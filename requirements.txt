@@ -1,0 +1,12 @@
+# DeckTune Python Dependencies
+# Runtime dependencies for Steam Deck
+
+# No external runtime dependencies required
+# All functionality uses Python standard library:
+# - asyncio for async operations
+# - subprocess for ryzenadj/stress-ng calls
+# - json for settings persistence
+# - dataclasses for data structures
+# - pathlib for file operations
+# - tarfile for diagnostics export
+# - typing for type hints

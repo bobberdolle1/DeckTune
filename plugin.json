@@ -1,0 +1,22 @@
+{
+  "name": "DeckTune",
+  "author": "DeckTune Team",
+  "api_version": 1,
+  "flags": ["root"],
+  "publish": {
+    "tags": [
+      "root",
+      "undervolt",
+      "autotune",
+      "performance",
+      "temperature",
+      "ryzenadj",
+      "curve optimizer",
+      "battery-saving",
+      "safety",
+      "stress-test"
+    ],
+    "description": "Automated undervolting and tuning solution for Steam Deck with safety features, autotune, and stress testing.",
+    "image": "https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"
+  }
+}
