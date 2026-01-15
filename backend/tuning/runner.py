@@ -2,14 +2,51 @@
 
 Feature: decktune, Test Runner Module
 Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6
+
+Note: On SteamOS (read-only filesystem), stress-ng and memtester must be
+bundled as static binaries in the bin/ directory since pacman is unavailable.
 """
 
 import asyncio
+import os
 import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
+
+# Plugin directory for bundled binaries (set by Decky Loader)
+PLUGIN_DIR = os.environ.get("DECKY_PLUGIN_DIR", ".")
+BIN_DIR = os.path.join(PLUGIN_DIR, "bin")
+
+# Bundled binary paths (static builds for SteamOS compatibility)
+STRESS_NG_PATH = os.path.join(BIN_DIR, "stress-ng")
+MEMTESTER_PATH = os.path.join(BIN_DIR, "memtester")
+
+
+def _get_binary_path(binary_name: str) -> str:
+    """Get path to binary, preferring bundled version.
+    
+    Falls back to system PATH if bundled binary not found.
+    This allows development on systems with stress-ng installed.
+    
+    Args:
+        binary_name: Name of the binary (stress-ng, memtester)
+        
+    Returns:
+        Full path to binary or just the name for PATH lookup
+    """
+    bundled_paths = {
+        "stress-ng": STRESS_NG_PATH,
+        "memtester": MEMTESTER_PATH,
+    }
+    
+    bundled_path = bundled_paths.get(binary_name)
+    if bundled_path and os.path.isfile(bundled_path):
+        return bundled_path
+    
+    # Fallback to system PATH
+    return binary_name
 
 
 @dataclass
@@ -18,7 +55,7 @@ class TestCase:
     
     Attributes:
         name: Human-readable test name
-        command: Command and arguments to execute
+        command: Command and arguments to execute (first element is binary name)
         timeout: Maximum execution time in seconds
         parse_fn: Function to parse output and determine pass/fail
     """
@@ -110,6 +147,39 @@ class TestRunner:
         """Initialize the test runner."""
         self._current_process: Optional[asyncio.subprocess.Process] = None
     
+    def check_binaries(self) -> Dict[str, bool]:
+        """Check availability of required binaries.
+        
+        Returns:
+            Dictionary mapping binary name to availability status.
+            Useful for diagnostics and UI warnings.
+        """
+        binaries = {
+            "stress-ng": _get_binary_path("stress-ng"),
+            "memtester": _get_binary_path("memtester"),
+        }
+        
+        result = {}
+        for name, path in binaries.items():
+            if os.path.isabs(path):
+                # Bundled binary - check if file exists and is executable
+                result[name] = os.path.isfile(path) and os.access(path, os.X_OK)
+            else:
+                # System binary - check if in PATH
+                import shutil
+                result[name] = shutil.which(path) is not None
+        
+        return result
+    
+    def get_missing_binaries(self) -> List[str]:
+        """Get list of missing required binaries.
+        
+        Returns:
+            List of binary names that are not available
+        """
+        status = self.check_binaries()
+        return [name for name, available in status.items() if not available]
+    
     async def run_test(self, test_name: str) -> TestResult:
         """Execute a test case and return results.
         
@@ -135,10 +205,14 @@ class TestRunner:
         error = None
         passed = False
         
+        # Resolve binary path (bundled or system)
+        command = test_case.command.copy()
+        command[0] = _get_binary_path(command[0])
+        
         try:
             # Execute subprocess with timeout
             self._current_process = await asyncio.create_subprocess_exec(
-                *test_case.command,
+                *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

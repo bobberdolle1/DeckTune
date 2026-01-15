@@ -149,6 +149,9 @@ export interface State {
   testHistory: TestHistoryEntry[];
   currentTest: string | null;
   isTestRunning: boolean;
+  
+  // Binary availability (for SteamOS compatibility warnings)
+  missingBinaries: string[];
 }
 
 /**

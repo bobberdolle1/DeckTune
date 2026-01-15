@@ -12,5 +12,6 @@ export {
   useAutotune,
   useTests,
   usePlatformInfo,
+  useBinaries,
   initialState,
 } from "./DeckTuneContext";

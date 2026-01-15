@@ -19,8 +19,8 @@ import {
   ProgressBarWithInfo,
   Focusable,
 } from "@decky/ui";
-import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle } from "react-icons/fa";
-import { useAutotune, usePlatformInfo, useDeckTune } from "../context";
+import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle, FaExclamationCircle } from "react-icons/fa";
+import { useAutotune, usePlatformInfo, useDeckTune, useBinaries } from "../context";
 import { AutotuneProgress, AutotuneResult, Preset } from "../api/types";
 
 /**
@@ -161,6 +161,12 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
   const { progress, result, isRunning, start, stop } = useAutotune();
   const { info: platformInfo } = usePlatformInfo();
   const { api, state } = useDeckTune();
+  const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
+
+  // Check binaries on mount
+  useEffect(() => {
+    checkBinaries();
+  }, []);
 
   // Handle autotune completion - move to step 3
   useEffect(() => {
@@ -238,6 +244,37 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
       {/* Panic Disable Button - Always visible at top (Requirement 4.5) */}
       <PanicDisableButton />
 
+      {/* Missing Binaries Warning */}
+      {hasMissing && (
+        <PanelSectionRow>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+              padding: "12px",
+              backgroundColor: "#5c4813",
+              borderRadius: "8px",
+              marginBottom: "12px",
+              border: "1px solid #ff9800",
+            }}
+          >
+            <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
+            <div>
+              <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
+                Missing Components
+              </div>
+              <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
+                Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
+              </div>
+              <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
+                Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder.
+              </div>
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
       {/* Step indicator */}
       <PanelSectionRow>
         <StepIndicator currentStep={step} />
@@ -248,6 +285,7 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
         <GoalSelectionStep
           onSelect={handleGoalSelect}
           platformInfo={platformInfo}
+          disabled={hasMissing}
         />
       )}
 
@@ -347,9 +385,10 @@ const StepIndicator: FC<StepIndicatorProps> = ({ currentStep }) => {
 interface GoalSelectionStepProps {
   onSelect: (goal: WizardGoal) => void;
   platformInfo: { model: string; variant: string; safe_limit: number } | null;
+  disabled?: boolean;
 }
 
-const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo }) => {
+const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo, disabled = false }) => {
   const { state } = useDeckTune();
   const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
 
@@ -401,8 +440,9 @@ const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo 
               layout="below"
               onClick={() => onSelect(goal.id)}
               description={goal.description}
+              disabled={disabled}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: disabled ? 0.5 : 1 }}>
                 <Icon />
                 <span>{goal.label}</span>
                 <span style={{ fontSize: "10px", color: "#8b929a", marginLeft: "auto" }}>

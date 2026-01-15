@@ -41,9 +41,10 @@ import {
   FaThermometerHalf,
   FaMicrochip,
   FaExclamationTriangle,
+  FaExclamationCircle,
   FaRocket,
 } from "react-icons/fa";
-import { useDeckTune, usePlatformInfo, useTests } from "../context";
+import { useDeckTune, usePlatformInfo, useTests, useBinaries } from "../context";
 import { Preset, TestHistoryEntry, TestResult } from "../api/types";
 
 /**
@@ -807,10 +808,17 @@ const TEST_OPTIONS = [
  * - Test selection dropdown
  * - Run test button with progress
  * - Last 10 test results history
+ * - Warning banner if binaries missing
  */
 const TestsTab: FC = () => {
   const { history, currentTest, isRunning, runTest } = useTests();
+  const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
   const [selectedTest, setSelectedTest] = useState<string>("cpu_quick");
+
+  // Check binaries on mount
+  useEffect(() => {
+    checkBinaries();
+  }, []);
 
   /**
    * Handle run test button click.
@@ -852,6 +860,37 @@ const TestsTab: FC = () => {
 
   return (
     <>
+      {/* Missing Binaries Warning */}
+      {hasMissing && (
+        <PanelSectionRow>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+              padding: "12px",
+              backgroundColor: "#5c4813",
+              borderRadius: "8px",
+              marginBottom: "12px",
+              border: "1px solid #ff9800",
+            }}
+          >
+            <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
+            <div>
+              <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
+                Missing Components
+              </div>
+              <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
+                Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
+              </div>
+              <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
+                Stress tests are unavailable until binaries are installed.
+              </div>
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
       {/* Test selection */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
@@ -869,6 +908,7 @@ const TestsTab: FC = () => {
           }))}
           selectedOption={selectedTest}
           onChange={(option: any) => setSelectedTest(option.data)}
+          disabled={hasMissing}
         />
       </PanelSectionRow>
 
@@ -876,9 +916,9 @@ const TestsTab: FC = () => {
         <ButtonItem
           layout="below"
           onClick={handleRunTest}
-          disabled={isRunning}
+          disabled={isRunning || hasMissing}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: hasMissing ? 0.5 : 1 }}>
             {isRunning ? (
               <>
                 <FaSpinner className="spin" />
