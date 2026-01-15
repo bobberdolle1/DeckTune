@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2024 BakaDestroyer
+Copyright (c) 2026 DeckTune Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,13 +20,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
---- Based on template https://github.com/SteamDeckHomebrew/decky-plugin-template ---
---- Original LICENSE follows ---
+---
+
+This project is based on:
+- Decky-Undervolt (https://github.com/totallynotbakadestroyer/Decky-Undervolt) - MIT License
+- decky-plugin-template (https://github.com/SteamDeckHomebrew/decky-plugin-template) - BSD 3-Clause
+
+Original template license:
 
 BSD 3-Clause License
 
-Copyright (c) 2024, BakaDestroyer
-Original Copyright (c) 2022-2024, Steam Deck Homebrew
+Copyright (c) 2022-2024, Steam Deck Homebrew
 
 All rights reserved.
 
