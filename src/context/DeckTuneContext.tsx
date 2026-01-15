@@ -76,6 +76,7 @@ export const initialState: State = {
   // Dynamic mode
   gymdeckRunning: false,
   isDynamic: false,
+  dynamicStatus: null,
   
   // Autotune state (new properties)
   autotuneProgress: null,

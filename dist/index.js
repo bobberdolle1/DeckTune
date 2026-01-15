@@ -225,6 +225,7 @@ class Api extends SimpleEventEmitter {
         addEventListener("tuning_complete", this.onTuningComplete.bind(this));
         addEventListener("test_complete", this.onTestComplete.bind(this));
         addEventListener("update_status", this.onStatusUpdate.bind(this));
+        addEventListener("dynamic_status", this.onDynamicStatus.bind(this));
         if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
             return await this.handleMainRunningApp();
         }
@@ -295,6 +296,13 @@ class Api extends SimpleEventEmitter {
      */
     onStatusUpdate(status) {
         this.setState({ status });
+    }
+    /**
+     * Handle dynamic status update events from backend.
+     * Requirements: 15.1
+     */
+    onDynamicStatus(status) {
+        this.setState({ dynamicStatus: status });
     }
     /**
      * Handle app lifetime notifications from Steam.
@@ -435,7 +443,28 @@ class Api extends SimpleEventEmitter {
      */
     async disableGymdeck() {
         await call("stop_gymdeck");
-        this.setState({ gymdeckRunning: false, status: "disabled" });
+        this.setState({ gymdeckRunning: false, status: "disabled", dynamicStatus: null });
+    }
+    /**
+     * Get current dynamic mode status.
+     * Requirements: 15.1
+     */
+    async getDynamicStatus() {
+        const result = await call("get_dynamic_status");
+        if (result.running && result.load) {
+            const status = {
+                running: result.running,
+                load: result.load,
+                values: result.values,
+                strategy: result.strategy,
+                uptime_ms: result.uptime_ms,
+                error: result.error,
+            };
+            this.setState({ dynamicStatus: status });
+            return status;
+        }
+        this.setState({ dynamicStatus: null });
+        return null;
     }
     // ==================== Autotune Methods ====================
     // Requirements: Frontend integration
@@ -621,6 +650,18 @@ class Api extends SimpleEventEmitter {
         this.setState({ settings });
     }
     /**
+     * Save a single setting value.
+     */
+    async saveSetting(key, value) {
+        await call("save_setting", key, value);
+    }
+    /**
+     * Get a single setting value.
+     */
+    async getSetting(key) {
+        return await call("get_setting", key);
+    }
+    /**
      * Reset configuration to defaults.
      */
     async resetConfig() {
@@ -680,6 +721,45 @@ class Api extends SimpleEventEmitter {
         }
         return result;
     }
+    // ==================== Expert Mode Methods ====================
+    // Requirements: 13.1-13.6
+    /**
+     * Enable Expert Overclocker Mode.
+     * Requires explicit user confirmation of risks.
+     *
+     * @param confirmed - User has confirmed understanding of risks
+     * @returns Object with success status and expert mode state
+     */
+    async enableExpertMode(confirmed = false) {
+        const result = await call("enable_expert_mode", confirmed);
+        if (result.success) {
+            // Update state to reflect expert mode is active
+            this.emit("expert_mode_changed", { enabled: true });
+        }
+        return result;
+    }
+    /**
+     * Disable Expert Overclocker Mode.
+     * Returns to safe platform limits.
+     *
+     * @returns Object with success status
+     */
+    async disableExpertMode() {
+        const result = await call("disable_expert_mode");
+        if (result.success) {
+            // Update state to reflect expert mode is disabled
+            this.emit("expert_mode_changed", { enabled: false });
+        }
+        return result;
+    }
+    /**
+     * Get current Expert Mode status.
+     *
+     * @returns Object with expert mode state and limits
+     */
+    async getExpertModeStatus() {
+        return await call("get_expert_mode_status");
+    }
     // ==================== Server Events ====================
     /**
      * Handle server events.
@@ -712,6 +792,7 @@ class Api extends SimpleEventEmitter {
         removeEventListener("tuning_complete", this.onTuningComplete.bind(this));
         removeEventListener("test_complete", this.onTestComplete.bind(this));
         removeEventListener("update_status", this.onStatusUpdate.bind(this));
+        removeEventListener("dynamic_status", this.onDynamicStatus.bind(this));
     }
 }
 
@@ -764,6 +845,7 @@ const initialState = {
     // Dynamic mode
     gymdeckRunning: false,
     isDynamic: false,
+    dynamicStatus: null,
     // Autotune state (new properties)
     autotuneProgress: null,
     autotuneResult: null,
@@ -1327,6 +1409,191 @@ const ResultsStep = ({ result, platformInfo, onApplyAndSave, onStartOver, }) => 
 };
 
 /**
+ * LoadGraph component for displaying real-time CPU load.
+ *
+ * Feature: dynamic-mode-refactor
+ * Requirements: 15.1
+ *
+ * Displays per-core CPU load percentages when dynamic mode is active.
+ * Shows historical data with a simple line graph visualization.
+ */
+
+const MAX_HISTORY_POINTS = 60; // Keep 60 data points (1 minute at 1Hz)
+const GRAPH_HEIGHT = 100;
+const GRAPH_WIDTH = 300;
+/**
+ * Get color for a specific core.
+ */
+const getCoreColor = (coreIndex) => {
+    const colors = ["#1a9fff", "#4caf50", "#ff9800", "#f44336"];
+    return colors[coreIndex] || "#8b929a";
+};
+/**
+ * LoadGraph component - displays real-time CPU load graph.
+ * Requirements: 15.1
+ */
+const LoadGraph = ({ load, isActive }) => {
+    const [history, setHistory] = SP_REACT.useState([]);
+    const canvasRef = SP_REACT.useRef(null);
+    // Update history when load changes
+    SP_REACT.useEffect(() => {
+        if (!isActive || load.length !== 4) {
+            // Clear history when not active
+            setHistory([]);
+            return;
+        }
+        setHistory((prev) => {
+            const newHistory = [
+                ...prev,
+                {
+                    timestamp: Date.now(),
+                    values: [...load],
+                },
+            ];
+            // Keep only the last MAX_HISTORY_POINTS
+            if (newHistory.length > MAX_HISTORY_POINTS) {
+                return newHistory.slice(-MAX_HISTORY_POINTS);
+            }
+            return newHistory;
+        });
+    }, [load, isActive]);
+    // Draw the graph on canvas
+    SP_REACT.useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || history.length === 0) {
+            return;
+        }
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            return;
+        }
+        // Clear canvas
+        ctx.clearRect(0, 0, GRAPH_WIDTH, GRAPH_HEIGHT);
+        // Draw background grid
+        ctx.strokeStyle = "#3d4450";
+        ctx.lineWidth = 1;
+        // Horizontal grid lines (every 25%)
+        for (let i = 0; i <= 4; i++) {
+            const y = (i * GRAPH_HEIGHT) / 4;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(GRAPH_WIDTH, y);
+            ctx.stroke();
+        }
+        // Draw load lines for each core
+        const pointSpacing = GRAPH_WIDTH / (MAX_HISTORY_POINTS - 1);
+        for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
+            ctx.strokeStyle = getCoreColor(coreIndex);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            let firstPoint = true;
+            history.forEach((point, index) => {
+                const x = index * pointSpacing;
+                const loadValue = point.values[coreIndex] || 0;
+                // Invert Y axis (0% at bottom, 100% at top)
+                const y = GRAPH_HEIGHT - (loadValue / 100) * GRAPH_HEIGHT;
+                if (firstPoint) {
+                    ctx.moveTo(x, y);
+                    firstPoint = false;
+                }
+                else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+        }
+    }, [history]);
+    if (!isActive) {
+        return null;
+    }
+    return (React.createElement("div", { style: {
+            padding: "12px",
+            backgroundColor: "#23262e",
+            borderRadius: "8px",
+            marginBottom: "16px",
+        } },
+        React.createElement("div", { style: {
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "12px",
+            } },
+            React.createElement(FaMicrochip, { style: { color: "#1a9fff" } }),
+            React.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, "CPU Load (Real-time)")),
+        React.createElement("div", { style: {
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "8px",
+                marginBottom: "12px",
+            } }, load.map((value, index) => (React.createElement("div", { key: index, style: {
+                padding: "6px",
+                backgroundColor: "#1a1d23",
+                borderRadius: "4px",
+                textAlign: "center",
+                borderLeft: `3px solid ${getCoreColor(index)}`,
+            } },
+            React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
+                "Core ",
+                index),
+            React.createElement("div", { style: {
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    color: getCoreColor(index),
+                } },
+                value.toFixed(1),
+                "%"))))),
+        React.createElement("div", { style: {
+                position: "relative",
+                width: "100%",
+                height: `${GRAPH_HEIGHT}px`,
+                backgroundColor: "#1a1d23",
+                borderRadius: "4px",
+                overflow: "hidden",
+            } },
+            React.createElement("canvas", { ref: canvasRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: {
+                    width: "100%",
+                    height: "100%",
+                } }),
+            React.createElement("div", { style: {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    padding: "2px 4px",
+                    pointerEvents: "none",
+                } }, [100, 75, 50, 25, 0].map((value) => (React.createElement("div", { key: value, style: {
+                    fontSize: "9px",
+                    color: "#8b929a",
+                    lineHeight: "1",
+                } },
+                value,
+                "%"))))),
+        React.createElement("div", { style: {
+                display: "flex",
+                justifyContent: "center",
+                gap: "16px",
+                marginTop: "8px",
+                fontSize: "11px",
+            } }, [0, 1, 2, 3].map((index) => (React.createElement("div", { key: index, style: {
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+            } },
+            React.createElement("div", { style: {
+                    width: "12px",
+                    height: "3px",
+                    backgroundColor: getCoreColor(index),
+                    borderRadius: "2px",
+                } }),
+            React.createElement("span", { style: { color: "#8b929a" } },
+                "Core ",
+                index)))))));
+};
+
+/**
  * ExpertMode component for DeckTune.
  *
  * Feature: decktune, Frontend UI Components - Expert Mode
@@ -1430,9 +1697,11 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
 };
 /**
  * Manual tab component.
- * Requirements: 5.4, 7.2
+ * Requirements: 5.4, 7.2, 13.3-13.6, 14.1, 14.2
  *
  * Features:
+ * - Expert Overclocker Mode toggle with warning (Requirements 13.3-13.6)
+ * - Simple Mode toggle (Requirements 14.1, 14.2)
  * - Per-core sliders with current values
  * - Apply, Test, Disable buttons
  * - Live temperature and frequency display
@@ -1445,7 +1714,14 @@ const ManualTab = () => {
     const [isApplying, setIsApplying] = SP_REACT.useState(false);
     const [isTesting, setIsTesting] = SP_REACT.useState(false);
     const [isTuning, setIsTuning] = SP_REACT.useState(false);
+    const [simpleMode, setSimpleMode] = SP_REACT.useState(false);
+    const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
     const [systemMetrics, setSystemMetrics] = SP_REACT.useState(null);
+    // Expert Mode state (Requirements 13.3-13.6)
+    const [expertMode, setExpertMode] = SP_REACT.useState(false);
+    const [expertModeActive, setExpertModeActive] = SP_REACT.useState(false);
+    const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+    const [isTogglingExpert, setIsTogglingExpert] = SP_REACT.useState(false);
     // Fetch system metrics periodically
     SP_REACT.useEffect(() => {
         const fetchMetrics = async () => {
@@ -1463,7 +1739,131 @@ const ManualTab = () => {
         const interval = setInterval(fetchMetrics, 2000);
         return () => clearInterval(interval);
     }, [api]);
+    // Load expert mode status on mount (Requirements 13.3-13.6)
+    SP_REACT.useEffect(() => {
+        const loadExpertMode = async () => {
+            try {
+                const status = await api.getExpertModeStatus();
+                setExpertMode(status.expert_mode);
+                setExpertModeActive(status.active);
+            }
+            catch (e) {
+                // Ignore errors, use default (false)
+            }
+        };
+        loadExpertMode();
+        // Listen for expert mode changes
+        const handleExpertModeChange = (data) => {
+            setExpertMode(data.enabled);
+            setExpertModeActive(data.enabled);
+        };
+        api.on("expert_mode_changed", handleExpertModeChange);
+        return () => {
+            api.removeListener("expert_mode_changed", handleExpertModeChange);
+        };
+    }, [api]);
+    // Initialize simpleValue from current cores (average) and load saved preference
+    SP_REACT.useEffect(() => {
+        if (coreValues.length === 4) {
+            const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+            setSimpleValue(avg);
+        }
+        // Load saved simple_mode preference
+        const loadSimpleMode = async () => {
+            try {
+                const saved = await api.getSetting("simple_mode");
+                if (saved !== null && saved !== undefined) {
+                    setSimpleMode(saved);
+                }
+            }
+            catch (e) {
+                // Ignore errors, use default (false)
+            }
+        };
+        loadSimpleMode();
+    }, []);
     const safeLimit = platformInfo?.safe_limit ?? -30;
+    // Determine current limit based on expert mode (Requirements 13.2, 13.6)
+    const currentMinLimit = expertModeActive ? -100 : safeLimit;
+    /**
+     * Handle Expert Mode toggle.
+     * Requirements: 13.3, 13.4, 13.5
+     */
+    const handleExpertModeToggle = async (enabled) => {
+        if (enabled) {
+            // Show warning dialog (Requirement 13.3)
+            setShowExpertWarning(true);
+        }
+        else {
+            // Disable expert mode
+            setIsTogglingExpert(true);
+            try {
+                const result = await api.disableExpertMode();
+                if (result.success) {
+                    setExpertMode(false);
+                    setExpertModeActive(false);
+                }
+            }
+            finally {
+                setIsTogglingExpert(false);
+            }
+        }
+    };
+    /**
+     * Confirm expert mode activation.
+     * Requirements: 13.4
+     */
+    const handleExpertModeConfirm = async () => {
+        setIsTogglingExpert(true);
+        try {
+            const result = await api.enableExpertMode(true);
+            if (result.success) {
+                setExpertMode(true);
+                setExpertModeActive(true);
+                setShowExpertWarning(false);
+            }
+            else {
+                // Show error if confirmation failed
+                alert(result.error || "Failed to enable expert mode");
+            }
+        }
+        finally {
+            setIsTogglingExpert(false);
+        }
+    };
+    /**
+     * Cancel expert mode activation.
+     */
+    const handleExpertModeCancel = () => {
+        setShowExpertWarning(false);
+    };
+    /**
+     * Handle Simple Mode toggle.
+     * Requirements: 14.4, 14.5
+     */
+    const handleSimpleModeToggle = (enabled) => {
+        if (enabled) {
+            // Switching to Simple Mode: use average of current values (Requirement 14.4)
+            const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+            setSimpleValue(avg);
+        }
+        else {
+            // Switching to per-core mode: copy current simple value to all cores (Requirement 14.5)
+            setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
+        }
+        setSimpleMode(enabled);
+        // Save preference
+        api.saveSetting("simple_mode", enabled);
+    };
+    /**
+     * Handle simple slider value change.
+     * Requirements: 14.3
+     */
+    const handleSimpleValueChange = (value) => {
+        setSimpleValue(value);
+        // Apply same value to all cores (Requirement 14.3)
+        setCoreValues([value, value, value, value]);
+    };
     /**
      * Handle slider value change for a specific core.
      */
@@ -1537,6 +1937,66 @@ const ManualTab = () => {
     // Check if a game is currently running
     const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
     return (React.createElement(React.Fragment, null,
+        showExpertWarning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.85)",
+                    zIndex: 9999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "20px",
+                } },
+                React.createElement("div", { style: {
+                        backgroundColor: "#1a1d23",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        maxWidth: "500px",
+                        border: "2px solid #ff6b6b",
+                        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
+                    } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            marginBottom: "16px",
+                        } },
+                        React.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "32px" } }),
+                        React.createElement("div", { style: { fontSize: "20px", fontWeight: "bold", color: "#ff6b6b" } }, "Expert Overclocker Mode")),
+                    React.createElement("div", { style: { fontSize: "14px", lineHeight: "1.6", marginBottom: "20px", color: "#e0e0e0" } },
+                        React.createElement("p", { style: { marginBottom: "12px" } },
+                            React.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
+                            " You are about to enable Expert Overclocker Mode, which removes all safety limits."),
+                        React.createElement("p", { style: { marginBottom: "12px" } },
+                            "This mode allows undervolt values up to ",
+                            React.createElement("strong", null, "-100mV"),
+                            ", far beyond the safe limits for your device."),
+                        React.createElement("p", { style: { marginBottom: "12px", color: "#ff9800" } },
+                            React.createElement("strong", null, "Risks include:")),
+                        React.createElement("ul", { style: { marginLeft: "20px", marginBottom: "12px", color: "#ffb74d" } },
+                            React.createElement("li", null, "System instability and crashes"),
+                            React.createElement("li", null, "Data loss from unexpected shutdowns"),
+                            React.createElement("li", null, "Potential hardware damage"),
+                            React.createElement("li", null, "Voiding of warranty")),
+                        React.createElement("p", { style: { color: "#f44336", fontWeight: "bold" } }, "Use at your own risk. The developers are not responsible for any damage.")),
+                    React.createElement(DFL.Focusable, { style: { display: "flex", gap: "12px" } },
+                        React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExpertModeConfirm, disabled: isTogglingExpert, style: {
+                                flex: 1,
+                                backgroundColor: "#b71c1c",
+                            } },
+                            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isTogglingExpert ? (React.createElement(React.Fragment, null,
+                                React.createElement(FaSpinner, { className: "spin" }),
+                                React.createElement("span", null, "Enabling..."))) : (React.createElement(React.Fragment, null,
+                                React.createElement(FaCheck, null),
+                                React.createElement("span", null, "I Understand, Enable"))))),
+                        React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExpertModeCancel, disabled: isTogglingExpert, style: { flex: 1 } },
+                            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                                React.createElement(FaTimes, null),
+                                React.createElement("span", null, "Cancel")))))))),
         platformInfo && (React.createElement(DFL.PanelSectionRow, null,
             React.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
                 platformInfo.variant,
@@ -1544,6 +2004,24 @@ const ManualTab = () => {
                 platformInfo.model,
                 ") \u2022 Safe limit: ",
                 safeLimit))),
+        state.dynamicStatus && state.dynamicStatus.running && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(LoadGraph, { load: state.dynamicStatus.load, isActive: state.dynamicStatus.running }))),
+        expertModeActive && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px",
+                    backgroundColor: "#5c1313",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                    border: "2px solid #ff6b6b",
+                    animation: "pulse 2s ease-in-out infinite",
+                } },
+                React.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px", flexShrink: 0 } }),
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontWeight: "bold", color: "#ff6b6b", marginBottom: "2px" } }, "Expert Overclocker Mode Active"),
+                    React.createElement("div", { style: { fontSize: "11px", color: "#ffb74d" } }, "Extended range enabled: 0 to -100mV \u2022 Use with extreme caution"))))),
         systemMetrics && (React.createElement(DFL.PanelSectionRow, null,
             React.createElement(DFL.Focusable, { style: {
                     display: "grid",
@@ -1568,9 +2046,22 @@ const ManualTab = () => {
                     React.createElement(FaMicrochip, { style: { color: "#1a9fff", fontSize: "10px" } }),
                     React.createElement("span", { style: { fontSize: "12px" } }, systemMetrics.freqs[core] ? `${(systemMetrics.freqs[core] / 1000).toFixed(1)}GHz` : "--")))))))),
         React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Undervolt Values")),
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
+                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold" } }, "Undervolt Values"),
+                React.createElement("div", { style: { display: "flex", gap: "12px", alignItems: "center" } },
+                    React.createElement(DFL.ToggleField, { label: "Expert Mode", description: "Remove safety limits (-100mV)", checked: expertMode, onChange: handleExpertModeToggle, disabled: isTogglingExpert }),
+                    React.createElement(DFL.ToggleField, { label: "Simple Mode", description: "Control all cores with one slider", checked: simpleMode, onChange: handleSimpleModeToggle })))),
+        simpleMode ? (
+        /* Simple Mode: Single slider for all cores - Requirements: 14.2, 14.3 */
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: "", description: React.createElement("span", { style: { color: getValueColor(simpleValue) } },
+                    simpleValue === 0 ? "Disabled" : `${simpleValue} mV (applies to all 4 cores)`,
+                    expertModeActive && simpleValue < safeLimit && (React.createElement("span", { style: { color: "#ff6b6b", marginLeft: "8px" } }, "\u26A0\uFE0F EXPERT"))) }))) : (
+        /* Per-core mode: Individual sliders */
         [0, 1, 2, 3].map((core) => (React.createElement(DFL.PanelSectionRow, { key: core },
-            React.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: safeLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: "", description: React.createElement("span", { style: { color: getValueColor(coreValues[core]) } }, coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`) })))),
+            React.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: "", description: React.createElement("span", { style: { color: getValueColor(coreValues[core]) } },
+                    coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`,
+                    expertModeActive && coreValues[core] < safeLimit && (React.createElement("span", { style: { color: "#ff6b6b", marginLeft: "8px" } }, "\u26A0\uFE0F EXPERT"))) }))))),
         React.createElement(DFL.PanelSectionRow, null,
             React.createElement(DFL.Focusable, { style: {
                     display: "flex",
@@ -1619,6 +2110,10 @@ const ManualTab = () => {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
           }
         `)));
 };

@@ -4,7 +4,7 @@ Feature: decktune, Property 16: Dynamic Mode Status
 Validates: Requirements 10.3
 
 Property 16: Dynamic Mode Status
-For any active gymdeck2 process, the status SHALL be "DYNAMIC RUNNING". 
+For any active gymdeck3 process, the status SHALL be "DYNAMIC RUNNING". 
 When the process terminates, status SHALL transition to "Disabled".
 """
 
@@ -134,7 +134,7 @@ class DynamicModeStatusTracker:
 class TestDynamicModeStatus:
     """Property 16: Dynamic Mode Status
     
-    For any active gymdeck2 process, the status SHALL be "DYNAMIC RUNNING". 
+    For any active gymdeck3 process, the status SHALL be "DYNAMIC RUNNING". 
     When the process terminates, status SHALL transition to "Disabled".
     
     Validates: Requirements 10.3
@@ -144,9 +144,9 @@ class TestDynamicModeStatus:
     @given(initial_status=st.sampled_from(["Disabled", "enabled", "error", "scheduled"]))
     @settings(max_examples=100)
     async def test_status_is_dynamic_running_when_process_active(self, initial_status: str):
-        """When gymdeck2 process is active, status SHALL be 'DYNAMIC RUNNING'.
+        """When gymdeck3 process is active, status SHALL be 'DYNAMIC RUNNING'.
         
-        Property: For any active gymdeck2 process, status == "DYNAMIC RUNNING"
+        Property: For any active gymdeck3 process, status == "DYNAMIC RUNNING"
         """
         settings_manager = MockSettings()
         settings_manager.setSetting("status", initial_status)
@@ -167,7 +167,7 @@ class TestDynamicModeStatus:
     @given(initial_status=st.sampled_from(["Disabled", "enabled", "error", "scheduled", "DYNAMIC RUNNING"]))
     @settings(max_examples=100)
     async def test_status_is_disabled_when_process_stops(self, initial_status: str):
-        """When gymdeck2 process terminates, status SHALL transition to 'Disabled'.
+        """When gymdeck3 process terminates, status SHALL transition to 'Disabled'.
         
         Property: When process terminates, status == "Disabled"
         """

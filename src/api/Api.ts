@@ -19,6 +19,7 @@ import {
   Preset,
   Settings,
   DynamicSettings,
+  DynamicStatus,
   ServerEvent,
   StatusString,
 } from "./types";
@@ -128,6 +129,7 @@ export class Api extends SimpleEventEmitter {
     addEventListener("tuning_complete", this.onTuningComplete.bind(this));
     addEventListener("test_complete", this.onTestComplete.bind(this));
     addEventListener("update_status", this.onStatusUpdate.bind(this));
+    addEventListener("dynamic_status", this.onDynamicStatus.bind(this));
 
     if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
       return await this.handleMainRunningApp();
@@ -212,6 +214,14 @@ export class Api extends SimpleEventEmitter {
    */
   private onStatusUpdate(status: StatusString): void {
     this.setState({ status });
+  }
+
+  /**
+   * Handle dynamic status update events from backend.
+   * Requirements: 15.1
+   */
+  private onDynamicStatus(status: DynamicStatus): void {
+    this.setState({ dynamicStatus: status });
   }
 
   /**
@@ -368,7 +378,31 @@ export class Api extends SimpleEventEmitter {
    */
   async disableGymdeck(): Promise<void> {
     await call("stop_gymdeck");
-    this.setState({ gymdeckRunning: false, status: "disabled" });
+    this.setState({ gymdeckRunning: false, status: "disabled", dynamicStatus: null });
+  }
+
+  /**
+   * Get current dynamic mode status.
+   * Requirements: 15.1
+   */
+  async getDynamicStatus(): Promise<DynamicStatus | null> {
+    const result = await call("get_dynamic_status") as any;
+    
+    if (result.running && result.load) {
+      const status: DynamicStatus = {
+        running: result.running,
+        load: result.load,
+        values: result.values,
+        strategy: result.strategy,
+        uptime_ms: result.uptime_ms,
+        error: result.error,
+      };
+      this.setState({ dynamicStatus: status });
+      return status;
+    }
+    
+    this.setState({ dynamicStatus: null });
+    return null;
   }
 
   // ==================== Autotune Methods ====================
@@ -606,6 +640,20 @@ export class Api extends SimpleEventEmitter {
   }
 
   /**
+   * Save a single setting value.
+   */
+  async saveSetting(key: string, value: any): Promise<void> {
+    await call("save_setting", key, value);
+  }
+
+  /**
+   * Get a single setting value.
+   */
+  async getSetting(key: string): Promise<any> {
+    return await call("get_setting", key);
+  }
+
+  /**
    * Reset configuration to defaults.
    */
   async resetConfig(): Promise<void> {
@@ -673,6 +721,85 @@ export class Api extends SimpleEventEmitter {
     return result;
   }
 
+  // ==================== Expert Mode Methods ====================
+  // Requirements: 13.1-13.6
+
+  /**
+   * Enable Expert Overclocker Mode.
+   * Requires explicit user confirmation of risks.
+   * 
+   * @param confirmed - User has confirmed understanding of risks
+   * @returns Object with success status and expert mode state
+   */
+  async enableExpertMode(confirmed: boolean = false): Promise<{
+    success: boolean;
+    expert_mode: boolean;
+    confirmed: boolean;
+    message?: string;
+    error?: string;
+  }> {
+    const result = await call("enable_expert_mode", confirmed) as {
+      success: boolean;
+      expert_mode: boolean;
+      confirmed: boolean;
+      message?: string;
+      error?: string;
+    };
+    
+    if (result.success) {
+      // Update state to reflect expert mode is active
+      this.emit("expert_mode_changed", { enabled: true });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Disable Expert Overclocker Mode.
+   * Returns to safe platform limits.
+   * 
+   * @returns Object with success status
+   */
+  async disableExpertMode(): Promise<{
+    success: boolean;
+    expert_mode: boolean;
+    message?: string;
+  }> {
+    const result = await call("disable_expert_mode") as {
+      success: boolean;
+      expert_mode: boolean;
+      message?: string;
+    };
+    
+    if (result.success) {
+      // Update state to reflect expert mode is disabled
+      this.emit("expert_mode_changed", { enabled: false });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get current Expert Mode status.
+   * 
+   * @returns Object with expert mode state and limits
+   */
+  async getExpertModeStatus(): Promise<{
+    expert_mode: boolean;
+    confirmed: boolean;
+    active: boolean;
+    min_limit: number;
+    max_limit: number;
+  }> {
+    return await call("get_expert_mode_status") as {
+      expert_mode: boolean;
+      confirmed: boolean;
+      active: boolean;
+      min_limit: number;
+      max_limit: number;
+    };
+  }
+
   // ==================== Server Events ====================
 
   /**
@@ -709,6 +836,7 @@ export class Api extends SimpleEventEmitter {
     removeEventListener("tuning_complete", this.onTuningComplete.bind(this));
     removeEventListener("test_complete", this.onTestComplete.bind(this));
     removeEventListener("update_status", this.onStatusUpdate.bind(this));
+    removeEventListener("dynamic_status", this.onDynamicStatus.bind(this));
   }
 }
 

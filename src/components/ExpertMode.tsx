@@ -46,6 +46,7 @@ import {
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo, useTests, useBinaries } from "../context";
 import { Preset, TestHistoryEntry, TestResult } from "../api/types";
+import { LoadGraph } from "./LoadGraph";
 
 /**
  * Tab type for Expert Mode navigation.
@@ -212,9 +213,11 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 /**
  * Manual tab component.
- * Requirements: 5.4, 7.2
+ * Requirements: 5.4, 7.2, 13.3-13.6, 14.1, 14.2
  * 
  * Features:
+ * - Expert Overclocker Mode toggle with warning (Requirements 13.3-13.6)
+ * - Simple Mode toggle (Requirements 14.1, 14.2)
  * - Per-core sliders with current values
  * - Apply, Test, Disable buttons
  * - Live temperature and frequency display
@@ -227,10 +230,18 @@ const ManualTab: FC = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isTuning, setIsTuning] = useState(false);
+  const [simpleMode, setSimpleMode] = useState<boolean>(false);
+  const [simpleValue, setSimpleValue] = useState<number>(-25);
   const [systemMetrics, setSystemMetrics] = useState<{
     temps: number[];
     freqs: number[];
   } | null>(null);
+  
+  // Expert Mode state (Requirements 13.3-13.6)
+  const [expertMode, setExpertMode] = useState<boolean>(false);
+  const [expertModeActive, setExpertModeActive] = useState<boolean>(false);
+  const [showExpertWarning, setShowExpertWarning] = useState<boolean>(false);
+  const [isTogglingExpert, setIsTogglingExpert] = useState(false);
 
   // Fetch system metrics periodically
   useEffect(() => {
@@ -250,7 +261,135 @@ const ManualTab: FC = () => {
     return () => clearInterval(interval);
   }, [api]);
 
+  // Load expert mode status on mount (Requirements 13.3-13.6)
+  useEffect(() => {
+    const loadExpertMode = async () => {
+      try {
+        const status = await api.getExpertModeStatus();
+        setExpertMode(status.expert_mode);
+        setExpertModeActive(status.active);
+      } catch (e) {
+        // Ignore errors, use default (false)
+      }
+    };
+    loadExpertMode();
+
+    // Listen for expert mode changes
+    const handleExpertModeChange = (data: { enabled: boolean }) => {
+      setExpertMode(data.enabled);
+      setExpertModeActive(data.enabled);
+    };
+    api.on("expert_mode_changed", handleExpertModeChange);
+
+    return () => {
+      api.removeListener("expert_mode_changed", handleExpertModeChange);
+    };
+  }, [api]);
+
+  // Initialize simpleValue from current cores (average) and load saved preference
+  useEffect(() => {
+    if (coreValues.length === 4) {
+      const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+      setSimpleValue(avg);
+    }
+    
+    // Load saved simple_mode preference
+    const loadSimpleMode = async () => {
+      try {
+        const saved = await api.getSetting("simple_mode");
+        if (saved !== null && saved !== undefined) {
+          setSimpleMode(saved);
+        }
+      } catch (e) {
+        // Ignore errors, use default (false)
+      }
+    };
+    loadSimpleMode();
+  }, []);
+
   const safeLimit = platformInfo?.safe_limit ?? -30;
+  
+  // Determine current limit based on expert mode (Requirements 13.2, 13.6)
+  const currentMinLimit = expertModeActive ? -100 : safeLimit;
+
+  /**
+   * Handle Expert Mode toggle.
+   * Requirements: 13.3, 13.4, 13.5
+   */
+  const handleExpertModeToggle = async (enabled: boolean) => {
+    if (enabled) {
+      // Show warning dialog (Requirement 13.3)
+      setShowExpertWarning(true);
+    } else {
+      // Disable expert mode
+      setIsTogglingExpert(true);
+      try {
+        const result = await api.disableExpertMode();
+        if (result.success) {
+          setExpertMode(false);
+          setExpertModeActive(false);
+        }
+      } finally {
+        setIsTogglingExpert(false);
+      }
+    }
+  };
+
+  /**
+   * Confirm expert mode activation.
+   * Requirements: 13.4
+   */
+  const handleExpertModeConfirm = async () => {
+    setIsTogglingExpert(true);
+    try {
+      const result = await api.enableExpertMode(true);
+      if (result.success) {
+        setExpertMode(true);
+        setExpertModeActive(true);
+        setShowExpertWarning(false);
+      } else {
+        // Show error if confirmation failed
+        alert(result.error || "Failed to enable expert mode");
+      }
+    } finally {
+      setIsTogglingExpert(false);
+    }
+  };
+
+  /**
+   * Cancel expert mode activation.
+   */
+  const handleExpertModeCancel = () => {
+    setShowExpertWarning(false);
+  };
+
+  /**
+   * Handle Simple Mode toggle.
+   * Requirements: 14.4, 14.5
+   */
+  const handleSimpleModeToggle = (enabled: boolean) => {
+    if (enabled) {
+      // Switching to Simple Mode: use average of current values (Requirement 14.4)
+      const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+      setSimpleValue(avg);
+    } else {
+      // Switching to per-core mode: copy current simple value to all cores (Requirement 14.5)
+      setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
+    }
+    setSimpleMode(enabled);
+    // Save preference
+    api.saveSetting("simple_mode", enabled);
+  };
+
+  /**
+   * Handle simple slider value change.
+   * Requirements: 14.3
+   */
+  const handleSimpleValueChange = (value: number) => {
+    setSimpleValue(value);
+    // Apply same value to all cores (Requirement 14.3)
+    setCoreValues([value, value, value, value]);
+  };
 
   /**
    * Handle slider value change for a specific core.
@@ -329,11 +468,155 @@ const ManualTab: FC = () => {
 
   return (
     <>
+      {/* Expert Mode Warning Dialog - Requirements: 13.3, 13.4 */}
+      {showExpertWarning && (
+        <PanelSectionRow>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.85)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: "#1a1d23",
+                borderRadius: "12px",
+                padding: "24px",
+                maxWidth: "500px",
+                border: "2px solid #ff6b6b",
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginBottom: "16px",
+                }}
+              >
+                <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "32px" }} />
+                <div style={{ fontSize: "20px", fontWeight: "bold", color: "#ff6b6b" }}>
+                  Expert Overclocker Mode
+                </div>
+              </div>
+
+              <div style={{ fontSize: "14px", lineHeight: "1.6", marginBottom: "20px", color: "#e0e0e0" }}>
+                <p style={{ marginBottom: "12px" }}>
+                  <strong>⚠️ WARNING:</strong> You are about to enable Expert Overclocker Mode, which removes all safety limits.
+                </p>
+                <p style={{ marginBottom: "12px" }}>
+                  This mode allows undervolt values up to <strong>-100mV</strong>, far beyond the safe limits for your device.
+                </p>
+                <p style={{ marginBottom: "12px", color: "#ff9800" }}>
+                  <strong>Risks include:</strong>
+                </p>
+                <ul style={{ marginLeft: "20px", marginBottom: "12px", color: "#ffb74d" }}>
+                  <li>System instability and crashes</li>
+                  <li>Data loss from unexpected shutdowns</li>
+                  <li>Potential hardware damage</li>
+                  <li>Voiding of warranty</li>
+                </ul>
+                <p style={{ color: "#f44336", fontWeight: "bold" }}>
+                  Use at your own risk. The developers are not responsible for any damage.
+                </p>
+              </div>
+
+              <Focusable style={{ display: "flex", gap: "12px" }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={handleExpertModeConfirm}
+                  disabled={isTogglingExpert}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#b71c1c",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    {isTogglingExpert ? (
+                      <>
+                        <FaSpinner className="spin" />
+                        <span>Enabling...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCheck />
+                        <span>I Understand, Enable</span>
+                      </>
+                    )}
+                  </div>
+                </ButtonItem>
+
+                <ButtonItem
+                  layout="below"
+                  onClick={handleExpertModeCancel}
+                  disabled={isTogglingExpert}
+                  style={{ flex: 1 }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <FaTimes />
+                    <span>Cancel</span>
+                  </div>
+                </ButtonItem>
+              </Focusable>
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>
           <div style={{ fontSize: "12px", color: "#8b929a", marginBottom: "8px" }}>
             {platformInfo.variant} ({platformInfo.model}) • Safe limit: {safeLimit}
+          </div>
+        </PanelSectionRow>
+      )}
+
+      {/* Real-time Load Graph - Requirements: 15.1 */}
+      {state.dynamicStatus && state.dynamicStatus.running && (
+        <PanelSectionRow>
+          <LoadGraph
+            load={state.dynamicStatus.load}
+            isActive={state.dynamicStatus.running}
+          />
+        </PanelSectionRow>
+      )}
+
+      {/* Expert Mode Active Indicator - Requirements: 13.6 */}
+      {expertModeActive && (
+        <PanelSectionRow>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "12px",
+              backgroundColor: "#5c1313",
+              borderRadius: "8px",
+              marginBottom: "12px",
+              border: "2px solid #ff6b6b",
+              animation: "pulse 2s ease-in-out infinite",
+            }}
+          >
+            <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "20px", flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: "bold", color: "#ff6b6b", marginBottom: "2px" }}>
+                Expert Overclocker Mode Active
+              </div>
+              <div style={{ fontSize: "11px", color: "#ffb74d" }}>
+                Extended range enabled: 0 to -100mV • Use with extreme caution
+              </div>
+            </div>
           </div>
         </PanelSectionRow>
       )}
@@ -380,30 +663,77 @@ const ManualTab: FC = () => {
 
       {/* Per-core sliders */}
       <PanelSectionRow>
-        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          Undervolt Values
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+            Undervolt Values
+          </div>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            {/* Expert Mode Toggle - Requirements: 13.3-13.6 */}
+            <ToggleField
+              label="Expert Mode"
+              description="Remove safety limits (-100mV)"
+              checked={expertMode}
+              onChange={handleExpertModeToggle}
+              disabled={isTogglingExpert}
+            />
+            {/* Simple Mode Toggle - Requirements: 14.1, 14.2 */}
+            <ToggleField
+              label="Simple Mode"
+              description="Control all cores with one slider"
+              checked={simpleMode}
+              onChange={handleSimpleModeToggle}
+            />
+          </div>
         </div>
       </PanelSectionRow>
 
-      {[0, 1, 2, 3].map((core) => (
-        <PanelSectionRow key={core}>
+      {simpleMode ? (
+        /* Simple Mode: Single slider for all cores - Requirements: 14.2, 14.3 */
+        <PanelSectionRow>
           <SliderField
-            label={`Core ${core}`}
-            value={coreValues[core]}
-            min={safeLimit}
+            label="All Cores"
+            value={simpleValue}
+            min={currentMinLimit}
             max={0}
             step={1}
             showValue={true}
-            onChange={(value: number) => handleCoreChange(core, value)}
+            onChange={handleSimpleValueChange}
             valueSuffix=""
             description={
-              <span style={{ color: getValueColor(coreValues[core]) }}>
-                {coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`}
+              <span style={{ color: getValueColor(simpleValue) }}>
+                {simpleValue === 0 ? "Disabled" : `${simpleValue} mV (applies to all 4 cores)`}
+                {expertModeActive && simpleValue < safeLimit && (
+                  <span style={{ color: "#ff6b6b", marginLeft: "8px" }}>⚠️ EXPERT</span>
+                )}
               </span>
             }
           />
         </PanelSectionRow>
-      ))}
+      ) : (
+        /* Per-core mode: Individual sliders */
+        [0, 1, 2, 3].map((core) => (
+          <PanelSectionRow key={core}>
+            <SliderField
+              label={`Core ${core}`}
+              value={coreValues[core]}
+              min={currentMinLimit}
+              max={0}
+              step={1}
+              showValue={true}
+              onChange={(value: number) => handleCoreChange(core, value)}
+              valueSuffix=""
+              description={
+                <span style={{ color: getValueColor(coreValues[core]) }}>
+                  {coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`}
+                  {expertModeActive && coreValues[core] < safeLimit && (
+                    <span style={{ color: "#ff6b6b", marginLeft: "8px" }}>⚠️ EXPERT</span>
+                  )}
+                </span>
+              }
+            />
+          </PanelSectionRow>
+        ))
+      )}
 
       {/* Action buttons */}
       <PanelSectionRow>
@@ -502,6 +832,10 @@ const ManualTab: FC = () => {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
           }
         `}
       </style>

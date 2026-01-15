@@ -49,8 +49,8 @@ if [[ -f "$PLUGIN_DIR/bin/ryzenadj" ]]; then
     chmod +x "$PLUGIN_DIR/bin/ryzenadj"
 fi
 
-if [[ -f "$PLUGIN_DIR/bin/gymdeck2" ]]; then
-    chmod +x "$PLUGIN_DIR/bin/gymdeck2"
+if [[ -f "$PLUGIN_DIR/bin/gymdeck3" ]]; then
+    chmod +x "$PLUGIN_DIR/bin/gymdeck3"
 fi
 
 echo ""

@@ -4,7 +4,7 @@ This is the main plugin entry point that serves as a thin RPC wrapper,
 delegating to the modular backend components.
 
 Feature: decktune
-Validates: Integration, Requirements 10.1, 10.3, 10.4
+Validates: Integration, Requirements 10.1, 10.3, 10.4, 10.7, 11.3, 13.1-13.5
 """
 
 import asyncio
@@ -22,6 +22,9 @@ from backend.tuning.runner import TestRunner
 from backend.api.events import EventEmitter
 from backend.api.rpc import DeckTuneRPC
 from backend.watchdog import Watchdog
+from backend.dynamic.controller import DynamicController
+from backend.dynamic.config import DynamicConfig, CoreConfig
+from backend.dynamic.migration import migrate_dynamic_settings, is_old_format
 
 # Environment paths
 SETTINGS_DIR = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
@@ -31,7 +34,7 @@ PLUGIN_DIR = os.environ.get("DECKY_PLUGIN_DIR")
 settings = SettingsManager(name="settings", settings_directory=SETTINGS_DIR)
 
 # Binary paths
-GYMDECK2_CLI_PATH = "./bin/gymdeck2"
+GYMDECK3_CLI_PATH = "./bin/gymdeck3"
 RYZENADJ_CLI_PATH = "./bin/ryzenadj"
 
 # Default settings
@@ -57,6 +60,9 @@ DEFAULT_SETTINGS = {
         "strategy": "DEFAULT",
         "sampleInterval": 50000,
     },
+    "expert_mode": False,  # Expert Overclocker Mode (Requirements 13.1-13.5)
+    "expert_mode_confirmed": False,  # User has confirmed risks
+    "simple_mode": False,  # Simple Mode toggle (Requirements 14.1, 14.2)
     "test_history": [],
 }
 
@@ -72,7 +78,7 @@ class Plugin:
         # Dynamic mode state
         self.gymdeck_monitor_task = None
         self.delay_task = None
-        self.gymdeck_instance = None
+        self.gymdeck_instance = None  # Legacy, kept for compatibility check
         
         # Core components (initialized in init())
         self.platform = None
@@ -83,6 +89,7 @@ class Plugin:
         self.autotune_engine = None
         self.watchdog = None
         self.rpc = None
+        self.dynamic_controller = None  # New gymdeck3 controller
 
     async def init(self):
         """Initialize plugin and all modules."""
@@ -142,7 +149,18 @@ class Plugin:
             test_runner=self.test_runner
         )
         
-        # 8. Check for boot recovery (Requirement: Integration)
+        # 8. Initialize DynamicController for gymdeck3
+        gymdeck3_path = os.path.join(PLUGIN_DIR, GYMDECK3_CLI_PATH) if PLUGIN_DIR else GYMDECK3_CLI_PATH
+        ryzenadj_path = os.path.join(PLUGIN_DIR, RYZENADJ_CLI_PATH) if PLUGIN_DIR else RYZENADJ_CLI_PATH
+        
+        self.dynamic_controller = DynamicController(
+            ryzenadj_path=ryzenadj_path,
+            gymdeck3_path=gymdeck3_path,
+            event_emitter=self.event_emitter,
+            safety_manager=self.safety,
+        )
+        
+        # 9. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -156,8 +174,8 @@ class Plugin:
         decky.logger.info("Disabling undervolt")
         self._cancel_task()
         
-        # Stop dynamic mode if running
-        if self.gymdeck_instance:
+        # Stop dynamic mode if running (using new controller)
+        if self.dynamic_controller and self.dynamic_controller.is_running():
             await self.stop_gymdeck()
         
         result = await self.rpc.disable_undervolt()
@@ -172,8 +190,8 @@ class Plugin:
         """
         decky.logger.info(f"Applying undervolt with values: {core_values} and timeout: {timeout}")
         
-        # Stop dynamic mode if running
-        if self.gymdeck_instance:
+        # Stop dynamic mode if running (using new controller)
+        if self.dynamic_controller and self.dynamic_controller.is_running():
             await self.stop_gymdeck()
 
         if timeout is not None and timeout > 0:
@@ -194,8 +212,8 @@ class Plugin:
         decky.logger.info("PANIC DISABLE triggered")
         self._cancel_task()
         
-        # Stop dynamic mode if running
-        if self.gymdeck_instance:
+        # Stop dynamic mode if running (using new controller)
+        if self.dynamic_controller and self.dynamic_controller.is_running():
             await self.stop_gymdeck()
         
         result = await self.rpc.panic_disable()
@@ -217,8 +235,8 @@ class Plugin:
     
     async def start_autotune(self, mode="quick"):
         """Start autotune process."""
-        # Stop dynamic mode if running
-        if self.gymdeck_instance:
+        # Stop dynamic mode if running (using new controller)
+        if self.dynamic_controller and self.dynamic_controller.is_running():
             await self.stop_gymdeck()
         
         return await self.rpc.start_autotune(mode)
@@ -311,137 +329,80 @@ class Plugin:
         decky.logger.info(f"Config fetched: {config}")
         return config
 
-    # ==================== Dynamic Mode (Gymdeck) ====================
-    # Requirements: 10.1, 10.3, 10.4
+    # ==================== Dynamic Mode (Gymdeck3) ====================
+    # Requirements: 10.1-10.7, 11.3
 
     async def start_gymdeck(self, dynamic_settings):
-        """Start gymdeck2 dynamic mode.
+        """Start gymdeck3 dynamic mode.
         
-        Requirements: 10.1, 10.3
+        Supports both old and new settings formats.
+        Automatically migrates old format settings.
+        
+        Requirements: 10.1, 10.3, 10.7, 11.3
         """
+        # Stop any existing dynamic mode
         await self.stop_gymdeck()
 
-        decky.logger.info("Starting Gymdeck in dynamic run mode...")
+        decky.logger.info("Starting Gymdeck3 in dynamic run mode...")
+
+        # Check if settings are in old format and migrate if needed
+        if is_old_format(dynamic_settings):
+            decky.logger.info("Migrating old dynamic settings format to new format")
+            config = migrate_dynamic_settings(dynamic_settings)
+        else:
+            # Already in new format or create from dict
+            config = DynamicConfig.from_dict(dynamic_settings) if isinstance(dynamic_settings, dict) else dynamic_settings
+        
+        # Apply expert mode setting from global settings
+        expert_mode = settings.getSetting("expert_mode") or False
+        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        config.expert_mode = expert_mode and expert_confirmed
+
+        # Validate configuration
+        errors = config.validate()
+        if errors:
+            decky.logger.error(f"Invalid dynamic config: {errors}")
+            await decky.emit("server_event", {"type": "update_status", "data": "error"})
+            return {"success": False, "error": f"Invalid configuration: {errors}"}
 
         # Update status to DYNAMIC RUNNING (Requirement 10.3)
         settings.setSetting("status", "DYNAMIC RUNNING")
-        settings.setSetting("dynamicSettings", dynamic_settings)
+        settings.setSetting("dynamicSettings", dynamic_settings)  # Store original format for compatibility
 
-        await decky.emit("server_event", {
-            "type": "update_status",
-            "data": "dynamic_running"
-        })
-
-        # Map strategy names (Requirement 10.1)
-        strategy_map = {
-            "MANUAL": "manual",
-            "AGGRESSIVE": "aggressive",
-            "DEFAULT": "default"
-        }
-        strategy = strategy_map.get(dynamic_settings.get("strategy", "DEFAULT"), "default")
-        sample_interval = str(dynamic_settings.get("sampleInterval", 50000))
-
-        # Build core arguments (Requirement 10.4)
-        cores = dynamic_settings.get("cores", [])
-        core_args = []
-        for c in cores:
-            core_args.append(str(c.get("maximumValue", 35)))
-            core_args.append(str(c.get("minimumValue", 25)))
-            core_args.append(str(c.get("threshold", 40.0)))
-
-        manual_points_args = []
-        for c in cores:
-            manual_points_json = json.dumps(c.get("manualPoints", []))
-            manual_points_args.append(manual_points_json)
-
-        args = [
-            "sudo",
-            GYMDECK2_CLI_PATH,
-            strategy,
-            sample_interval,
-            *core_args,
-            *manual_points_args
-        ]
-
-        decky.logger.info(f"Gymdeck will be launched with arguments: {args}")
-
-        try:
-            self.gymdeck_instance = await asyncio.create_subprocess_exec(
-                *args,
-                cwd=PLUGIN_DIR,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                text=False,
-            )
-        except Exception as e:
-            decky.logger.error(f"Failed to start Gymdeck: {e}")
+        # Start using new DynamicController
+        success = await self.dynamic_controller.start(config)
+        
+        if success:
+            decky.logger.info(f"Gymdeck3 started with strategy: {config.strategy}")
+            return {"success": True, "status": "DYNAMIC RUNNING"}
+        else:
             settings.setSetting("status", "Disabled")
             await decky.emit("server_event", {"type": "update_status", "data": "disabled"})
-            return {"success": False, "error": str(e)}
-
-        self.gymdeck_monitor_task = asyncio.create_task(self._monitor_gymdeck_output())
-        return {"success": True, "status": "DYNAMIC RUNNING"}
+            return {"success": False, "error": "Failed to start gymdeck3"}
 
     async def stop_gymdeck(self):
-        """Stop gymdeck2 dynamic mode.
+        """Stop gymdeck3 dynamic mode.
         
         Requirements: 10.3, 10.4
         """
-        if self.gymdeck_monitor_task:
-            self.gymdeck_monitor_task.cancel()
-            self.gymdeck_monitor_task = None
-
-        if self.gymdeck_instance and self.gymdeck_instance.returncode is None:
-            decky.logger.info("Terminating Gymdeck process...")
-            self.gymdeck_instance.terminate()
-            try:
-                await asyncio.wait_for(self.gymdeck_instance.wait(), timeout=5)
-            except asyncio.TimeoutError:
-                decky.logger.warning("Gymdeck did not exit in time; killing...")
-                self.gymdeck_instance.kill()
-
-        self.gymdeck_instance = None
+        if self.dynamic_controller and self.dynamic_controller.is_running():
+            decky.logger.info("Stopping Gymdeck3 process...")
+            await self.dynamic_controller.stop()
 
         # Update status to Disabled (Requirement 10.3)
         settings.setSetting("status", "Disabled")
         await decky.emit("server_event", {"type": "update_status", "data": "disabled"})
         return {"success": True, "status": "Disabled"}
-
-    async def _monitor_gymdeck_output(self):
-        """Monitor gymdeck output and log periodically."""
-        decky.logger.info("Monitoring Gymdeck output...")
-        line_count = 0
-
-        try:
-            while True:
-                if self.gymdeck_instance.stdout and not self.gymdeck_instance.stdout.at_eof():
-                    line_count += 1
-                    line = await self.gymdeck_instance.stdout.readline()
-                    if line and line_count % 25 == 0:
-                        decky.logger.info(f"GYMDECK: {line.rstrip()}")
-                        line_count = 0
-
-        except asyncio.CancelledError:
-            decky.logger.info("Gymdeck monitoring task was cancelled.")
-            raise
-
-        finally:
-            decky.logger.info("Gymdeck process ended or was terminated.")
-            # Update status to Disabled when process ends (Requirement 10.3)
-            settings.setSetting("status", "Disabled")
-            await decky.emit("server_event", {"type": "update_status", "data": "disabled"})
-            self.gymdeck_instance = None
-            self.gymdeck_monitor_task = None
     
     def is_dynamic_running(self):
         """Check if dynamic mode is currently running.
         
         Returns:
-            True if gymdeck2 process is active
+            True if gymdeck3 process is active
         """
         return (
-            self.gymdeck_instance is not None and 
-            self.gymdeck_instance.returncode is None
+            self.dynamic_controller is not None and 
+            self.dynamic_controller.is_running()
         )
     
     async def get_dynamic_status(self):
@@ -455,8 +416,166 @@ class Plugin:
         is_running = self.is_dynamic_running()
         current_status = settings.getSetting("status") or "Disabled"
         
+        # Get detailed status from controller if running
+        if is_running and self.dynamic_controller:
+            status = await self.dynamic_controller.get_status()
+            return {
+                "running": status.running,
+                "status": "DYNAMIC RUNNING" if status.running else current_status,
+                "settings": settings.getSetting("dynamicSettings") or {},
+                "load": status.load,
+                "values": status.values,
+                "strategy": status.strategy,
+                "uptime_ms": status.uptime_ms,
+                "error": status.error,
+            }
+        
         return {
             "running": is_running,
             "status": "DYNAMIC RUNNING" if is_running else current_status,
             "settings": settings.getSetting("dynamicSettings") or {}
         }
+
+    # ==================== Expert Mode ====================
+    # Requirements: 13.1-13.5
+
+    async def enable_expert_mode(self, confirmed: bool = False):
+        """Enable Expert Overclocker Mode.
+        
+        Expert mode removes platform safety limits, allowing undervolt
+        values from 0 to -100mV. Requires explicit user confirmation.
+        
+        Args:
+            confirmed: User has explicitly confirmed understanding of risks
+            
+        Returns:
+            Dictionary with success status and current expert mode state
+            
+        Requirements: 13.1-13.5
+        """
+        if not confirmed:
+            decky.logger.warning("Expert mode enable attempted without confirmation")
+            return {
+                "success": False,
+                "error": "Expert mode requires explicit confirmation of risks",
+                "expert_mode": False,
+                "confirmed": False
+            }
+        
+        decky.logger.warning("EXPERT MODE ENABLED - Safety limits removed")
+        decky.logger.warning("User has confirmed understanding of risks (instability, crashes, potential hardware damage)")
+        
+        settings.setSetting("expert_mode", True)
+        settings.setSetting("expert_mode_confirmed", True)
+        
+        # Emit event to frontend for visual indicator
+        await decky.emit("server_event", {
+            "type": "expert_mode_changed",
+            "data": {"enabled": True}
+        })
+        
+        return {
+            "success": True,
+            "expert_mode": True,
+            "confirmed": True,
+            "message": "Expert mode enabled. Extended undervolt range (-100mV) now available."
+        }
+
+    async def disable_expert_mode(self):
+        """Disable Expert Overclocker Mode.
+        
+        Returns to safe platform limits. Does not reset current values,
+        but they will be clamped on next apply.
+        
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 13.1-13.5
+        """
+        decky.logger.info("Expert mode disabled - returning to safe limits")
+        
+        settings.setSetting("expert_mode", False)
+        # Keep confirmed flag so user doesn't need to re-confirm if they re-enable
+        # But after plugin update, this will be reset via DEFAULT_SETTINGS
+        
+        # Emit event to frontend
+        await decky.emit("server_event", {
+            "type": "expert_mode_changed",
+            "data": {"enabled": False}
+        })
+        
+        return {
+            "success": True,
+            "expert_mode": False,
+            "message": "Expert mode disabled. Safe platform limits restored."
+        }
+
+    async def get_expert_mode_status(self):
+        """Get current Expert Mode status.
+        
+        Returns:
+            Dictionary with expert mode state and limits
+            
+        Requirements: 13.1-13.5
+        """
+        expert_mode = settings.getSetting("expert_mode") or False
+        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        
+        # Determine current limits based on mode
+        if expert_mode and expert_confirmed:
+            min_limit = -100  # Expert mode allows deeper undervolt
+        else:
+            min_limit = self.platform.safe_limit if self.platform else -35
+        
+        return {
+            "expert_mode": expert_mode,
+            "confirmed": expert_confirmed,
+            "active": expert_mode and expert_confirmed,
+            "min_limit": min_limit,
+            "max_limit": 0,
+            "platform_safe_limit": self.platform.safe_limit if self.platform else -35
+        }
+
+    async def apply_expert_undervolt(self, core_values, timeout=0):
+        """Apply undervolt values with expert mode validation.
+        
+        If expert mode is active, allows values up to -100mV.
+        Otherwise, clamps to platform safe limits.
+        Logs all expert mode value changes for diagnostics.
+        
+        Args:
+            core_values: List of undervolt values (negative or will be negated)
+            timeout: Delay in seconds before applying
+            
+        Returns:
+            Dictionary with success status and applied values
+            
+        Requirements: 13.2, 13.7
+        """
+        expert_mode = settings.getSetting("expert_mode") or False
+        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        is_expert_active = expert_mode and expert_confirmed
+        
+        # Convert to negative values if positive
+        negated_cores = [-abs(v) if v > 0 else v for v in core_values]
+        
+        # Determine limits
+        if is_expert_active:
+            min_limit = -100
+            decky.logger.warning(f"EXPERT MODE: Applying values {negated_cores} (extended range)")
+        else:
+            min_limit = self.platform.safe_limit if self.platform else -35
+        
+        # Clamp values to current limits
+        clamped_cores = [max(min_limit, min(0, v)) for v in negated_cores]
+        
+        # Log if values were clamped
+        if clamped_cores != negated_cores:
+            decky.logger.info(f"Values clamped from {negated_cores} to {clamped_cores}")
+        
+        # Log expert mode changes for diagnostics (Requirement 13.7)
+        if is_expert_active:
+            decky.logger.warning(f"EXPERT MODE VALUE CHANGE: {clamped_cores}")
+        
+        # Delegate to standard apply
+        return await self.apply_undervolt(clamped_cores, timeout)

@@ -2,6 +2,49 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [2.0.0] - 2026-01-15
+
+### Major Changes - Dynamic Mode Refactor (gymdeck3)
+
+#### New Rust Daemon (gymdeck3)
+- **Complete rewrite** of dynamic mode in Rust for memory safety and performance
+- **Static binary** (905KB) with zero runtime dependencies
+- **Advanced load monitoring** from /proc/stat with per-core tracking
+- **Adaptive strategies**: Conservative (5s ramp), Balanced (2s ramp), Aggressive (500ms ramp), Custom
+- **Hysteresis control** prevents value hunting with configurable dead-band (1-20%)
+- **Smooth transitions** with 1mV linear interpolation
+- **Safety features**: watchdog, panic hook, automatic rollback, signal handling
+- **JSON IPC protocol** (NDJSON) for status updates
+
+#### Python Integration
+- **DynamicController** manages gymdeck3 subprocess lifecycle
+- **DynamicConfig** with validation and serialization
+- **Profile management** with default profiles (Battery Saver, Balanced, Performance, Silent)
+- **Settings migration** from old gymdeck2 format with automatic conversion
+- **Event system** for real-time frontend updates
+
+#### UI Enhancements
+- **Expert Overclocker Mode** removes safety limits (-100mV range) with warning dialog
+- **Simple Mode** single slider controls all cores simultaneously
+- **Real-time load graph** displays CPU load when dynamic mode active
+- **Profile switching** quick access to saved configurations
+
+#### Testing & Quality
+- **Property-based testing** for correctness verification
+  - 8 Rust properties (proptest) - 244 tests
+  - 7 Python properties (hypothesis) - 127 tests
+- **Manual integration tests** comprehensive end-to-end validation
+- **100% test coverage** for critical components
+
+### Removed
+- **gymdeck2** (C daemon) replaced by gymdeck3 (Rust)
+
+### Technical Improvements
+- Rust 1.70+ with musl static linking
+- Comprehensive inline documentation
+- Updated README with gymdeck3 build instructions
+- Improved error handling and diagnostics
+
 ## [1.0.0] - 2026-01-15
 
 ### Added
@@ -39,7 +82,7 @@ All notable changes to DeckTune will be documented in this file.
   - Конфигурация и LKG
   - Системная информация
   - dmesg
-- **Dynamic Mode** — интеграция с gymdeck2
+- **Dynamic Mode** — интеграция с gymdeck3
   - Автоматическая подстройка под нагрузку
   - Стратегии: Default, Aggressive, Manual
 

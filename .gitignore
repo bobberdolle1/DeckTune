@@ -1,6 +1,11 @@
 # Kiro IDE
 .kiro/
 
+# Rust
+gymdeck3/target/
+gymdeck3/Cargo.lock
+*.rs.bk
+
 # Python
 __pycache__/
 *.py[cod]

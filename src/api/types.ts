@@ -89,6 +89,19 @@ export interface DynamicSettings {
 }
 
 /**
+ * Dynamic mode status from gymdeck3.
+ * Requirements: 15.1
+ */
+export interface DynamicStatus {
+  running: boolean;
+  load: number[];       // Per-core CPU load percentages (0-100)
+  values: number[];     // Per-core applied undervolt values (mV)
+  strategy: string;     // Current strategy name
+  uptime_ms: number;    // Time since gymdeck3 started
+  error?: string;       // Error message if any
+}
+
+/**
  * User settings configuration.
  */
 export interface Settings {
@@ -139,6 +152,7 @@ export interface State {
   // Dynamic mode
   gymdeckRunning: boolean;
   isDynamic: boolean;
+  dynamicStatus: DynamicStatus | null;
   
   // Autotune state
   autotuneProgress: AutotuneProgress | null;
