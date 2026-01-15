@@ -1,31 +1,24 @@
 # DeckTune
 
-<p align="center">
-  <img src="./assets/preview.jpg" alt="DeckTune Preview" width="600"/>
-</p>
-
-<p align="center">
-  <a href="#english">English</a> | <a href="#russian">Русский</a>
-</p>
+**English** | [Русский](#russian)
 
 ---
 
-<a name="english"></a>
-## �🇧 English
+## English
 
 **DeckTune** — an automated undervolting tool for Steam Deck (LCD/OLED) with safety guarantees. Transforms the complex tuning process into a one-button procedure with automatic optimal value discovery.
 
-### ✨ Features
+### Features
 
-- 🔍 **Auto Platform Detection** — LCD (Jupiter) or OLED (Galileo) with appropriate limits
-- 🎯 **Autotune** — automatic discovery of optimal values for your specific chip
-- �️ **Safety System** — watchdog, automatic rollback on freeze, LKG (Last Known Good)
-- 🧪 **Built-in Stress Tests** — CPU, RAM, Combo for stability verification
-- 💾 **Presets** — global and per-game settings with auto-apply
-- 📊 **Diagnostics** — one-click export of logs and system info
-- ⚡ **Dynamic Mode** — automatic adjustment based on load (gymdeck2)
+- **Auto Platform Detection** — LCD (Jupiter) or OLED (Galileo) with appropriate limits
+- **Autotune** — automatic discovery of optimal values for your specific chip
+- **Safety System** — watchdog, automatic rollback on freeze, LKG (Last Known Good)
+- **Built-in Stress Tests** — CPU, RAM, Combo for stability verification
+- **Presets** — global and per-game settings with auto-apply
+- **Diagnostics** — one-click export of logs and system info
+- **Dynamic Mode** — automatic adjustment based on load (gymdeck2)
 
-### 🚀 Installation
+### Installation
 
 #### Requirements
 
@@ -46,7 +39,7 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 3. Enable Developer Mode in Decky Loader settings
 4. Install the plugin from the archive
 
-### 📖 Usage
+### Usage
 
 #### Wizard Mode (for beginners)
 
@@ -66,7 +59,7 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 
 The red "Panic Disable" button is always available — instantly resets all values to 0.
 
-### 🔧 Architecture
+### Architecture
 
 ```
 DeckTune/
@@ -84,7 +77,7 @@ DeckTune/
 └── tests/             # Property-based tests (pytest + hypothesis)
 ```
 
-### 🧪 Testing
+### Testing
 
 ```bash
 # Install dependencies
@@ -99,7 +92,7 @@ The project uses property-based testing (hypothesis) for correctness verificatio
 - 91 tests
 - Coverage of all critical components
 
-### ⚠️ Safety
+### Safety
 
 DeckTune includes multi-level protection:
 
@@ -109,39 +102,39 @@ DeckTune includes multi-level protection:
 4. **LKG Values** — persistence of last stable values
 5. **Panic Disable** — instant reset with one button
 
-### 📋 Recommendations
+### Recommendations
 
 - For global use, don't set values below -20/-25
 - Configure undervolt individually for each game
 - Use Thorough autotune mode for maximum accuracy
 - If freezing occurs, reduce values
 
-### 🤝 Contributing
+### Contributing
 
 Pull requests are welcome! For major changes, please open an issue first.
 
-### 📄 License
+### License
 
 MIT License — see [LICENSE](LICENSE)
 
 ---
 
 <a name="russian"></a>
-## 🇷🇺 Русский
+## Русский
 
 **DeckTune** — автоматизированный инструмент для андервольтинга Steam Deck (LCD/OLED) с гарантией безопасности. Превращает сложный процесс настройки в однокнопочную процедуру с автоматическим поиском оптимальных значений.
 
-### ✨ Возможности
+### Возможности
 
-- 🔍 **Автоматическое определение модели** — LCD (Jupiter) или OLED (Galileo) с соответствующими лимитами
-- 🎯 **Autotune** — автоматический поиск оптимальных значений для вашего конкретного чипа
-- 🛡️ **Система безопасности** — watchdog, автоматический откат при зависании, LKG (Last Known Good)
-- 🧪 **Встроенные стресс-тесты** — CPU, RAM, Combo для проверки стабильности
-- 💾 **Пресеты** — глобальные и per-game настройки с автоприменением
-- 📊 **Диагностика** — экспорт логов и системной информации одной кнопкой
-- ⚡ **Динамический режим** — автоматическая подстройка под нагрузку (gymdeck2)
+- **Автоматическое определение модели** — LCD (Jupiter) или OLED (Galileo) с соответствующими лимитами
+- **Autotune** — автоматический поиск оптимальных значений для вашего конкретного чипа
+- **Система безопасности** — watchdog, автоматический откат при зависании, LKG (Last Known Good)
+- **Встроенные стресс-тесты** — CPU, RAM, Combo для проверки стабильности
+- **Пресеты** — глобальные и per-game настройки с автоприменением
+- **Диагностика** — экспорт логов и системной информации одной кнопкой
+- **Динамический режим** — автоматическая подстройка под нагрузку (gymdeck2)
 
-### 🚀 Установка
+### Установка
 
 #### Требования
 
@@ -162,7 +155,7 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 3. В настройках Decky Loader включите Developer Mode
 4. Установите плагин из архива
 
-### 📖 Использование
+### Использование
 
 #### Wizard Mode (для новичков)
 
@@ -182,7 +175,7 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 
 Красная кнопка "Panic Disable" всегда доступна — мгновенно сбрасывает все значения в 0.
 
-### 🔧 Архитектура
+### Архитектура
 
 ```
 DeckTune/
@@ -200,7 +193,7 @@ DeckTune/
 └── tests/             # Property-based тесты (pytest + hypothesis)
 ```
 
-### 🧪 Тестирование
+### Тестирование
 
 ```bash
 # Установка зависимостей
@@ -215,7 +208,7 @@ pytest tests/ -v
 - 91 тест
 - Покрытие всех критических компонентов
 
-### ⚠️ Безопасность
+### Безопасность
 
 DeckTune включает многоуровневую систему защиты:
 
@@ -225,24 +218,24 @@ DeckTune включает многоуровневую систему защит
 4. **LKG Values** — сохранение последних стабильных значений
 5. **Panic Disable** — мгновенный сброс одной кнопкой
 
-### 📋 Рекомендации
+### Рекомендации
 
 - Для глобального использования не ставьте значения ниже -20/-25
 - Настраивайте андервольт индивидуально для каждой игры
 - Используйте Thorough режим autotune для максимальной точности
 - При зависаниях уменьшайте значения
 
-### 🤝 Contributing
+### Contributing
 
 Pull requests приветствуются! Для крупных изменений сначала откройте issue.
 
-### 📄 Лицензия
+### Лицензия
 
 MIT License — см. [LICENSE](LICENSE)
 
 ---
 
-## 🙏 Acknowledgements / Благодарности
+## Acknowledgements / Благодарности
 
 - [RyzenAdj](https://github.com/FlyGoat/RyzenAdj) — AMD APU control utility
 - [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) — plugin framework
