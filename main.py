@@ -229,6 +229,10 @@ class Plugin:
 
     # ==================== Tests (delegated to RPC) ====================
     
+    async def check_binaries(self):
+        """Check availability of stress test binaries (stress-ng, memtester)."""
+        return await self.rpc.check_binaries()
+    
     async def run_test(self, test_name):
         """Run a specific stress test."""
         return await self.rpc.run_test(test_name)

@@ -8,7 +8,6 @@
  * communicating with the Python backend.
  */
 
-import EventEmitter from "eventemitter3";
 import { call, addEventListener, removeEventListener } from "@decky/api";
 import {
   State,
@@ -23,6 +22,37 @@ import {
   ServerEvent,
   StatusString,
 } from "./types";
+
+// Simple EventEmitter implementation
+type EventHandler = (...args: any[]) => void;
+
+class SimpleEventEmitter {
+  private events: Map<string, EventHandler[]> = new Map();
+
+  on(event: string, handler: EventHandler): void {
+    if (!this.events.has(event)) {
+      this.events.set(event, []);
+    }
+    this.events.get(event)!.push(handler);
+  }
+
+  emit(event: string, ...args: any[]): void {
+    const handlers = this.events.get(event);
+    if (handlers) {
+      handlers.forEach(handler => handler(...args));
+    }
+  }
+
+  removeListener(event: string, handler: EventHandler): void {
+    const handlers = this.events.get(event);
+    if (handlers) {
+      const index = handlers.indexOf(handler);
+      if (index !== -1) {
+        handlers.splice(index, 1);
+      }
+    }
+  }
+}
 
 // Decky Frontend Library types
 declare const DFL: any;
@@ -44,10 +74,10 @@ export const getApiInstance = (initialState: State): Api => {
 /**
  * Main API class for DeckTune frontend.
  * 
- * Extends EventEmitter to provide state change notifications.
+ * Extends SimpleEventEmitter to provide state change notifications.
  * Implements all RPC methods for backend communication.
  */
-export class Api extends EventEmitter {
+export class Api extends SimpleEventEmitter {
   private state: State;
   private registeredListeners: any[] = [];
 
@@ -454,6 +484,26 @@ export class Api extends EventEmitter {
 
   // ==================== Test Methods ====================
   // Requirements: Frontend integration
+
+  /**
+   * Check availability of required stress test binaries.
+   * Call this on mount to show warnings if binaries are missing.
+   * 
+   * @returns Object with binary status and list of missing binaries
+   */
+  async checkBinaries(): Promise<{
+    success: boolean;
+    binaries: Record<string, boolean>;
+    missing: string[];
+    all_available: boolean;
+  }> {
+    return (await call("check_binaries")) as {
+      success: boolean;
+      binaries: Record<string, boolean>;
+      missing: string[];
+      all_available: boolean;
+    };
+  }
 
   /**
    * Run a specific stress test.

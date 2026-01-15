@@ -1,15 +1,9 @@
-// Decky Loader will pass this api in, it's versioned to allow for backwards compatibility.
-// @ts-ignore
-
-// Prevents it from being duplicated in output.
-const manifest = {"name":"Decky-Undervolt","author":"BakaDestroyer","api_version":1,"flags":["root"],"publish":{"tags":["root","undervolt","performance","temperature","ryzenadj","curve optimizer","battery-saving"],"description":"A simple plugin that is using ryzenadj to apply Curve Optimizer to CPU.","image":"https://raw.githubusercontent.com/totallynotbakadestroyer/Decky-Undervolt/master/assets/preview.jpg"}};
+const manifest = {"name":"DeckTune"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
-// Initialize
 if (!internalAPIConnection) {
     throw new Error('[@decky/api]: Failed to connect to the loader as as the loader API was not initialized. This is likely a bug in Decky Loader.');
 }
-// Version 1 throws on version mismatch so we have to account for that here.
 let api;
 try {
     api = internalAPIConnection.connect(API_VERSION, manifest.name);
@@ -21,11 +15,9 @@ catch {
 if (api._version != API_VERSION) {
     console.warn(`[@decky/api] Requested API version ${API_VERSION} but the running loader only supports version ${api._version}. Some features may not work.`);
 }
-// TODO these could use a lot of JSDoc
 const call = api.call;
 const addEventListener = api.addEventListener;
 const removeEventListener = api.removeEventListener;
-const routerHook = api.routerHook;
 
 var DefaultContext = {
   color: undefined,
@@ -99,654 +91,140 @@ function IconBase(props) {
 }
 
 // THIS FILE IS AUTO GENERATED
-function FaCog (props) {
-  return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M487.4 315.7l-42.6-24.6c4.3-23.2 4.3-47 0-70.2l42.6-24.6c4.9-2.8 7.1-8.6 5.5-14-11.1-35.6-30-67.8-54.7-94.6-3.8-4.1-10-5.1-14.8-2.3L380.8 110c-17.9-15.4-38.5-27.3-60.8-35.1V25.8c0-5.6-3.9-10.5-9.4-11.7-36.7-8.2-74.3-7.8-109.2 0-5.5 1.2-9.4 6.1-9.4 11.7V75c-22.2 7.9-42.8 19.8-60.8 35.1L88.7 85.5c-4.9-2.8-11-1.9-14.8 2.3-24.7 26.7-43.6 58.9-54.7 94.6-1.7 5.4.6 11.2 5.5 14L67.3 221c-4.3 23.2-4.3 47 0 70.2l-42.6 24.6c-4.9 2.8-7.1 8.6-5.5 14 11.1 35.6 30 67.8 54.7 94.6 3.8 4.1 10 5.1 14.8 2.3l42.6-24.6c17.9 15.4 38.5 27.3 60.8 35.1v49.2c0 5.6 3.9 10.5 9.4 11.7 36.7 8.2 74.3 7.8 109.2 0 5.5-1.2 9.4-6.1 9.4-11.7v-49.2c22.2-7.9 42.8-19.8 60.8-35.1l42.6 24.6c4.9 2.8 11 1.9 14.8-2.3 24.7-26.7 43.6-58.9 54.7-94.6 1.5-5.5-.7-11.3-5.6-14.1zM256 336c-44.1 0-80-35.9-80-80s35.9-80 80-80 80 35.9 80 80-35.9 80-80 80z"}}]})(props);
-}function FaFire (props) {
-  return GenIcon({"tag":"svg","attr":{"viewBox":"0 0 384 512"},"child":[{"tag":"path","attr":{"d":"M216 23.86c0-23.8-30.65-32.77-44.15-13.04C48 191.85 224 200 224 288c0 35.63-29.11 64.46-64.85 63.99-35.17-.45-63.15-29.77-63.15-64.94v-85.51c0-21.7-26.47-32.23-41.43-16.5C27.8 213.16 0 261.33 0 320c0 105.87 86.13 192 192 192s192-86.13 192-192c0-170.29-168-193-168-296.14z"}}]})(props);
+function FaBalanceScale (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M256 336h-.02c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0C-2.06 328.75.02 320.33.02 336H0c0 44.18 57.31 80 128 80s128-35.82 128-80zM128 176l72 144H56l72-144zm511.98 160c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0-87.12 174.26-85.04 165.84-85.04 181.51H384c0 44.18 57.31 80 128 80s128-35.82 128-80h-.02zM440 320l72-144 72 144H440zm88 128H352V153.25c23.51-10.29 41.16-31.48 46.39-57.25H528c8.84 0 16-7.16 16-16V48c0-8.84-7.16-16-16-16H383.64C369.04 12.68 346.09 0 320 0s-49.04 12.68-63.64 32H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h129.61c5.23 25.76 22.87 46.96 46.39 57.25V448H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z"}}]})(props);
+}function FaBan (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.108 117.892c65.448 65.448 70 165.481 20.677 235.637L150.47 105.216c70.204-49.356 170.226-44.735 235.638 20.676zM125.892 386.108c-65.448-65.448-70-165.481-20.677-235.637L361.53 406.784c-70.203 49.356-170.226 44.736-235.638-20.676z"}}]})(props);
+}function FaBatteryFull (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M544 160v64h32v64h-32v64H64V160h480m16-64H48c-26.51 0-48 21.49-48 48v224c0 26.51 21.49 48 48 48h512c26.51 0 48-21.49 48-48v-16h8c13.255 0 24-10.745 24-24V184c0-13.255-10.745-24-24-24h-8v-16c0-26.51-21.49-48-48-48zm-48 96H96v128h416V192z"}}]})(props);
+}function FaCheck (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"}}]})(props);
+}function FaCog (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M487.4 315.7l-42.6-24.6c4.3-23.2 4.3-47 0-70.2l42.6-24.6c4.9-2.8 7.1-8.6 5.5-14-11.1-35.6-30-67.8-54.7-94.6-3.8-4.1-10-5.1-14.8-2.3L380.8 110c-17.9-15.4-38.5-27.3-60.8-35.1V25.8c0-5.6-3.9-10.5-9.4-11.7-36.7-8.2-74.3-7.8-109.2 0-5.5 1.2-9.4 6.1-9.4 11.7V75c-22.2 7.9-42.8 19.8-60.8 35.1L88.7 85.5c-4.9-2.8-11-1.9-14.8 2.3-24.7 26.7-43.6 58.9-54.7 94.6-1.7 5.4.6 11.2 5.5 14L67.3 221c-4.3 23.2-4.3 47 0 70.2l-42.6 24.6c-4.9 2.8-7.1 8.6-5.5 14 11.1 35.6 30 67.8 54.7 94.6 3.8 4.1 10 5.1 14.8 2.3l42.6-24.6c17.9 15.4 38.5 27.3 60.8 35.1v49.2c0 5.6 3.9 10.5 9.4 11.7 36.7 8.2 74.3 7.8 109.2 0 5.5-1.2 9.4-6.1 9.4-11.7v-49.2c22.2-7.9 42.8-19.8 60.8-35.1l42.6 24.6c4.9 2.8 11 1.9 14.8-2.3 24.7-26.7 43.6-58.9 54.7-94.6 1.5-5.5-.7-11.3-5.6-14.1zM256 336c-44.1 0-80-35.9-80-80s35.9-80 80-80 80 35.9 80 80-35.9 80-80 80z"}}]})(props);
+}function FaDownload (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M216 0h80c13.3 0 24 10.7 24 24v168h87.7c17.8 0 26.7 21.5 14.1 34.1L269.7 378.3c-7.5 7.5-19.8 7.5-27.3 0L90.1 226.1c-12.6-12.6-3.7-34.1 14.1-34.1H192V24c0-13.3 10.7-24 24-24zm296 376v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h146.7l49 49c20.1 20.1 52.5 20.1 72.6 0l49-49H488c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"}}]})(props);
+}function FaEdit (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 576 512"},"child":[{"tag":"path","attr":{"d":"M402.6 83.2l90.2 90.2c3.8 3.8 3.8 10 0 13.8L274.4 405.6l-92.8 10.3c-12.4 1.4-22.9-9.1-21.5-21.5l10.3-92.8L388.8 83.2c3.8-3.8 10-3.8 13.8 0zm162-22.9l-48.8-48.8c-15.2-15.2-39.9-15.2-55.2 0l-35.4 35.4c-3.8 3.8-3.8 10 0 13.8l90.2 90.2c3.8 3.8 10 3.8 13.8 0l35.4-35.4c15.2-15.3 15.2-40 0-55.2zM384 346.2V448H64V128h229.8c3.2 0 6.2-1.3 8.5-3.5l40-40c7.6-7.6 2.2-20.5-8.5-20.5H48C21.5 64 0 85.5 0 112v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V306.2c0-10.7-12.9-16-20.5-8.5l-40 40c-2.2 2.3-3.5 5.3-3.5 8.5z"}}]})(props);
+}function FaExclamationCircle (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M504 256c0 136.997-111.043 248-248 248S8 392.997 8 256C8 119.083 119.043 8 256 8s248 111.083 248 248zm-248 50c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"}}]})(props);
+}function FaExclamationTriangle (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 576 512"},"child":[{"tag":"path","attr":{"d":"M569.517 440.013C587.975 472.007 564.806 512 527.94 512H48.054c-36.937 0-59.999-40.055-41.577-71.987L246.423 23.985c18.467-32.009 64.72-31.951 83.154 0l239.94 416.028zM288 354c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"}}]})(props);
+}function FaInfoCircle (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119.043 8 8 119.083 8 256c0 136.997 111.043 248 248 248s248-111.003 248-248C504 119.083 392.957 8 256 8zm0 110c23.196 0 42 18.804 42 42s-18.804 42-42 42-42-18.804-42-42 18.804-42 42-42zm56 254c0 6.627-5.373 12-12 12h-88c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h12v-64h-12c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h64c6.627 0 12 5.373 12 12v100h12c6.627 0 12 5.373 12 12v24z"}}]})(props);
+}function FaLeaf (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 576 512"},"child":[{"tag":"path","attr":{"d":"M546.2 9.7c-5.6-12.5-21.6-13-28.3-1.2C486.9 62.4 431.4 96 368 96h-80C182 96 96 182 96 288c0 7 .8 13.7 1.5 20.5C161.3 262.8 253.4 224 384 224c8.8 0 16 7.2 16 16s-7.2 16-16 16C132.6 256 26 410.1 2.4 468c-6.6 16.3 1.2 34.9 17.5 41.6 16.4 6.8 35-1.1 41.8-17.3 1.5-3.6 20.9-47.9 71.9-90.6 32.4 43.9 94 85.8 174.9 77.2C465.5 467.5 576 326.7 576 154.3c0-50.2-10.8-102.2-29.8-144.6z"}}]})(props);
+}function FaList (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M80 368H16a16 16 0 0 0-16 16v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16v-64a16 16 0 0 0-16-16zm0-320H16A16 16 0 0 0 0 64v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16zm0 160H16a16 16 0 0 0-16 16v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16v-64a16 16 0 0 0-16-16zm416 176H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16zm0-320H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm0 160H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16z"}}]})(props);
+}function FaMagic (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M224 96l16-32 32-16-32-16-16-32-16 32-32 16 32 16 16 32zM80 160l26.66-53.33L160 80l-53.34-26.67L80 0 53.34 53.33 0 80l53.34 26.67L80 160zm352 128l-26.66 53.33L352 368l53.34 26.67L432 448l26.66-53.33L512 368l-53.34-26.67L432 288zm70.62-193.77L417.77 9.38C411.53 3.12 403.34 0 395.15 0c-8.19 0-16.38 3.12-22.63 9.38L9.38 372.52c-12.5 12.5-12.5 32.76 0 45.25l84.85 84.85c6.25 6.25 14.44 9.37 22.62 9.37 8.19 0 16.38-3.12 22.63-9.37l363.14-363.15c12.5-12.48 12.5-32.75 0-45.24zM359.45 203.46l-50.91-50.91 86.6-86.6 50.91 50.91-86.6 86.6z"}}]})(props);
+}function FaMicrochip (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M416 48v416c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V48c0-26.51 21.49-48 48-48h224c26.51 0 48 21.49 48 48zm96 58v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42V88h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zM30 376h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6z"}}]})(props);
+}function FaPlay (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"}}]})(props);
+}function FaRocket (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M505.12019,19.09375c-1.18945-5.53125-6.65819-11-12.207-12.1875C460.716,0,435.507,0,410.40747,0,307.17523,0,245.26909,55.20312,199.05238,128H94.83772c-16.34763.01562-35.55658,11.875-42.88664,26.48438L2.51562,253.29688A28.4,28.4,0,0,0,0,264a24.00867,24.00867,0,0,0,24.00582,24H127.81618l-22.47457,22.46875c-11.36521,11.36133-12.99607,32.25781,0,45.25L156.24582,406.625c11.15623,11.1875,32.15619,13.15625,45.27726,0l22.47457-22.46875V488a24.00867,24.00867,0,0,0,24.00581,24,28.55934,28.55934,0,0,0,10.707-2.51562l98.72834-49.39063c14.62888-7.29687,26.50776-26.5,26.50776-42.85937V312.79688c72.59753-46.3125,128.03493-108.40626,128.03493-211.09376C512.07526,76.5,512.07526,51.29688,505.12019,19.09375ZM384.04033,168A40,40,0,1,1,424.05,128,40.02322,40.02322,0,0,1,384.04033,168Z"}}]})(props);
+}function FaSlidersH (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M496 384H160v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h80v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h336c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160h-80v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h336v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h80c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160H288V48c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16C7.2 64 0 71.2 0 80v32c0 8.8 7.2 16 16 16h208v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h208c8.8 0 16-7.2 16-16V80c0-8.8-7.2-16-16-16z"}}]})(props);
+}function FaSpinner (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M304 48c0 26.51-21.49 48-48 48s-48-21.49-48-48 21.49-48 48-48 48 21.49 48 48zm-48 368c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zm208-208c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zM96 256c0-26.51-21.49-48-48-48S0 229.49 0 256s21.49 48 48 48 48-21.49 48-48zm12.922 99.078c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.491-48-48-48zm294.156 0c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.49-48-48-48zM108.922 60.922c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.491-48-48-48z"}}]})(props);
+}function FaThermometerHalf (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 256 512"},"child":[{"tag":"path","attr":{"d":"M192 384c0 35.346-28.654 64-64 64s-64-28.654-64-64c0-23.685 12.876-44.349 32-55.417V224c0-17.673 14.327-32 32-32s32 14.327 32 32v104.583c19.124 11.068 32 31.732 32 55.417zm32-84.653c19.912 22.563 32 52.194 32 84.653 0 70.696-57.303 128-128 128-.299 0-.609-.001-.909-.003C56.789 511.509-.357 453.636.002 383.333.166 351.135 12.225 321.755 32 299.347V96c0-53.019 42.981-96 96-96s96 42.981 96 96v203.347zM208 384c0-34.339-19.37-52.19-32-66.502V96c0-26.467-21.533-48-48-48S80 69.533 80 96v221.498c-12.732 14.428-31.825 32.1-31.999 66.08-.224 43.876 35.563 80.116 79.423 80.42L128 464c44.112 0 80-35.888 80-80z"}}]})(props);
+}function FaTimes (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"}}]})(props);
+}function FaTrash (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"}}]})(props);
+}function FaUpload (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M296 384h-80c-13.3 0-24-10.7-24-24V192h-87.7c-17.8 0-26.7-21.5-14.1-34.1L242.3 5.7c7.5-7.5 19.8-7.5 27.3 0l152.2 152.2c12.6 12.6 3.7 34.1-14.1 34.1H320v168c0 13.3-10.7 24-24 24zm216-8v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h136v8c0 30.9 25.1 56 56 56h80c30.9 0 56-25.1 56-56v-8h136c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"}}]})(props);
+}function FaVial (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 480 512"},"child":[{"tag":"path","attr":{"d":"M477.7 186.1L309.5 18.3c-3.1-3.1-8.2-3.1-11.3 0l-34 33.9c-3.1 3.1-3.1 8.2 0 11.3l11.2 11.1L33 316.5c-38.8 38.7-45.1 102-9.4 143.5 20.6 24 49.5 36 78.4 35.9 26.4 0 52.8-10 72.9-30.1l246.3-245.7 11.2 11.1c3.1 3.1 8.2 3.1 11.3 0l34-33.9c3.1-3 3.1-8.1 0-11.2zM318 256H161l148-147.7 78.5 78.3L318 256z"}}]})(props);
 }
 
-function getDefaultExportFromCjs (x) {
-	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+/**
+ * API class for DeckTune frontend state management.
+ *
+ * Feature: decktune, Frontend State Management
+ * Requirements: Frontend integration, State management
+ *
+ * This class manages frontend state and provides RPC methods for
+ * communicating with the Python backend.
+ */
+class SimpleEventEmitter {
+    constructor() {
+        this.events = new Map();
+    }
+    on(event, handler) {
+        if (!this.events.has(event)) {
+            this.events.set(event, []);
+        }
+        this.events.get(event).push(handler);
+    }
+    emit(event, ...args) {
+        const handlers = this.events.get(event);
+        if (handlers) {
+            handlers.forEach(handler => handler(...args));
+        }
+    }
+    removeListener(event, handler) {
+        const handlers = this.events.get(event);
+        if (handlers) {
+            const index = handlers.indexOf(handler);
+            if (index !== -1) {
+                handlers.splice(index, 1);
+            }
+        }
+    }
 }
-
-const warn = (...args) => {
-  if (console?.warn) {
-    if (isString$1(args[0])) args[0] = `react-i18next:: ${args[0]}`;
-    console.warn(...args);
-  }
-};
-const alreadyWarned = {};
-const warnOnce = (...args) => {
-  if (isString$1(args[0]) && alreadyWarned[args[0]]) return;
-  if (isString$1(args[0])) alreadyWarned[args[0]] = new Date();
-  warn(...args);
-};
-const loadedClb = (i18n, cb) => () => {
-  if (i18n.isInitialized) {
-    cb();
-  } else {
-    const initialized = () => {
-      setTimeout(() => {
-        i18n.off('initialized', initialized);
-      }, 0);
-      cb();
-    };
-    i18n.on('initialized', initialized);
-  }
-};
-const loadNamespaces = (i18n, ns, cb) => {
-  i18n.loadNamespaces(ns, loadedClb(i18n, cb));
-};
-const loadLanguages = (i18n, lng, ns, cb) => {
-  if (isString$1(ns)) ns = [ns];
-  if (i18n.options.preload && i18n.options.preload.indexOf(lng) > -1) return loadNamespaces(i18n, ns, cb);
-  ns.forEach(n => {
-    if (i18n.options.ns.indexOf(n) < 0) i18n.options.ns.push(n);
-  });
-  i18n.loadLanguages(lng, loadedClb(i18n, cb));
-};
-const hasLoadedNamespace = (ns, i18n, options = {}) => {
-  if (!i18n.languages || !i18n.languages.length) {
-    warnOnce('i18n.languages were undefined or empty', i18n.languages);
-    return true;
-  }
-  return i18n.hasLoadedNamespace(ns, {
-    lng: options.lng,
-    precheck: (i18nInstance, loadNotPending) => {
-      if (options.bindI18n?.indexOf('languageChanging') > -1 && i18nInstance.services.backendConnector.backend && i18nInstance.isLanguageChangingTo && !loadNotPending(i18nInstance.isLanguageChangingTo, ns)) return false;
-    }
-  });
-};
-const isString$1 = obj => typeof obj === 'string';
-const isObject = obj => typeof obj === 'object' && obj !== null;
-
-const matchHtmlEntity = /&(?:amp|#38|lt|#60|gt|#62|apos|#39|quot|#34|nbsp|#160|copy|#169|reg|#174|hellip|#8230|#x2F|#47);/g;
-const htmlEntities = {
-  '&amp;': '&',
-  '&#38;': '&',
-  '&lt;': '<',
-  '&#60;': '<',
-  '&gt;': '>',
-  '&#62;': '>',
-  '&apos;': "'",
-  '&#39;': "'",
-  '&quot;': '"',
-  '&#34;': '"',
-  '&nbsp;': ' ',
-  '&#160;': ' ',
-  '&copy;': '©',
-  '&#169;': '©',
-  '&reg;': '®',
-  '&#174;': '®',
-  '&hellip;': '…',
-  '&#8230;': '…',
-  '&#x2F;': '/',
-  '&#47;': '/'
-};
-const unescapeHtmlEntity = m => htmlEntities[m];
-const unescape = text => text.replace(matchHtmlEntity, unescapeHtmlEntity);
-
-let defaultOptions = {
-  bindI18n: 'languageChanged',
-  bindI18nStore: '',
-  transEmptyNodeValue: '',
-  transSupportBasicHtmlNodes: true,
-  transWrapTextNodes: '',
-  transKeepBasicHtmlNodesFor: ['br', 'strong', 'i', 'p'],
-  useSuspense: true,
-  unescape
-};
-const setDefaults = (options = {}) => {
-  defaultOptions = {
-    ...defaultOptions,
-    ...options
-  };
-};
-const getDefaults = () => defaultOptions;
-
-let i18nInstance;
-const setI18n = instance => {
-  i18nInstance = instance;
-};
-const getI18n = () => i18nInstance;
-
-const initReactI18next = {
-  type: '3rdParty',
-  init(instance) {
-    setDefaults(instance.options.react);
-    setI18n(instance);
-  }
-};
-
-const I18nContext = SP_REACT.createContext();
-class ReportNamespaces {
-  constructor() {
-    this.usedNamespaces = {};
-  }
-  addUsedNamespaces(namespaces) {
-    namespaces.forEach(ns => {
-      if (!this.usedNamespaces[ns]) this.usedNamespaces[ns] = true;
-    });
-  }
-  getUsedNamespaces() {
-    return Object.keys(this.usedNamespaces);
-  }
-}
-
-const usePrevious = (value, ignore) => {
-  const ref = SP_REACT.useRef();
-  SP_REACT.useEffect(() => {
-    ref.current = value;
-  }, [value, ignore]);
-  return ref.current;
-};
-const alwaysNewT = (i18n, language, namespace, keyPrefix) => i18n.getFixedT(language, namespace, keyPrefix);
-const useMemoizedT = (i18n, language, namespace, keyPrefix) => SP_REACT.useCallback(alwaysNewT(i18n, language, namespace, keyPrefix), [i18n, language, namespace, keyPrefix]);
-const useTranslation = (ns, props = {}) => {
-  const {
-    i18n: i18nFromProps
-  } = props;
-  const {
-    i18n: i18nFromContext,
-    defaultNS: defaultNSFromContext
-  } = SP_REACT.useContext(I18nContext) || {};
-  const i18n = i18nFromProps || i18nFromContext || getI18n();
-  if (i18n && !i18n.reportNamespaces) i18n.reportNamespaces = new ReportNamespaces();
-  if (!i18n) {
-    warnOnce('You will need to pass in an i18next instance by using initReactI18next');
-    const notReadyT = (k, optsOrDefaultValue) => {
-      if (isString$1(optsOrDefaultValue)) return optsOrDefaultValue;
-      if (isObject(optsOrDefaultValue) && isString$1(optsOrDefaultValue.defaultValue)) return optsOrDefaultValue.defaultValue;
-      return Array.isArray(k) ? k[k.length - 1] : k;
-    };
-    const retNotReady = [notReadyT, {}, false];
-    retNotReady.t = notReadyT;
-    retNotReady.i18n = {};
-    retNotReady.ready = false;
-    return retNotReady;
-  }
-  if (i18n.options.react?.wait) warnOnce('It seems you are still using the old wait option, you may migrate to the new useSuspense behaviour.');
-  const i18nOptions = {
-    ...getDefaults(),
-    ...i18n.options.react,
-    ...props
-  };
-  const {
-    useSuspense,
-    keyPrefix
-  } = i18nOptions;
-  let namespaces = defaultNSFromContext || i18n.options?.defaultNS;
-  namespaces = isString$1(namespaces) ? [namespaces] : namespaces || ['translation'];
-  i18n.reportNamespaces.addUsedNamespaces?.(namespaces);
-  const ready = (i18n.isInitialized || i18n.initializedStoreOnce) && namespaces.every(n => hasLoadedNamespace(n, i18n, i18nOptions));
-  const memoGetT = useMemoizedT(i18n, props.lng || null, i18nOptions.nsMode === 'fallback' ? namespaces : namespaces[0], keyPrefix);
-  const getT = () => memoGetT;
-  const getNewT = () => alwaysNewT(i18n, props.lng || null, i18nOptions.nsMode === 'fallback' ? namespaces : namespaces[0], keyPrefix);
-  const [t, setT] = SP_REACT.useState(getT);
-  let joinedNS = namespaces.join();
-  if (props.lng) joinedNS = `${props.lng}${joinedNS}`;
-  const previousJoinedNS = usePrevious(joinedNS);
-  const isMounted = SP_REACT.useRef(true);
-  SP_REACT.useEffect(() => {
-    const {
-      bindI18n,
-      bindI18nStore
-    } = i18nOptions;
-    isMounted.current = true;
-    if (!ready && !useSuspense) {
-      if (props.lng) {
-        loadLanguages(i18n, props.lng, namespaces, () => {
-          if (isMounted.current) setT(getNewT);
-        });
-      } else {
-        loadNamespaces(i18n, namespaces, () => {
-          if (isMounted.current) setT(getNewT);
-        });
-      }
-    }
-    if (ready && previousJoinedNS && previousJoinedNS !== joinedNS && isMounted.current) {
-      setT(getNewT);
-    }
-    const boundReset = () => {
-      if (isMounted.current) setT(getNewT);
-    };
-    if (bindI18n) i18n?.on(bindI18n, boundReset);
-    if (bindI18nStore) i18n?.store.on(bindI18nStore, boundReset);
-    return () => {
-      isMounted.current = false;
-      if (i18n) bindI18n?.split(' ').forEach(e => i18n.off(e, boundReset));
-      if (bindI18nStore && i18n) bindI18nStore.split(' ').forEach(e => i18n.store.off(e, boundReset));
-    };
-  }, [i18n, joinedNS]);
-  SP_REACT.useEffect(() => {
-    if (isMounted.current && ready) {
-      setT(getT);
-    }
-  }, [i18n, keyPrefix, ready]);
-  const ret = [t, i18n, ready];
-  ret.t = t;
-  ret.i18n = i18n;
-  ret.ready = ready;
-  if (ready) return ret;
-  if (!ready && !useSuspense) return ret;
-  throw new Promise(resolve => {
-    if (props.lng) {
-      loadLanguages(i18n, props.lng, namespaces, () => resolve());
-    } else {
-      loadNamespaces(i18n, namespaces, () => resolve());
-    }
-  });
-};
-
-const PresetSelector = ({ presets, selectedPreset, handleSetSelectedPreset, }) => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.DropdownItem, { rgOptions: [
-                { label: t("presetManager.presetSelector.none"), data: null },
-                ...presets.map((x) => ({ label: x.label, data: x })),
-            ], selectedOption: selectedPreset, onChange: handleSetSelectedPreset, label: t("presetManager.presetSelector.label") })));
-};
-
-const PresetControls$1 = ({ editablePreset, setEditablePreset, }) => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { checked: editablePreset.use_timeout, onChange: (value) => setEditablePreset({ ...editablePreset, use_timeout: value }), label: t("presetControls.useTimeout"), description: t("presetControls.timeoutDescription", {
-                    label: editablePreset.label,
-                }) })),
-        editablePreset.use_timeout && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { bottomSeparator: "standard", min: 0, showValue: true, max: 1000, step: 1, label: t("presetControls.timeoutLabel"), value: editablePreset.timeout, onChange: (value) => setEditablePreset({ ...editablePreset, timeout: value }) })))));
-};
-
-const CoreSlider = ({ coreNumber, coreValue, setCoreValue, }) => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.SliderField, { label: t("coreSlider", { coreNumber }), showValue: true, min: 0, max: 60, step: 1, value: coreValue, onChange: setCoreValue })));
-};
-
-const CoreSliders = ({ cores, updateCore, }) => (window.SP_REACT.createElement(SP_REACT.Fragment, null, cores.map((core, index) => (window.SP_REACT.createElement(CoreSlider, { key: index, coreValue: core, coreNumber: index, setCoreValue: (value) => updateCore(index, value) })))));
-
-const ActionButtons$2 = ({ loading, doubleCheckDelete, handleUpdatePreset, handleDeletePreset, }) => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleUpdatePreset }, loading
-                ? t("presetManager.actionButtons.saving")
-                : t("presetManager.actionButtons.savePreset"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loading, layout: "below", onClick: handleDeletePreset }, doubleCheckDelete
-                ? t("presetManager.actionButtons.deleteConfirm")
-                : t("presetManager.actionButtons.delete")))));
-};
-
-var eventemitter3 = {exports: {}};
-
-(function (module) {
-
-	var has = Object.prototype.hasOwnProperty
-	  , prefix = '~';
-
-	/**
-	 * Constructor to create a storage for our `EE` objects.
-	 * An `Events` instance is a plain object whose properties are event names.
-	 *
-	 * @constructor
-	 * @private
-	 */
-	function Events() {}
-
-	//
-	// We try to not inherit from `Object.prototype`. In some engines creating an
-	// instance in this way is faster than calling `Object.create(null)` directly.
-	// If `Object.create(null)` is not supported we prefix the event names with a
-	// character to make sure that the built-in object properties are not
-	// overridden or used as an attack vector.
-	//
-	if (Object.create) {
-	  Events.prototype = Object.create(null);
-
-	  //
-	  // This hack is needed because the `__proto__` property is still inherited in
-	  // some old browsers like Android 4, iPhone 5.1, Opera 11 and Safari 5.
-	  //
-	  if (!new Events().__proto__) prefix = false;
-	}
-
-	/**
-	 * Representation of a single event listener.
-	 *
-	 * @param {Function} fn The listener function.
-	 * @param {*} context The context to invoke the listener with.
-	 * @param {Boolean} [once=false] Specify if the listener is a one-time listener.
-	 * @constructor
-	 * @private
-	 */
-	function EE(fn, context, once) {
-	  this.fn = fn;
-	  this.context = context;
-	  this.once = once || false;
-	}
-
-	/**
-	 * Add a listener for a given event.
-	 *
-	 * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
-	 * @param {(String|Symbol)} event The event name.
-	 * @param {Function} fn The listener function.
-	 * @param {*} context The context to invoke the listener with.
-	 * @param {Boolean} once Specify if the listener is a one-time listener.
-	 * @returns {EventEmitter}
-	 * @private
-	 */
-	function addListener(emitter, event, fn, context, once) {
-	  if (typeof fn !== 'function') {
-	    throw new TypeError('The listener must be a function');
-	  }
-
-	  var listener = new EE(fn, context || emitter, once)
-	    , evt = prefix ? prefix + event : event;
-
-	  if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
-	  else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
-	  else emitter._events[evt] = [emitter._events[evt], listener];
-
-	  return emitter;
-	}
-
-	/**
-	 * Clear event by name.
-	 *
-	 * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
-	 * @param {(String|Symbol)} evt The Event name.
-	 * @private
-	 */
-	function clearEvent(emitter, evt) {
-	  if (--emitter._eventsCount === 0) emitter._events = new Events();
-	  else delete emitter._events[evt];
-	}
-
-	/**
-	 * Minimal `EventEmitter` interface that is molded against the Node.js
-	 * `EventEmitter` interface.
-	 *
-	 * @constructor
-	 * @public
-	 */
-	function EventEmitter() {
-	  this._events = new Events();
-	  this._eventsCount = 0;
-	}
-
-	/**
-	 * Return an array listing the events for which the emitter has registered
-	 * listeners.
-	 *
-	 * @returns {Array}
-	 * @public
-	 */
-	EventEmitter.prototype.eventNames = function eventNames() {
-	  var names = []
-	    , events
-	    , name;
-
-	  if (this._eventsCount === 0) return names;
-
-	  for (name in (events = this._events)) {
-	    if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
-	  }
-
-	  if (Object.getOwnPropertySymbols) {
-	    return names.concat(Object.getOwnPropertySymbols(events));
-	  }
-
-	  return names;
-	};
-
-	/**
-	 * Return the listeners registered for a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @returns {Array} The registered listeners.
-	 * @public
-	 */
-	EventEmitter.prototype.listeners = function listeners(event) {
-	  var evt = prefix ? prefix + event : event
-	    , handlers = this._events[evt];
-
-	  if (!handlers) return [];
-	  if (handlers.fn) return [handlers.fn];
-
-	  for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
-	    ee[i] = handlers[i].fn;
-	  }
-
-	  return ee;
-	};
-
-	/**
-	 * Return the number of listeners listening to a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @returns {Number} The number of listeners.
-	 * @public
-	 */
-	EventEmitter.prototype.listenerCount = function listenerCount(event) {
-	  var evt = prefix ? prefix + event : event
-	    , listeners = this._events[evt];
-
-	  if (!listeners) return 0;
-	  if (listeners.fn) return 1;
-	  return listeners.length;
-	};
-
-	/**
-	 * Calls each of the listeners registered for a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @returns {Boolean} `true` if the event had listeners, else `false`.
-	 * @public
-	 */
-	EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
-	  var evt = prefix ? prefix + event : event;
-
-	  if (!this._events[evt]) return false;
-
-	  var listeners = this._events[evt]
-	    , len = arguments.length
-	    , args
-	    , i;
-
-	  if (listeners.fn) {
-	    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
-
-	    switch (len) {
-	      case 1: return listeners.fn.call(listeners.context), true;
-	      case 2: return listeners.fn.call(listeners.context, a1), true;
-	      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
-	      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
-	      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
-	      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
-	    }
-
-	    for (i = 1, args = new Array(len -1); i < len; i++) {
-	      args[i - 1] = arguments[i];
-	    }
-
-	    listeners.fn.apply(listeners.context, args);
-	  } else {
-	    var length = listeners.length
-	      , j;
-
-	    for (i = 0; i < length; i++) {
-	      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
-
-	      switch (len) {
-	        case 1: listeners[i].fn.call(listeners[i].context); break;
-	        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
-	        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
-	        case 4: listeners[i].fn.call(listeners[i].context, a1, a2, a3); break;
-	        default:
-	          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
-	            args[j - 1] = arguments[j];
-	          }
-
-	          listeners[i].fn.apply(listeners[i].context, args);
-	      }
-	    }
-	  }
-
-	  return true;
-	};
-
-	/**
-	 * Add a listener for a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @param {Function} fn The listener function.
-	 * @param {*} [context=this] The context to invoke the listener with.
-	 * @returns {EventEmitter} `this`.
-	 * @public
-	 */
-	EventEmitter.prototype.on = function on(event, fn, context) {
-	  return addListener(this, event, fn, context, false);
-	};
-
-	/**
-	 * Add a one-time listener for a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @param {Function} fn The listener function.
-	 * @param {*} [context=this] The context to invoke the listener with.
-	 * @returns {EventEmitter} `this`.
-	 * @public
-	 */
-	EventEmitter.prototype.once = function once(event, fn, context) {
-	  return addListener(this, event, fn, context, true);
-	};
-
-	/**
-	 * Remove the listeners of a given event.
-	 *
-	 * @param {(String|Symbol)} event The event name.
-	 * @param {Function} fn Only remove the listeners that match this function.
-	 * @param {*} context Only remove the listeners that have this context.
-	 * @param {Boolean} once Only remove one-time listeners.
-	 * @returns {EventEmitter} `this`.
-	 * @public
-	 */
-	EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
-	  var evt = prefix ? prefix + event : event;
-
-	  if (!this._events[evt]) return this;
-	  if (!fn) {
-	    clearEvent(this, evt);
-	    return this;
-	  }
-
-	  var listeners = this._events[evt];
-
-	  if (listeners.fn) {
-	    if (
-	      listeners.fn === fn &&
-	      (!once || listeners.once) &&
-	      (!context || listeners.context === context)
-	    ) {
-	      clearEvent(this, evt);
-	    }
-	  } else {
-	    for (var i = 0, events = [], length = listeners.length; i < length; i++) {
-	      if (
-	        listeners[i].fn !== fn ||
-	        (once && !listeners[i].once) ||
-	        (context && listeners[i].context !== context)
-	      ) {
-	        events.push(listeners[i]);
-	      }
-	    }
-
-	    //
-	    // Reset the array, or remove it completely if we have no more listeners.
-	    //
-	    if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
-	    else clearEvent(this, evt);
-	  }
-
-	  return this;
-	};
-
-	/**
-	 * Remove all listeners, or those of the specified event.
-	 *
-	 * @param {(String|Symbol)} [event] The event name.
-	 * @returns {EventEmitter} `this`.
-	 * @public
-	 */
-	EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
-	  var evt;
-
-	  if (event) {
-	    evt = prefix ? prefix + event : event;
-	    if (this._events[evt]) clearEvent(this, evt);
-	  } else {
-	    this._events = new Events();
-	    this._eventsCount = 0;
-	  }
-
-	  return this;
-	};
-
-	//
-	// Alias methods names because people roll like that.
-	//
-	EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
-	EventEmitter.prototype.addListener = EventEmitter.prototype.on;
-
-	//
-	// Expose the prefix.
-	//
-	EventEmitter.prefixed = prefix;
-
-	//
-	// Allow `EventEmitter` to be imported as module namespace.
-	//
-	EventEmitter.EventEmitter = EventEmitter;
-
-	//
-	// Expose the module.
-	//
-	{
-	  module.exports = EventEmitter;
-	} 
-} (eventemitter3));
-
-var eventemitter3Exports = eventemitter3.exports;
-var EventEmitter$1 = /*@__PURE__*/getDefaultExportFromCjs(eventemitter3Exports);
-
 let apiInstance = null;
+/**
+ * Get or create the singleton Api instance.
+ */
 const getApiInstance = (initialState) => {
     if (!apiInstance) {
         apiInstance = new Api(initialState);
     }
     return apiInstance;
 };
-class Api extends EventEmitter$1 {
+/**
+ * Main API class for DeckTune frontend.
+ *
+ * Extends SimpleEventEmitter to provide state change notifications.
+ * Implements all RPC methods for backend communication.
+ */
+class Api extends SimpleEventEmitter {
     constructor(initialState) {
         super();
         this.registeredListeners = [];
         this.state = initialState;
     }
+    /**
+     * Update state and emit change event.
+     */
     setState(newState) {
         this.state = { ...this.state, ...newState };
         this.emit("state_change", this.state);
     }
+    /**
+     * Get current state.
+     */
     getState() {
         return this.state;
     }
+    /**
+     * Initialize the API and register event listeners.
+     */
     async init() {
         await call("init");
         await this.fetchConfig();
+        await this.fetchPlatformInfo();
+        await this.fetchTestHistory();
+        // Register Steam client listeners
         this.registeredListeners.push(SteamClient.GameSessions.RegisterForAppLifetimeNotifications(this.onAppLifetimeNotification.bind(this)));
         this.registeredListeners.push(SteamClient.System.RegisterForOnResumeFromSuspend(this.onResumeFromSuspend.bind(this)));
+        // Register backend event listeners
+        addEventListener("tuning_progress", this.onTuningProgress.bind(this));
+        addEventListener("tuning_complete", this.onTuningComplete.bind(this));
+        addEventListener("test_complete", this.onTestComplete.bind(this));
+        addEventListener("update_status", this.onStatusUpdate.bind(this));
         if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
             return await this.handleMainRunningApp();
         }
@@ -755,6 +233,9 @@ class Api extends EventEmitter$1 {
         }
         await this.disableUndervolt();
     }
+    /**
+     * Fetch configuration from backend.
+     */
     async fetchConfig() {
         const config = (await call("fetch_config"));
         this.setState({
@@ -766,64 +247,337 @@ class Api extends EventEmitter$1 {
             status: config.status,
         });
     }
-    async handleMainRunningApp(id, label) {
-        if (DFL.Router.MainRunningApp || (id && label)) {
-            this.setState({
-                runningAppName: label || DFL.Router.MainRunningApp?.display_name || null,
-                runningAppId: id || Number(DFL.Router.MainRunningApp?.appid) || null,
-            });
-            await this.applyUndervoltBasedOnPreset();
-        }
-        else {
-            this.setState({ cores: this.state.globalCores });
-        }
+    /**
+     * Fetch platform information from backend.
+     * Requirements: Frontend integration
+     */
+    async fetchPlatformInfo() {
+        const platformInfo = (await call("get_platform_info"));
+        this.setState({ platformInfo });
+        return platformInfo;
     }
-    async applyUndervoltBasedOnPreset() {
-        const preset = this.state.presets.find((p) => p.app_id === this.state.runningAppId);
-        if (preset) {
-            this.setState({ cores: preset.value, currentPreset: preset });
-            await this.applyUndervolt(preset.value, preset.use_timeout ? preset.timeout : 0);
-        }
-        else {
-            await this.applyUndervolt(this.state.globalCores);
-        }
+    /**
+     * Fetch test history from backend.
+     * Requirements: Frontend integration
+     */
+    async fetchTestHistory() {
+        const testHistory = (await call("get_test_history"));
+        this.setState({ testHistory });
+        return testHistory;
     }
+    // ==================== Event Handlers ====================
+    /**
+     * Handle tuning progress events from backend.
+     */
+    onTuningProgress(progress) {
+        this.setState({ autotuneProgress: progress });
+    }
+    /**
+     * Handle tuning complete events from backend.
+     */
+    onTuningComplete(result) {
+        this.setState({
+            autotuneResult: result,
+            autotuneProgress: null,
+            isAutotuning: false,
+        });
+    }
+    /**
+     * Handle test complete events from backend.
+     */
+    onTestComplete(result) {
+        this.setState({ currentTest: null, isTestRunning: false });
+        // Refresh test history
+        this.fetchTestHistory();
+    }
+    /**
+     * Handle status update events from backend.
+     */
+    onStatusUpdate(status) {
+        this.setState({ status });
+    }
+    /**
+     * Handle app lifetime notifications from Steam.
+     * Requirements: 5.2, 5.3
+     *
+     * Detects game launch via SteamClient and applies preset with timeout.
+     * Shows status: "Using preset for <GameName>"
+     */
     async onAppLifetimeNotification(app) {
         const gameId = app.unAppID;
         const gameInfo = appStore.GetAppOverviewByGameID(gameId);
         if (app.bRunning) {
+            // Game is starting
             if (!this.state.settings.isRunAutomatically)
                 return;
             await this.handleMainRunningApp(gameId, gameInfo.display_name);
         }
         else {
-            this.setState({ runningAppName: null, cores: this.state.globalCores });
-            if (this.state.settings.isGlobal && this.state.status === "enabled") {
+            // Game is closing - revert to global settings
+            this.setState({
+                runningAppName: null,
+                runningAppId: null,
+                cores: this.state.globalCores,
+                currentPreset: null,
+            });
+            if (this.state.settings.isGlobal && this.state.status !== "disabled") {
                 await this.applyUndervolt(this.state.globalCores);
+                this.setState({ status: "Global" });
             }
             else {
                 await this.disableUndervolt();
             }
         }
     }
+    /**
+     * Handle resume from suspend.
+     */
     async onResumeFromSuspend() {
-        if (this.state.status === "enabled") {
+        if (this.state.status === "enabled" || this.state.status.startsWith("Using preset for")) {
             await this.applyUndervolt(this.state.cores, 5);
         }
     }
-    async enableGymdeck() {
-        await call("start_gymdeck", this.state.dynamicSettings);
+    /**
+     * Handle main running app detection.
+     * Requirements: 5.2, 5.3
+     *
+     * Applies preset for the running game and updates status.
+     */
+    async handleMainRunningApp(id, label) {
+        if (DFL.Router.MainRunningApp || (id && label)) {
+            const appName = label || DFL.Router.MainRunningApp?.display_name || null;
+            const appId = id || Number(DFL.Router.MainRunningApp?.appid) || null;
+            this.setState({
+                runningAppName: appName,
+                runningAppId: appId,
+            });
+            await this.applyUndervoltBasedOnPreset(appId, appName);
+        }
+        else {
+            this.setState({ cores: this.state.globalCores });
+        }
     }
-    async disableGymdeck() {
-        await call('stop_gymdeck');
+    /**
+     * Apply undervolt based on current preset.
+     * Requirements: 5.2, 5.3
+     *
+     * Finds preset for the running game and applies it with timeout.
+     * Updates status to "Using preset for <GameName>" or "Global".
+     */
+    async applyUndervoltBasedOnPreset(appId, appName) {
+        const targetAppId = appId ?? this.state.runningAppId;
+        const targetAppName = appName ?? this.state.runningAppName;
+        const preset = this.state.presets.find((p) => p.app_id === targetAppId);
+        if (preset) {
+            // Found a preset for this game
+            this.setState({
+                cores: preset.value,
+                currentPreset: preset,
+            });
+            const timeout = preset.use_timeout ? preset.timeout : 0;
+            await this.applyUndervolt(preset.value, timeout);
+            // Update status to show which preset is being used (Requirement 5.3)
+            const statusString = `Using preset for ${preset.label || targetAppName || 'Unknown'}`;
+            this.setState({ status: statusString });
+        }
+        else if (this.state.settings.isGlobal) {
+            // No preset, but global mode is enabled - use global values
+            this.setState({
+                cores: this.state.globalCores,
+                currentPreset: null,
+            });
+            await this.applyUndervolt(this.state.globalCores);
+            this.setState({ status: "Global" });
+        }
+        else {
+            // No preset and global mode disabled
+            this.setState({
+                currentPreset: null,
+                status: "Disabled",
+            });
+        }
     }
+    // ==================== Undervolt Control ====================
+    /**
+     * Apply undervolt values.
+     */
     async applyUndervolt(core_values, timeout = 0) {
         this.setState({ cores: core_values });
         await call("apply_undervolt", core_values, timeout);
     }
+    /**
+     * Disable undervolt (reset to 0).
+     */
     async disableUndervolt() {
         await call("disable_undervolt");
     }
+    /**
+     * Panic disable - emergency reset.
+     */
+    async panicDisable() {
+        await call("panic_disable");
+        this.setState({
+            status: "disabled",
+            isAutotuning: false,
+            autotuneProgress: null,
+        });
+    }
+    // ==================== Dynamic Mode ====================
+    /**
+     * Enable gymdeck dynamic mode.
+     */
+    async enableGymdeck() {
+        await call("start_gymdeck", this.state.dynamicSettings);
+        this.setState({ gymdeckRunning: true, status: "DYNAMIC RUNNING" });
+    }
+    /**
+     * Disable gymdeck dynamic mode.
+     */
+    async disableGymdeck() {
+        await call("stop_gymdeck");
+        this.setState({ gymdeckRunning: false, status: "disabled" });
+    }
+    // ==================== Autotune Methods ====================
+    // Requirements: Frontend integration
+    /**
+     * Start autotune process.
+     * @param mode - "quick" or "thorough"
+     */
+    async startAutotune(mode = "quick") {
+        const result = (await call("start_autotune", mode));
+        if (result.success) {
+            this.setState({
+                isAutotuning: true,
+                autotuneProgress: null,
+                autotuneResult: null,
+            });
+        }
+        return result;
+    }
+    /**
+     * Stop running autotune.
+     */
+    async stopAutotune() {
+        const result = (await call("stop_autotune"));
+        if (result.success) {
+            this.setState({
+                isAutotuning: false,
+                autotuneProgress: null,
+            });
+        }
+        return result;
+    }
+    /**
+     * Tune for current game - run autotune and save as game preset.
+     * Requirements: 5.4
+     *
+     * @param mode - "quick" or "thorough" autotune mode
+     * @returns Promise with success status and the created preset
+     */
+    async tuneForCurrentGame(mode = "quick") {
+        // Check if a game is currently running
+        if (!this.state.runningAppId || !this.state.runningAppName) {
+            return { success: false, error: "No game is currently running" };
+        }
+        const appId = this.state.runningAppId;
+        const appName = this.state.runningAppName;
+        // Start autotune
+        const startResult = await this.startAutotune(mode);
+        if (!startResult.success) {
+            return { success: false, error: startResult.error };
+        }
+        // Wait for autotune to complete by watching state changes
+        return new Promise((resolve) => {
+            const checkComplete = () => {
+                const state = this.getState();
+                if (state.autotuneResult) {
+                    // Autotune completed - save as preset
+                    const result = state.autotuneResult;
+                    if (result.stable) {
+                        // Create and save preset for this game
+                        const preset = {
+                            app_id: appId,
+                            label: appName,
+                            value: result.cores,
+                            timeout: 0,
+                            use_timeout: false,
+                            created_at: new Date().toISOString(),
+                            tested: true, // Marked as tested since autotune validates stability
+                        };
+                        // Save the preset
+                        this.saveAndApply(result.cores, true, preset).then(() => {
+                            resolve({ success: true, preset });
+                        }).catch((error) => {
+                            resolve({ success: false, error: String(error) });
+                        });
+                    }
+                    else {
+                        resolve({
+                            success: false,
+                            error: "Autotune did not find stable values for all cores"
+                        });
+                    }
+                    // Remove listener
+                    this.removeListener("state_change", checkComplete);
+                }
+                else if (!state.isAutotuning && !state.autotuneResult) {
+                    // Autotune was cancelled or failed
+                    resolve({ success: false, error: "Autotune was cancelled or failed" });
+                    this.removeListener("state_change", checkComplete);
+                }
+            };
+            // Listen for state changes
+            this.on("state_change", checkComplete);
+        });
+    }
+    // ==================== Test Methods ====================
+    // Requirements: Frontend integration
+    /**
+     * Check availability of required stress test binaries.
+     * Call this on mount to show warnings if binaries are missing.
+     *
+     * @returns Object with binary status and list of missing binaries
+     */
+    async checkBinaries() {
+        return (await call("check_binaries"));
+    }
+    /**
+     * Run a specific stress test.
+     * @param testName - Name of test (cpu_quick, cpu_long, ram_quick, ram_thorough, combo)
+     */
+    async runTest(testName) {
+        this.setState({ currentTest: testName, isTestRunning: true });
+        const result = (await call("run_test", testName));
+        this.setState({ currentTest: null, isTestRunning: false });
+        // Refresh test history after test completes
+        await this.fetchTestHistory();
+        return result;
+    }
+    /**
+     * Get test history (last 10 results).
+     */
+    async getTestHistory() {
+        return await this.fetchTestHistory();
+    }
+    // ==================== Diagnostics Methods ====================
+    // Requirements: Frontend integration
+    /**
+     * Export diagnostics archive.
+     * @returns Path to the created archive
+     */
+    async exportDiagnostics() {
+        return (await call("export_diagnostics"));
+    }
+    /**
+     * Get system information for diagnostics tab.
+     */
+    async getSystemInfo() {
+        return await call("get_system_info");
+    }
+    // ==================== Preset Management ====================
+    /**
+     * Save and apply undervolt values.
+     */
     async saveAndApply(core_values, use_as_preset, presetSettings) {
         if (use_as_preset) {
             const presetIndex = this.state.presets.findIndex((p) => p.app_id === this.state.runningAppId);
@@ -842,7 +596,9 @@ class Api extends EventEmitter$1 {
                     ...presetSettings,
                     app_id: this.state.runningAppId,
                     value: core_values,
-                    label: this.state.runningAppName,
+                    label: this.state.runningAppName || "",
+                    timeout: presetSettings?.timeout || 0,
+                    use_timeout: presetSettings?.use_timeout || false,
                 };
                 presets.push(preset);
             }
@@ -857,26 +613,30 @@ class Api extends EventEmitter$1 {
             await call("save_setting", "cores", core_values);
         }
     }
+    /**
+     * Save settings.
+     */
     async saveSettings(settings) {
         await call("save_settings", settings);
         this.setState({ settings });
     }
+    /**
+     * Reset configuration to defaults.
+     */
     async resetConfig() {
         const result = (await call("reset_config"));
         this.setState({
             globalCores: result.cores,
             cores: result.cores,
             settings: result.settings,
-            status: "Disabled",
+            status: "disabled",
             currentPreset: null,
         });
         await this.disableUndervolt();
     }
-    destroy() {
-        this.registeredListeners.forEach((call) => {
-            call.unregister();
-        });
-    }
+    /**
+     * Delete a preset.
+     */
     async deletePreset(app_id) {
         const presets = [...this.state.presets];
         const presetIndex = presets.findIndex((p) => p.app_id === app_id);
@@ -886,6 +646,9 @@ class Api extends EventEmitter$1 {
         this.setState({ presets });
         await call("delete_preset", app_id);
     }
+    /**
+     * Update a preset.
+     */
     async updatePreset(preset) {
         const presets = [...this.state.presets];
         const presetIndex = presets.findIndex((p) => p.app_id === preset.app_id);
@@ -900,45 +663,124 @@ class Api extends EventEmitter$1 {
             }
         }
     }
-    handleServerEvent({ type, data, }) {
+    /**
+     * Export all presets as JSON.
+     */
+    async exportPresets() {
+        return (await call("export_presets"));
+    }
+    /**
+     * Import presets from JSON.
+     */
+    async importPresets(jsonData) {
+        const result = (await call("import_presets", jsonData));
+        if (result.success) {
+            // Refresh presets from backend
+            await this.fetchConfig();
+        }
+        return result;
+    }
+    // ==================== Server Events ====================
+    /**
+     * Handle server events.
+     */
+    handleServerEvent({ type, data }) {
         switch (type) {
             case "update_status":
                 this.setState({ status: data });
                 break;
+            case "tuning_progress":
+                this.onTuningProgress(data);
+                break;
+            case "tuning_complete":
+                this.onTuningComplete(data);
+                break;
+            case "test_complete":
+                this.onTestComplete(data);
+                break;
         }
+    }
+    // ==================== Cleanup ====================
+    /**
+     * Cleanup and unregister listeners.
+     */
+    destroy() {
+        this.registeredListeners.forEach((listener) => {
+            listener.unregister();
+        });
+        removeEventListener("tuning_progress", this.onTuningProgress.bind(this));
+        removeEventListener("tuning_complete", this.onTuningComplete.bind(this));
+        removeEventListener("test_complete", this.onTestComplete.bind(this));
+        removeEventListener("update_status", this.onStatusUpdate.bind(this));
     }
 }
 
-// @ts-ignore
-const Context = SP_REACT.createContext(null);
-const Provider = ({ children }) => {
-    const initialState = {
-        gymdeckRunning: false,
-        isDynamic: false,
-        dynamicSettings: {
-            cores: [
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-            ],
-            sampleInterval: 50000,
-            strategy: "DEFAULT",
-        },
-        runningAppName: null,
-        runningAppId: null,
-        status: "Disabled",
-        cores: [5, 5, 5, 5],
-        currentPreset: null,
-        presets: [],
-        settings: {
-            isGlobal: false,
-            runAtStartup: false,
-            isRunAutomatically: false,
-            timeoutApply: 15,
-        },
-        globalCores: [],
-    };
+/**
+ * React context for DeckTune state management.
+ *
+ * Feature: decktune, Frontend State Management
+ * Requirements: State management
+ *
+ * Provides state properties:
+ * - autotuneProgress, autotuneResult
+ * - testHistory, currentTest
+ * - platformInfo
+ */
+
+/**
+ * Initial state with all required properties.
+ * Requirements: State management
+ */
+const initialState = {
+    // Core state
+    cores: [5, 5, 5, 5],
+    globalCores: [],
+    status: "disabled",
+    // Platform info
+    platformInfo: null,
+    // Running app info
+    runningAppName: null,
+    runningAppId: null,
+    // Presets
+    presets: [],
+    currentPreset: null,
+    // Settings
+    settings: {
+        isGlobal: false,
+        runAtStartup: false,
+        isRunAutomatically: false,
+        timeoutApply: 15,
+    },
+    dynamicSettings: {
+        strategy: "DEFAULT",
+        sample_interval: 50000,
+        cores: [
+            { maximum_value: 100, minimum_value: 0, threshold: 0, manual_points: [] },
+            { maximum_value: 100, minimum_value: 0, threshold: 0, manual_points: [] },
+            { maximum_value: 100, minimum_value: 0, threshold: 0, manual_points: [] },
+            { maximum_value: 100, minimum_value: 0, threshold: 0, manual_points: [] },
+        ],
+    },
+    // Dynamic mode
+    gymdeckRunning: false,
+    isDynamic: false,
+    // Autotune state (new properties)
+    autotuneProgress: null,
+    autotuneResult: null,
+    isAutotuning: false,
+    // Test state (new properties)
+    testHistory: [],
+    currentTest: null,
+    isTestRunning: false,
+    // Binary availability
+    missingBinaries: [],
+};
+// Create context with null default
+const DeckTuneContext = SP_REACT.createContext(null);
+/**
+ * Provider component for DeckTune context.
+ */
+const DeckTuneProvider = ({ children }) => {
     const api = getApiInstance(initialState);
     const [state, setState] = SP_REACT.useState(api.getState());
     SP_REACT.useEffect(() => {
@@ -950,3270 +792,1423 @@ const Provider = ({ children }) => {
             api.removeListener("state_change", handleStateChange);
         };
     }, [api]);
-    return window.SP_REACT.createElement(Context.Provider, { value: { state, api } }, children);
+    const contextValue = {
+        state,
+        api,
+        // Convenience accessors for new state properties
+        autotuneProgress: state.autotuneProgress,
+        autotuneResult: state.autotuneResult,
+        testHistory: state.testHistory,
+        currentTest: state.currentTest,
+        platformInfo: state.platformInfo,
+        isAutotuning: state.isAutotuning,
+        isTestRunning: state.isTestRunning,
+    };
+    return (React.createElement(DeckTuneContext.Provider, { value: contextValue }, children));
+};
+/**
+ * Hook to access DeckTune context.
+ * @throws Error if used outside of DeckTuneProvider
+ */
+const useDeckTune = () => {
+    const context = SP_REACT.useContext(DeckTuneContext);
+    if (!context) {
+        throw new Error("useDeckTune must be used within a DeckTuneProvider");
+    }
+    return context;
+};
+/**
+ * Hook to access autotune state.
+ */
+const useAutotune = () => {
+    const { autotuneProgress, autotuneResult, isAutotuning, api } = useDeckTune();
+    return {
+        progress: autotuneProgress,
+        result: autotuneResult,
+        isRunning: isAutotuning,
+        start: (mode) => api.startAutotune(mode),
+        stop: () => api.stopAutotune(),
+    };
+};
+/**
+ * Hook to access test state.
+ */
+const useTests = () => {
+    const { testHistory, currentTest, isTestRunning, api } = useDeckTune();
+    return {
+        history: testHistory,
+        currentTest,
+        isRunning: isTestRunning,
+        runTest: (testName) => api.runTest(testName),
+        getHistory: () => api.getTestHistory(),
+    };
+};
+/**
+ * Hook to access platform info.
+ */
+const usePlatformInfo = () => {
+    const { platformInfo, api } = useDeckTune();
+    return {
+        info: platformInfo,
+        refresh: () => api.fetchPlatformInfo(),
+    };
+};
+/**
+ * Hook to check binary availability.
+ * Returns missing binaries list and a function to refresh.
+ */
+const useBinaries = () => {
+    const { state, api } = useDeckTune();
+    const checkBinaries = async () => {
+        const result = await api.checkBinaries();
+        if (result.success) {
+            api.setState({ missingBinaries: result.missing });
+        }
+        return result;
+    };
+    return {
+        missing: state.missingBinaries,
+        hasMissing: state.missingBinaries.length > 0,
+        check: checkBinaries,
+    };
 };
 
-const PresetManager = ({ setCurrentPage, }) => {
-    const { t } = useTranslation();
-    const [selectedPreset, setSelectedPreset] = SP_REACT.useState(null);
-    const [editablePreset, setEditablePreset] = SP_REACT.useState(null);
-    const [doubleCheckDelete, setDoubleCheckDelete] = SP_REACT.useState(false);
-    const [loading, setLoading] = SP_REACT.useState(false);
-    const { state, api } = SP_REACT.useContext(Context);
-    const handleSetSelectedPreset = (preset) => {
-        setDoubleCheckDelete(false);
-        setSelectedPreset(preset?.data || null);
-        setEditablePreset(preset?.data || null);
+/**
+ * WizardMode component for DeckTune.
+ *
+ * Feature: decktune, Frontend UI Components - Wizard Mode
+ * Requirements: 4.5, 6.1, 6.2, 6.3, 6.4, 6.5
+ *
+ * Provides a 3-step wizard interface for beginner users:
+ * - Step 1: Goal selection (Quiet/Cool, Balanced, Max Battery, Max Performance)
+ * - Step 2: Autotune progress with phase, core, ETA
+ * - Step 3: Results display with per-core values and Apply & Save
+ * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
+ */
+
+const GOAL_OPTIONS = [
+    {
+        id: "quiet_cool",
+        label: "Quiet/Cool",
+        description: "Lower temperatures and fan noise",
+        icon: FaLeaf,
+        mode: "quick",
+    },
+    {
+        id: "balanced",
+        label: "Balanced",
+        description: "Good balance of performance and efficiency",
+        icon: FaBalanceScale,
+        mode: "quick",
+    },
+    {
+        id: "max_battery",
+        label: "Max Battery",
+        description: "Maximize battery life",
+        icon: FaBatteryFull,
+        mode: "thorough",
+    },
+    {
+        id: "max_performance",
+        label: "Max Performance",
+        description: "Find the most aggressive stable undervolt",
+        icon: FaRocket,
+        mode: "thorough",
+    },
+];
+/**
+ * Panic Disable Button component - always visible emergency reset.
+ * Requirements: 4.5
+ *
+ * Features:
+ * - Always visible red button
+ * - Immediate reset to 0 on click
+ */
+const PanicDisableButton$1 = () => {
+    const { api } = useDeckTune();
+    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
+    const handlePanicDisable = async () => {
+        setIsPanicking(true);
+        try {
+            await api.panicDisable();
+        }
+        finally {
+            setIsPanicking(false);
+        }
     };
-    const updateCore = (index, value) => {
-        const newCores = [...editablePreset.value];
-        newCores[index] = value;
-        setEditablePreset({ ...editablePreset, value: newCores });
+    return (React.createElement(DFL.PanelSectionRow, null,
+        React.createElement(DFL.ButtonItem, { layout: "below", onClick: handlePanicDisable, disabled: isPanicking, style: {
+                backgroundColor: "#b71c1c",
+                borderRadius: "8px",
+            } },
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    color: "#fff",
+                    fontWeight: "bold",
+                } }, isPanicking ? (React.createElement(React.Fragment, null,
+                React.createElement(FaSpinner, { className: "spin" }),
+                React.createElement("span", null, "Disabling..."))) : (React.createElement(React.Fragment, null,
+                React.createElement(FaExclamationTriangle, null),
+                React.createElement("span", null, "PANIC DISABLE"))))),
+        React.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+/**
+ * WizardMode component - 3-step wizard for beginner users.
+ * Requirements: 4.5, 5.4, 6.1
+ */
+const WizardMode = ({ onComplete, onCancel }) => {
+    const [step, setStep] = SP_REACT.useState(1);
+    const [selectedGoal, setSelectedGoal] = SP_REACT.useState(null);
+    const { progress, result, isRunning, start, stop } = useAutotune();
+    const { info: platformInfo } = usePlatformInfo();
+    const { api, state } = useDeckTune();
+    const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
+    // Check binaries on mount
+    SP_REACT.useEffect(() => {
+        checkBinaries();
+    }, []);
+    // Handle autotune completion - move to step 3
+    SP_REACT.useEffect(() => {
+        if (result && step === 2) {
+            setStep(3);
+        }
+    }, [result, step]);
+    /**
+     * Handle goal selection and start autotune.
+     * Requirements: 6.2, 6.3
+     */
+    const handleGoalSelect = async (goal) => {
+        setSelectedGoal(goal);
+        const goalOption = GOAL_OPTIONS.find((g) => g.id === goal);
+        if (goalOption) {
+            setStep(2);
+            await start(goalOption.mode);
+        }
     };
-    const handleUpdatePreset = async () => {
-        setSelectedPreset(editablePreset);
-        setDoubleCheckDelete(false);
-        setLoading(true);
-        if (!editablePreset)
-            return;
-        await api.updatePreset(editablePreset);
-        setTimeout(() => setLoading(false), 1000);
+    /**
+     * Handle cancel button click.
+     * Requirements: 6.3
+     */
+    const handleCancel = async () => {
+        if (isRunning) {
+            await stop();
+        }
+        setStep(1);
+        setSelectedGoal(null);
+        onCancel?.();
     };
-    const handleDeletePreset = async () => {
-        if (!doubleCheckDelete) {
-            setDoubleCheckDelete(true);
+    /**
+     * Handle Apply & Save button click.
+     * Requirements: 5.4, 6.4
+     *
+     * If a game is running, saves the result as a game-specific preset.
+     */
+    const handleApplyAndSave = async () => {
+        if (result) {
+            // Check if a game is running - save as game preset (Requirement 5.4)
+            if (state.runningAppId && state.runningAppName) {
+                const preset = {
+                    app_id: state.runningAppId,
+                    label: state.runningAppName,
+                    value: result.cores,
+                    timeout: 0,
+                    use_timeout: false,
+                    created_at: new Date().toISOString(),
+                    tested: true,
+                };
+                await api.saveAndApply(result.cores, true, preset);
+            }
+            else {
+                // No game running - apply as global values
+                await api.applyUndervolt(result.cores);
+            }
+            onComplete?.(result);
+        }
+    };
+    /**
+     * Reset wizard to start over.
+     */
+    const handleStartOver = () => {
+        setStep(1);
+        setSelectedGoal(null);
+    };
+    return (React.createElement(DFL.PanelSection, { title: "DeckTune Wizard" },
+        React.createElement(PanicDisableButton$1, null),
+        hasMissing && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "12px",
+                    backgroundColor: "#5c4813",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                    border: "1px solid #ff9800",
+                } },
+                React.createElement(FaExclamationCircle, { style: { color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" } }),
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" } }, "Missing Components"),
+                    React.createElement("div", { style: { fontSize: "12px", color: "#ffe0b2" } },
+                        "Required tools not found: ",
+                        React.createElement("strong", null, missingBinaries.join(", "))),
+                    React.createElement("div", { style: { fontSize: "11px", color: "#ffcc80", marginTop: "4px" } }, "Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder."))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(StepIndicator, { currentStep: step })),
+        step === 1 && (React.createElement(GoalSelectionStep, { onSelect: handleGoalSelect, platformInfo: platformInfo, disabled: hasMissing })),
+        step === 2 && (React.createElement(AutotuneProgressStep, { progress: progress, isRunning: isRunning, onCancel: handleCancel, selectedGoal: selectedGoal })),
+        step === 3 && result && (React.createElement(ResultsStep, { result: result, platformInfo: platformInfo, onApplyAndSave: handleApplyAndSave, onStartOver: handleStartOver }))));
+};
+const StepIndicator = ({ currentStep }) => {
+    const steps = [
+        { num: 1, label: "Goal" },
+        { num: 2, label: "Tuning" },
+        { num: 3, label: "Results" },
+    ];
+    return (React.createElement(DFL.Focusable, { style: { display: "flex", justifyContent: "center", gap: "16px", marginBottom: "16px" } }, steps.map((s, index) => (React.createElement("div", { key: s.num, style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+        } },
+        React.createElement("div", { style: {
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: currentStep >= s.num ? "#1a9fff" : "#3d4450",
+                color: currentStep >= s.num ? "#fff" : "#8b929a",
+                fontWeight: "bold",
+                fontSize: "14px",
+            } }, currentStep > s.num ? React.createElement(FaCheck, { size: 12 }) : s.num),
+        React.createElement("span", { style: {
+                color: currentStep >= s.num ? "#fff" : "#8b929a",
+                fontSize: "12px",
+            } }, s.label),
+        index < steps.length - 1 && (React.createElement("div", { style: {
+                width: "24px",
+                height: "2px",
+                backgroundColor: currentStep > s.num ? "#1a9fff" : "#3d4450",
+                marginLeft: "8px",
+            } })))))));
+};
+const GoalSelectionStep = ({ onSelect, platformInfo, disabled = false }) => {
+    const { state } = useDeckTune();
+    const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
+    return (React.createElement(React.Fragment, null,
+        platformInfo && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
+                "Detected: ",
+                platformInfo.variant,
+                " (",
+                platformInfo.model,
+                ") \u2022 Safe limit: ",
+                platformInfo.safe_limit))),
+        isGameRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "8px 12px",
+                    backgroundColor: "#1a3a5c",
+                    borderRadius: "6px",
+                    marginBottom: "12px",
+                    fontSize: "12px",
+                } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                    React.createElement(FaRocket, { style: { color: "#1a9fff" } }),
+                    React.createElement("span", null,
+                        "Running: ",
+                        React.createElement("strong", null, state.runningAppName))),
+                React.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginTop: "4px" } }, "Tuning will be saved as a preset for this game")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", marginBottom: "12px" } }, "Select your tuning goal:")),
+        GOAL_OPTIONS.map((goal) => {
+            const Icon = goal.icon;
+            return (React.createElement(DFL.PanelSectionRow, { key: goal.id },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelect(goal.id), description: goal.description, disabled: disabled },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", opacity: disabled ? 0.5 : 1 } },
+                        React.createElement(Icon, null),
+                        React.createElement("span", null, goal.label),
+                        React.createElement("span", { style: { fontSize: "10px", color: "#8b929a", marginLeft: "auto" } }, goal.mode === "thorough" ? "~10 min" : "~3 min")))));
+        })));
+};
+const AutotuneProgressStep = ({ progress, isRunning, onCancel, selectedGoal, }) => {
+    const goalLabel = GOAL_OPTIONS.find((g) => g.id === selectedGoal)?.label || "Unknown";
+    // Calculate progress percentage
+    const calculateProgress = () => {
+        if (!progress)
+            return 0;
+        // Phase A: cores 0-3 (0-50%), Phase B: cores 0-3 (50-100%)
+        const phaseOffset = progress.phase === "B" ? 50 : 0;
+        const coreProgress = (progress.core / 4) * 50;
+        return Math.min(phaseOffset + coreProgress, 100);
+    };
+    // Format ETA
+    const formatEta = (seconds) => {
+        if (seconds <= 0)
+            return "Almost done...";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins > 0) {
+            return `${mins}m ${secs}s remaining`;
+        }
+        return `${secs}s remaining`;
+    };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { textAlign: "center", marginBottom: "16px" } },
+                React.createElement(FaSpinner, { style: {
+                        animation: "spin 1s linear infinite",
+                        fontSize: "24px",
+                        color: "#1a9fff",
+                    } }),
+                React.createElement("style", null, `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                "Tuning for: ",
+                goalLabel)),
+        progress && (React.createElement(React.Fragment, null,
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement(DFL.ProgressBarWithInfo, { label: `Phase ${progress.phase} - Core ${progress.core}`, description: `Testing value: ${progress.value}`, nProgress: calculateProgress(), sOperationText: formatEta(progress.eta) })),
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: {
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "12px",
+                        color: "#8b929a",
+                        marginTop: "8px",
+                    } },
+                    React.createElement("span", null,
+                        "Phase: ",
+                        progress.phase === "A" ? "Coarse Search" : "Fine Tuning"),
+                    React.createElement("span", null,
+                        "Core: ",
+                        progress.core + 1,
+                        "/4"))))),
+        !progress && isRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "Initializing autotune..."))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, style: { marginTop: "16px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
+                    React.createElement(FaTimes, null),
+                    React.createElement("span", null, "Cancel"))))));
+};
+const ResultsStep = ({ result, platformInfo, onApplyAndSave, onStartOver, }) => {
+    /**
+     * Get color indicator based on value and stability.
+     * Requirements: 6.5
+     * - Green: stable/applied
+     * - Yellow: moderate undervolt
+     * - Red: aggressive undervolt near limit
+     */
+    const getValueColor = (value) => {
+        if (!platformInfo)
+            return "#8b929a";
+        const limit = platformInfo.safe_limit;
+        const ratio = Math.abs(value) / Math.abs(limit);
+        if (ratio < 0.5)
+            return "#4caf50"; // Green - conservative
+        if (ratio < 0.8)
+            return "#ff9800"; // Yellow - moderate
+        return "#f44336"; // Red - aggressive
+    };
+    /**
+     * Get status label for value.
+     */
+    const getValueStatus = (value) => {
+        if (!platformInfo)
+            return "";
+        const limit = platformInfo.safe_limit;
+        const ratio = Math.abs(value) / Math.abs(limit);
+        if (ratio < 0.5)
+            return "Conservative";
+        if (ratio < 0.8)
+            return "Moderate";
+        return "Aggressive";
+    };
+    // Format duration
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `${mins}m ${secs}s`;
+    };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px",
+                    backgroundColor: result.stable ? "#1b5e20" : "#b71c1c",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                result.stable ? React.createElement(FaCheck, null) : React.createElement(FaTimes, null),
+                React.createElement("span", { style: { fontWeight: "bold" } }, result.stable ? "Tuning Complete!" : "Tuning Incomplete"))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    justifyContent: "space-around",
+                    fontSize: "12px",
+                    color: "#8b929a",
+                    marginBottom: "16px",
+                } },
+                React.createElement("span", null,
+                    "Duration: ",
+                    formatDuration(result.duration)),
+                React.createElement("span", null,
+                    "Tests: ",
+                    result.tests_run))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Optimal Values Found:")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.Focusable, { style: {
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: "8px",
+                } }, result.cores.map((value, index) => (React.createElement("div", { key: index, style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    borderLeft: `4px solid ${getValueColor(value)}`,
+                } },
+                React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } },
+                    "Core ",
+                    index),
+                React.createElement("div", { style: {
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: getValueColor(value),
+                    } }, value),
+                React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, getValueStatus(value))))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "16px",
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginTop: "8px",
+                } },
+                React.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#4caf50" } }),
+                    "Conservative"),
+                React.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ff9800" } }),
+                    "Moderate"),
+                React.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f44336" } }),
+                    "Aggressive"))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onApplyAndSave, style: { marginTop: "16px" } },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#4caf50",
+                    } },
+                    React.createElement(FaCheck, null),
+                    React.createElement("span", null, "Apply & Save")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                    React.createElement("span", null, "Start Over"))))));
+};
+
+/**
+ * ExpertMode component for DeckTune.
+ *
+ * Feature: decktune, Frontend UI Components - Expert Mode
+ * Requirements: 4.5, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2
+ *
+ * Provides detailed manual controls and diagnostics for power users:
+ * - Manual tab: Per-core sliders, Apply/Test/Disable buttons, live metrics
+ * - Presets tab: Preset list with edit/delete/export, import
+ * - Tests tab: Test selection, run button, history
+ * - Diagnostics tab: System info, logs, export
+ * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
+ */
+
+const TABS = [
+    { id: "manual", label: "Manual", icon: FaSlidersH },
+    { id: "presets", label: "Presets", icon: FaList },
+    { id: "tests", label: "Tests", icon: FaVial },
+    { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
+];
+/**
+ * Panic Disable Button component - always visible emergency reset.
+ * Requirements: 4.5
+ *
+ * Features:
+ * - Always visible red button
+ * - Immediate reset to 0 on click
+ */
+const PanicDisableButton = () => {
+    const { api } = useDeckTune();
+    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
+    const handlePanicDisable = async () => {
+        setIsPanicking(true);
+        try {
+            await api.panicDisable();
+        }
+        finally {
+            setIsPanicking(false);
+        }
+    };
+    return (React.createElement(DFL.PanelSectionRow, null,
+        React.createElement(DFL.ButtonItem, { layout: "below", onClick: handlePanicDisable, disabled: isPanicking, style: {
+                backgroundColor: "#b71c1c",
+                borderRadius: "8px",
+            } },
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    color: "#fff",
+                    fontWeight: "bold",
+                } }, isPanicking ? (React.createElement(React.Fragment, null,
+                React.createElement(FaSpinner, { className: "spin" }),
+                React.createElement("span", null, "Disabling..."))) : (React.createElement(React.Fragment, null,
+                React.createElement(FaExclamationTriangle, null),
+                React.createElement("span", null, "PANIC DISABLE")))))));
+};
+/**
+ * ExpertMode component - detailed controls for power users.
+ * Requirements: 4.5, 7.1
+ */
+const ExpertMode = ({ initialTab = "manual" }) => {
+    const [activeTab, setActiveTab] = SP_REACT.useState(initialTab);
+    return (React.createElement(DFL.PanelSection, { title: "Expert Mode" },
+        React.createElement(PanicDisableButton, null),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
+        activeTab === "manual" && React.createElement(ManualTab, null),
+        activeTab === "presets" && React.createElement(PresetsTab, null),
+        activeTab === "tests" && React.createElement(TestsTab, null),
+        activeTab === "diagnostics" && React.createElement(DiagnosticsTab, null)));
+};
+const TabNavigation = ({ activeTab, onTabChange }) => {
+    return (React.createElement(DFL.Focusable, { style: {
+            display: "flex",
+            justifyContent: "space-around",
+            marginBottom: "16px",
+            backgroundColor: "#23262e",
+            borderRadius: "8px",
+            padding: "4px",
+        } }, TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (React.createElement("button", { key: tab.id, onClick: () => onTabChange(tab.id), style: {
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "4px",
+                padding: "8px 4px",
+                backgroundColor: isActive ? "#1a9fff" : "transparent",
+                border: "none",
+                borderRadius: "6px",
+                color: isActive ? "#fff" : "#8b929a",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+            } },
+            React.createElement(Icon, null),
+            React.createElement("span", { style: { fontSize: "10px" } }, tab.label)));
+    })));
+};
+/**
+ * Manual tab component.
+ * Requirements: 5.4, 7.2
+ *
+ * Features:
+ * - Per-core sliders with current values
+ * - Apply, Test, Disable buttons
+ * - Live temperature and frequency display
+ * - "Tune for this game" button (Requirement 5.4)
+ */
+const ManualTab = () => {
+    const { state, api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
+    const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const [isTesting, setIsTesting] = SP_REACT.useState(false);
+    const [isTuning, setIsTuning] = SP_REACT.useState(false);
+    const [systemMetrics, setSystemMetrics] = SP_REACT.useState(null);
+    // Fetch system metrics periodically
+    SP_REACT.useEffect(() => {
+        const fetchMetrics = async () => {
+            try {
+                const info = await api.getSystemInfo();
+                if (info.temps && info.freqs) {
+                    setSystemMetrics({ temps: info.temps, freqs: info.freqs });
+                }
+            }
+            catch (e) {
+                // Ignore errors
+            }
+        };
+        fetchMetrics();
+        const interval = setInterval(fetchMetrics, 2000);
+        return () => clearInterval(interval);
+    }, [api]);
+    const safeLimit = platformInfo?.safe_limit ?? -30;
+    /**
+     * Handle slider value change for a specific core.
+     */
+    const handleCoreChange = (core, value) => {
+        const newValues = [...coreValues];
+        newValues[core] = value;
+        setCoreValues(newValues);
+    };
+    /**
+     * Apply current values.
+     */
+    const handleApply = async () => {
+        setIsApplying(true);
+        try {
+            await api.applyUndervolt(coreValues);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    /**
+     * Run quick test with current values.
+     */
+    const handleTest = async () => {
+        setIsTesting(true);
+        try {
+            await api.applyUndervolt(coreValues);
+            await api.runTest("cpu_quick");
+        }
+        finally {
+            setIsTesting(false);
+        }
+    };
+    /**
+     * Disable undervolt (reset to 0).
+     */
+    const handleDisable = async () => {
+        await api.disableUndervolt();
+        setCoreValues([0, 0, 0, 0]);
+    };
+    /**
+     * Tune for current game - run autotune and save as preset.
+     * Requirements: 5.4
+     */
+    const handleTuneForGame = async () => {
+        if (!state.runningAppId || !state.runningAppName) {
             return;
         }
-        if (!editablePreset)
-            return;
-        setDoubleCheckDelete(false);
-        await api.deletePreset(editablePreset.app_id);
-        setSelectedPreset(null);
-        setEditablePreset(null);
-    };
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setCurrentPage("main") }, t("presetManager.backButton"))),
-        window.SP_REACT.createElement(PresetSelector, { presets: state.presets, selectedPreset: selectedPreset, handleSetSelectedPreset: handleSetSelectedPreset }),
-        editablePreset && (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-            state.settings.isRunAutomatically && (window.SP_REACT.createElement(PresetControls$1, { editablePreset: editablePreset, setEditablePreset: setEditablePreset })),
-            window.SP_REACT.createElement(CoreSliders, { cores: editablePreset.value, updateCore: updateCore }),
-            window.SP_REACT.createElement(ActionButtons$2, { loading: loading, doubleCheckDelete: doubleCheckDelete, handleUpdatePreset: handleUpdatePreset, handleDeletePreset: handleDeletePreset })))));
-};
-
-const UndervoltStatus = () => {
-    const { state } = SP_REACT.useContext(Context);
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        t("undervoltStatus.status"),
-        " ",
-        t("undervoltStatus." + state.status || "disabled")));
-};
-
-const PresetControls = ({ useAsPreset, setUseAsPreset, usePresetTimeout, setUsePresetTimeout, presetTimeout, setPresetTimeout, }) => {
-    const { state } = SP_REACT.useContext(Context);
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { checked: useAsPreset, onChange: (value) => setUseAsPreset(value), label: t("staticUndervolt.useForCurrentGame", {
-                    appName: state.runningAppName ||
-                        t("staticUndervolt.currentGamePlaceholder"),
-                }), disabled: !state.runningAppName, description: state.runningAppName
-                    ? t("staticUndervolt.descriptionRunningGame", {
-                        appName: state.runningAppName,
-                    })
-                    : t("staticUndervolt.noGameRunning") })),
-        state.settings.isRunAutomatically && useAsPreset && (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { checked: usePresetTimeout, onChange: (value) => setUsePresetTimeout(value), label: t("presetControls.useTimeout"), description: t("presetControls.timeoutDescription", {
-                        label: state.runningAppName,
-                    }) })),
-            usePresetTimeout && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { bottomSeparator: "standard", min: 0, showValue: true, max: 1000, step: 1, label: t("presetControls.timeoutLabel"), value: presetTimeout, onChange: setPresetTimeout })))))));
-};
-
-const ActionButtons$1 = ({ loading, updateCoreValues, handleReset, handleDisableUndervolt, }) => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loading, layout: "below", onClick: updateCoreValues }, loading
-                ? t("staticUndervolt.actionButtons.applying")
-                : t("staticUndervolt.actionButtons.saveAndApply"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loading, layout: "below", onClick: handleReset }, t("staticUndervolt.actionButtons.reset"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loading, layout: "below", onClick: handleDisableUndervolt }, t("staticUndervolt.actionButtons.disable")))));
-};
-
-const StaticUndervolt = ({ setCurrentPage, }) => {
-    const [cores, setCores] = SP_REACT.useState([5, 5, 5, 5]);
-    const [useAsPreset, setUseAsPreset] = SP_REACT.useState(false);
-    const [usePresetTimeout, setUsePresetTimeout] = SP_REACT.useState(false);
-    const [presetTimeout, setPresetTimeout] = SP_REACT.useState(0);
-    const { api, state } = SP_REACT.useContext(Context);
-    const [loading, setLoading] = SP_REACT.useState(false);
-    const { t } = useTranslation();
-    SP_REACT.useEffect(() => {
-        setCores(state.cores);
-        setUseAsPreset(!!state.currentPreset && !!state.runningAppName);
-        setUsePresetTimeout(state?.currentPreset?.use_timeout || false);
-        setPresetTimeout(state?.currentPreset?.timeout || 0);
-    }, [state]);
-    const setDynamicUndervolt = (value) => {
-        api.setState({ isDynamic: value });
-    };
-    const updateCore = (index, value) => {
-        const newCores = [...cores];
-        newCores[index] = value;
-        setCores(newCores);
-    };
-    const updateCoreValues = async () => {
-        setLoading(true);
+        setIsTuning(true);
         try {
-            await api.saveAndApply(cores, useAsPreset, {
-                use_timeout: usePresetTimeout,
-                timeout: presetTimeout,
-            });
+            const result = await api.tuneForCurrentGame("quick");
+            if (result.success && result.preset) {
+                setCoreValues(result.preset.value);
+            }
+        }
+        finally {
+            setIsTuning(false);
+        }
+    };
+    /**
+     * Get color for value indicator.
+     */
+    const getValueColor = (value) => {
+        const ratio = Math.abs(value) / Math.abs(safeLimit);
+        if (ratio < 0.5)
+            return "#4caf50";
+        if (ratio < 0.8)
+            return "#ff9800";
+        return "#f44336";
+    };
+    // Check if a game is currently running
+    const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
+    return (React.createElement(React.Fragment, null,
+        platformInfo && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
+                platformInfo.variant,
+                " (",
+                platformInfo.model,
+                ") \u2022 Safe limit: ",
+                safeLimit))),
+        systemMetrics && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.Focusable, { style: {
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "8px",
+                    marginBottom: "16px",
+                } }, [0, 1, 2, 3].map((core) => (React.createElement("div", { key: core, style: {
+                    padding: "8px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    textAlign: "center",
+                } },
+                React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
+                    "Core ",
+                    core),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginTop: "4px" } },
+                    React.createElement(FaThermometerHalf, { style: { color: "#ff9800", fontSize: "10px" } }),
+                    React.createElement("span", { style: { fontSize: "12px" } },
+                        systemMetrics.temps[core] ?? "--",
+                        "\u00B0C")),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" } },
+                    React.createElement(FaMicrochip, { style: { color: "#1a9fff", fontSize: "10px" } }),
+                    React.createElement("span", { style: { fontSize: "12px" } }, systemMetrics.freqs[core] ? `${(systemMetrics.freqs[core] / 1000).toFixed(1)}GHz` : "--")))))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Undervolt Values")),
+        [0, 1, 2, 3].map((core) => (React.createElement(DFL.PanelSectionRow, { key: core },
+            React.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: safeLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: "", description: React.createElement("span", { style: { color: getValueColor(coreValues[core]) } }, coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`) })))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    gap: "8px",
+                    marginTop: "16px",
+                } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleApply, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                        isApplying ? React.createElement(FaSpinner, { className: "spin" }) : React.createElement(FaCheck, null),
+                        React.createElement("span", null, "Apply"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleTest, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                        isTesting ? React.createElement(FaSpinner, { className: "spin" }) : React.createElement(FaVial, null),
+                        React.createElement("span", null, "Test"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleDisable, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
+                        React.createElement(FaBan, null),
+                        React.createElement("span", null, "Disable"))))),
+        isGameRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleTuneForGame, disabled: isApplying || isTesting || isTuning, style: { marginTop: "8px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#1a9fff" } }, isTuning ? (React.createElement(React.Fragment, null,
+                    React.createElement(FaSpinner, { className: "spin" }),
+                    React.createElement("span", null,
+                        "Tuning for ",
+                        state.runningAppName,
+                        "..."))) : (React.createElement(React.Fragment, null,
+                    React.createElement(FaRocket, null),
+                    React.createElement("span", null,
+                        "Tune for ",
+                        state.runningAppName))))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    marginTop: "12px",
+                    padding: "8px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    textAlign: "center",
+                } },
+                "Status: ",
+                React.createElement("span", { style: { color: state.status === "enabled" ? "#4caf50" : "#8b929a" } }, state.status))),
+        React.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+/**
+ * Presets tab component.
+ * Requirements: 7.3
+ *
+ * Features:
+ * - Preset list with edit/delete/export
+ * - Import preset button
+ */
+const PresetsTab = () => {
+    const { state, api } = useDeckTune();
+    const [editingPreset, setEditingPreset] = SP_REACT.useState(null);
+    const [isImporting, setIsImporting] = SP_REACT.useState(false);
+    const [importJson, setImportJson] = SP_REACT.useState("");
+    const [importError, setImportError] = SP_REACT.useState(null);
+    /**
+     * Handle preset deletion.
+     */
+    const handleDelete = async (appId) => {
+        await api.deletePreset(appId);
+    };
+    /**
+     * Handle preset export (single preset).
+     */
+    const handleExportSingle = async (preset) => {
+        const json = JSON.stringify([preset], null, 2);
+        // In a real implementation, this would trigger a file download
+        console.log("Export preset:", json);
+        // For now, copy to clipboard simulation
+        alert(`Preset exported:\n${json}`);
+    };
+    /**
+     * Handle export all presets.
+     */
+    const handleExportAll = async () => {
+        const json = await api.exportPresets();
+        console.log("Export all presets:", json);
+        alert(`All presets exported:\n${json}`);
+    };
+    /**
+     * Handle import presets.
+     */
+    const handleImport = async () => {
+        setImportError(null);
+        try {
+            const result = await api.importPresets(importJson);
+            if (result.success) {
+                setIsImporting(false);
+                setImportJson("");
+                alert(`Successfully imported ${result.imported_count} preset(s)`);
+            }
+            else {
+                setImportError(result.error || "Import failed");
+            }
         }
         catch (e) {
-            console.error(e);
-        }
-        finally {
-            setTimeout(() => setLoading(false), 1000);
+            setImportError("Invalid JSON format");
         }
     };
-    const handleReset = () => setCores([5, 5, 5, 5]);
-    const handleDisableUndervolt = async () => {
-        await api.disableUndervolt();
-    };
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(UndervoltStatus, null),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { checked: state.isDynamic, label: 'Use Dynamic Undervolting', onChange: setDynamicUndervolt })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setCurrentPage("preset-manager") }, t("staticUndervolt.presetManagerButton"))),
-        window.SP_REACT.createElement(PresetControls, { useAsPreset: useAsPreset, setUseAsPreset: setUseAsPreset, usePresetTimeout: usePresetTimeout, setUsePresetTimeout: setUsePresetTimeout, presetTimeout: presetTimeout, setPresetTimeout: setPresetTimeout }),
-        window.SP_REACT.createElement(CoreSliders, { cores: cores, updateCore: updateCore }),
-        window.SP_REACT.createElement(ActionButtons$1, { loading: loading, updateCoreValues: updateCoreValues, handleReset: handleReset, handleDisableUndervolt: handleDisableUndervolt })));
-};
-
-const ActionButtons = ({ handleSave, loading, }) => {
-    const { api } = SP_REACT.useContext(Context);
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, disabled: loading }, "Save and Enable Dynamic"),
-        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: api.disableGymdeck, disabled: loading }, "Disable")));
-};
-
-const StrategySelector = ({ handleChangeStrategy, selectedStrategy, }) => {
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.DropdownItem, { rgOptions: [
-                { label: "Manual", data: "MANUAL" },
-                { label: "Aggressive", data: "AGGRESSIVE" },
-                { label: "Default", data: "DEFAULT" },
-            ], selectedOption: selectedStrategy, onChange: handleChangeStrategy, label: "Strategy Selector" })));
-};
-
-// A helper to create a smooth path with quadratic Bézier curves
-function getSmoothPath(points) {
-    if (points.length < 2)
-        return "";
-    let d = `M ${points[0].x},${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[i];
-        const p1 = points[i + 1];
-        const midX = (p0.x + p1.x) / 2;
-        const midY = (p0.y + p1.y) / 2;
-        // Quadratic curve from p0 to mid‐point
-        d += ` Q ${p0.x},${p0.y} ${midX},${midY}`;
-    }
-    // "T" continues the smooth curve to the final point
-    const last = points[points.length - 1];
-    d += ` T ${last.x},${last.y}`;
-    return d;
-}
-const UndervoltingPreview = ({ data }) => {
-    // We reserve a 10% margin at each edge
-    const MARGIN = 10;
-    const CHART_MIN = MARGIN;
-    const CHART_MAX = 100 - MARGIN;
-    const CHART_SIZE = CHART_MAX - CHART_MIN; // 80
-    // Map data [0..100] → [MARGIN..(100 - MARGIN)]
-    const normalizedData = data.map((pt) => ({
-        x: CHART_MIN + (pt.point / 100) * CHART_SIZE,
-        // invert Y so 100 is at bottom
-        y: CHART_MAX - (pt.value / 100) * CHART_SIZE,
-    }));
-    const smoothPath = getSmoothPath(normalizedData);
-    return (window.SP_REACT.createElement("div", { style: { width: "100%", height: "250px", position: "relative" } },
-        window.SP_REACT.createElement("svg", { viewBox: "0 0 100 100", preserveAspectRatio: "xMidYMid meet", style: {
-                width: "100%",
-                height: "100%",
-                backgroundColor: "black",
-                border: "1px solid #1e90ff",
-                display: "block",
-            } },
-            [...Array(11)].map((_, i) => {
-                // e.g. i=0 => val=0, i=10 => val=100
-                const val = (i * 100) / 10; // 0,10,20,...,100
-                // Convert val to chart coords
-                const xPos = CHART_MIN + (val / 100) * CHART_SIZE;
-                const yPos = CHART_MAX - (val / 100) * CHART_SIZE;
-                return (window.SP_REACT.createElement(SP_REACT.Fragment, { key: i },
-                    window.SP_REACT.createElement("line", { x1: CHART_MIN, y1: yPos, x2: CHART_MAX, y2: yPos, stroke: "#1e90ff", strokeWidth: "0.2" }),
-                    window.SP_REACT.createElement("line", { x1: xPos, y1: CHART_MIN, x2: xPos, y2: CHART_MAX, stroke: "#1e90ff", strokeWidth: "0.2" })));
-            }),
-            [...Array(11)].map((_, i) => {
-                const val = i * 10; // 0..100
-                const xPos = CHART_MIN + (val / 100) * CHART_SIZE;
-                return (window.SP_REACT.createElement("text", { key: `x-label-${val}`, x: xPos, y: CHART_MAX + 5, fontSize: "2", fill: "#ccc", textAnchor: "middle", style: { fontFamily: "sans-serif" } },
-                    val,
-                    "%"));
-            }),
-            [...Array(11)].map((_, i) => {
-                const val = i * 10; // 0..100
-                const yPos = CHART_MAX - (val / 100) * CHART_SIZE;
-                return (window.SP_REACT.createElement("text", { key: `y-label-${val}`, x: CHART_MIN - 2, y: yPos, fontSize: "2", fill: "#ccc", textAnchor: "end", alignmentBaseline: "middle", style: { fontFamily: "sans-serif" } }, val));
-            }),
-            window.SP_REACT.createElement("text", { x: (CHART_MIN + CHART_MAX) / 2, y: CHART_MAX + 9, fontSize: "4", fill: "white", textAnchor: "middle", style: { fontFamily: "sans-serif" } }, "CPU Load %"),
-            window.SP_REACT.createElement("text", { x: CHART_MIN - 9, y: (CHART_MIN + CHART_MAX) / 2, fontSize: "4", fill: "white", textAnchor: "middle", style: { fontFamily: "sans-serif" }, transform: `
-            rotate(-90, 
-              ${CHART_MIN - 9}, 
-              ${(CHART_MIN + CHART_MAX) / 2}
-            )
-          ` }, "CO Step"),
-            window.SP_REACT.createElement("path", { d: smoothPath, stroke: "#1e90ff", strokeWidth: "0.7", fill: "none" }))));
-};
-
-function debounce(func, ms) {
-    let timeout;
-    return function () {
-        clearTimeout(timeout);
-        // @ts-ignore
-        timeout = setTimeout(() => func.apply(this, arguments), ms);
-    };
-}
-
-const DynamicCoreSettings = ({ label, coreSettings, handleChange, strategy, }) => {
-    const [graphData, setGraphData] = SP_REACT.useState([]);
-    const generateGraphData = () => {
-        const data = [];
-        const threshold = coreSettings.threshold;
-        const minValue = coreSettings.minimumValue;
-        const maxValue = coreSettings.maximumValue;
-        for (let i = 0; i < 100; i++) {
-            const point = i; // Temperature from 0 to 100
-            let value = minValue; // Default curve optimizer step value
-            if (strategy === "AGGRESSIVE") {
-                if (point > threshold) {
-                    const loadAboveThreshold = point - threshold;
-                    const loadRange = 100 - threshold;
-                    const normalizedLoad = loadAboveThreshold / loadRange;
-                    value = minValue + Math.round(normalizedLoad * (maxValue - minValue));
-                }
-            }
-            else if (strategy === "DEFAULT") {
-                if (point > threshold) {
-                    value = Math.round((point / 100) * maxValue);
-                }
-                else {
-                    value = Math.round((point / 100) * minValue);
-                }
-                value = Math.max(minValue, Math.min(value, maxValue));
-            }
-            else if (strategy === "MANUAL") {
-                // Manual logic can be implemented if specific points and values are provided
-                // For now, we assume linear mapping between minValue and maxValue
-                value = Math.round((point / 100) * (maxValue - minValue) + minValue);
-            }
-            data.push({ point, value });
+    /**
+     * Handle preset edit save.
+     */
+    const handleSaveEdit = async () => {
+        if (editingPreset) {
+            await api.updatePreset(editingPreset);
+            setEditingPreset(null);
         }
-        console.log(data);
-        setGraphData(data);
     };
-    const debouncedGenerateGraphData = debounce(generateGraphData, 200);
-    const handleSliderChange = (key, value) => {
-        handleChange({ ...coreSettings, [key]: value });
-        debouncedGenerateGraphData();
+    /**
+     * Format core values for display.
+     */
+    const formatCoreValues = (values) => {
+        return values.map((v, i) => `C${i}:${v}`).join(" ");
     };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "16px",
+                } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportAll },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        React.createElement(FaDownload, null),
+                        React.createElement("span", null, "Export All"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setIsImporting(true) },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        React.createElement(FaUpload, null),
+                        React.createElement("span", null, "Import"))))),
+        isImporting && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Import Presets"),
+                React.createElement(DFL.TextField, { label: "JSON Data", value: importJson, onChange: (e) => setImportJson(e.target.value), style: { marginBottom: "8px" } }),
+                importError && (React.createElement("div", { style: { color: "#f44336", fontSize: "12px", marginBottom: "8px" } }, importError)),
+                React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleImport },
+                        React.createElement("span", null, "Import")),
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => { setIsImporting(false); setImportJson(""); setImportError(null); } },
+                        React.createElement("span", null, "Cancel")))))),
+        editingPreset && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                    "Edit Preset: ",
+                    editingPreset.label),
+                React.createElement(DFL.TextField, { label: "Label", value: editingPreset.label, onChange: (e) => setEditingPreset({ ...editingPreset, label: e.target.value }), style: { marginBottom: "8px" } }),
+                React.createElement(DFL.ToggleField, { label: "Use Timeout", checked: editingPreset.use_timeout, onChange: (checked) => setEditingPreset({ ...editingPreset, use_timeout: checked }) }),
+                editingPreset.use_timeout && (React.createElement(DFL.SliderField, { label: "Timeout (seconds)", value: editingPreset.timeout, min: 0, max: 60, step: 5, showValue: true, onChange: (value) => setEditingPreset({ ...editingPreset, timeout: value }) })),
+                React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSaveEdit },
+                        React.createElement("span", null, "Save")),
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setEditingPreset(null) },
+                        React.createElement("span", null, "Cancel")))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                "Saved Presets (",
+                state.presets.length,
+                ")")),
+        state.presets.length === 0 ? (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px" } }, "No presets saved yet. Use \"Tune for this game\" or save from Manual tab."))) : (state.presets.map((preset) => (React.createElement(DFL.PanelSectionRow, { key: preset.app_id },
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "8px",
+                } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                    React.createElement("div", null,
+                        React.createElement("div", { style: { fontWeight: "bold", fontSize: "14px" } }, preset.label),
+                        React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, formatCoreValues(preset.value)),
+                        preset.use_timeout && (React.createElement("div", { style: { fontSize: "10px", color: "#ff9800" } },
+                            "Timeout: ",
+                            preset.timeout,
+                            "s")),
+                        preset.tested && (React.createElement("div", { style: { fontSize: "10px", color: "#4caf50" } }, "\u2713 Tested"))),
+                    React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
+                        React.createElement("button", { onClick: () => setEditingPreset(preset), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#1a9fff",
+                                cursor: "pointer",
+                            } },
+                            React.createElement(FaEdit, null)),
+                        React.createElement("button", { onClick: () => handleExportSingle(preset), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#8b929a",
+                                cursor: "pointer",
+                            } },
+                            React.createElement(FaDownload, null)),
+                        React.createElement("button", { onClick: () => handleDelete(preset.app_id), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#f44336",
+                                cursor: "pointer",
+                            } },
+                            React.createElement(FaTrash, null)))))))))));
+};
+/**
+ * Available test options.
+ */
+const TEST_OPTIONS = [
+    { value: "cpu_quick", label: "CPU Quick (30s)" },
+    { value: "cpu_long", label: "CPU Long (5m)" },
+    { value: "ram_quick", label: "RAM Quick (2m)" },
+    { value: "ram_thorough", label: "RAM Thorough (15m)" },
+    { value: "combo", label: "Combo Stress (5m)" },
+];
+/**
+ * Tests tab component.
+ * Requirements: 7.4
+ *
+ * Features:
+ * - Test selection dropdown
+ * - Run test button with progress
+ * - Last 10 test results history
+ * - Warning banner if binaries missing
+ */
+const TestsTab = () => {
+    const { history, currentTest, isRunning, runTest } = useTests();
+    const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
+    const [selectedTest, setSelectedTest] = SP_REACT.useState("cpu_quick");
+    // Check binaries on mount
     SP_REACT.useEffect(() => {
-        debouncedGenerateGraphData();
+        checkBinaries();
     }, []);
+    /**
+     * Handle run test button click.
+     */
+    const handleRunTest = async () => {
+        await runTest(selectedTest);
+    };
+    /**
+     * Format duration for display.
+     */
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        if (mins > 0) {
+            return `${mins}m ${secs}s`;
+        }
+        return `${secs}s`;
+    };
+    /**
+     * Format timestamp for display.
+     */
+    const formatTimestamp = (timestamp) => {
+        try {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+        catch {
+            return timestamp;
+        }
+    };
+    /**
+     * Get test label from value.
+     */
+    const getTestLabel = (value) => {
+        return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
+    };
+    return (React.createElement(React.Fragment, null,
+        hasMissing && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "12px",
+                    backgroundColor: "#5c4813",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                    border: "1px solid #ff9800",
+                } },
+                React.createElement(FaExclamationCircle, { style: { color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" } }),
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" } }, "Missing Components"),
+                    React.createElement("div", { style: { fontSize: "12px", color: "#ffe0b2" } },
+                        "Required tools not found: ",
+                        React.createElement("strong", null, missingBinaries.join(", "))),
+                    React.createElement("div", { style: { fontSize: "11px", color: "#ffcc80", marginTop: "4px" } }, "Stress tests are unavailable until binaries are installed."))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Run Stress Test")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.DropdownItem, { label: "Select Test", menuLabel: "Select Test", rgOptions: TEST_OPTIONS.map((t) => ({
+                    data: t.value,
+                    label: t.label,
+                })), selectedOption: selectedTest, onChange: (option) => setSelectedTest(option.data), disabled: hasMissing })),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunTest, disabled: isRunning || hasMissing },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: hasMissing ? 0.5 : 1 } }, isRunning ? (React.createElement(React.Fragment, null,
+                    React.createElement(FaSpinner, { className: "spin" }),
+                    React.createElement("span", null,
+                        "Running ",
+                        getTestLabel(currentTest || selectedTest),
+                        "..."))) : (React.createElement(React.Fragment, null,
+                    React.createElement(FaPlay, null),
+                    React.createElement("span", null, "Run Test")))))),
+        isRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1a3a5c",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+                    React.createElement(FaSpinner, { className: "spin", style: { color: "#1a9fff" } }),
+                    React.createElement("span", null, "Test in progress...")),
+                React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } },
+                    "Running: ",
+                    getTestLabel(currentTest || selectedTest))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Test History (Last 10)")),
+        history.length === 0 ? (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px" } }, "No tests run yet."))) : (history.slice(0, 10).map((entry, index) => (React.createElement(DFL.PanelSectionRow, { key: index },
+            React.createElement("div", { style: {
+                    padding: "10px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    marginBottom: "6px",
+                    borderLeft: `3px solid ${entry.passed ? "#4caf50" : "#f44336"}`,
+                } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        entry.passed ? (React.createElement(FaCheck, { style: { color: "#4caf50" } })) : (React.createElement(FaTimes, { style: { color: "#f44336" } })),
+                        React.createElement("span", { style: { fontWeight: "bold", fontSize: "13px" } }, getTestLabel(entry.test_name))),
+                    React.createElement("span", { style: { fontSize: "11px", color: "#8b929a" } }, formatDuration(entry.duration))),
+                React.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginTop: "4px" } }, formatTimestamp(entry.timestamp)),
+                React.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginTop: "2px" } },
+                    "Cores: [",
+                    entry.cores_tested.join(", "),
+                    "]")))))),
+        React.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+/**
+ * Diagnostics tab component.
+ * Requirements: 7.5, 8.1, 8.2
+ *
+ * Features:
+ * - System info display (platform, SteamOS version)
+ * - Log viewer
+ * - Export Diagnostics button
+ */
+const DiagnosticsTab = () => {
+    const { api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const [systemInfo, setSystemInfo] = SP_REACT.useState(null);
+    const [isExporting, setIsExporting] = SP_REACT.useState(false);
+    const [exportResult, setExportResult] = SP_REACT.useState(null);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    // Fetch system info on mount
     SP_REACT.useEffect(() => {
-        debouncedGenerateGraphData();
-    }, [strategy]);
-    return (window.SP_REACT.createElement("div", { style: { marginBottom: 10 } },
+        const fetchSystemInfo = async () => {
+            setIsLoading(true);
+            try {
+                const info = await api.getSystemInfo();
+                setSystemInfo(info);
+            }
+            catch (e) {
+                console.error("Failed to fetch system info:", e);
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSystemInfo();
+    }, [api]);
+    /**
+     * Handle export diagnostics button click.
+     */
+    const handleExportDiagnostics = async () => {
+        setIsExporting(true);
+        setExportResult(null);
+        try {
+            const result = await api.exportDiagnostics();
+            setExportResult(result);
+        }
+        catch (e) {
+            setExportResult({ success: false, error: "Export failed" });
+        }
+        finally {
+            setIsExporting(false);
+        }
+    };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "System Information")),
+        isLoading ? (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", color: "#8b929a" } },
+                React.createElement(FaSpinner, { className: "spin" }),
+                React.createElement("span", null, "Loading system info...")))) : (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } },
+                React.createElement(InfoRow, { label: "Platform", value: platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown" }),
+                React.createElement(InfoRow, { label: "Safe Limit", value: platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown" }),
+                React.createElement(InfoRow, { label: "Detection", value: platformInfo?.detected ? "Successful" : "Failed" }),
+                systemInfo && (React.createElement(React.Fragment, null,
+                    React.createElement("div", { style: { borderTop: "1px solid #3d4450", margin: "8px 0" } }),
+                    React.createElement(InfoRow, { label: "SteamOS Version", value: systemInfo.steamos_version || "Unknown" }),
+                    React.createElement(InfoRow, { label: "Kernel", value: systemInfo.kernel || "Unknown" }),
+                    React.createElement(InfoRow, { label: "Hostname", value: systemInfo.hostname || "Unknown" }),
+                    systemInfo.uptime && (React.createElement(InfoRow, { label: "Uptime", value: formatUptime(systemInfo.uptime) }))))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Current Configuration")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } }, systemInfo?.config ? (React.createElement(React.Fragment, null,
+                React.createElement(InfoRow, { label: "Active Cores", value: `[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                React.createElement(InfoRow, { label: "LKG Cores", value: `[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                React.createElement(InfoRow, { label: "Status", value: systemInfo.config.status || "Unknown" }),
+                React.createElement(InfoRow, { label: "Presets Count", value: String(systemInfo.config.presets_count || 0) }))) : (React.createElement("div", { style: { color: "#8b929a" } }, "Configuration not available")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Recent Logs")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "8px",
+                    backgroundColor: "#1a1d23",
+                    borderRadius: "8px",
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "#8b929a",
+                } }, systemInfo?.logs ? (systemInfo.logs.split("\n").slice(-20).map((line, index) => (React.createElement("div", { key: index, style: { marginBottom: "2px" } }, line)))) : (React.createElement("div", null, "No logs available")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportDiagnostics, disabled: isExporting, style: { marginTop: "16px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isExporting ? (React.createElement(React.Fragment, null,
+                    React.createElement(FaSpinner, { className: "spin" }),
+                    React.createElement("span", null, "Exporting..."))) : (React.createElement(React.Fragment, null,
+                    React.createElement(FaDownload, null),
+                    React.createElement("span", null, "Export Diagnostics")))))),
+        exportResult && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: exportResult.success ? "#1b5e20" : "#b71c1c",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } }, exportResult.success ? (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: { fontWeight: "bold", marginBottom: "4px" } },
+                    React.createElement(FaCheck, { style: { marginRight: "8px" } }),
+                    "Export Successful"),
+                React.createElement("div", { style: { fontSize: "12px", wordBreak: "break-all" } },
+                    "Saved to: ",
+                    exportResult.path))) : (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: { fontWeight: "bold" } },
+                    React.createElement(FaTimes, { style: { marginRight: "8px" } }),
+                    "Export Failed"),
+                React.createElement("div", { style: { fontSize: "12px" } }, exportResult.error)))))),
+        React.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+const InfoRow = ({ label, value }) => (React.createElement("div", { style: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: "6px",
+        fontSize: "12px",
+    } },
+    React.createElement("span", { style: { color: "#8b929a" } },
         label,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { showValue: true, label: "Minimal Value", min: 0, max: 100, value: coreSettings.minimumValue, onChange: (value) => handleSliderChange("minimumValue", value) })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { label: "Maximum Value", min: 0, showValue: true, max: 100, value: coreSettings.maximumValue, onChange: (value) => handleSliderChange("maximumValue", value) })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", min: 0, showValue: true, max: 100, value: coreSettings.threshold, onChange: (value) => handleSliderChange("threshold", value) })),
-        window.SP_REACT.createElement(UndervoltingPreview, { data: graphData })));
+        ":"),
+    React.createElement("span", { style: { color: "#fff" } }, value)));
+/**
+ * Format uptime seconds to human readable string.
+ */
+const formatUptime = (seconds) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const parts = [];
+    if (days > 0)
+        parts.push(`${days}d`);
+    if (hours > 0)
+        parts.push(`${hours}h`);
+    if (mins > 0)
+        parts.push(`${mins}m`);
+    return parts.length > 0 ? parts.join(" ") : "< 1m";
 };
 
-const DynamicUndervolt = () => {
-    const { api, state } = SP_REACT.useContext(Context);
-    const [loading, setLoading] = SP_REACT.useState(false);
-    const [dynamicSettings, setDynamicSettings] = SP_REACT.useState({
-        ...state.dynamicSettings,
-    });
-    const setDynamicUndervolt = (checked) => {
-        api.setState({ isDynamic: checked });
-    };
-    const handleUpdateStrategy = (strategy) => {
-        setDynamicSettings((prevState) => ({
-            ...prevState,
-            strategy: strategy.data,
-        }));
-    };
-    const handleUpdateSampleInterval = (value) => {
-        setDynamicSettings((prevState) => ({
-            ...prevState,
-            sampleInterval: value,
-        }));
-    };
-    const handleUpdateCoreSettings = (coreIndex, value) => {
-        setDynamicSettings((prevState) => ({
-            ...prevState,
-            cores: prevState.cores.map((core, index) => {
-                if (index === coreIndex) {
-                    return {
-                        ...core,
-                        ...value,
-                    };
-                }
-                return core;
-            }),
-        }));
-    };
-    const handleSave = async () => {
-        api.setState({ dynamicSettings });
-        setLoading(true);
-        await api.enableGymdeck();
-        setLoading(false);
-    };
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(UndervoltStatus, null),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { checked: state.isDynamic, label: "Use Dynamic Undervolting", onChange: setDynamicUndervolt })),
-        window.SP_REACT.createElement(StrategySelector, { handleChangeStrategy: handleUpdateStrategy, selectedStrategy: dynamicSettings.strategy }),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { label: "Sample Interval", min: 10000, showValue: true, max: 100000, value: dynamicSettings.sampleInterval, onChange: handleUpdateSampleInterval })),
-        state.dynamicSettings.cores.map((_core, index) => (window.SP_REACT.createElement(DynamicCoreSettings, { coreSettings: dynamicSettings.cores[index], handleChange: (data) => handleUpdateCoreSettings(index, data), key: index, label: `Core ${index}`, strategy: dynamicSettings.strategy }))),
-        window.SP_REACT.createElement(ActionButtons, { handleSave: handleSave, loading: loading })));
-};
+/**
+ * DeckTune - Main plugin entry point for Decky Loader.
+ *
+ * This file registers the plugin with Decky Loader and provides
+ * the main UI component that appears in the Quick Access Menu.
+ */
 
-const UndervoltSection = () => {
-    const [currentPage, setCurrentPage] = SP_REACT.useState("main");
-    const { state } = SP_REACT.useContext(Context);
-    if (state.isDynamic)
-        return window.SP_REACT.createElement(DynamicUndervolt, null);
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        currentPage === "main" && (window.SP_REACT.createElement(StaticUndervolt, { setCurrentPage: setCurrentPage })),
-        currentPage === "preset-manager" && (window.SP_REACT.createElement(PresetManager, { setCurrentPage: setCurrentPage }))));
+/**
+ * Main content component with mode switching.
+ */
+const DeckTuneContent = () => {
+    const [mode, setMode] = SP_REACT.useState("wizard");
+    const { state } = useDeckTune();
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSection, null,
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: {
+                        display: "flex",
+                        justifyContent: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                    } },
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard"), style: {
+                            flex: 1,
+                            backgroundColor: mode === "wizard" ? "#1a9fff" : "#23262e",
+                            borderRadius: "6px",
+                        } },
+                        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } },
+                            React.createElement(FaMagic, null),
+                            React.createElement("span", null, "Wizard"))),
+                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert"), style: {
+                            flex: 1,
+                            backgroundColor: mode === "expert" ? "#1a9fff" : "#23262e",
+                            borderRadius: "6px",
+                        } },
+                        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } },
+                            React.createElement(FaCog, null),
+                            React.createElement("span", null, "Expert"))))),
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: {
+                        textAlign: "center",
+                        fontSize: "12px",
+                        color: "#8b929a",
+                        padding: "4px 8px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "4px",
+                    } },
+                    "Status: ",
+                    React.createElement("span", { style: {
+                            color: state.status === "enabled" || state.status === "DYNAMIC RUNNING"
+                                ? "#4caf50"
+                                : state.status === "error"
+                                    ? "#f44336"
+                                    : "#8b929a"
+                        } }, state.status)))),
+        mode === "wizard" ? React.createElement(WizardMode, null) : React.createElement(ExpertMode, null)));
 };
-
-const Settings = () => {
-    const { t } = useTranslation();
-    const [settings, setSettings] = SP_REACT.useState({
-        isGlobal: false,
-        runAtStartup: false,
-        isRunAutomatically: false,
-        timeoutApply: 0,
-    });
-    const { api, state } = SP_REACT.useContext(Context);
+/**
+ * Main plugin component wrapped with context provider.
+ */
+const DeckTunePlugin = () => {
+    const [initialized, setInitialized] = SP_REACT.useState(false);
+    const [error, setError] = SP_REACT.useState(null);
     SP_REACT.useEffect(() => {
-        setSettings({ ...state.settings });
-    }, [state]);
-    const [loadingSave, setLoadingSave] = SP_REACT.useState(false);
-    const [loadingReset, setLoadingReset] = SP_REACT.useState(false);
-    const handleSaveSettings = async () => {
-        setLoadingSave(true);
-        try {
-            await api.saveSettings(settings);
-        }
-        catch (error) {
-            console.error(error);
-        }
-        finally {
-            setTimeout(() => setLoadingSave(false), 1000);
-        }
-    };
-    const handleTimeoutApplyChange = ($event) => {
-        const value = Number($event?.target?.value);
-        if (!isNaN(Number(value))) {
-            setSettings({ ...settings, timeoutApply: Number(value) });
-        }
-    };
-    const handleResetConfig = async () => {
-        setLoadingReset(true);
-        try {
-            await api.resetConfig();
-            setSettings({ ...state.settings });
-        }
-        catch (error) {
-            console.error(error);
-        }
-        finally {
-            setTimeout(() => setLoadingReset(false), 1000);
-        }
-    };
-    const { isGlobal, runAtStartup, isRunAutomatically, timeoutApply } = settings;
-    return (window.SP_REACT.createElement(SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: t("settings.useGlobally"), checked: isGlobal, onChange: (checked) => setSettings({ ...settings, isGlobal: checked }), description: t("settings.useGloballyDescription") })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: t("settings.runWithGame"), checked: isRunAutomatically, onChange: (checked) => setSettings({ ...settings, isRunAutomatically: checked }), description: t("settings.runWithGameDescription") })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: t("settings.runAtStartup"), checked: runAtStartup, onChange: (checked) => setSettings({ ...settings, runAtStartup: checked }), description: t("settings.runAtStartupDescription") })),
-        runAtStartup && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.TextField, { label: t("settings.timeoutApply"), mustBeNumeric: true, value: String(timeoutApply), onChange: handleTimeoutApplyChange, description: t("settings.timeoutApplyDescription") }))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loadingReset, onClick: handleResetConfig, layout: "inline" }, loadingReset
-                ? t("settings.resettingConfig")
-                : t("settings.resetConfig"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { disabled: loadingSave, onClick: handleSaveSettings, layout: "inline" }, loadingSave
-                ? t("settings.savingSettings")
-                : t("settings.saveSettings")))));
-};
-
-const AboutPage = () => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement("div", { style: { fontSize: "12px" } },
-        window.SP_REACT.createElement("p", null, t("about.header")),
-        window.SP_REACT.createElement("ul", null,
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.tools.ryzenadj"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.tools.steamDeck")))),
-        window.SP_REACT.createElement("p", null, t("about.supportHeader")),
-        window.SP_REACT.createElement("ul", null,
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.kigs"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.pososaku"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.deadwenk"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.foxn"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.robert"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.ngnius"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.notBullseye"))),
-            window.SP_REACT.createElement("li", null,
-                window.SP_REACT.createElement("b", null, t("about.supporters.community")))),
-        window.SP_REACT.createElement("div", { style: { textAlign: "center" } },
-            window.SP_REACT.createElement("p", null, t("about.footer.thankYou")),
-            window.SP_REACT.createElement("div", null, t("about.footer.madeBy")))));
-};
-
-const Pages = () => {
-    const { t } = useTranslation();
-    return (window.SP_REACT.createElement(DFL.SidebarNavigation, { title: t("sidebar.title"), showTitle: false, pages: [
-            {
-                title: t("sidebar.settings"),
-                content: window.SP_REACT.createElement(Settings, null),
-            },
-            {
-                title: t("sidebar.about"),
-                content: window.SP_REACT.createElement(AboutPage, null),
-            },
-        ] }));
-};
-
-const isString = obj => typeof obj === 'string';
-const defer = () => {
-  let res;
-  let rej;
-  const promise = new Promise((resolve, reject) => {
-    res = resolve;
-    rej = reject;
-  });
-  promise.resolve = res;
-  promise.reject = rej;
-  return promise;
-};
-const makeString = object => {
-  if (object == null) return '';
-  return '' + object;
-};
-const copy = (a, s, t) => {
-  a.forEach(m => {
-    if (s[m]) t[m] = s[m];
-  });
-};
-const lastOfPathSeparatorRegExp = /###/g;
-const cleanKey = key => key && key.indexOf('###') > -1 ? key.replace(lastOfPathSeparatorRegExp, '.') : key;
-const canNotTraverseDeeper = object => !object || isString(object);
-const getLastOfPath = (object, path, Empty) => {
-  const stack = !isString(path) ? path : path.split('.');
-  let stackIndex = 0;
-  while (stackIndex < stack.length - 1) {
-    if (canNotTraverseDeeper(object)) return {};
-    const key = cleanKey(stack[stackIndex]);
-    if (!object[key] && Empty) object[key] = new Empty();
-    if (Object.prototype.hasOwnProperty.call(object, key)) {
-      object = object[key];
-    } else {
-      object = {};
-    }
-    ++stackIndex;
-  }
-  if (canNotTraverseDeeper(object)) return {};
-  return {
-    obj: object,
-    k: cleanKey(stack[stackIndex])
-  };
-};
-const setPath = (object, path, newValue) => {
-  const {
-    obj,
-    k
-  } = getLastOfPath(object, path, Object);
-  if (obj !== undefined || path.length === 1) {
-    obj[k] = newValue;
-    return;
-  }
-  let e = path[path.length - 1];
-  let p = path.slice(0, path.length - 1);
-  let last = getLastOfPath(object, p, Object);
-  while (last.obj === undefined && p.length) {
-    e = `${p[p.length - 1]}.${e}`;
-    p = p.slice(0, p.length - 1);
-    last = getLastOfPath(object, p, Object);
-    if (last && last.obj && typeof last.obj[`${last.k}.${e}`] !== 'undefined') {
-      last.obj = undefined;
-    }
-  }
-  last.obj[`${last.k}.${e}`] = newValue;
-};
-const pushPath = (object, path, newValue, concat) => {
-  const {
-    obj,
-    k
-  } = getLastOfPath(object, path, Object);
-  obj[k] = obj[k] || [];
-  obj[k].push(newValue);
-};
-const getPath = (object, path) => {
-  const {
-    obj,
-    k
-  } = getLastOfPath(object, path);
-  if (!obj) return undefined;
-  return obj[k];
-};
-const getPathWithDefaults = (data, defaultData, key) => {
-  const value = getPath(data, key);
-  if (value !== undefined) {
-    return value;
-  }
-  return getPath(defaultData, key);
-};
-const deepExtend = (target, source, overwrite) => {
-  for (const prop in source) {
-    if (prop !== '__proto__' && prop !== 'constructor') {
-      if (prop in target) {
-        if (isString(target[prop]) || target[prop] instanceof String || isString(source[prop]) || source[prop] instanceof String) {
-          if (overwrite) target[prop] = source[prop];
-        } else {
-          deepExtend(target[prop], source[prop], overwrite);
-        }
-      } else {
-        target[prop] = source[prop];
-      }
-    }
-  }
-  return target;
-};
-const regexEscape = str => str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
-var _entityMap = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-  '/': '&#x2F;'
-};
-const escape = data => {
-  if (isString(data)) {
-    return data.replace(/[&<>"'\/]/g, s => _entityMap[s]);
-  }
-  return data;
-};
-class RegExpCache {
-  constructor(capacity) {
-    this.capacity = capacity;
-    this.regExpMap = new Map();
-    this.regExpQueue = [];
-  }
-  getRegExp(pattern) {
-    const regExpFromCache = this.regExpMap.get(pattern);
-    if (regExpFromCache !== undefined) {
-      return regExpFromCache;
-    }
-    const regExpNew = new RegExp(pattern);
-    if (this.regExpQueue.length === this.capacity) {
-      this.regExpMap.delete(this.regExpQueue.shift());
-    }
-    this.regExpMap.set(pattern, regExpNew);
-    this.regExpQueue.push(pattern);
-    return regExpNew;
-  }
-}
-const chars = [' ', ',', '?', '!', ';'];
-const looksLikeObjectPathRegExpCache = new RegExpCache(20);
-const looksLikeObjectPath = (key, nsSeparator, keySeparator) => {
-  nsSeparator = nsSeparator || '';
-  keySeparator = keySeparator || '';
-  const possibleChars = chars.filter(c => nsSeparator.indexOf(c) < 0 && keySeparator.indexOf(c) < 0);
-  if (possibleChars.length === 0) return true;
-  const r = looksLikeObjectPathRegExpCache.getRegExp(`(${possibleChars.map(c => c === '?' ? '\\?' : c).join('|')})`);
-  let matched = !r.test(key);
-  if (!matched) {
-    const ki = key.indexOf(keySeparator);
-    if (ki > 0 && !r.test(key.substring(0, ki))) {
-      matched = true;
-    }
-  }
-  return matched;
-};
-const deepFind = function (obj, path) {
-  let keySeparator = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '.';
-  if (!obj) return undefined;
-  if (obj[path]) return obj[path];
-  const tokens = path.split(keySeparator);
-  let current = obj;
-  for (let i = 0; i < tokens.length;) {
-    if (!current || typeof current !== 'object') {
-      return undefined;
-    }
-    let next;
-    let nextPath = '';
-    for (let j = i; j < tokens.length; ++j) {
-      if (j !== i) {
-        nextPath += keySeparator;
-      }
-      nextPath += tokens[j];
-      next = current[nextPath];
-      if (next !== undefined) {
-        if (['string', 'number', 'boolean'].indexOf(typeof next) > -1 && j < tokens.length - 1) {
-          continue;
-        }
-        i += j - i + 1;
-        break;
-      }
-    }
-    current = next;
-  }
-  return current;
-};
-const getCleanedCode = code => code && code.replace('_', '-');
-
-const consoleLogger = {
-  type: 'logger',
-  log(args) {
-    this.output('log', args);
-  },
-  warn(args) {
-    this.output('warn', args);
-  },
-  error(args) {
-    this.output('error', args);
-  },
-  output(type, args) {
-    if (console && console[type]) console[type].apply(console, args);
-  }
-};
-class Logger {
-  constructor(concreteLogger) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    this.init(concreteLogger, options);
-  }
-  init(concreteLogger) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    this.prefix = options.prefix || 'i18next:';
-    this.logger = concreteLogger || consoleLogger;
-    this.options = options;
-    this.debug = options.debug;
-  }
-  log() {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-    return this.forward(args, 'log', '', true);
-  }
-  warn() {
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-    return this.forward(args, 'warn', '', true);
-  }
-  error() {
-    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-      args[_key3] = arguments[_key3];
-    }
-    return this.forward(args, 'error', '');
-  }
-  deprecate() {
-    for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-      args[_key4] = arguments[_key4];
-    }
-    return this.forward(args, 'warn', 'WARNING DEPRECATED: ', true);
-  }
-  forward(args, lvl, prefix, debugOnly) {
-    if (debugOnly && !this.debug) return null;
-    if (isString(args[0])) args[0] = `${prefix}${this.prefix} ${args[0]}`;
-    return this.logger[lvl](args);
-  }
-  create(moduleName) {
-    return new Logger(this.logger, {
-      ...{
-        prefix: `${this.prefix}:${moduleName}:`
-      },
-      ...this.options
-    });
-  }
-  clone(options) {
-    options = options || this.options;
-    options.prefix = options.prefix || this.prefix;
-    return new Logger(this.logger, options);
-  }
-}
-var baseLogger = new Logger();
-
-class EventEmitter {
-  constructor() {
-    this.observers = {};
-  }
-  on(events, listener) {
-    events.split(' ').forEach(event => {
-      if (!this.observers[event]) this.observers[event] = new Map();
-      const numListeners = this.observers[event].get(listener) || 0;
-      this.observers[event].set(listener, numListeners + 1);
-    });
-    return this;
-  }
-  off(event, listener) {
-    if (!this.observers[event]) return;
-    if (!listener) {
-      delete this.observers[event];
-      return;
-    }
-    this.observers[event].delete(listener);
-  }
-  emit(event) {
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-    if (this.observers[event]) {
-      const cloned = Array.from(this.observers[event].entries());
-      cloned.forEach(_ref => {
-        let [observer, numTimesAdded] = _ref;
-        for (let i = 0; i < numTimesAdded; i++) {
-          observer(...args);
-        }
-      });
-    }
-    if (this.observers['*']) {
-      const cloned = Array.from(this.observers['*'].entries());
-      cloned.forEach(_ref2 => {
-        let [observer, numTimesAdded] = _ref2;
-        for (let i = 0; i < numTimesAdded; i++) {
-          observer.apply(observer, [event, ...args]);
-        }
-      });
-    }
-  }
-}
-
-class ResourceStore extends EventEmitter {
-  constructor(data) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-      ns: ['translation'],
-      defaultNS: 'translation'
-    };
-    super();
-    this.data = data || {};
-    this.options = options;
-    if (this.options.keySeparator === undefined) {
-      this.options.keySeparator = '.';
-    }
-    if (this.options.ignoreJSONStructure === undefined) {
-      this.options.ignoreJSONStructure = true;
-    }
-  }
-  addNamespaces(ns) {
-    if (this.options.ns.indexOf(ns) < 0) {
-      this.options.ns.push(ns);
-    }
-  }
-  removeNamespaces(ns) {
-    const index = this.options.ns.indexOf(ns);
-    if (index > -1) {
-      this.options.ns.splice(index, 1);
-    }
-  }
-  getResource(lng, ns, key) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    const keySeparator = options.keySeparator !== undefined ? options.keySeparator : this.options.keySeparator;
-    const ignoreJSONStructure = options.ignoreJSONStructure !== undefined ? options.ignoreJSONStructure : this.options.ignoreJSONStructure;
-    let path;
-    if (lng.indexOf('.') > -1) {
-      path = lng.split('.');
-    } else {
-      path = [lng, ns];
-      if (key) {
-        if (Array.isArray(key)) {
-          path.push(...key);
-        } else if (isString(key) && keySeparator) {
-          path.push(...key.split(keySeparator));
-        } else {
-          path.push(key);
-        }
-      }
-    }
-    const result = getPath(this.data, path);
-    if (!result && !ns && !key && lng.indexOf('.') > -1) {
-      lng = path[0];
-      ns = path[1];
-      key = path.slice(2).join('.');
-    }
-    if (result || !ignoreJSONStructure || !isString(key)) return result;
-    return deepFind(this.data && this.data[lng] && this.data[lng][ns], key, keySeparator);
-  }
-  addResource(lng, ns, key, value) {
-    let options = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {
-      silent: false
-    };
-    const keySeparator = options.keySeparator !== undefined ? options.keySeparator : this.options.keySeparator;
-    let path = [lng, ns];
-    if (key) path = path.concat(keySeparator ? key.split(keySeparator) : key);
-    if (lng.indexOf('.') > -1) {
-      path = lng.split('.');
-      value = ns;
-      ns = path[1];
-    }
-    this.addNamespaces(ns);
-    setPath(this.data, path, value);
-    if (!options.silent) this.emit('added', lng, ns, key, value);
-  }
-  addResources(lng, ns, resources) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {
-      silent: false
-    };
-    for (const m in resources) {
-      if (isString(resources[m]) || Array.isArray(resources[m])) this.addResource(lng, ns, m, resources[m], {
-        silent: true
-      });
-    }
-    if (!options.silent) this.emit('added', lng, ns, resources);
-  }
-  addResourceBundle(lng, ns, resources, deep, overwrite) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {
-      silent: false,
-      skipCopy: false
-    };
-    let path = [lng, ns];
-    if (lng.indexOf('.') > -1) {
-      path = lng.split('.');
-      deep = resources;
-      resources = ns;
-      ns = path[1];
-    }
-    this.addNamespaces(ns);
-    let pack = getPath(this.data, path) || {};
-    if (!options.skipCopy) resources = JSON.parse(JSON.stringify(resources));
-    if (deep) {
-      deepExtend(pack, resources, overwrite);
-    } else {
-      pack = {
-        ...pack,
-        ...resources
-      };
-    }
-    setPath(this.data, path, pack);
-    if (!options.silent) this.emit('added', lng, ns, resources);
-  }
-  removeResourceBundle(lng, ns) {
-    if (this.hasResourceBundle(lng, ns)) {
-      delete this.data[lng][ns];
-    }
-    this.removeNamespaces(ns);
-    this.emit('removed', lng, ns);
-  }
-  hasResourceBundle(lng, ns) {
-    return this.getResource(lng, ns) !== undefined;
-  }
-  getResourceBundle(lng, ns) {
-    if (!ns) ns = this.options.defaultNS;
-    if (this.options.compatibilityAPI === 'v1') return {
-      ...{},
-      ...this.getResource(lng, ns)
-    };
-    return this.getResource(lng, ns);
-  }
-  getDataByLanguage(lng) {
-    return this.data[lng];
-  }
-  hasLanguageSomeTranslations(lng) {
-    const data = this.getDataByLanguage(lng);
-    const n = data && Object.keys(data) || [];
-    return !!n.find(v => data[v] && Object.keys(data[v]).length > 0);
-  }
-  toJSON() {
-    return this.data;
-  }
-}
-
-var postProcessor = {
-  processors: {},
-  addPostProcessor(module) {
-    this.processors[module.name] = module;
-  },
-  handle(processors, value, key, options, translator) {
-    processors.forEach(processor => {
-      if (this.processors[processor]) value = this.processors[processor].process(value, key, options, translator);
-    });
-    return value;
-  }
-};
-
-const checkedLoadedFor = {};
-class Translator extends EventEmitter {
-  constructor(services) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    super();
-    copy(['resourceStore', 'languageUtils', 'pluralResolver', 'interpolator', 'backendConnector', 'i18nFormat', 'utils'], services, this);
-    this.options = options;
-    if (this.options.keySeparator === undefined) {
-      this.options.keySeparator = '.';
-    }
-    this.logger = baseLogger.create('translator');
-  }
-  changeLanguage(lng) {
-    if (lng) this.language = lng;
-  }
-  exists(key) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-      interpolation: {}
-    };
-    if (key === undefined || key === null) {
-      return false;
-    }
-    const resolved = this.resolve(key, options);
-    return resolved && resolved.res !== undefined;
-  }
-  extractFromKey(key, options) {
-    let nsSeparator = options.nsSeparator !== undefined ? options.nsSeparator : this.options.nsSeparator;
-    if (nsSeparator === undefined) nsSeparator = ':';
-    const keySeparator = options.keySeparator !== undefined ? options.keySeparator : this.options.keySeparator;
-    let namespaces = options.ns || this.options.defaultNS || [];
-    const wouldCheckForNsInKey = nsSeparator && key.indexOf(nsSeparator) > -1;
-    const seemsNaturalLanguage = !this.options.userDefinedKeySeparator && !options.keySeparator && !this.options.userDefinedNsSeparator && !options.nsSeparator && !looksLikeObjectPath(key, nsSeparator, keySeparator);
-    if (wouldCheckForNsInKey && !seemsNaturalLanguage) {
-      const m = key.match(this.interpolator.nestingRegexp);
-      if (m && m.length > 0) {
-        return {
-          key,
-          namespaces: isString(namespaces) ? [namespaces] : namespaces
-        };
-      }
-      const parts = key.split(nsSeparator);
-      if (nsSeparator !== keySeparator || nsSeparator === keySeparator && this.options.ns.indexOf(parts[0]) > -1) namespaces = parts.shift();
-      key = parts.join(keySeparator);
-    }
-    return {
-      key,
-      namespaces: isString(namespaces) ? [namespaces] : namespaces
-    };
-  }
-  translate(keys, options, lastKey) {
-    if (typeof options !== 'object' && this.options.overloadTranslationOptionHandler) {
-      options = this.options.overloadTranslationOptionHandler(arguments);
-    }
-    if (typeof options === 'object') options = {
-      ...options
-    };
-    if (!options) options = {};
-    if (keys === undefined || keys === null) return '';
-    if (!Array.isArray(keys)) keys = [String(keys)];
-    const returnDetails = options.returnDetails !== undefined ? options.returnDetails : this.options.returnDetails;
-    const keySeparator = options.keySeparator !== undefined ? options.keySeparator : this.options.keySeparator;
-    const {
-      key,
-      namespaces
-    } = this.extractFromKey(keys[keys.length - 1], options);
-    const namespace = namespaces[namespaces.length - 1];
-    const lng = options.lng || this.language;
-    const appendNamespaceToCIMode = options.appendNamespaceToCIMode || this.options.appendNamespaceToCIMode;
-    if (lng && lng.toLowerCase() === 'cimode') {
-      if (appendNamespaceToCIMode) {
-        const nsSeparator = options.nsSeparator || this.options.nsSeparator;
-        if (returnDetails) {
-          return {
-            res: `${namespace}${nsSeparator}${key}`,
-            usedKey: key,
-            exactUsedKey: key,
-            usedLng: lng,
-            usedNS: namespace,
-            usedParams: this.getUsedParamsDetails(options)
-          };
-        }
-        return `${namespace}${nsSeparator}${key}`;
-      }
-      if (returnDetails) {
-        return {
-          res: key,
-          usedKey: key,
-          exactUsedKey: key,
-          usedLng: lng,
-          usedNS: namespace,
-          usedParams: this.getUsedParamsDetails(options)
-        };
-      }
-      return key;
-    }
-    const resolved = this.resolve(keys, options);
-    let res = resolved && resolved.res;
-    const resUsedKey = resolved && resolved.usedKey || key;
-    const resExactUsedKey = resolved && resolved.exactUsedKey || key;
-    const resType = Object.prototype.toString.apply(res);
-    const noObject = ['[object Number]', '[object Function]', '[object RegExp]'];
-    const joinArrays = options.joinArrays !== undefined ? options.joinArrays : this.options.joinArrays;
-    const handleAsObjectInI18nFormat = !this.i18nFormat || this.i18nFormat.handleAsObject;
-    const handleAsObject = !isString(res) && typeof res !== 'boolean' && typeof res !== 'number';
-    if (handleAsObjectInI18nFormat && res && handleAsObject && noObject.indexOf(resType) < 0 && !(isString(joinArrays) && Array.isArray(res))) {
-      if (!options.returnObjects && !this.options.returnObjects) {
-        if (!this.options.returnedObjectHandler) {
-          this.logger.warn('accessing an object - but returnObjects options is not enabled!');
-        }
-        const r = this.options.returnedObjectHandler ? this.options.returnedObjectHandler(resUsedKey, res, {
-          ...options,
-          ns: namespaces
-        }) : `key '${key} (${this.language})' returned an object instead of string.`;
-        if (returnDetails) {
-          resolved.res = r;
-          resolved.usedParams = this.getUsedParamsDetails(options);
-          return resolved;
-        }
-        return r;
-      }
-      if (keySeparator) {
-        const resTypeIsArray = Array.isArray(res);
-        const copy = resTypeIsArray ? [] : {};
-        const newKeyToUse = resTypeIsArray ? resExactUsedKey : resUsedKey;
-        for (const m in res) {
-          if (Object.prototype.hasOwnProperty.call(res, m)) {
-            const deepKey = `${newKeyToUse}${keySeparator}${m}`;
-            copy[m] = this.translate(deepKey, {
-              ...options,
-              ...{
-                joinArrays: false,
-                ns: namespaces
-              }
-            });
-            if (copy[m] === deepKey) copy[m] = res[m];
-          }
-        }
-        res = copy;
-      }
-    } else if (handleAsObjectInI18nFormat && isString(joinArrays) && Array.isArray(res)) {
-      res = res.join(joinArrays);
-      if (res) res = this.extendTranslation(res, keys, options, lastKey);
-    } else {
-      let usedDefault = false;
-      let usedKey = false;
-      const needsPluralHandling = options.count !== undefined && !isString(options.count);
-      const hasDefaultValue = Translator.hasDefaultValue(options);
-      const defaultValueSuffix = needsPluralHandling ? this.pluralResolver.getSuffix(lng, options.count, options) : '';
-      const defaultValueSuffixOrdinalFallback = options.ordinal && needsPluralHandling ? this.pluralResolver.getSuffix(lng, options.count, {
-        ordinal: false
-      }) : '';
-      const needsZeroSuffixLookup = needsPluralHandling && !options.ordinal && options.count === 0 && this.pluralResolver.shouldUseIntlApi();
-      const defaultValue = needsZeroSuffixLookup && options[`defaultValue${this.options.pluralSeparator}zero`] || options[`defaultValue${defaultValueSuffix}`] || options[`defaultValue${defaultValueSuffixOrdinalFallback}`] || options.defaultValue;
-      if (!this.isValidLookup(res) && hasDefaultValue) {
-        usedDefault = true;
-        res = defaultValue;
-      }
-      if (!this.isValidLookup(res)) {
-        usedKey = true;
-        res = key;
-      }
-      const missingKeyNoValueFallbackToKey = options.missingKeyNoValueFallbackToKey || this.options.missingKeyNoValueFallbackToKey;
-      const resForMissing = missingKeyNoValueFallbackToKey && usedKey ? undefined : res;
-      const updateMissing = hasDefaultValue && defaultValue !== res && this.options.updateMissing;
-      if (usedKey || usedDefault || updateMissing) {
-        this.logger.log(updateMissing ? 'updateKey' : 'missingKey', lng, namespace, key, updateMissing ? defaultValue : res);
-        if (keySeparator) {
-          const fk = this.resolve(key, {
-            ...options,
-            keySeparator: false
-          });
-          if (fk && fk.res) this.logger.warn('Seems the loaded translations were in flat JSON format instead of nested. Either set keySeparator: false on init or make sure your translations are published in nested format.');
-        }
-        let lngs = [];
-        const fallbackLngs = this.languageUtils.getFallbackCodes(this.options.fallbackLng, options.lng || this.language);
-        if (this.options.saveMissingTo === 'fallback' && fallbackLngs && fallbackLngs[0]) {
-          for (let i = 0; i < fallbackLngs.length; i++) {
-            lngs.push(fallbackLngs[i]);
-          }
-        } else if (this.options.saveMissingTo === 'all') {
-          lngs = this.languageUtils.toResolveHierarchy(options.lng || this.language);
-        } else {
-          lngs.push(options.lng || this.language);
-        }
-        const send = (l, k, specificDefaultValue) => {
-          const defaultForMissing = hasDefaultValue && specificDefaultValue !== res ? specificDefaultValue : resForMissing;
-          if (this.options.missingKeyHandler) {
-            this.options.missingKeyHandler(l, namespace, k, defaultForMissing, updateMissing, options);
-          } else if (this.backendConnector && this.backendConnector.saveMissing) {
-            this.backendConnector.saveMissing(l, namespace, k, defaultForMissing, updateMissing, options);
-          }
-          this.emit('missingKey', l, namespace, k, res);
-        };
-        if (this.options.saveMissing) {
-          if (this.options.saveMissingPlurals && needsPluralHandling) {
-            lngs.forEach(language => {
-              const suffixes = this.pluralResolver.getSuffixes(language, options);
-              if (needsZeroSuffixLookup && options[`defaultValue${this.options.pluralSeparator}zero`] && suffixes.indexOf(`${this.options.pluralSeparator}zero`) < 0) {
-                suffixes.push(`${this.options.pluralSeparator}zero`);
-              }
-              suffixes.forEach(suffix => {
-                send([language], key + suffix, options[`defaultValue${suffix}`] || defaultValue);
-              });
-            });
-          } else {
-            send(lngs, key, defaultValue);
-          }
-        }
-      }
-      res = this.extendTranslation(res, keys, options, resolved, lastKey);
-      if (usedKey && res === key && this.options.appendNamespaceToMissingKey) res = `${namespace}:${key}`;
-      if ((usedKey || usedDefault) && this.options.parseMissingKeyHandler) {
-        if (this.options.compatibilityAPI !== 'v1') {
-          res = this.options.parseMissingKeyHandler(this.options.appendNamespaceToMissingKey ? `${namespace}:${key}` : key, usedDefault ? res : undefined);
-        } else {
-          res = this.options.parseMissingKeyHandler(res);
-        }
-      }
-    }
-    if (returnDetails) {
-      resolved.res = res;
-      resolved.usedParams = this.getUsedParamsDetails(options);
-      return resolved;
-    }
-    return res;
-  }
-  extendTranslation(res, key, options, resolved, lastKey) {
-    var _this = this;
-    if (this.i18nFormat && this.i18nFormat.parse) {
-      res = this.i18nFormat.parse(res, {
-        ...this.options.interpolation.defaultVariables,
-        ...options
-      }, options.lng || this.language || resolved.usedLng, resolved.usedNS, resolved.usedKey, {
-        resolved
-      });
-    } else if (!options.skipInterpolation) {
-      if (options.interpolation) this.interpolator.init({
-        ...options,
-        ...{
-          interpolation: {
-            ...this.options.interpolation,
-            ...options.interpolation
-          }
-        }
-      });
-      const skipOnVariables = isString(res) && (options && options.interpolation && options.interpolation.skipOnVariables !== undefined ? options.interpolation.skipOnVariables : this.options.interpolation.skipOnVariables);
-      let nestBef;
-      if (skipOnVariables) {
-        const nb = res.match(this.interpolator.nestingRegexp);
-        nestBef = nb && nb.length;
-      }
-      let data = options.replace && !isString(options.replace) ? options.replace : options;
-      if (this.options.interpolation.defaultVariables) data = {
-        ...this.options.interpolation.defaultVariables,
-        ...data
-      };
-      res = this.interpolator.interpolate(res, data, options.lng || this.language || resolved.usedLng, options);
-      if (skipOnVariables) {
-        const na = res.match(this.interpolator.nestingRegexp);
-        const nestAft = na && na.length;
-        if (nestBef < nestAft) options.nest = false;
-      }
-      if (!options.lng && this.options.compatibilityAPI !== 'v1' && resolved && resolved.res) options.lng = this.language || resolved.usedLng;
-      if (options.nest !== false) res = this.interpolator.nest(res, function () {
-        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-          args[_key] = arguments[_key];
-        }
-        if (lastKey && lastKey[0] === args[0] && !options.context) {
-          _this.logger.warn(`It seems you are nesting recursively key: ${args[0]} in key: ${key[0]}`);
-          return null;
-        }
-        return _this.translate(...args, key);
-      }, options);
-      if (options.interpolation) this.interpolator.reset();
-    }
-    const postProcess = options.postProcess || this.options.postProcess;
-    const postProcessorNames = isString(postProcess) ? [postProcess] : postProcess;
-    if (res !== undefined && res !== null && postProcessorNames && postProcessorNames.length && options.applyPostProcessor !== false) {
-      res = postProcessor.handle(postProcessorNames, res, key, this.options && this.options.postProcessPassResolved ? {
-        i18nResolved: {
-          ...resolved,
-          usedParams: this.getUsedParamsDetails(options)
-        },
-        ...options
-      } : options, this);
-    }
-    return res;
-  }
-  resolve(keys) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    let found;
-    let usedKey;
-    let exactUsedKey;
-    let usedLng;
-    let usedNS;
-    if (isString(keys)) keys = [keys];
-    keys.forEach(k => {
-      if (this.isValidLookup(found)) return;
-      const extracted = this.extractFromKey(k, options);
-      const key = extracted.key;
-      usedKey = key;
-      let namespaces = extracted.namespaces;
-      if (this.options.fallbackNS) namespaces = namespaces.concat(this.options.fallbackNS);
-      const needsPluralHandling = options.count !== undefined && !isString(options.count);
-      const needsZeroSuffixLookup = needsPluralHandling && !options.ordinal && options.count === 0 && this.pluralResolver.shouldUseIntlApi();
-      const needsContextHandling = options.context !== undefined && (isString(options.context) || typeof options.context === 'number') && options.context !== '';
-      const codes = options.lngs ? options.lngs : this.languageUtils.toResolveHierarchy(options.lng || this.language, options.fallbackLng);
-      namespaces.forEach(ns => {
-        if (this.isValidLookup(found)) return;
-        usedNS = ns;
-        if (!checkedLoadedFor[`${codes[0]}-${ns}`] && this.utils && this.utils.hasLoadedNamespace && !this.utils.hasLoadedNamespace(usedNS)) {
-          checkedLoadedFor[`${codes[0]}-${ns}`] = true;
-          this.logger.warn(`key "${usedKey}" for languages "${codes.join(', ')}" won't get resolved as namespace "${usedNS}" was not yet loaded`, 'This means something IS WRONG in your setup. You access the t function before i18next.init / i18next.loadNamespace / i18next.changeLanguage was done. Wait for the callback or Promise to resolve before accessing it!!!');
-        }
-        codes.forEach(code => {
-          if (this.isValidLookup(found)) return;
-          usedLng = code;
-          const finalKeys = [key];
-          if (this.i18nFormat && this.i18nFormat.addLookupKeys) {
-            this.i18nFormat.addLookupKeys(finalKeys, key, code, ns, options);
-          } else {
-            let pluralSuffix;
-            if (needsPluralHandling) pluralSuffix = this.pluralResolver.getSuffix(code, options.count, options);
-            const zeroSuffix = `${this.options.pluralSeparator}zero`;
-            const ordinalPrefix = `${this.options.pluralSeparator}ordinal${this.options.pluralSeparator}`;
-            if (needsPluralHandling) {
-              finalKeys.push(key + pluralSuffix);
-              if (options.ordinal && pluralSuffix.indexOf(ordinalPrefix) === 0) {
-                finalKeys.push(key + pluralSuffix.replace(ordinalPrefix, this.options.pluralSeparator));
-              }
-              if (needsZeroSuffixLookup) {
-                finalKeys.push(key + zeroSuffix);
-              }
+        const initPlugin = async () => {
+            try {
+                const api = getApiInstance(initialState);
+                await api.init();
+                setInitialized(true);
             }
-            if (needsContextHandling) {
-              const contextKey = `${key}${this.options.contextSeparator}${options.context}`;
-              finalKeys.push(contextKey);
-              if (needsPluralHandling) {
-                finalKeys.push(contextKey + pluralSuffix);
-                if (options.ordinal && pluralSuffix.indexOf(ordinalPrefix) === 0) {
-                  finalKeys.push(contextKey + pluralSuffix.replace(ordinalPrefix, this.options.pluralSeparator));
-                }
-                if (needsZeroSuffixLookup) {
-                  finalKeys.push(contextKey + zeroSuffix);
-                }
-              }
+            catch (e) {
+                console.error("DeckTune init error:", e);
+                setError(String(e));
             }
-          }
-          let possibleKey;
-          while (possibleKey = finalKeys.pop()) {
-            if (!this.isValidLookup(found)) {
-              exactUsedKey = possibleKey;
-              found = this.getResource(code, ns, possibleKey, options);
-            }
-          }
-        });
-      });
-    });
-    return {
-      res: found,
-      usedKey,
-      exactUsedKey,
-      usedLng,
-      usedNS
-    };
-  }
-  isValidLookup(res) {
-    return res !== undefined && !(!this.options.returnNull && res === null) && !(!this.options.returnEmptyString && res === '');
-  }
-  getResource(code, ns, key) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    if (this.i18nFormat && this.i18nFormat.getResource) return this.i18nFormat.getResource(code, ns, key, options);
-    return this.resourceStore.getResource(code, ns, key, options);
-  }
-  getUsedParamsDetails() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    const optionsKeys = ['defaultValue', 'ordinal', 'context', 'replace', 'lng', 'lngs', 'fallbackLng', 'ns', 'keySeparator', 'nsSeparator', 'returnObjects', 'returnDetails', 'joinArrays', 'postProcess', 'interpolation'];
-    const useOptionsReplaceForData = options.replace && !isString(options.replace);
-    let data = useOptionsReplaceForData ? options.replace : options;
-    if (useOptionsReplaceForData && typeof options.count !== 'undefined') {
-      data.count = options.count;
-    }
-    if (this.options.interpolation.defaultVariables) {
-      data = {
-        ...this.options.interpolation.defaultVariables,
-        ...data
-      };
-    }
-    if (!useOptionsReplaceForData) {
-      data = {
-        ...data
-      };
-      for (const key of optionsKeys) {
-        delete data[key];
-      }
-    }
-    return data;
-  }
-  static hasDefaultValue(options) {
-    const prefix = 'defaultValue';
-    for (const option in options) {
-      if (Object.prototype.hasOwnProperty.call(options, option) && prefix === option.substring(0, prefix.length) && undefined !== options[option]) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
-const capitalize = string => string.charAt(0).toUpperCase() + string.slice(1);
-class LanguageUtil {
-  constructor(options) {
-    this.options = options;
-    this.supportedLngs = this.options.supportedLngs || false;
-    this.logger = baseLogger.create('languageUtils');
-  }
-  getScriptPartFromCode(code) {
-    code = getCleanedCode(code);
-    if (!code || code.indexOf('-') < 0) return null;
-    const p = code.split('-');
-    if (p.length === 2) return null;
-    p.pop();
-    if (p[p.length - 1].toLowerCase() === 'x') return null;
-    return this.formatLanguageCode(p.join('-'));
-  }
-  getLanguagePartFromCode(code) {
-    code = getCleanedCode(code);
-    if (!code || code.indexOf('-') < 0) return code;
-    const p = code.split('-');
-    return this.formatLanguageCode(p[0]);
-  }
-  formatLanguageCode(code) {
-    if (isString(code) && code.indexOf('-') > -1) {
-      if (typeof Intl !== 'undefined' && typeof Intl.getCanonicalLocales !== 'undefined') {
-        try {
-          let formattedCode = Intl.getCanonicalLocales(code)[0];
-          if (formattedCode && this.options.lowerCaseLng) {
-            formattedCode = formattedCode.toLowerCase();
-          }
-          if (formattedCode) return formattedCode;
-        } catch (e) {}
-      }
-      const specialCases = ['hans', 'hant', 'latn', 'cyrl', 'cans', 'mong', 'arab'];
-      let p = code.split('-');
-      if (this.options.lowerCaseLng) {
-        p = p.map(part => part.toLowerCase());
-      } else if (p.length === 2) {
-        p[0] = p[0].toLowerCase();
-        p[1] = p[1].toUpperCase();
-        if (specialCases.indexOf(p[1].toLowerCase()) > -1) p[1] = capitalize(p[1].toLowerCase());
-      } else if (p.length === 3) {
-        p[0] = p[0].toLowerCase();
-        if (p[1].length === 2) p[1] = p[1].toUpperCase();
-        if (p[0] !== 'sgn' && p[2].length === 2) p[2] = p[2].toUpperCase();
-        if (specialCases.indexOf(p[1].toLowerCase()) > -1) p[1] = capitalize(p[1].toLowerCase());
-        if (specialCases.indexOf(p[2].toLowerCase()) > -1) p[2] = capitalize(p[2].toLowerCase());
-      }
-      return p.join('-');
-    }
-    return this.options.cleanCode || this.options.lowerCaseLng ? code.toLowerCase() : code;
-  }
-  isSupportedCode(code) {
-    if (this.options.load === 'languageOnly' || this.options.nonExplicitSupportedLngs) {
-      code = this.getLanguagePartFromCode(code);
-    }
-    return !this.supportedLngs || !this.supportedLngs.length || this.supportedLngs.indexOf(code) > -1;
-  }
-  getBestMatchFromCodes(codes) {
-    if (!codes) return null;
-    let found;
-    codes.forEach(code => {
-      if (found) return;
-      const cleanedLng = this.formatLanguageCode(code);
-      if (!this.options.supportedLngs || this.isSupportedCode(cleanedLng)) found = cleanedLng;
-    });
-    if (!found && this.options.supportedLngs) {
-      codes.forEach(code => {
-        if (found) return;
-        const lngOnly = this.getLanguagePartFromCode(code);
-        if (this.isSupportedCode(lngOnly)) return found = lngOnly;
-        found = this.options.supportedLngs.find(supportedLng => {
-          if (supportedLng === lngOnly) return supportedLng;
-          if (supportedLng.indexOf('-') < 0 && lngOnly.indexOf('-') < 0) return;
-          if (supportedLng.indexOf('-') > 0 && lngOnly.indexOf('-') < 0 && supportedLng.substring(0, supportedLng.indexOf('-')) === lngOnly) return supportedLng;
-          if (supportedLng.indexOf(lngOnly) === 0 && lngOnly.length > 1) return supportedLng;
-        });
-      });
-    }
-    if (!found) found = this.getFallbackCodes(this.options.fallbackLng)[0];
-    return found;
-  }
-  getFallbackCodes(fallbacks, code) {
-    if (!fallbacks) return [];
-    if (typeof fallbacks === 'function') fallbacks = fallbacks(code);
-    if (isString(fallbacks)) fallbacks = [fallbacks];
-    if (Array.isArray(fallbacks)) return fallbacks;
-    if (!code) return fallbacks.default || [];
-    let found = fallbacks[code];
-    if (!found) found = fallbacks[this.getScriptPartFromCode(code)];
-    if (!found) found = fallbacks[this.formatLanguageCode(code)];
-    if (!found) found = fallbacks[this.getLanguagePartFromCode(code)];
-    if (!found) found = fallbacks.default;
-    return found || [];
-  }
-  toResolveHierarchy(code, fallbackCode) {
-    const fallbackCodes = this.getFallbackCodes(fallbackCode || this.options.fallbackLng || [], code);
-    const codes = [];
-    const addCode = c => {
-      if (!c) return;
-      if (this.isSupportedCode(c)) {
-        codes.push(c);
-      } else {
-        this.logger.warn(`rejecting language code not found in supportedLngs: ${c}`);
-      }
-    };
-    if (isString(code) && (code.indexOf('-') > -1 || code.indexOf('_') > -1)) {
-      if (this.options.load !== 'languageOnly') addCode(this.formatLanguageCode(code));
-      if (this.options.load !== 'languageOnly' && this.options.load !== 'currentOnly') addCode(this.getScriptPartFromCode(code));
-      if (this.options.load !== 'currentOnly') addCode(this.getLanguagePartFromCode(code));
-    } else if (isString(code)) {
-      addCode(this.formatLanguageCode(code));
-    }
-    fallbackCodes.forEach(fc => {
-      if (codes.indexOf(fc) < 0) addCode(this.formatLanguageCode(fc));
-    });
-    return codes;
-  }
-}
-
-let sets = [{
-  lngs: ['ach', 'ak', 'am', 'arn', 'br', 'fil', 'gun', 'ln', 'mfe', 'mg', 'mi', 'oc', 'pt', 'pt-BR', 'tg', 'tl', 'ti', 'tr', 'uz', 'wa'],
-  nr: [1, 2],
-  fc: 1
-}, {
-  lngs: ['af', 'an', 'ast', 'az', 'bg', 'bn', 'ca', 'da', 'de', 'dev', 'el', 'en', 'eo', 'es', 'et', 'eu', 'fi', 'fo', 'fur', 'fy', 'gl', 'gu', 'ha', 'hi', 'hu', 'hy', 'ia', 'it', 'kk', 'kn', 'ku', 'lb', 'mai', 'ml', 'mn', 'mr', 'nah', 'nap', 'nb', 'ne', 'nl', 'nn', 'no', 'nso', 'pa', 'pap', 'pms', 'ps', 'pt-PT', 'rm', 'sco', 'se', 'si', 'so', 'son', 'sq', 'sv', 'sw', 'ta', 'te', 'tk', 'ur', 'yo'],
-  nr: [1, 2],
-  fc: 2
-}, {
-  lngs: ['ay', 'bo', 'cgg', 'fa', 'ht', 'id', 'ja', 'jbo', 'ka', 'km', 'ko', 'ky', 'lo', 'ms', 'sah', 'su', 'th', 'tt', 'ug', 'vi', 'wo', 'zh'],
-  nr: [1],
-  fc: 3
-}, {
-  lngs: ['be', 'bs', 'cnr', 'dz', 'hr', 'ru', 'sr', 'uk'],
-  nr: [1, 2, 5],
-  fc: 4
-}, {
-  lngs: ['ar'],
-  nr: [0, 1, 2, 3, 11, 100],
-  fc: 5
-}, {
-  lngs: ['cs', 'sk'],
-  nr: [1, 2, 5],
-  fc: 6
-}, {
-  lngs: ['csb', 'pl'],
-  nr: [1, 2, 5],
-  fc: 7
-}, {
-  lngs: ['cy'],
-  nr: [1, 2, 3, 8],
-  fc: 8
-}, {
-  lngs: ['fr'],
-  nr: [1, 2],
-  fc: 9
-}, {
-  lngs: ['ga'],
-  nr: [1, 2, 3, 7, 11],
-  fc: 10
-}, {
-  lngs: ['gd'],
-  nr: [1, 2, 3, 20],
-  fc: 11
-}, {
-  lngs: ['is'],
-  nr: [1, 2],
-  fc: 12
-}, {
-  lngs: ['jv'],
-  nr: [0, 1],
-  fc: 13
-}, {
-  lngs: ['kw'],
-  nr: [1, 2, 3, 4],
-  fc: 14
-}, {
-  lngs: ['lt'],
-  nr: [1, 2, 10],
-  fc: 15
-}, {
-  lngs: ['lv'],
-  nr: [1, 2, 0],
-  fc: 16
-}, {
-  lngs: ['mk'],
-  nr: [1, 2],
-  fc: 17
-}, {
-  lngs: ['mnk'],
-  nr: [0, 1, 2],
-  fc: 18
-}, {
-  lngs: ['mt'],
-  nr: [1, 2, 11, 20],
-  fc: 19
-}, {
-  lngs: ['or'],
-  nr: [2, 1],
-  fc: 2
-}, {
-  lngs: ['ro'],
-  nr: [1, 2, 20],
-  fc: 20
-}, {
-  lngs: ['sl'],
-  nr: [5, 1, 2, 3],
-  fc: 21
-}, {
-  lngs: ['he', 'iw'],
-  nr: [1, 2, 20, 21],
-  fc: 22
-}];
-let _rulesPluralsTypes = {
-  1: n => Number(n > 1),
-  2: n => Number(n != 1),
-  3: n => 0,
-  4: n => Number(n % 10 == 1 && n % 100 != 11 ? 0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2),
-  5: n => Number(n == 0 ? 0 : n == 1 ? 1 : n == 2 ? 2 : n % 100 >= 3 && n % 100 <= 10 ? 3 : n % 100 >= 11 ? 4 : 5),
-  6: n => Number(n == 1 ? 0 : n >= 2 && n <= 4 ? 1 : 2),
-  7: n => Number(n == 1 ? 0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2),
-  8: n => Number(n == 1 ? 0 : n == 2 ? 1 : n != 8 && n != 11 ? 2 : 3),
-  9: n => Number(n >= 2),
-  10: n => Number(n == 1 ? 0 : n == 2 ? 1 : n < 7 ? 2 : n < 11 ? 3 : 4),
-  11: n => Number(n == 1 || n == 11 ? 0 : n == 2 || n == 12 ? 1 : n > 2 && n < 20 ? 2 : 3),
-  12: n => Number(n % 10 != 1 || n % 100 == 11),
-  13: n => Number(n !== 0),
-  14: n => Number(n == 1 ? 0 : n == 2 ? 1 : n == 3 ? 2 : 3),
-  15: n => Number(n % 10 == 1 && n % 100 != 11 ? 0 : n % 10 >= 2 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2),
-  16: n => Number(n % 10 == 1 && n % 100 != 11 ? 0 : n !== 0 ? 1 : 2),
-  17: n => Number(n == 1 || n % 10 == 1 && n % 100 != 11 ? 0 : 1),
-  18: n => Number(n == 0 ? 0 : n == 1 ? 1 : 2),
-  19: n => Number(n == 1 ? 0 : n == 0 || n % 100 > 1 && n % 100 < 11 ? 1 : n % 100 > 10 && n % 100 < 20 ? 2 : 3),
-  20: n => Number(n == 1 ? 0 : n == 0 || n % 100 > 0 && n % 100 < 20 ? 1 : 2),
-  21: n => Number(n % 100 == 1 ? 1 : n % 100 == 2 ? 2 : n % 100 == 3 || n % 100 == 4 ? 3 : 0),
-  22: n => Number(n == 1 ? 0 : n == 2 ? 1 : (n < 0 || n > 10) && n % 10 == 0 ? 2 : 3)
-};
-const nonIntlVersions = ['v1', 'v2', 'v3'];
-const intlVersions = ['v4'];
-const suffixesOrder = {
-  zero: 0,
-  one: 1,
-  two: 2,
-  few: 3,
-  many: 4,
-  other: 5
-};
-const createRules = () => {
-  const rules = {};
-  sets.forEach(set => {
-    set.lngs.forEach(l => {
-      rules[l] = {
-        numbers: set.nr,
-        plurals: _rulesPluralsTypes[set.fc]
-      };
-    });
-  });
-  return rules;
-};
-class PluralResolver {
-  constructor(languageUtils) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    this.languageUtils = languageUtils;
-    this.options = options;
-    this.logger = baseLogger.create('pluralResolver');
-    if ((!this.options.compatibilityJSON || intlVersions.includes(this.options.compatibilityJSON)) && (typeof Intl === 'undefined' || !Intl.PluralRules)) {
-      this.options.compatibilityJSON = 'v3';
-      this.logger.error('Your environment seems not to be Intl API compatible, use an Intl.PluralRules polyfill. Will fallback to the compatibilityJSON v3 format handling.');
-    }
-    this.rules = createRules();
-    this.pluralRulesCache = {};
-  }
-  addRule(lng, obj) {
-    this.rules[lng] = obj;
-  }
-  clearCache() {
-    this.pluralRulesCache = {};
-  }
-  getRule(code) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    if (this.shouldUseIntlApi()) {
-      const cleanedCode = getCleanedCode(code === 'dev' ? 'en' : code);
-      const type = options.ordinal ? 'ordinal' : 'cardinal';
-      const cacheKey = JSON.stringify({
-        cleanedCode,
-        type
-      });
-      if (cacheKey in this.pluralRulesCache) {
-        return this.pluralRulesCache[cacheKey];
-      }
-      let rule;
-      try {
-        rule = new Intl.PluralRules(cleanedCode, {
-          type
-        });
-      } catch (err) {
-        if (!code.match(/-|_/)) return;
-        const lngPart = this.languageUtils.getLanguagePartFromCode(code);
-        rule = this.getRule(lngPart, options);
-      }
-      this.pluralRulesCache[cacheKey] = rule;
-      return rule;
-    }
-    return this.rules[code] || this.rules[this.languageUtils.getLanguagePartFromCode(code)];
-  }
-  needsPlural(code) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    const rule = this.getRule(code, options);
-    if (this.shouldUseIntlApi()) {
-      return rule && rule.resolvedOptions().pluralCategories.length > 1;
-    }
-    return rule && rule.numbers.length > 1;
-  }
-  getPluralFormsOfKey(code, key) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    return this.getSuffixes(code, options).map(suffix => `${key}${suffix}`);
-  }
-  getSuffixes(code) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    const rule = this.getRule(code, options);
-    if (!rule) {
-      return [];
-    }
-    if (this.shouldUseIntlApi()) {
-      return rule.resolvedOptions().pluralCategories.sort((pluralCategory1, pluralCategory2) => suffixesOrder[pluralCategory1] - suffixesOrder[pluralCategory2]).map(pluralCategory => `${this.options.prepend}${options.ordinal ? `ordinal${this.options.prepend}` : ''}${pluralCategory}`);
-    }
-    return rule.numbers.map(number => this.getSuffix(code, number, options));
-  }
-  getSuffix(code, count) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    const rule = this.getRule(code, options);
-    if (rule) {
-      if (this.shouldUseIntlApi()) {
-        return `${this.options.prepend}${options.ordinal ? `ordinal${this.options.prepend}` : ''}${rule.select(count)}`;
-      }
-      return this.getSuffixRetroCompatible(rule, count);
-    }
-    this.logger.warn(`no plural rule found for: ${code}`);
-    return '';
-  }
-  getSuffixRetroCompatible(rule, count) {
-    const idx = rule.noAbs ? rule.plurals(count) : rule.plurals(Math.abs(count));
-    let suffix = rule.numbers[idx];
-    if (this.options.simplifyPluralSuffix && rule.numbers.length === 2 && rule.numbers[0] === 1) {
-      if (suffix === 2) {
-        suffix = 'plural';
-      } else if (suffix === 1) {
-        suffix = '';
-      }
-    }
-    const returnSuffix = () => this.options.prepend && suffix.toString() ? this.options.prepend + suffix.toString() : suffix.toString();
-    if (this.options.compatibilityJSON === 'v1') {
-      if (suffix === 1) return '';
-      if (typeof suffix === 'number') return `_plural_${suffix.toString()}`;
-      return returnSuffix();
-    } else if (this.options.compatibilityJSON === 'v2') {
-      return returnSuffix();
-    } else if (this.options.simplifyPluralSuffix && rule.numbers.length === 2 && rule.numbers[0] === 1) {
-      return returnSuffix();
-    }
-    return this.options.prepend && idx.toString() ? this.options.prepend + idx.toString() : idx.toString();
-  }
-  shouldUseIntlApi() {
-    return !nonIntlVersions.includes(this.options.compatibilityJSON);
-  }
-}
-
-const deepFindWithDefaults = function (data, defaultData, key) {
-  let keySeparator = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '.';
-  let ignoreJSONStructure = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
-  let path = getPathWithDefaults(data, defaultData, key);
-  if (!path && ignoreJSONStructure && isString(key)) {
-    path = deepFind(data, key, keySeparator);
-    if (path === undefined) path = deepFind(defaultData, key, keySeparator);
-  }
-  return path;
-};
-const regexSafe = val => val.replace(/\$/g, '$$$$');
-class Interpolator {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    this.logger = baseLogger.create('interpolator');
-    this.options = options;
-    this.format = options.interpolation && options.interpolation.format || (value => value);
-    this.init(options);
-  }
-  init() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    if (!options.interpolation) options.interpolation = {
-      escapeValue: true
-    };
-    const {
-      escape: escape$1,
-      escapeValue,
-      useRawValueToEscape,
-      prefix,
-      prefixEscaped,
-      suffix,
-      suffixEscaped,
-      formatSeparator,
-      unescapeSuffix,
-      unescapePrefix,
-      nestingPrefix,
-      nestingPrefixEscaped,
-      nestingSuffix,
-      nestingSuffixEscaped,
-      nestingOptionsSeparator,
-      maxReplaces,
-      alwaysFormat
-    } = options.interpolation;
-    this.escape = escape$1 !== undefined ? escape$1 : escape;
-    this.escapeValue = escapeValue !== undefined ? escapeValue : true;
-    this.useRawValueToEscape = useRawValueToEscape !== undefined ? useRawValueToEscape : false;
-    this.prefix = prefix ? regexEscape(prefix) : prefixEscaped || '{{';
-    this.suffix = suffix ? regexEscape(suffix) : suffixEscaped || '}}';
-    this.formatSeparator = formatSeparator || ',';
-    this.unescapePrefix = unescapeSuffix ? '' : unescapePrefix || '-';
-    this.unescapeSuffix = this.unescapePrefix ? '' : unescapeSuffix || '';
-    this.nestingPrefix = nestingPrefix ? regexEscape(nestingPrefix) : nestingPrefixEscaped || regexEscape('$t(');
-    this.nestingSuffix = nestingSuffix ? regexEscape(nestingSuffix) : nestingSuffixEscaped || regexEscape(')');
-    this.nestingOptionsSeparator = nestingOptionsSeparator || ',';
-    this.maxReplaces = maxReplaces || 1000;
-    this.alwaysFormat = alwaysFormat !== undefined ? alwaysFormat : false;
-    this.resetRegExp();
-  }
-  reset() {
-    if (this.options) this.init(this.options);
-  }
-  resetRegExp() {
-    const getOrResetRegExp = (existingRegExp, pattern) => {
-      if (existingRegExp && existingRegExp.source === pattern) {
-        existingRegExp.lastIndex = 0;
-        return existingRegExp;
-      }
-      return new RegExp(pattern, 'g');
-    };
-    this.regexp = getOrResetRegExp(this.regexp, `${this.prefix}(.+?)${this.suffix}`);
-    this.regexpUnescape = getOrResetRegExp(this.regexpUnescape, `${this.prefix}${this.unescapePrefix}(.+?)${this.unescapeSuffix}${this.suffix}`);
-    this.nestingRegexp = getOrResetRegExp(this.nestingRegexp, `${this.nestingPrefix}(.+?)${this.nestingSuffix}`);
-  }
-  interpolate(str, data, lng, options) {
-    let match;
-    let value;
-    let replaces;
-    const defaultData = this.options && this.options.interpolation && this.options.interpolation.defaultVariables || {};
-    const handleFormat = key => {
-      if (key.indexOf(this.formatSeparator) < 0) {
-        const path = deepFindWithDefaults(data, defaultData, key, this.options.keySeparator, this.options.ignoreJSONStructure);
-        return this.alwaysFormat ? this.format(path, undefined, lng, {
-          ...options,
-          ...data,
-          interpolationkey: key
-        }) : path;
-      }
-      const p = key.split(this.formatSeparator);
-      const k = p.shift().trim();
-      const f = p.join(this.formatSeparator).trim();
-      return this.format(deepFindWithDefaults(data, defaultData, k, this.options.keySeparator, this.options.ignoreJSONStructure), f, lng, {
-        ...options,
-        ...data,
-        interpolationkey: k
-      });
-    };
-    this.resetRegExp();
-    const missingInterpolationHandler = options && options.missingInterpolationHandler || this.options.missingInterpolationHandler;
-    const skipOnVariables = options && options.interpolation && options.interpolation.skipOnVariables !== undefined ? options.interpolation.skipOnVariables : this.options.interpolation.skipOnVariables;
-    const todos = [{
-      regex: this.regexpUnescape,
-      safeValue: val => regexSafe(val)
-    }, {
-      regex: this.regexp,
-      safeValue: val => this.escapeValue ? regexSafe(this.escape(val)) : regexSafe(val)
-    }];
-    todos.forEach(todo => {
-      replaces = 0;
-      while (match = todo.regex.exec(str)) {
-        const matchedVar = match[1].trim();
-        value = handleFormat(matchedVar);
-        if (value === undefined) {
-          if (typeof missingInterpolationHandler === 'function') {
-            const temp = missingInterpolationHandler(str, match, options);
-            value = isString(temp) ? temp : '';
-          } else if (options && Object.prototype.hasOwnProperty.call(options, matchedVar)) {
-            value = '';
-          } else if (skipOnVariables) {
-            value = match[0];
-            continue;
-          } else {
-            this.logger.warn(`missed to pass in variable ${matchedVar} for interpolating ${str}`);
-            value = '';
-          }
-        } else if (!isString(value) && !this.useRawValueToEscape) {
-          value = makeString(value);
-        }
-        const safeValue = todo.safeValue(value);
-        str = str.replace(match[0], safeValue);
-        if (skipOnVariables) {
-          todo.regex.lastIndex += value.length;
-          todo.regex.lastIndex -= match[0].length;
-        } else {
-          todo.regex.lastIndex = 0;
-        }
-        replaces++;
-        if (replaces >= this.maxReplaces) {
-          break;
-        }
-      }
-    });
-    return str;
-  }
-  nest(str, fc) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    let match;
-    let value;
-    let clonedOptions;
-    const handleHasOptions = (key, inheritedOptions) => {
-      const sep = this.nestingOptionsSeparator;
-      if (key.indexOf(sep) < 0) return key;
-      const c = key.split(new RegExp(`${sep}[ ]*{`));
-      let optionsString = `{${c[1]}`;
-      key = c[0];
-      optionsString = this.interpolate(optionsString, clonedOptions);
-      const matchedSingleQuotes = optionsString.match(/'/g);
-      const matchedDoubleQuotes = optionsString.match(/"/g);
-      if (matchedSingleQuotes && matchedSingleQuotes.length % 2 === 0 && !matchedDoubleQuotes || matchedDoubleQuotes.length % 2 !== 0) {
-        optionsString = optionsString.replace(/'/g, '"');
-      }
-      try {
-        clonedOptions = JSON.parse(optionsString);
-        if (inheritedOptions) clonedOptions = {
-          ...inheritedOptions,
-          ...clonedOptions
         };
-      } catch (e) {
-        this.logger.warn(`failed parsing options string in nesting for key ${key}`, e);
-        return `${key}${sep}${optionsString}`;
-      }
-      if (clonedOptions.defaultValue && clonedOptions.defaultValue.indexOf(this.prefix) > -1) delete clonedOptions.defaultValue;
-      return key;
-    };
-    while (match = this.nestingRegexp.exec(str)) {
-      let formatters = [];
-      clonedOptions = {
-        ...options
-      };
-      clonedOptions = clonedOptions.replace && !isString(clonedOptions.replace) ? clonedOptions.replace : clonedOptions;
-      clonedOptions.applyPostProcessor = false;
-      delete clonedOptions.defaultValue;
-      let doReduce = false;
-      if (match[0].indexOf(this.formatSeparator) !== -1 && !/{.*}/.test(match[1])) {
-        const r = match[1].split(this.formatSeparator).map(elem => elem.trim());
-        match[1] = r.shift();
-        formatters = r;
-        doReduce = true;
-      }
-      value = fc(handleHasOptions.call(this, match[1].trim(), clonedOptions), clonedOptions);
-      if (value && match[0] === str && !isString(value)) return value;
-      if (!isString(value)) value = makeString(value);
-      if (!value) {
-        this.logger.warn(`missed to resolve ${match[1]} for nesting ${str}`);
-        value = '';
-      }
-      if (doReduce) {
-        value = formatters.reduce((v, f) => this.format(v, f, options.lng, {
-          ...options,
-          interpolationkey: match[1].trim()
-        }), value.trim());
-      }
-      str = str.replace(match[0], value);
-      this.regexp.lastIndex = 0;
-    }
-    return str;
-  }
-}
-
-const parseFormatStr = formatStr => {
-  let formatName = formatStr.toLowerCase().trim();
-  const formatOptions = {};
-  if (formatStr.indexOf('(') > -1) {
-    const p = formatStr.split('(');
-    formatName = p[0].toLowerCase().trim();
-    const optStr = p[1].substring(0, p[1].length - 1);
-    if (formatName === 'currency' && optStr.indexOf(':') < 0) {
-      if (!formatOptions.currency) formatOptions.currency = optStr.trim();
-    } else if (formatName === 'relativetime' && optStr.indexOf(':') < 0) {
-      if (!formatOptions.range) formatOptions.range = optStr.trim();
-    } else {
-      const opts = optStr.split(';');
-      opts.forEach(opt => {
-        if (opt) {
-          const [key, ...rest] = opt.split(':');
-          const val = rest.join(':').trim().replace(/^'+|'+$/g, '');
-          const trimmedKey = key.trim();
-          if (!formatOptions[trimmedKey]) formatOptions[trimmedKey] = val;
-          if (val === 'false') formatOptions[trimmedKey] = false;
-          if (val === 'true') formatOptions[trimmedKey] = true;
-          if (!isNaN(val)) formatOptions[trimmedKey] = parseInt(val, 10);
-        }
-      });
-    }
-  }
-  return {
-    formatName,
-    formatOptions
-  };
-};
-const createCachedFormatter = fn => {
-  const cache = {};
-  return (val, lng, options) => {
-    let optForCache = options;
-    if (options && options.interpolationkey && options.formatParams && options.formatParams[options.interpolationkey] && options[options.interpolationkey]) {
-      optForCache = {
-        ...optForCache,
-        [options.interpolationkey]: undefined
-      };
-    }
-    const key = lng + JSON.stringify(optForCache);
-    let formatter = cache[key];
-    if (!formatter) {
-      formatter = fn(getCleanedCode(lng), options);
-      cache[key] = formatter;
-    }
-    return formatter(val);
-  };
-};
-class Formatter {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    this.logger = baseLogger.create('formatter');
-    this.options = options;
-    this.formats = {
-      number: createCachedFormatter((lng, opt) => {
-        const formatter = new Intl.NumberFormat(lng, {
-          ...opt
-        });
-        return val => formatter.format(val);
-      }),
-      currency: createCachedFormatter((lng, opt) => {
-        const formatter = new Intl.NumberFormat(lng, {
-          ...opt,
-          style: 'currency'
-        });
-        return val => formatter.format(val);
-      }),
-      datetime: createCachedFormatter((lng, opt) => {
-        const formatter = new Intl.DateTimeFormat(lng, {
-          ...opt
-        });
-        return val => formatter.format(val);
-      }),
-      relativetime: createCachedFormatter((lng, opt) => {
-        const formatter = new Intl.RelativeTimeFormat(lng, {
-          ...opt
-        });
-        return val => formatter.format(val, opt.range || 'day');
-      }),
-      list: createCachedFormatter((lng, opt) => {
-        const formatter = new Intl.ListFormat(lng, {
-          ...opt
-        });
-        return val => formatter.format(val);
-      })
-    };
-    this.init(options);
-  }
-  init(services) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-      interpolation: {}
-    };
-    this.formatSeparator = options.interpolation.formatSeparator || ',';
-  }
-  add(name, fc) {
-    this.formats[name.toLowerCase().trim()] = fc;
-  }
-  addCached(name, fc) {
-    this.formats[name.toLowerCase().trim()] = createCachedFormatter(fc);
-  }
-  format(value, format, lng) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    const formats = format.split(this.formatSeparator);
-    if (formats.length > 1 && formats[0].indexOf('(') > 1 && formats[0].indexOf(')') < 0 && formats.find(f => f.indexOf(')') > -1)) {
-      const lastIndex = formats.findIndex(f => f.indexOf(')') > -1);
-      formats[0] = [formats[0], ...formats.splice(1, lastIndex)].join(this.formatSeparator);
-    }
-    const result = formats.reduce((mem, f) => {
-      const {
-        formatName,
-        formatOptions
-      } = parseFormatStr(f);
-      if (this.formats[formatName]) {
-        let formatted = mem;
-        try {
-          const valOptions = options && options.formatParams && options.formatParams[options.interpolationkey] || {};
-          const l = valOptions.locale || valOptions.lng || options.locale || options.lng || lng;
-          formatted = this.formats[formatName](mem, l, {
-            ...formatOptions,
-            ...options,
-            ...valOptions
-          });
-        } catch (error) {
-          this.logger.warn(error);
-        }
-        return formatted;
-      } else {
-        this.logger.warn(`there was no format function for ${formatName}`);
-      }
-      return mem;
-    }, value);
-    return result;
-  }
-}
-
-const removePending = (q, name) => {
-  if (q.pending[name] !== undefined) {
-    delete q.pending[name];
-    q.pendingCount--;
-  }
-};
-class Connector extends EventEmitter {
-  constructor(backend, store, services) {
-    let options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    super();
-    this.backend = backend;
-    this.store = store;
-    this.services = services;
-    this.languageUtils = services.languageUtils;
-    this.options = options;
-    this.logger = baseLogger.create('backendConnector');
-    this.waitingReads = [];
-    this.maxParallelReads = options.maxParallelReads || 10;
-    this.readingCalls = 0;
-    this.maxRetries = options.maxRetries >= 0 ? options.maxRetries : 5;
-    this.retryTimeout = options.retryTimeout >= 1 ? options.retryTimeout : 350;
-    this.state = {};
-    this.queue = [];
-    if (this.backend && this.backend.init) {
-      this.backend.init(services, options.backend, options);
-    }
-  }
-  queueLoad(languages, namespaces, options, callback) {
-    const toLoad = {};
-    const pending = {};
-    const toLoadLanguages = {};
-    const toLoadNamespaces = {};
-    languages.forEach(lng => {
-      let hasAllNamespaces = true;
-      namespaces.forEach(ns => {
-        const name = `${lng}|${ns}`;
-        if (!options.reload && this.store.hasResourceBundle(lng, ns)) {
-          this.state[name] = 2;
-        } else if (this.state[name] < 0) ; else if (this.state[name] === 1) {
-          if (pending[name] === undefined) pending[name] = true;
-        } else {
-          this.state[name] = 1;
-          hasAllNamespaces = false;
-          if (pending[name] === undefined) pending[name] = true;
-          if (toLoad[name] === undefined) toLoad[name] = true;
-          if (toLoadNamespaces[ns] === undefined) toLoadNamespaces[ns] = true;
-        }
-      });
-      if (!hasAllNamespaces) toLoadLanguages[lng] = true;
-    });
-    if (Object.keys(toLoad).length || Object.keys(pending).length) {
-      this.queue.push({
-        pending,
-        pendingCount: Object.keys(pending).length,
-        loaded: {},
-        errors: [],
-        callback
-      });
-    }
-    return {
-      toLoad: Object.keys(toLoad),
-      pending: Object.keys(pending),
-      toLoadLanguages: Object.keys(toLoadLanguages),
-      toLoadNamespaces: Object.keys(toLoadNamespaces)
-    };
-  }
-  loaded(name, err, data) {
-    const s = name.split('|');
-    const lng = s[0];
-    const ns = s[1];
-    if (err) this.emit('failedLoading', lng, ns, err);
-    if (!err && data) {
-      this.store.addResourceBundle(lng, ns, data, undefined, undefined, {
-        skipCopy: true
-      });
-    }
-    this.state[name] = err ? -1 : 2;
-    if (err && data) this.state[name] = 0;
-    const loaded = {};
-    this.queue.forEach(q => {
-      pushPath(q.loaded, [lng], ns);
-      removePending(q, name);
-      if (err) q.errors.push(err);
-      if (q.pendingCount === 0 && !q.done) {
-        Object.keys(q.loaded).forEach(l => {
-          if (!loaded[l]) loaded[l] = {};
-          const loadedKeys = q.loaded[l];
-          if (loadedKeys.length) {
-            loadedKeys.forEach(n => {
-              if (loaded[l][n] === undefined) loaded[l][n] = true;
-            });
-          }
-        });
-        q.done = true;
-        if (q.errors.length) {
-          q.callback(q.errors);
-        } else {
-          q.callback();
-        }
-      }
-    });
-    this.emit('loaded', loaded);
-    this.queue = this.queue.filter(q => !q.done);
-  }
-  read(lng, ns, fcName) {
-    let tried = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    let wait = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : this.retryTimeout;
-    let callback = arguments.length > 5 ? arguments[5] : undefined;
-    if (!lng.length) return callback(null, {});
-    if (this.readingCalls >= this.maxParallelReads) {
-      this.waitingReads.push({
-        lng,
-        ns,
-        fcName,
-        tried,
-        wait,
-        callback
-      });
-      return;
-    }
-    this.readingCalls++;
-    const resolver = (err, data) => {
-      this.readingCalls--;
-      if (this.waitingReads.length > 0) {
-        const next = this.waitingReads.shift();
-        this.read(next.lng, next.ns, next.fcName, next.tried, next.wait, next.callback);
-      }
-      if (err && data && tried < this.maxRetries) {
-        setTimeout(() => {
-          this.read.call(this, lng, ns, fcName, tried + 1, wait * 2, callback);
-        }, wait);
-        return;
-      }
-      callback(err, data);
-    };
-    const fc = this.backend[fcName].bind(this.backend);
-    if (fc.length === 2) {
-      try {
-        const r = fc(lng, ns);
-        if (r && typeof r.then === 'function') {
-          r.then(data => resolver(null, data)).catch(resolver);
-        } else {
-          resolver(null, r);
-        }
-      } catch (err) {
-        resolver(err);
-      }
-      return;
-    }
-    return fc(lng, ns, resolver);
-  }
-  prepareLoading(languages, namespaces) {
-    let options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    let callback = arguments.length > 3 ? arguments[3] : undefined;
-    if (!this.backend) {
-      this.logger.warn('No backend was added via i18next.use. Will not load resources.');
-      return callback && callback();
-    }
-    if (isString(languages)) languages = this.languageUtils.toResolveHierarchy(languages);
-    if (isString(namespaces)) namespaces = [namespaces];
-    const toLoad = this.queueLoad(languages, namespaces, options, callback);
-    if (!toLoad.toLoad.length) {
-      if (!toLoad.pending.length) callback();
-      return null;
-    }
-    toLoad.toLoad.forEach(name => {
-      this.loadOne(name);
-    });
-  }
-  load(languages, namespaces, callback) {
-    this.prepareLoading(languages, namespaces, {}, callback);
-  }
-  reload(languages, namespaces, callback) {
-    this.prepareLoading(languages, namespaces, {
-      reload: true
-    }, callback);
-  }
-  loadOne(name) {
-    let prefix = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    const s = name.split('|');
-    const lng = s[0];
-    const ns = s[1];
-    this.read(lng, ns, 'read', undefined, undefined, (err, data) => {
-      if (err) this.logger.warn(`${prefix}loading namespace ${ns} for language ${lng} failed`, err);
-      if (!err && data) this.logger.log(`${prefix}loaded namespace ${ns} for language ${lng}`, data);
-      this.loaded(name, err, data);
-    });
-  }
-  saveMissing(languages, namespace, key, fallbackValue, isUpdate) {
-    let options = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
-    let clb = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : () => {};
-    if (this.services.utils && this.services.utils.hasLoadedNamespace && !this.services.utils.hasLoadedNamespace(namespace)) {
-      this.logger.warn(`did not save key "${key}" as the namespace "${namespace}" was not yet loaded`, 'This means something IS WRONG in your setup. You access the t function before i18next.init / i18next.loadNamespace / i18next.changeLanguage was done. Wait for the callback or Promise to resolve before accessing it!!!');
-      return;
-    }
-    if (key === undefined || key === null || key === '') return;
-    if (this.backend && this.backend.create) {
-      const opts = {
-        ...options,
-        isUpdate
-      };
-      const fc = this.backend.create.bind(this.backend);
-      if (fc.length < 6) {
-        try {
-          let r;
-          if (fc.length === 5) {
-            r = fc(languages, namespace, key, fallbackValue, opts);
-          } else {
-            r = fc(languages, namespace, key, fallbackValue);
-          }
-          if (r && typeof r.then === 'function') {
-            r.then(data => clb(null, data)).catch(clb);
-          } else {
-            clb(null, r);
-          }
-        } catch (err) {
-          clb(err);
-        }
-      } else {
-        fc(languages, namespace, key, fallbackValue, clb, opts);
-      }
-    }
-    if (!languages || !languages[0]) return;
-    this.store.addResource(languages[0], namespace, key, fallbackValue);
-  }
-}
-
-const get = () => ({
-  debug: false,
-  initImmediate: true,
-  ns: ['translation'],
-  defaultNS: ['translation'],
-  fallbackLng: ['dev'],
-  fallbackNS: false,
-  supportedLngs: false,
-  nonExplicitSupportedLngs: false,
-  load: 'all',
-  preload: false,
-  simplifyPluralSuffix: true,
-  keySeparator: '.',
-  nsSeparator: ':',
-  pluralSeparator: '_',
-  contextSeparator: '_',
-  partialBundledLanguages: false,
-  saveMissing: false,
-  updateMissing: false,
-  saveMissingTo: 'fallback',
-  saveMissingPlurals: true,
-  missingKeyHandler: false,
-  missingInterpolationHandler: false,
-  postProcess: false,
-  postProcessPassResolved: false,
-  returnNull: false,
-  returnEmptyString: true,
-  returnObjects: false,
-  joinArrays: false,
-  returnedObjectHandler: false,
-  parseMissingKeyHandler: false,
-  appendNamespaceToMissingKey: false,
-  appendNamespaceToCIMode: false,
-  overloadTranslationOptionHandler: args => {
-    let ret = {};
-    if (typeof args[1] === 'object') ret = args[1];
-    if (isString(args[1])) ret.defaultValue = args[1];
-    if (isString(args[2])) ret.tDescription = args[2];
-    if (typeof args[2] === 'object' || typeof args[3] === 'object') {
-      const options = args[3] || args[2];
-      Object.keys(options).forEach(key => {
-        ret[key] = options[key];
-      });
-    }
-    return ret;
-  },
-  interpolation: {
-    escapeValue: true,
-    format: value => value,
-    prefix: '{{',
-    suffix: '}}',
-    formatSeparator: ',',
-    unescapePrefix: '-',
-    nestingPrefix: '$t(',
-    nestingSuffix: ')',
-    nestingOptionsSeparator: ',',
-    maxReplaces: 1000,
-    skipOnVariables: true
-  }
-});
-const transformOptions = options => {
-  if (isString(options.ns)) options.ns = [options.ns];
-  if (isString(options.fallbackLng)) options.fallbackLng = [options.fallbackLng];
-  if (isString(options.fallbackNS)) options.fallbackNS = [options.fallbackNS];
-  if (options.supportedLngs && options.supportedLngs.indexOf('cimode') < 0) {
-    options.supportedLngs = options.supportedLngs.concat(['cimode']);
-  }
-  return options;
-};
-
-const noop = () => {};
-const bindMemberFunctions = inst => {
-  const mems = Object.getOwnPropertyNames(Object.getPrototypeOf(inst));
-  mems.forEach(mem => {
-    if (typeof inst[mem] === 'function') {
-      inst[mem] = inst[mem].bind(inst);
-    }
-  });
-};
-class I18n extends EventEmitter {
-  constructor() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    let callback = arguments.length > 1 ? arguments[1] : undefined;
-    super();
-    this.options = transformOptions(options);
-    this.services = {};
-    this.logger = baseLogger;
-    this.modules = {
-      external: []
-    };
-    bindMemberFunctions(this);
-    if (callback && !this.isInitialized && !options.isClone) {
-      if (!this.options.initImmediate) {
-        this.init(options, callback);
-        return this;
-      }
-      setTimeout(() => {
-        this.init(options, callback);
-      }, 0);
-    }
-  }
-  init() {
-    var _this = this;
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    let callback = arguments.length > 1 ? arguments[1] : undefined;
-    this.isInitializing = true;
-    if (typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    if (!options.defaultNS && options.defaultNS !== false && options.ns) {
-      if (isString(options.ns)) {
-        options.defaultNS = options.ns;
-      } else if (options.ns.indexOf('translation') < 0) {
-        options.defaultNS = options.ns[0];
-      }
-    }
-    const defOpts = get();
-    this.options = {
-      ...defOpts,
-      ...this.options,
-      ...transformOptions(options)
-    };
-    if (this.options.compatibilityAPI !== 'v1') {
-      this.options.interpolation = {
-        ...defOpts.interpolation,
-        ...this.options.interpolation
-      };
-    }
-    if (options.keySeparator !== undefined) {
-      this.options.userDefinedKeySeparator = options.keySeparator;
-    }
-    if (options.nsSeparator !== undefined) {
-      this.options.userDefinedNsSeparator = options.nsSeparator;
-    }
-    const createClassOnDemand = ClassOrObject => {
-      if (!ClassOrObject) return null;
-      if (typeof ClassOrObject === 'function') return new ClassOrObject();
-      return ClassOrObject;
-    };
-    if (!this.options.isClone) {
-      if (this.modules.logger) {
-        baseLogger.init(createClassOnDemand(this.modules.logger), this.options);
-      } else {
-        baseLogger.init(null, this.options);
-      }
-      let formatter;
-      if (this.modules.formatter) {
-        formatter = this.modules.formatter;
-      } else if (typeof Intl !== 'undefined') {
-        formatter = Formatter;
-      }
-      const lu = new LanguageUtil(this.options);
-      this.store = new ResourceStore(this.options.resources, this.options);
-      const s = this.services;
-      s.logger = baseLogger;
-      s.resourceStore = this.store;
-      s.languageUtils = lu;
-      s.pluralResolver = new PluralResolver(lu, {
-        prepend: this.options.pluralSeparator,
-        compatibilityJSON: this.options.compatibilityJSON,
-        simplifyPluralSuffix: this.options.simplifyPluralSuffix
-      });
-      if (formatter && (!this.options.interpolation.format || this.options.interpolation.format === defOpts.interpolation.format)) {
-        s.formatter = createClassOnDemand(formatter);
-        s.formatter.init(s, this.options);
-        this.options.interpolation.format = s.formatter.format.bind(s.formatter);
-      }
-      s.interpolator = new Interpolator(this.options);
-      s.utils = {
-        hasLoadedNamespace: this.hasLoadedNamespace.bind(this)
-      };
-      s.backendConnector = new Connector(createClassOnDemand(this.modules.backend), s.resourceStore, s, this.options);
-      s.backendConnector.on('*', function (event) {
-        for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-          args[_key - 1] = arguments[_key];
-        }
-        _this.emit(event, ...args);
-      });
-      if (this.modules.languageDetector) {
-        s.languageDetector = createClassOnDemand(this.modules.languageDetector);
-        if (s.languageDetector.init) s.languageDetector.init(s, this.options.detection, this.options);
-      }
-      if (this.modules.i18nFormat) {
-        s.i18nFormat = createClassOnDemand(this.modules.i18nFormat);
-        if (s.i18nFormat.init) s.i18nFormat.init(this);
-      }
-      this.translator = new Translator(this.services, this.options);
-      this.translator.on('*', function (event) {
-        for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          args[_key2 - 1] = arguments[_key2];
-        }
-        _this.emit(event, ...args);
-      });
-      this.modules.external.forEach(m => {
-        if (m.init) m.init(this);
-      });
-    }
-    this.format = this.options.interpolation.format;
-    if (!callback) callback = noop;
-    if (this.options.fallbackLng && !this.services.languageDetector && !this.options.lng) {
-      const codes = this.services.languageUtils.getFallbackCodes(this.options.fallbackLng);
-      if (codes.length > 0 && codes[0] !== 'dev') this.options.lng = codes[0];
-    }
-    if (!this.services.languageDetector && !this.options.lng) {
-      this.logger.warn('init: no languageDetector is used and no lng is defined');
-    }
-    const storeApi = ['getResource', 'hasResourceBundle', 'getResourceBundle', 'getDataByLanguage'];
-    storeApi.forEach(fcName => {
-      this[fcName] = function () {
-        return _this.store[fcName](...arguments);
-      };
-    });
-    const storeApiChained = ['addResource', 'addResources', 'addResourceBundle', 'removeResourceBundle'];
-    storeApiChained.forEach(fcName => {
-      this[fcName] = function () {
-        _this.store[fcName](...arguments);
-        return _this;
-      };
-    });
-    const deferred = defer();
-    const load = () => {
-      const finish = (err, t) => {
-        this.isInitializing = false;
-        if (this.isInitialized && !this.initializedStoreOnce) this.logger.warn('init: i18next is already initialized. You should call init just once!');
-        this.isInitialized = true;
-        if (!this.options.isClone) this.logger.log('initialized', this.options);
-        this.emit('initialized', this.options);
-        deferred.resolve(t);
-        callback(err, t);
-      };
-      if (this.languages && this.options.compatibilityAPI !== 'v1' && !this.isInitialized) return finish(null, this.t.bind(this));
-      this.changeLanguage(this.options.lng, finish);
-    };
-    if (this.options.resources || !this.options.initImmediate) {
-      load();
-    } else {
-      setTimeout(load, 0);
-    }
-    return deferred;
-  }
-  loadResources(language) {
-    let callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
-    let usedCallback = callback;
-    const usedLng = isString(language) ? language : this.language;
-    if (typeof language === 'function') usedCallback = language;
-    if (!this.options.resources || this.options.partialBundledLanguages) {
-      if (usedLng && usedLng.toLowerCase() === 'cimode' && (!this.options.preload || this.options.preload.length === 0)) return usedCallback();
-      const toLoad = [];
-      const append = lng => {
-        if (!lng) return;
-        if (lng === 'cimode') return;
-        const lngs = this.services.languageUtils.toResolveHierarchy(lng);
-        lngs.forEach(l => {
-          if (l === 'cimode') return;
-          if (toLoad.indexOf(l) < 0) toLoad.push(l);
-        });
-      };
-      if (!usedLng) {
-        const fallbacks = this.services.languageUtils.getFallbackCodes(this.options.fallbackLng);
-        fallbacks.forEach(l => append(l));
-      } else {
-        append(usedLng);
-      }
-      if (this.options.preload) {
-        this.options.preload.forEach(l => append(l));
-      }
-      this.services.backendConnector.load(toLoad, this.options.ns, e => {
-        if (!e && !this.resolvedLanguage && this.language) this.setResolvedLanguage(this.language);
-        usedCallback(e);
-      });
-    } else {
-      usedCallback(null);
-    }
-  }
-  reloadResources(lngs, ns, callback) {
-    const deferred = defer();
-    if (typeof lngs === 'function') {
-      callback = lngs;
-      lngs = undefined;
-    }
-    if (typeof ns === 'function') {
-      callback = ns;
-      ns = undefined;
-    }
-    if (!lngs) lngs = this.languages;
-    if (!ns) ns = this.options.ns;
-    if (!callback) callback = noop;
-    this.services.backendConnector.reload(lngs, ns, err => {
-      deferred.resolve();
-      callback(err);
-    });
-    return deferred;
-  }
-  use(module) {
-    if (!module) throw new Error('You are passing an undefined module! Please check the object you are passing to i18next.use()');
-    if (!module.type) throw new Error('You are passing a wrong module! Please check the object you are passing to i18next.use()');
-    if (module.type === 'backend') {
-      this.modules.backend = module;
-    }
-    if (module.type === 'logger' || module.log && module.warn && module.error) {
-      this.modules.logger = module;
-    }
-    if (module.type === 'languageDetector') {
-      this.modules.languageDetector = module;
-    }
-    if (module.type === 'i18nFormat') {
-      this.modules.i18nFormat = module;
-    }
-    if (module.type === 'postProcessor') {
-      postProcessor.addPostProcessor(module);
-    }
-    if (module.type === 'formatter') {
-      this.modules.formatter = module;
-    }
-    if (module.type === '3rdParty') {
-      this.modules.external.push(module);
-    }
-    return this;
-  }
-  setResolvedLanguage(l) {
-    if (!l || !this.languages) return;
-    if (['cimode', 'dev'].indexOf(l) > -1) return;
-    for (let li = 0; li < this.languages.length; li++) {
-      const lngInLngs = this.languages[li];
-      if (['cimode', 'dev'].indexOf(lngInLngs) > -1) continue;
-      if (this.store.hasLanguageSomeTranslations(lngInLngs)) {
-        this.resolvedLanguage = lngInLngs;
-        break;
-      }
-    }
-  }
-  changeLanguage(lng, callback) {
-    var _this2 = this;
-    this.isLanguageChangingTo = lng;
-    const deferred = defer();
-    this.emit('languageChanging', lng);
-    const setLngProps = l => {
-      this.language = l;
-      this.languages = this.services.languageUtils.toResolveHierarchy(l);
-      this.resolvedLanguage = undefined;
-      this.setResolvedLanguage(l);
-    };
-    const done = (err, l) => {
-      if (l) {
-        setLngProps(l);
-        this.translator.changeLanguage(l);
-        this.isLanguageChangingTo = undefined;
-        this.emit('languageChanged', l);
-        this.logger.log('languageChanged', l);
-      } else {
-        this.isLanguageChangingTo = undefined;
-      }
-      deferred.resolve(function () {
-        return _this2.t(...arguments);
-      });
-      if (callback) callback(err, function () {
-        return _this2.t(...arguments);
-      });
-    };
-    const setLng = lngs => {
-      if (!lng && !lngs && this.services.languageDetector) lngs = [];
-      const l = isString(lngs) ? lngs : this.services.languageUtils.getBestMatchFromCodes(lngs);
-      if (l) {
-        if (!this.language) {
-          setLngProps(l);
-        }
-        if (!this.translator.language) this.translator.changeLanguage(l);
-        if (this.services.languageDetector && this.services.languageDetector.cacheUserLanguage) this.services.languageDetector.cacheUserLanguage(l);
-      }
-      this.loadResources(l, err => {
-        done(err, l);
-      });
-    };
-    if (!lng && this.services.languageDetector && !this.services.languageDetector.async) {
-      setLng(this.services.languageDetector.detect());
-    } else if (!lng && this.services.languageDetector && this.services.languageDetector.async) {
-      if (this.services.languageDetector.detect.length === 0) {
-        this.services.languageDetector.detect().then(setLng);
-      } else {
-        this.services.languageDetector.detect(setLng);
-      }
-    } else {
-      setLng(lng);
-    }
-    return deferred;
-  }
-  getFixedT(lng, ns, keyPrefix) {
-    var _this3 = this;
-    const fixedT = function (key, opts) {
-      let options;
-      if (typeof opts !== 'object') {
-        for (var _len3 = arguments.length, rest = new Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-          rest[_key3 - 2] = arguments[_key3];
-        }
-        options = _this3.options.overloadTranslationOptionHandler([key, opts].concat(rest));
-      } else {
-        options = {
-          ...opts
+        initPlugin();
+        // Register server event listener
+        const handleServerEvent = (event) => {
+            const api = getApiInstance(initialState);
+            api.handleServerEvent(event);
         };
-      }
-      options.lng = options.lng || fixedT.lng;
-      options.lngs = options.lngs || fixedT.lngs;
-      options.ns = options.ns || fixedT.ns;
-      if (options.keyPrefix !== '') options.keyPrefix = options.keyPrefix || keyPrefix || fixedT.keyPrefix;
-      const keySeparator = _this3.options.keySeparator || '.';
-      let resultKey;
-      if (options.keyPrefix && Array.isArray(key)) {
-        resultKey = key.map(k => `${options.keyPrefix}${keySeparator}${k}`);
-      } else {
-        resultKey = options.keyPrefix ? `${options.keyPrefix}${keySeparator}${key}` : key;
-      }
-      return _this3.t(resultKey, options);
-    };
-    if (isString(lng)) {
-      fixedT.lng = lng;
-    } else {
-      fixedT.lngs = lng;
-    }
-    fixedT.ns = ns;
-    fixedT.keyPrefix = keyPrefix;
-    return fixedT;
-  }
-  t() {
-    return this.translator && this.translator.translate(...arguments);
-  }
-  exists() {
-    return this.translator && this.translator.exists(...arguments);
-  }
-  setDefaultNamespace(ns) {
-    this.options.defaultNS = ns;
-  }
-  hasLoadedNamespace(ns) {
-    let options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    if (!this.isInitialized) {
-      this.logger.warn('hasLoadedNamespace: i18next was not initialized', this.languages);
-      return false;
-    }
-    if (!this.languages || !this.languages.length) {
-      this.logger.warn('hasLoadedNamespace: i18n.languages were undefined or empty', this.languages);
-      return false;
-    }
-    const lng = options.lng || this.resolvedLanguage || this.languages[0];
-    const fallbackLng = this.options ? this.options.fallbackLng : false;
-    const lastLng = this.languages[this.languages.length - 1];
-    if (lng.toLowerCase() === 'cimode') return true;
-    const loadNotPending = (l, n) => {
-      const loadState = this.services.backendConnector.state[`${l}|${n}`];
-      return loadState === -1 || loadState === 0 || loadState === 2;
-    };
-    if (options.precheck) {
-      const preResult = options.precheck(this, loadNotPending);
-      if (preResult !== undefined) return preResult;
-    }
-    if (this.hasResourceBundle(lng, ns)) return true;
-    if (!this.services.backendConnector.backend || this.options.resources && !this.options.partialBundledLanguages) return true;
-    if (loadNotPending(lng, ns) && (!fallbackLng || loadNotPending(lastLng, ns))) return true;
-    return false;
-  }
-  loadNamespaces(ns, callback) {
-    const deferred = defer();
-    if (!this.options.ns) {
-      if (callback) callback();
-      return Promise.resolve();
-    }
-    if (isString(ns)) ns = [ns];
-    ns.forEach(n => {
-      if (this.options.ns.indexOf(n) < 0) this.options.ns.push(n);
-    });
-    this.loadResources(err => {
-      deferred.resolve();
-      if (callback) callback(err);
-    });
-    return deferred;
-  }
-  loadLanguages(lngs, callback) {
-    const deferred = defer();
-    if (isString(lngs)) lngs = [lngs];
-    const preloaded = this.options.preload || [];
-    const newLngs = lngs.filter(lng => preloaded.indexOf(lng) < 0 && this.services.languageUtils.isSupportedCode(lng));
-    if (!newLngs.length) {
-      if (callback) callback();
-      return Promise.resolve();
-    }
-    this.options.preload = preloaded.concat(newLngs);
-    this.loadResources(err => {
-      deferred.resolve();
-      if (callback) callback(err);
-    });
-    return deferred;
-  }
-  dir(lng) {
-    if (!lng) lng = this.resolvedLanguage || (this.languages && this.languages.length > 0 ? this.languages[0] : this.language);
-    if (!lng) return 'rtl';
-    const rtlLngs = ['ar', 'shu', 'sqr', 'ssh', 'xaa', 'yhd', 'yud', 'aao', 'abh', 'abv', 'acm', 'acq', 'acw', 'acx', 'acy', 'adf', 'ads', 'aeb', 'aec', 'afb', 'ajp', 'apc', 'apd', 'arb', 'arq', 'ars', 'ary', 'arz', 'auz', 'avl', 'ayh', 'ayl', 'ayn', 'ayp', 'bbz', 'pga', 'he', 'iw', 'ps', 'pbt', 'pbu', 'pst', 'prp', 'prd', 'ug', 'ur', 'ydd', 'yds', 'yih', 'ji', 'yi', 'hbo', 'men', 'xmn', 'fa', 'jpr', 'peo', 'pes', 'prs', 'dv', 'sam', 'ckb'];
-    const languageUtils = this.services && this.services.languageUtils || new LanguageUtil(get());
-    return rtlLngs.indexOf(languageUtils.getLanguagePartFromCode(lng)) > -1 || lng.toLowerCase().indexOf('-arab') > 1 ? 'rtl' : 'ltr';
-  }
-  static createInstance() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    let callback = arguments.length > 1 ? arguments[1] : undefined;
-    return new I18n(options, callback);
-  }
-  cloneInstance() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    let callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
-    const forkResourceStore = options.forkResourceStore;
-    if (forkResourceStore) delete options.forkResourceStore;
-    const mergedOptions = {
-      ...this.options,
-      ...options,
-      ...{
-        isClone: true
-      }
-    };
-    const clone = new I18n(mergedOptions);
-    if (options.debug !== undefined || options.prefix !== undefined) {
-      clone.logger = clone.logger.clone(options);
-    }
-    const membersToCopy = ['store', 'services', 'language'];
-    membersToCopy.forEach(m => {
-      clone[m] = this[m];
-    });
-    clone.services = {
-      ...this.services
-    };
-    clone.services.utils = {
-      hasLoadedNamespace: clone.hasLoadedNamespace.bind(clone)
-    };
-    if (forkResourceStore) {
-      clone.store = new ResourceStore(this.store.data, mergedOptions);
-      clone.services.resourceStore = clone.store;
-    }
-    clone.translator = new Translator(clone.services, mergedOptions);
-    clone.translator.on('*', function (event) {
-      for (var _len4 = arguments.length, args = new Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-        args[_key4 - 1] = arguments[_key4];
-      }
-      clone.emit(event, ...args);
-    });
-    clone.init(mergedOptions, callback);
-    clone.translator.options = mergedOptions;
-    clone.translator.backendConnector.services.utils = {
-      hasLoadedNamespace: clone.hasLoadedNamespace.bind(clone)
-    };
-    return clone;
-  }
-  toJSON() {
-    return {
-      options: this.options,
-      store: this.store,
-      language: this.language,
-      languages: this.languages,
-      resolvedLanguage: this.resolvedLanguage
-    };
-  }
-}
-const instance = I18n.createInstance();
-instance.createInstance = I18n.createInstance;
-
-const translations = {
-    en: {
-        translation: {
-            about: {
-                header: "Decky-Undervolt could not be made without these awesome tools:",
-                tools: {
-                    ryzenadj: "Ryzenadj: Power Management tool for Ryzen APUs made by FlyGoat (LGPL-3.0 license)",
-                    steamDeck: "Steam-Deck-Software-Undervolt Pososaku's fork: Easy way to implement per-core undervolt, made by Pososaku (GPL-3.0 License)",
-                },
-                supportHeader: "But most importantly, Decky-Undervolt could not be made without the support of these amazing people:",
-                supporters: {
-                    pososaku: "Pososaku (Ew Meh): For making Steam Deck overclocking popular in Russian community and his awesome fork",
-                    kigs: "k1gs: For contributing to the project and helping with the development",
-                    deadwenk: "deadwenk (Alexey Tarasov): For contributing Steam-Deck-Software-Undervolt and making it easier to use per-core undervolting",
-                    foxn: "FoxN: For finding a solution to make software undervolting possible at Steam Deck OLED",
-                    robert: "Robert (biddbb): For maintaining overclocking guide",
-                    ngnius: "NGnius: For resolving licensing issues",
-                    notBullseye: "NotBullseye: For creating plugin logo",
-                    community: "Everyone in the Steam Deck OC (@steamdeckoverclock) Telegram community: For their support and feedback",
-                },
-                footer: {
-                    thankYou: "And of course, thank you for using Decky-Undervolt!",
-                    madeBy: "Made with ❤️ by BakaDestroyer",
-                },
-            },
-            sidebar: {
-                settings: "Settings",
-                about: "About",
-                title: "Decky-Undervolt",
-            },
-            settings: {
-                useGlobally: "Use Globally",
-                useGloballyDescription: "Undervolt will persist even if the game is closed. By default, it turns off when the game is not running.",
-                runWithGame: "Run With Game",
-                runWithGameDescription: "Undervolt will be applied automatically when the game starts.",
-                runAtStartup: "Run at Startup",
-                runAtStartupDescription: "Undervolt will be applied automatically when the system starts.",
-                timeoutApply: "Timeout Apply",
-                timeoutApplyDescription: "The time in seconds to wait before applying the undervolt at startup.",
-                resetConfig: "Reset Config",
-                resettingConfig: "Resetting Config...",
-                saveSettings: "Save Settings",
-                savingSettings: "Saving Settings...",
-            },
-            staticUndervolt: {
-                useForCurrentGame: "Use only for {{appName}}?",
-                currentGamePlaceholder: "current game",
-                noGameRunning: "No game is running, please start a game to use this feature. Undervolting settings will be applied globally.",
-                descriptionRunningGame: "Checking this will save the undervolt settings and will apply them only when {{appName}} is running instead of applying it globally.",
-                presetManagerButton: "Preset Manager",
-                actionButtons: {
-                    saveAndApply: "Save & Apply",
-                    applying: "Applying...",
-                    reset: "Reset",
-                    disable: "Disable",
-                },
-            },
-            presetManager: {
-                label: "Preset Manager",
-                presetSelector: {
-                    none: "None",
-                    label: "Preset to edit:",
-                },
-                actionButtons: {
-                    saving: "Saving...",
-                    savePreset: "Save Preset",
-                    deleteConfirm: "Really delete?",
-                    delete: "Delete",
-                },
-                backButton: "Back",
-            },
-            coreSlider: "Core {{coreNumber}}",
-            presetControls: {
-                useTimeout: "Use timeout for this preset?",
-                timeoutDescription: "Checking this will apply the undervolt after some time when {{label}} is opened. Might be useful for games with launchers.",
-                timeoutLabel: "Timeout in seconds",
-            },
-            undervoltStatus: {
-                status: "Undervolt Status: ",
-                enabled: "Enabled",
-                disabled: "Disabled",
-                error: "Error",
-                scheduled: "Scheduled",
-            },
-        },
-    },
-    ru: {
-        translation: {
-            about: {
-                header: "Decky-Undervolt не мог бы быть создан без этих замечательных инструментов:",
-                tools: {
-                    ryzenadj: "Ryzenadj: Инструмент управления питанием для Ryzen APU от FlyGoat (лицензия LGPL-3.0)",
-                    steamDeck: "Steam-Deck-Software-Undervolt, форк Pososaku: Удобный способ реализовать поядерный андервольтинг, созданный Pososaku (лицензия GPL-3.0)",
-                },
-                supportHeader: "Но, самое главное, Decky-Undervolt не мог бы быть создан без поддержки этих потрясающих людей:",
-                supporters: {
-                    pososaku: "Pososaku (Ew Meh): За популяризацию разгона Steam Deck в российском сообществе и его замечательный форк",
-                    kigs: "k1gs: За вклад в проект и помощь в разработке",
-                    deadwenk: "deadwenk (Алексей Тарасов): За вклад в Steam-Deck-Software-Undervolt и упрощение настройки поядерного андервольтинга",
-                    foxn: "FoxN: За решение, позволившее программный андервольтинг на Steam Deck OLED",
-                    robert: "Robert (biddbb): За поддержку гайда по разгону",
-                    ngnius: "NGnius: За решение вопросов лицензирования",
-                    notBullseye: "NotBullseye: За создание логотипа плагина",
-                    community: "Всем участникам сообщества Steam Deck OC (@steamdeckoverclock) в Telegram: За их поддержку и обратную связь",
-                },
-                footer: {
-                    thankYou: "И, конечно же, спасибо за использование Decky-Undervolt!",
-                    madeBy: "Создано с ❤️ BakaDestroyer",
-                },
-            },
-            sidebar: {
-                settings: "Настройки",
-                about: "О плагине",
-                title: "Decky-Undervolt",
-            },
-            settings: {
-                useGlobally: "Использовать глобально",
-                useGloballyDescription: "Андервольтинг будет сохраняться даже после закрытия игры. По умолчанию он отключается, если игра не запущена.",
-                runWithGame: "Включать с игрой",
-                runWithGameDescription: "Андервольтинг будет автоматически применяться при запуске игры.",
-                runAtStartup: "Включать при запуске системы",
-                runAtStartupDescription: "Андервольтинг будет автоматически применяться при включении системы.",
-                timeoutApply: "Применение с задержкой",
-                timeoutApplyDescription: "Задержка в секундах перед применением андервольтинга при старте системы.",
-                resetConfig: "Сбросить настройки",
-                resettingConfig: "Сброс настроек...",
-                saveSettings: "Сохранить настройки",
-                savingSettings: "Сохранение настроек...",
-            },
-            staticUndervolt: {
-                useForCurrentGame: "Использовать только для {{appName}}?",
-                currentGamePlaceholder: "текущей игры",
-                noGameRunning: "Игра не запущена. Запустите игру, чтобы использовать эту функцию. Настройки андервольтинга будут применены глобально.",
-                descriptionRunningGame: "Выбор этого параметра сохранит настройки андервольтинга и будет применять их только при запуске {{appName}}, а не глобально.",
-                presetManagerButton: "Менеджер пресетов",
-                actionButtons: {
-                    saveAndApply: "Сохранить и применить",
-                    applying: "Применение...",
-                    reset: "Сбросить",
-                    disable: "Отключить",
-                },
-            },
-            presetManager: {
-                label: "Менеджер пресетов",
-                presetSelector: {
-                    none: "Нет",
-                    label: "Пресет для редактирования:",
-                },
-                actionButtons: {
-                    saving: "Сохранение...",
-                    savePreset: "Сохранить пресет",
-                    deleteConfirm: "Удалить пресет?",
-                    delete: "Удалить",
-                },
-                backButton: "Назад",
-            },
-            coreSlider: "Ядро {{coreNumber}}",
-            presetControls: {
-                useTimeout: "Использовать задержку для этого пресета?",
-                timeoutDescription: "Выбор этого параметра применит андервольтинг через некоторое время после запуска {{label}}. Может быть полезно для игр с лаунчерами.",
-                timeoutLabel: "Задержка (в секундах)",
-            },
-            undervoltStatus: {
-                status: "Статус андервольтинга: ",
-                enabled: "Включено",
-                disabled: "Отключено",
-                error: "Ошибка",
-                scheduled: "Запланировано",
-            },
-        },
-    },
-    uk: {
-        translation: {
-            about: {
-                header: "Decky-Undervolt не міг би бути створений без цих чудових інструментів:",
-                tools: {
-                    ryzenadj: "Ryzenadj: Інструмент керування живленням для Ryzen APU від FlyGoat (ліцензія LGPL-3.0)",
-                    steamDeck: "Steam-Deck-Software-Undervolt, форк Pososaku: Зручний спосіб реалізувати поядерний андервольтинг, створений Pososaku (ліцензія GPL-3.0)",
-                },
-                supportHeader: "Але найважливіше, Decky-Undervolt не міг би існувати без підтримки цих дивовижних людей:",
-                supporters: {
-                    kigs: "k1gs: За внесок у проєкт та допомогу у розробці",
-                    pososaku: "Pososaku (Ew Meh): За популяризацію розгону Steam Deck у російській спільноті та його чудовий форк",
-                    deadwenk: "deadwenk (Олексій Тарасов): За вклад у Steam-Deck-Software-Undervolt та спрощення налаштування поядерного андервольтингу",
-                    foxn: "FoxN: За рішення, яке дозволило програмний андервольтинг для Steam Deck OLED",
-                    robert: "Robert (biddbb): За підтримку гайду з розгону",
-                    ngnius: "NGnius: За вирішення питань ліцензування",
-                    notBullseye: "NotBullseye: За створення логотипу плагіна",
-                    community: "Усім учасникам спільноти Steam Deck OC (@steamdeckoverclock) у Telegram: За їхню підтримку та відгуки",
-                },
-                footer: {
-                    thankYou: "І, звісно, дякуємо за використання Decky-Undervolt!",
-                    madeBy: "Створено з ❤️ BakaDestroyer",
-                },
-            },
-            sidebar: {
-                settings: "Налаштування",
-                about: "Про плагін",
-                title: "Decky-Undervolt",
-            },
-            settings: {
-                useGlobally: "Використовувати глобально",
-                useGloballyDescription: "Андервольтинг буде зберігатися навіть після закриття гри. За замовчуванням він вимикається, якщо гра не запущена.",
-                runWithGame: "Увімкнути з грою",
-                runWithGameDescription: "Андервольтинг буде автоматично застосовуватися під час запуску гри.",
-                runAtStartup: "Увімкнути при запуску системи",
-                runAtStartupDescription: "Андервольтинг буде автоматично застосовуватися при увімкненні системи.",
-                timeoutApply: "Застосувати із затримкою",
-                timeoutApplyDescription: "Час у секундах, через який буде застосовано андервольтинг після запуску системи.",
-                resetConfig: "Скинути налаштування",
-                resettingConfig: "Скидання налаштувань...",
-                saveSettings: "Зберегти налаштування",
-                savingSettings: "Збереження налаштувань...",
-            },
-            staticUndervolt: {
-                useForCurrentGame: "Використовувати лише для {{appName}}?",
-                currentGamePlaceholder: "поточної гри",
-                noGameRunning: "Жодна гра не запущена. Запустіть гру, щоб скористатися цією функцією. Налаштування андервольтингу будуть застосовані глобально.",
-                descriptionRunningGame: "Вибір цього параметра збереже налаштування андервольтингу і застосовуватиме їх тільки під час запуску {{appName}}, а не глобально.",
-                presetManagerButton: "Менеджер пресетів",
-                actionButtons: {
-                    saveAndApply: "Зберегти та застосувати",
-                    applying: "Застосування...",
-                    reset: "Скинути",
-                    disable: "Вимкнути",
-                },
-            },
-            presetManager: {
-                label: "Менеджер пресетів",
-                presetSelector: {
-                    none: "Немає",
-                    label: "Пресет для редагування:",
-                },
-                actionButtons: {
-                    saving: "Збереження...",
-                    savePreset: "Зберегти пресет",
-                    deleteConfirm: "Видалити пресет?",
-                    delete: "Видалити",
-                },
-                backButton: "Назад",
-            },
-            coreSlider: "Ядро {{coreNumber}}",
-            presetControls: {
-                useTimeout: "Використовувати затримку для цього пресета?",
-                timeoutDescription: "Вибір цього параметра застосує андервольтинг через певний час після запуску {{label}}. Може бути корисно для ігор із лаунчерами.",
-                timeoutLabel: "Затримка (у секундах)",
-            },
-            undervoltStatus: {
-                status: "Стан андервольтингу: ",
-                enabled: "Увімкнено",
-                disabled: "Вимкнено",
-                error: "Помилка",
-                scheduled: "Заплановано",
-            },
-        },
-    },
-    cz: {
-        translation: {
-            about: {
-                header: "Decky-Undervolt by nemohl vzniknout bez těchto skvělých nástrojů:",
-                tools: {
-                    ryzenadj: "Ryzenadj: Nástroj pro správu výkonu pro Ryzen APU od FlyGoat (licence LGPL-3.0)",
-                    steamDeck: "Steam-Deck-Software-Undervolt, fork od Pososaku: Snadný způsob implementace undervoltingu na jednotlivých jádrech, vytvořeno Pososaku (licence GPL-3.0)",
-                },
-                supportHeader: "Ale především, Decky-Undervolt by nevznikl bez podpory těchto úžasných lidí:",
-                supporters: {
-                    pososaku: "Pososaku (Ew Meh): Za popularizaci přetaktování Steam Decku v ruské komunitě a jeho skvělý fork",
-                    kigs: "k1gs: Za přispění do projektu a pomoc s vývojem",
-                    deadwenk: "deadwenk (Alexey Tarasov): Za příspěvky do Steam-Deck-Software-Undervolt a zjednodušení konfigurace undervoltingu na jednotlivých jádrech",
-                    foxn: "FoxN: Za nalezení řešení umožňujícího softwarový undervolting na Steam Deck OLED",
-                    robert: "Robert (biddbb): Za udržování průvodce přetaktováním",
-                    ngnius: "NGnius: Za řešení licenčních problémů",
-                    notBullseye: "NotBullseye: Za vytvoření loga pluginu",
-                    community: "Všem členům komunity Steam Deck OC (@steamdeckoverclock) na Telegramu: Za jejich podporu a zpětnou vazbu",
-                },
-                footer: {
-                    thankYou: "A samozřejmě děkujeme za používání Decky-Undervolt!",
-                    madeBy: "Vytvořeno s ❤️ BakaDestroyer",
-                },
-            },
-            sidebar: {
-                settings: "Nastavení",
-                about: "O pluginu",
-                title: "Decky-Undervolt",
-            },
-            settings: {
-                useGlobally: "Používat globálně",
-                useGloballyDescription: "Undervolting zůstane aktivní i po zavření hry. Ve výchozím nastavení se vypíná, když hra neběží.",
-                runWithGame: "Spustit s hrou",
-                runWithGameDescription: "Undervolting se automaticky aplikuje při spuštění hry.",
-                runAtStartup: "Spustit při startu systému",
-                runAtStartupDescription: "Undervolting se automaticky aplikuje při spuštění systému.",
-                timeoutApply: "Aplikovat se zpožděním",
-                timeoutApplyDescription: "Čas v sekundách, po kterém se undervolting aplikuje při spuštění systému.",
-                resetConfig: "Obnovit nastavení",
-                resettingConfig: "Obnovování nastavení...",
-                saveSettings: "Uložit nastavení",
-                savingSettings: "Ukládání nastavení...",
-            },
-            staticUndervolt: {
-                useForCurrentGame: "Použít pouze pro {{appName}}?",
-                currentGamePlaceholder: "aktuální hru",
-                noGameRunning: "Žádná hra neběží. Spusťte hru, abyste mohli použít tuto funkci. Nastavení undervoltingu bude použito globálně.",
-                descriptionRunningGame: "Zaškrtnutí tohoto políčka uloží nastavení undervoltingu a aplikuje je pouze při spuštění {{appName}}, místo aby se aplikovala globálně.",
-                presetManagerButton: "Správce profilů",
-                actionButtons: {
-                    saveAndApply: "Uložit a aplikovat",
-                    applying: "Aplikuje se...",
-                    reset: "Obnovit",
-                    disable: "Zakázat",
-                },
-            },
-            presetManager: {
-                label: "Správce profilů",
-                presetSelector: {
-                    none: "Žádný",
-                    label: "Profil k úpravě:",
-                },
-                actionButtons: {
-                    saving: "Ukládání...",
-                    savePreset: "Uložit profil",
-                    deleteConfirm: "Opravdu odstranit?",
-                    delete: "Odstranit",
-                },
-                backButton: "Zpět",
-            },
-            coreSlider: "Jádro {{coreNumber}}",
-            presetControls: {
-                useTimeout: "Použít zpoždění pro tento profil?",
-                timeoutDescription: "Zaškrtnutím tohoto políčka se undervolting aplikuje po určité době od spuštění {{label}}. Může být užitečné pro hry se spouštěčem.",
-                timeoutLabel: "Zpoždění v sekundách",
-            },
-            undervoltStatus: {
-                status: "Stav undervoltingu: ",
-                enabled: "Povoleno",
-                disabled: "Zakázáno",
-                error: "Chyba",
-                scheduled: "Naplánováno",
-            },
-        },
-    },
-};
-
-instance.use(initReactI18next).init({
-    resources: translations,
-    lng: navigator.language.split("-")[0],
-    fallbackLng: "en",
-    interpolation: {
-        escapeValue: false,
-    },
-});
-
-instance.t("en");
-function Content() {
-    return (window.SP_REACT.createElement(DFL.PanelSection, null,
-        window.SP_REACT.createElement(UndervoltSection, null)));
-}
-function TitleView() {
-    const handleNavigate = () => {
-        DFL.Navigation.CloseSideMenus();
-        DFL.Navigation.Navigate("/decky-undervolt");
-    };
-    return (window.SP_REACT.createElement("div", { style: {
-            display: "flex",
-            justifyContent: "space-between",
-            width: "100%",
-        } },
-        window.SP_REACT.createElement("span", { style: { fontSize: 20, flex: 1 } }, "Decky-Undervolt"),
-        window.SP_REACT.createElement(DFL.DialogButton, { style: {
-                height: "28px",
-                width: "40px",
-                minWidth: 0,
-                padding: "10px 12px",
-            }, onClick: () => handleNavigate() },
-            window.SP_REACT.createElement(FaCog, { style: { marginTop: "-4px", display: "block" } }))));
-}
-var index = DFL.definePlugin(() => {
-    routerHook.addRoute("/decky-undervolt", () => (window.SP_REACT.createElement(Provider, null,
-        window.SP_REACT.createElement(Pages, null))));
-    const initialState = {
-        gymdeckRunning: false,
-        isDynamic: false,
-        dynamicSettings: {
-            cores: [
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-                { manualPoints: [], maximumValue: 100, minimumValue: 0, threshold: 0 },
-            ],
-            strategy: 'DEFAULT',
-            sampleInterval: 50000,
-        },
-        runningAppName: null,
-        runningAppId: null,
-        status: "Disabled",
-        cores: [5, 5, 5, 5],
-        currentPreset: null,
-        presets: [],
-        settings: {
-            isGlobal: false,
-            runAtStartup: false,
-            isRunAutomatically: false,
-            timeoutApply: 15,
-        },
-        globalCores: []
-    };
-    const api = getApiInstance(initialState);
-    const handleServerEvent = (serverEvent) => {
-        return api.handleServerEvent(serverEvent);
-    };
-    api.init();
-    addEventListener("server_event", handleServerEvent);
-    return {
-        alwaysRender: true,
-        titleView: window.SP_REACT.createElement(TitleView, null),
-        title: window.SP_REACT.createElement("div", null, "Decky-Undervolt"),
-        content: (window.SP_REACT.createElement(Provider, null,
-            window.SP_REACT.createElement(Content, null))),
-        icon: window.SP_REACT.createElement(FaFire, null),
-        onDismount: () => {
-            routerHook.removeRoute("/decky-undervolt");
+        addEventListener("server_event", handleServerEvent);
+        return () => {
             removeEventListener("server_event", handleServerEvent);
+            const api = getApiInstance(initialState);
             api.destroy();
+        };
+    }, []);
+    if (error) {
+        return (React.createElement(DFL.PanelSection, { title: "DeckTune" },
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: { color: "#f44336", textAlign: "center", padding: "16px" } },
+                    "Failed to initialize: ",
+                    error))));
+    }
+    if (!initialized) {
+        return (React.createElement(DFL.PanelSection, { title: "DeckTune" },
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
+    }
+    return (React.createElement(DeckTuneProvider, null,
+        React.createElement(DeckTuneContent, null)));
+};
+/**
+ * Plugin definition for Decky Loader.
+ */
+var index = DFL.definePlugin(() => {
+    console.log("DeckTune plugin loaded");
+    return {
+        // Plugin title shown in Decky menu
+        title: React.createElement("div", { className: DFL.staticClasses.Title }, "DeckTune"),
+        // Main plugin content
+        content: React.createElement(DeckTunePlugin, null),
+        // Plugin icon (shown in Quick Access Menu)
+        icon: React.createElement(FaMagic, null),
+        // Called when plugin is unloaded
+        onDismount() {
+            console.log("DeckTune plugin unloaded");
         },
     };
 });

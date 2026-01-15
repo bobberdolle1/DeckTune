@@ -278,6 +278,26 @@ class DeckTuneRPC:
     
     # ==================== Tests ====================
     
+    async def check_binaries(self) -> Dict[str, Any]:
+        """Check availability of required stress test binaries.
+        
+        Returns:
+            Dictionary with binary status and list of missing binaries.
+            Useful for UI warnings on SteamOS where binaries must be bundled.
+        """
+        if self.test_runner is None:
+            return {"success": False, "error": "Test runner not configured"}
+        
+        status = self.test_runner.check_binaries()
+        missing = self.test_runner.get_missing_binaries()
+        
+        return {
+            "success": True,
+            "binaries": status,
+            "missing": missing,
+            "all_available": len(missing) == 0
+        }
+    
     async def run_test(self, test_name: str) -> Dict[str, Any]:
         """Run a specific stress test.
         

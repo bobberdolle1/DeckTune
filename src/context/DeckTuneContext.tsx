@@ -86,6 +86,9 @@ export const initialState: State = {
   testHistory: [],
   currentTest: null,
   isTestRunning: false,
+  
+  // Binary availability
+  missingBinaries: [],
 };
 
 // Create context with null default
@@ -187,6 +190,28 @@ export const usePlatformInfo = () => {
   return {
     info: platformInfo,
     refresh: () => api.fetchPlatformInfo(),
+  };
+};
+
+/**
+ * Hook to check binary availability.
+ * Returns missing binaries list and a function to refresh.
+ */
+export const useBinaries = () => {
+  const { state, api } = useDeckTune();
+  
+  const checkBinaries = async () => {
+    const result = await api.checkBinaries();
+    if (result.success) {
+      api.setState({ missingBinaries: result.missing });
+    }
+    return result;
+  };
+  
+  return {
+    missing: state.missingBinaries,
+    hasMissing: state.missingBinaries.length > 0,
+    check: checkBinaries,
   };
 };
 
