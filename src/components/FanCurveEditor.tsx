@@ -8,7 +8,7 @@
  * and real-time preview of the curve.
  */
 
-import React, { FC, useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, FC } from "react";
 import { 
   PanelSection, 
   PanelSectionRow, 

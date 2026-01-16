@@ -8,7 +8,7 @@
  * Supports temperature (°C) and power (W) data types with hover tooltips.
  */
 
-import React, { FC, useState, useRef, useCallback, MouseEvent } from "react";
+import { useState, useRef, useCallback, MouseEvent, FC } from "react";
 import { FaThermometerHalf, FaBolt } from "react-icons/fa";
 import { TelemetrySample } from "../api/types";
 

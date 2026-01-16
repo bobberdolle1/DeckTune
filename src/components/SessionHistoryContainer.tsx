@@ -10,7 +10,7 @@
  * - Session comparison view (SessionComparison)
  */
 
-import React, { FC, useState } from "react";
+import { useState, FC } from "react";
 import { Session } from "../api/types";
 import { SessionHistory } from "./SessionHistory";
 import { SessionDetail } from "./SessionDetail";

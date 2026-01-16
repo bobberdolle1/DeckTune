@@ -8,14 +8,13 @@
  */
 
 import {
-  definePlugin,
   PanelSection,
   PanelSectionRow,
   ButtonItem,
   staticClasses,
 } from "@decky/ui";
-import { addEventListener, removeEventListener } from "@decky/api";
-import React, { useState, useEffect, FC } from "react";
+import { definePlugin, addEventListener, removeEventListener } from "@decky/api";
+import { useState, useEffect, FC } from "react";
 import { FaCog, FaMagic, FaWrench } from "react-icons/fa";
 
 import { DeckTuneProvider, useDeckTune, initialState } from "./context";
@@ -288,16 +287,15 @@ export default definePlugin(() => {
   console.log("DeckTune plugin loaded");
 
   return {
-    // Plugin title shown in Decky menu
-    title: <div className={staticClasses.Title}>DeckTune</div>,
-    
-    // Main plugin content
+    // The name shown in various decky menus
+    name: "DeckTune",
+    // The element displayed at the top of your plugin's menu
+    titleView: <div className={staticClasses.Title}>DeckTune</div>,
+    // The content of your plugin's menu
     content: <DeckTunePlugin />,
-    
-    // Plugin icon (shown in Quick Access Menu)
+    // The icon displayed in the plugin list
     icon: <FaMagic />,
-    
-    // Called when plugin is unloaded
+    // The function triggered when your plugin unloads
     onDismount() {
       console.log("DeckTune plugin unloaded");
     },

@@ -10,7 +10,7 @@
  * - Full session statistics
  */
 
-import React, { FC, useMemo } from "react";
+import { useMemo, FC } from "react";
 import {
   FaArrowLeft,
   FaClock,

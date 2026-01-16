@@ -10,7 +10,7 @@
  * - Import preset button
  */
 
-import React, { useState, useEffect, FC } from "react";
+import { useState, useEffect, FC } from "react";
 import {
   ButtonItem,
   PanelSectionRow,

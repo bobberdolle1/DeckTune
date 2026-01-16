@@ -2,6 +2,24 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.5] - 2026-01-16
+
+### Fixed
+- **Decky Loader compatibility** — fixed plugin loading error "Unexpected token 'export'"
+  - Changed JSX transform from `react` to `react-jsx` (matches official Decky template)
+  - Fixed `definePlugin` import source (now from `@decky/api`)
+  - Fixed plugin return format with `name` and `titleView` fields
+  - Updated dependencies to match official decky-plugin-template versions
+- **Python 3.9 compatibility** — fixed `asyncio.Lock()` initialization in `backend/api/stream.py`
+- **Rust field name** — fixed `zero_rpm_enabled` → `allow_zero_rpm` in gymdeck3
+
+### Technical
+- Updated `@decky/rollup` to 1.0.2
+- Updated `@decky/ui` to 4.11.0
+- Updated `@decky/api` to 1.1.3
+- Updated TypeScript to 5.6.2
+- Updated React types to 19.1.1
+
 ## [3.1.0] - 2026-01-16
 
 ### Reliability & UX Improvements

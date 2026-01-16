@@ -8,7 +8,7 @@
  * - Duration, average temperature, power, battery saved
  */
 
-import React, { FC, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, FC } from "react";
 import {
   FaHistory,
   FaClock,

@@ -8,7 +8,7 @@
  * with diff values showing improvement or regression.
  */
 
-import React, { FC, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, FC } from "react";
 import {
   FaArrowLeft,
   FaExchangeAlt,
