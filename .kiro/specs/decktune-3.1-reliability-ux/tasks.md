@@ -1,0 +1,216 @@
+# Implementation Plan
+
+- [ ] 1. Implement CrashMetricsManager
+  - [ ] 1.1 Create CrashRecord and CrashMetrics dataclasses
+    - Define dataclasses with timestamp, crashed_values, restored_values, recovery_reason fields
+    - Add serialization methods (to_dict, from_dict)
+    - _Requirements: 1.2, 1.3_
+  - [ ] 1.2 Write property test for crash history FIFO limit
+    - **Property 1: Crash history FIFO limit**
+    - **Validates: Requirements 1.5**
+  - [ ] 1.3 Implement CrashMetricsManager class
+    - Implement record_crash() with FIFO limit enforcement (50 entries)
+    - Implement get_metrics() returning CrashMetrics
+    - Implement export_for_diagnostics() for archive inclusion
+    - Persist to settings via SettingsManager
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ] 1.4 Write property test for crash record completeness
+    - **Property 2: Crash record completeness**
+    - **Validates: Requirements 1.3**
+  - [ ] 1.5 Integrate CrashMetricsManager with SafetyManager
+    - Call record_crash() in check_boot_recovery()
+    - Include crash history in diagnostics export
+    - _Requirements: 1.1, 1.4_
+
+- [ ] 2. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 3. Implement TelemetryManager
+  - [ ] 3.1 Create TelemetrySample dataclass
+    - Define fields: timestamp, temperature_c, power_w, load_percent
+    - Add serialization methods
+    - _Requirements: 2.1, 2.2_
+  - [ ] 3.2 Write property test for telemetry buffer circular behavior
+    - **Property 3: Telemetry buffer circular behavior**
+    - **Validates: Requirements 2.5**
+  - [ ] 3.3 Implement TelemetryManager class
+    - Use collections.deque with maxlen=300
+    - Implement record_sample(), get_recent(seconds), get_all()
+    - _Requirements: 2.1, 2.2, 2.5_
+  - [ ] 3.4 Integrate TelemetryManager with DynamicController
+    - Record samples from gymdeck3 status updates
+    - Forward telemetry data to frontend via events
+    - _Requirements: 2.1, 2.2_
+
+- [ ] 4. Implement PlatformCache
+  - [ ] 4.1 Create CachedPlatform dataclass
+    - Define fields: model, variant, safe_limit, cached_at
+    - Add JSON serialization
+    - _Requirements: 3.1_
+  - [ ] 4.2 Write property test for platform cache validity
+    - **Property 4: Platform cache validity**
+    - **Validates: Requirements 3.3**
+  - [ ] 4.3 Write property test for cache corruption resilience
+    - **Property 5: Platform cache corruption resilience**
+    - **Validates: Requirements 3.5**
+  - [ ] 4.4 Implement PlatformCache class
+    - Implement load(), save(), clear(), is_valid()
+    - Handle corrupted files gracefully
+    - Use 30-day TTL for cache expiration
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [ ] 4.5 Integrate PlatformCache with detect_platform()
+    - Check cache before DMI read
+    - Update cache after fresh detection
+    - Add manual re-detection RPC method
+    - _Requirements: 3.1, 3.2, 3.4_
+
+- [ ] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 6. Implement SessionManager
+  - [ ] 6.1 Create Session and SessionMetrics dataclasses
+    - Define all fields per design document
+    - Add UUID generation for session IDs
+    - Add serialization methods
+    - _Requirements: 8.1, 8.3_
+  - [ ] 6.2 Write property test for session history limit
+    - **Property 6: Session history limit**
+    - **Validates: Requirements 8.7**
+  - [ ] 6.3 Write property test for session metrics calculation
+    - **Property 7: Session metrics calculation**
+    - **Validates: Requirements 8.3**
+  - [ ] 6.4 Implement SessionManager class
+    - Implement start_session(), end_session()
+    - Implement get_history(limit=30), get_session()
+    - Implement compare_sessions() with symmetric diff
+    - Implement archive_old_sessions() for 100+ entries
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+  - [ ] 6.5 Write property test for session comparison symmetry
+    - **Property 15: Session comparison symmetry**
+    - **Validates: Requirements 8.6**
+  - [ ] 6.6 Integrate SessionManager with DynamicController
+    - Start session when gymdeck3 starts
+    - End session and calculate metrics when gymdeck3 stops
+    - Include session history in diagnostics export
+    - _Requirements: 8.1, 8.2, 8.8_
+
+- [ ] 7. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 8. Implement StatusStreamManager (SSE)
+  - [ ] 8.1 Create StatusStreamManager class
+    - Implement subscriber management with asyncio.Queue
+    - Implement publish() with buffering (max 10)
+    - Implement subscribe() returning AsyncIterator
+    - _Requirements: 4.2, 4.4, 4.5_
+  - [ ] 8.2 Write property test for status buffer limit
+    - **Property 9: Status buffer limit**
+    - **Validates: Requirements 4.5**
+  - [ ] 8.3 Write property test for no events when stopped
+    - **Property 10: No events when stopped**
+    - **Validates: Requirements 4.3**
+  - [ ] 8.4 Integrate StatusStreamManager with DynamicController
+    - Replace polling with SSE in event emission
+    - Handle reconnection gracefully
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+
+- [ ] 9. Implement SetupWizard (Frontend)
+  - [ ] 9.1 Create WizardState types and goal estimates
+    - Define TypeScript interfaces for wizard state
+    - Define GOAL_ESTIMATES constant with battery/temp estimates
+    - _Requirements: 5.3, 5.4_
+  - [ ] 9.2 Write property test for wizard cancellation safety
+    - **Property 8: Wizard cancellation safety**
+    - **Validates: Requirements 5.7**
+  - [ ] 9.3 Write property test for goal estimates availability
+    - **Property 11: Goal estimates availability**
+    - **Validates: Requirements 5.4**
+  - [ ] 9.4 Implement SetupWizard component
+    - Create multi-step wizard UI with welcome, explanation, goal, confirm steps
+    - Implement step navigation with skip/cancel support
+    - Display goal estimates on selection
+    - Save preferences on completion, mark first_run_complete
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
+  - [ ] 9.5 Add first-run detection and wizard trigger
+    - Check first_run_complete setting on plugin load
+    - Show wizard automatically for new users
+    - Add "Run Setup Wizard" option in settings
+    - _Requirements: 5.1, 5.6_
+
+- [ ] 10. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 11. Implement TelemetryGraph (Frontend)
+  - [ ] 11.1 Create TelemetryGraph component
+    - Implement SVG-based scrolling line graph
+    - Support temperature and power data types
+    - Show last 60 seconds of data
+    - Add hover tooltip with exact value and timestamp
+    - _Requirements: 2.3, 2.4, 2.6_
+  - [ ] 11.2 Integrate TelemetryGraph with SSE updates
+    - Subscribe to telemetry events
+    - Update graph in real-time (1Hz)
+    - _Requirements: 2.3, 2.4_
+
+- [ ] 12. Implement SessionHistory UI (Frontend)
+  - [ ] 12.1 Create SessionHistory component
+    - Display last 30 sessions in list view
+    - Show key metrics: duration, avg temp, power, battery saved
+    - _Requirements: 8.4_
+  - [ ] 12.2 Create SessionDetail component
+    - Display detailed metrics with temperature and power graphs
+    - Show undervolt values used during session
+    - _Requirements: 8.5_
+  - [ ] 12.3 Create SessionComparison component
+    - Allow selecting two sessions for comparison
+    - Display side-by-side metric diff
+    - _Requirements: 8.6_
+
+- [ ] 13. Implement Rust Config Fuzzing
+  - [ ] 13.1 Add cargo-fuzz to gymdeck3
+    - Add fuzz targets for config parsing
+    - Create initial fuzzing dictionary with config field names
+    - _Requirements: 6.1, 6.5_
+  - [ ] 13.2 Write property test for fuzzing no-panic guarantee
+    - **Property 12: Fuzzing no-panic guarantee**
+    - **Validates: Requirements 6.1, 6.2**
+  - [ ] 13.3 Implement graceful error handling in config parser
+    - Return Result<Config, Error> instead of panicking
+    - Provide descriptive error messages for invalid inputs
+    - _Requirements: 6.2_
+
+- [ ] 14. Implement Frontend-Backend Integration Tests
+  - [ ] 14.1 Write property test for RPC response schema compliance
+    - **Property 13: RPC response schema compliance**
+    - **Validates: Requirements 7.1**
+  - [ ] 14.2 Write property test for error response structure
+    - **Property 14: Error response structure**
+    - **Validates: Requirements 7.4**
+  - [ ] 14.3 Create RPC contract test suite
+    - Test all RPC methods return expected response shapes
+    - Test event payloads match TypeScript type definitions
+    - _Requirements: 7.1, 7.2, 7.4_
+
+- [ ] 15. Add RPC methods for new features
+  - [ ] 15.1 Add crash metrics RPC methods
+    - get_crash_metrics() -> CrashMetrics
+    - _Requirements: 1.2_
+  - [ ] 15.2 Add telemetry RPC methods
+    - get_telemetry(seconds: int) -> List[TelemetrySample]
+    - _Requirements: 2.3, 2.4_
+  - [ ] 15.3 Add session history RPC methods
+    - get_session_history(limit: int) -> List[Session]
+    - get_session(id: str) -> Session
+    - compare_sessions(id1: str, id2: str) -> dict
+    - _Requirements: 8.4, 8.5, 8.6_
+  - [ ] 15.4 Add platform cache RPC methods
+    - redetect_platform() -> PlatformInfo
+    - _Requirements: 3.4_
+  - [ ] 15.5 Add wizard RPC methods
+    - get_wizard_state() -> WizardSettings
+    - complete_wizard(goal: str) -> bool
+    - reset_wizard() -> bool
+    - _Requirements: 5.5, 5.6_
+
+- [ ] 16. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
