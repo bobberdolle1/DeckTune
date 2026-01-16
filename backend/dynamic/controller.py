@@ -94,6 +94,7 @@ import json
 import logging
 import os
 import signal
+import time
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
@@ -102,6 +103,7 @@ from .config import DynamicConfig, DynamicStatus
 if TYPE_CHECKING:
     from ..api.events import EventEmitter
     from ..core.safety import SafetyManager
+    from ..core.blackbox import BlackBox, MetricSample
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +115,8 @@ class DynamicController:
     JSON status output, and emits events to the frontend.
     
     Requirements: 10.1-10.6
+    Feature: decktune-3.0-automation
+    Validates: Requirements 3.1, 3.2
     """
     
     def __init__(
@@ -121,6 +125,7 @@ class DynamicController:
         gymdeck3_path: str,
         event_emitter: "EventEmitter",
         safety_manager: Optional["SafetyManager"] = None,
+        blackbox: Optional["BlackBox"] = None,
     ):
         """Initialize the dynamic controller.
         
@@ -129,11 +134,13 @@ class DynamicController:
             gymdeck3_path: Path to gymdeck3 binary
             event_emitter: EventEmitter for frontend communication
             safety_manager: Optional SafetyManager for LKG persistence
+            blackbox: Optional BlackBox for metrics recording
         """
         self._ryzenadj_path = ryzenadj_path
         self._gymdeck3_path = gymdeck3_path
         self._event_emitter = event_emitter
         self._safety_manager = safety_manager
+        self._blackbox = blackbox
         
         self._process: Optional[asyncio.subprocess.Process] = None
         self._config: Optional[DynamicConfig] = None
@@ -144,6 +151,17 @@ class DynamicController:
     def is_running(self) -> bool:
         """Check if gymdeck3 is currently running."""
         return self._running and self._process is not None
+    
+    def set_blackbox(self, blackbox: "BlackBox") -> None:
+        """Set the BlackBox instance for metrics recording.
+        
+        Args:
+            blackbox: BlackBox instance for recording metrics
+            
+        Feature: decktune-3.0-automation
+        Validates: Requirements 3.1
+        """
+        self._blackbox = blackbox
     
     async def start(self, config: DynamicConfig) -> bool:
         """Start gymdeck3 with the given configuration.
@@ -363,6 +381,11 @@ class DynamicController:
                 running=False,
                 error=f"Process exited with code {returncode}"
             )
+            
+            # Persist BlackBox on crash
+            # Feature: decktune-3.0-automation, Validates: Requirements 3.2
+            await self.persist_blackbox(f"gymdeck3_crash_code_{returncode}")
+            
             await self._event_emitter.emit_status("error")
     
     async def _handle_json_message(self, data: dict) -> None:
@@ -377,6 +400,8 @@ class DynamicController:
             self._status = DynamicStatus.from_json_line(data, running=True)
             # Emit dynamic status event to frontend
             await self._emit_dynamic_status()
+            # Record sample to BlackBox if available
+            self._record_blackbox_sample()
             
         elif msg_type == "transition":
             # Log transition for debugging
@@ -392,6 +417,72 @@ class DynamicController:
             
         else:
             logger.debug(f"Unknown message type: {msg_type}")
+    
+    def _record_blackbox_sample(self) -> None:
+        """Record current status to BlackBox.
+        
+        Creates a MetricSample from current status and records it
+        to the BlackBox ring buffer.
+        
+        Feature: decktune-3.0-automation
+        Validates: Requirements 3.1
+        """
+        if self._blackbox is None:
+            return
+        
+        # Import here to avoid circular imports
+        from ..core.blackbox import MetricSample
+        
+        # Get fan data if available
+        fan_rpm = 0
+        fan_pwm = 0
+        temp_c = 0
+        if self._status.fan is not None:
+            fan_rpm = self._status.fan.rpm or 0
+            fan_pwm = self._status.fan.pwm
+            temp_c = self._status.fan.temp_c
+        
+        # Calculate average CPU load
+        avg_load = sum(self._status.load) / len(self._status.load) if self._status.load else 0.0
+        
+        sample = MetricSample(
+            timestamp=time.time(),
+            temperature_c=temp_c,
+            cpu_load_percent=avg_load,
+            undervolt_values=self._status.values.copy(),
+            fan_speed_rpm=fan_rpm,
+            fan_pwm=fan_pwm
+        )
+        
+        self._blackbox.record_sample(sample)
+    
+    async def persist_blackbox(self, reason: str) -> Optional[str]:
+        """Persist BlackBox buffer to disk.
+        
+        Called when crash or instability is detected.
+        
+        Args:
+            reason: Reason for persistence (e.g., "watchdog_timeout")
+            
+        Returns:
+            Filename of saved recording, or None if save failed
+            
+        Feature: decktune-3.0-automation
+        Validates: Requirements 3.2
+        """
+        if self._blackbox is None:
+            logger.warning("Cannot persist BlackBox: not configured")
+            return None
+        
+        filename = self._blackbox.persist_on_crash(reason)
+        if filename:
+            logger.info(f"BlackBox persisted: {filename}")
+            # Emit event to frontend
+            await self._event_emitter._emit_event("blackbox_saved", {
+                "filename": filename,
+                "reason": reason
+            })
+        return filename
     
     async def _emit_dynamic_status(self) -> None:
         """Emit dynamic status event to frontend."""

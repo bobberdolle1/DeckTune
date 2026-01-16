@@ -1,15 +1,248 @@
 # DeckTune 3.0 User Guide
 
-This guide covers the three major automation features introduced in DeckTune 3.0: Automated Silicon Binning, Per-Game Profiles, and Benchmarking.
+This guide covers the major automation features introduced in DeckTune 3.0: Context-Aware Profiles, Progressive Recovery, BlackBox Recorder, Acoustic Fan Profiles, PWM Smoothing, Iron Seeker, Silicon Binning, Per-Game Profiles, and Benchmarking.
 
 ## Table of Contents
 
-1. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
-2. [Automated Silicon Binning](#automated-silicon-binning)
-3. [Per-Game Profiles](#per-game-profiles)
-4. [Benchmarking](#benchmarking)
-5. [Best Practices](#best-practices)
-6. [Troubleshooting](#troubleshooting)
+1. [Context-Aware Profiles](#context-aware-profiles)
+2. [Progressive Recovery](#progressive-recovery)
+3. [BlackBox Recorder](#blackbox-recorder)
+4. [Acoustic Fan Profiles](#acoustic-fan-profiles)
+5. [PWM Smoothing](#pwm-smoothing)
+6. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
+7. [Automated Silicon Binning](#automated-silicon-binning)
+8. [Per-Game Profiles](#per-game-profiles)
+9. [Benchmarking](#benchmarking)
+10. [Best Practices](#best-practices)
+11. [Troubleshooting](#troubleshooting)
+
+---
+
+## Context-Aware Profiles
+
+DeckTune 3.0 introduces intelligent profile switching based on multiple conditions beyond just the running game.
+
+### What are Context Conditions?
+
+Context conditions allow profiles to activate based on:
+- **Battery Level**: Activate when battery drops below a threshold (e.g., 30%)
+- **Power Mode**: Activate only on AC power or battery power
+- **Temperature**: Activate when CPU temperature exceeds a threshold
+
+### Why Use Context-Aware Profiles?
+
+Different situations require different settings:
+- **On battery at 20%**: Use aggressive power saving
+- **Plugged in**: Use performance-focused settings
+- **High temperature**: Use conservative values for stability
+
+### Creating Context-Aware Profiles
+
+1. **Open Expert Mode** → **Presets Tab**
+2. **Click "Create Profile"**
+3. **Set context conditions:**
+   - Battery threshold (0-100%)
+   - Power mode (AC / Battery / Any)
+   - Temperature threshold (optional)
+4. **Configure undervolt values**
+5. **Save the profile**
+
+### Profile Priority
+
+When multiple profiles match, DeckTune selects the most specific one:
+1. **Most conditions** wins (3 conditions > 2 conditions > 1 condition)
+2. **Ties** broken by creation timestamp (newer wins)
+3. **Fallback chain**: Context match → App-only match → Global default
+
+### Example Setup
+
+```
+Profile: "Cyberpunk - Battery Saver"
+  AppID: 1091500
+  Conditions:
+    - Battery: ≤ 30%
+    - Power Mode: Battery
+  Cores: [-20, -20, -20, -20]
+
+Profile: "Cyberpunk - Performance"
+  AppID: 1091500
+  Conditions:
+    - Power Mode: AC
+  Cores: [-30, -30, -30, -30]
+```
+
+When playing Cyberpunk:
+- On AC power → "Performance" profile activates
+- On battery at 25% → "Battery Saver" profile activates
+- On battery at 50% → Falls back to app-only or global default
+
+---
+
+## Progressive Recovery
+
+DeckTune 3.0 includes a smarter recovery system that tries to preserve some power savings even after detecting instability.
+
+### How It Works
+
+1. **Instability detected** (missed heartbeats)
+2. **First attempt**: Reduce all undervolt values by 5mV
+3. **Wait** for 2 heartbeat cycles (~10 seconds)
+4. **If stable**: Update LKG to reduced values, continue
+5. **If still unstable**: Full rollback to original LKG values
+
+### Benefits
+
+- **Preserves optimization**: You keep some undervolt benefit
+- **Automatic recovery**: No manual intervention needed
+- **Safe fallback**: Full rollback if reduction doesn't help
+- **LKG update**: Successful recovery updates your safe baseline
+
+### Monitoring Recovery
+
+Recovery events are shown in the UI:
+- "Progressive recovery started" — reduction applied
+- "Progressive recovery success" — stability confirmed
+- "Progressive recovery failed" — full rollback performed
+
+---
+
+## BlackBox Recorder
+
+The BlackBox continuously records system metrics, allowing post-mortem analysis after crashes or instability.
+
+### What Gets Recorded
+
+Every 500ms, the BlackBox captures:
+- **Timestamp**
+- **CPU Temperature** (°C)
+- **CPU Load** (%)
+- **Undervolt Values** (all 4 cores)
+- **Fan Speed** (RPM)
+- **Fan PWM** (0-255)
+
+### Ring Buffer
+
+- **Duration**: Last 30 seconds
+- **Capacity**: 60 samples
+- **Behavior**: FIFO (oldest samples discarded when full)
+
+### Viewing Recordings
+
+1. **Open Expert Mode** → **Diagnostics Tab**
+2. **Click "BlackBox Recordings"**
+3. **Select a recording** to view details
+4. **Analyze** temperature spikes, load patterns, etc.
+
+### Recording Format
+
+```json
+{
+  "timestamp": "2026-01-16T12:30:45Z",
+  "reason": "watchdog_timeout",
+  "duration_sec": 30,
+  "samples": [
+    {
+      "timestamp": 1737030615.0,
+      "temperature_c": 75,
+      "cpu_load_percent": 85.5,
+      "undervolt_values": [-30, -30, -30, -30],
+      "fan_speed_rpm": 4200,
+      "fan_pwm": 180
+    }
+  ]
+}
+```
+
+---
+
+## Acoustic Fan Profiles
+
+DeckTune 3.0 adds preset fan profiles optimized for different priorities.
+
+### Available Profiles
+
+| Profile | Description | Best For |
+|---------|-------------|----------|
+| **Silent** | Max 60% (~3000 RPM) until 85°C | Quiet environments, light tasks |
+| **Balanced** | Linear 30-70°C → 30-90% | General use, gaming |
+| **Max Cooling** | 100% at 60°C+ | Heavy gaming, benchmarking |
+| **Custom** | Your own curve | Specific preferences |
+
+### Silent Profile Curve
+
+```
+40°C → 0%   (Zero RPM if enabled)
+60°C → 20%
+75°C → 40%
+85°C → 60%  (Max before safety override)
+90°C → 100% (Safety override)
+```
+
+### Balanced Profile Curve
+
+```
+30°C → 30%  (~1500 RPM)
+50°C → 50%
+70°C → 90%  (~4500 RPM)
+80°C → 100%
+```
+
+### Max Cooling Profile Curve
+
+```
+40°C → 50%
+60°C → 100% (Max RPM)
+```
+
+### Selecting a Profile
+
+1. **Open Expert Mode** → **Fan Control Tab**
+2. **Enable Fan Control**
+3. **Select Acoustic Profile** from dropdown
+4. **Profile applies immediately**
+
+### Safety Override
+
+Regardless of selected profile:
+- **90°C+**: Forces 100% fan speed
+- **85°C+**: Enforces minimum 80% fan speed
+
+---
+
+## PWM Smoothing
+
+PWM Smoothing eliminates annoying sudden fan speed changes by gradually transitioning between speeds.
+
+### How It Works
+
+Instead of jumping from 30% to 70% instantly:
+1. **Target set** to 70%
+2. **Interpolation** over 2 seconds (default)
+3. **Gradual increase** at ~1000 RPM/second
+4. **Smooth transition** without audible jumps
+
+### Configuration
+
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| Ramp Time | 2.0s | 0.5-5.0s | Time to reach target |
+| Increase Rate | ~1000 RPM/s | - | Calculated from ramp time |
+| Decrease Rate | ~500 RPM/s | - | 50% of increase rate |
+
+### Asymmetric Rates
+
+Fan speed **decreases slower** than it increases:
+- **Increase**: Full ramp rate (e.g., 1000 RPM/s)
+- **Decrease**: Half ramp rate (e.g., 500 RPM/s)
+
+This prevents thermal spikes when load drops temporarily.
+
+### Emergency Bypass
+
+When temperature reaches **90°C+**:
+- Smoothing is **bypassed**
+- Fan immediately set to **100%**
+- Safety takes priority over comfort
 
 ---
 
@@ -626,6 +859,91 @@ View past benchmark results:
 ---
 
 ## Troubleshooting
+
+### Context-Aware Profile Issues
+
+**Profile not switching on battery change:**
+- Check that battery threshold is set correctly
+- Verify context monitoring is active (check Diagnostics)
+- Ensure profile conditions match current context
+
+**Wrong profile selected:**
+- Review profile specificity (more conditions = higher priority)
+- Check for conflicting profiles with same conditions
+- Verify AppID matches the running game
+
+**Context not detected:**
+- Battery level read from `/sys/class/power_supply/`
+- Power mode detected from power supply status
+- Check system permissions for sysfs access
+
+### Progressive Recovery Issues
+
+**Recovery not triggering:**
+- Verify watchdog is active
+- Check heartbeat interval settings
+- Review Diagnostics for watchdog status
+
+**Recovery always escalates to full rollback:**
+- Your undervolt values may be too aggressive
+- Consider running binning again with longer test duration
+- Check for other system instability sources
+
+**LKG not updating after recovery:**
+- Recovery must complete 2 heartbeat cycles
+- Check for interruptions during recovery
+- Verify LKG file permissions
+
+### BlackBox Issues
+
+**No recordings available:**
+- BlackBox only saves on crash/instability detection
+- Check storage path permissions (`/tmp/decktune_blackbox/`)
+- Verify dynamic mode was active during the event
+
+**Recordings missing data:**
+- All fields are required for valid samples
+- Check for disk space issues
+- Review sample interval (500ms default)
+
+**Old recordings not visible:**
+- Only last 5 recordings are kept
+- Older recordings are automatically deleted
+- Export important recordings before they're overwritten
+
+### Acoustic Profile Issues
+
+**Fan not following profile curve:**
+- Check that fan control is enabled
+- Verify acoustic profile is selected (not "Default")
+- Safety override may be active (check temperature)
+
+**Fan too loud on Silent profile:**
+- Temperature may be above 85°C (safety override)
+- Check for background processes causing load
+- Consider improving ventilation
+
+**Fan stops unexpectedly:**
+- Zero RPM mode may be enabled
+- Check temperature is below 45°C
+- Disable Zero RPM if unwanted
+
+### PWM Smoothing Issues
+
+**Fan changes still feel abrupt:**
+- Increase ramp time (try 3-4 seconds)
+- Check that smoothing is enabled
+- Emergency bypass may be triggering (90°C+)
+
+**Fan response too slow:**
+- Decrease ramp time (try 1 second)
+- Check for temperature spikes
+- Consider using Max Cooling profile for heavy loads
+
+**Asymmetric rates not working:**
+- Verify decrease rate is 50% of increase rate
+- Check smoother configuration
+- Review fan controller logs
 
 ### Binning Issues
 

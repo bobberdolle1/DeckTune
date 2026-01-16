@@ -21,6 +21,9 @@ use clap::{Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+// Re-export AcousticProfile for use in config
+pub use crate::fan::AcousticProfile;
+
 /// Dynamic undervolt controller for Steam Deck
 #[derive(Parser, Debug, Clone)]
 #[command(name = "gymdeck3")]
@@ -79,6 +82,10 @@ pub struct Args {
     /// Fan temperature hysteresis in °C (1-10)
     #[arg(long = "fan-hysteresis", default_value = "2", value_parser = validate_fan_hysteresis)]
     pub fan_hysteresis: i32,
+
+    /// Acoustic fan profile preset (silent, balanced, max_cooling)
+    #[arg(long = "acoustic-profile", value_parser = parse_acoustic_profile)]
+    pub acoustic_profile: Option<AcousticProfile>,
 }
 
 /// Fan control mode
@@ -407,6 +414,16 @@ pub fn validate_fan_hysteresis(s: &str) -> Result<i32, String> {
     Ok(val)
 }
 
+/// Parse acoustic profile from string
+pub fn parse_acoustic_profile(s: &str) -> Result<AcousticProfile, String> {
+    AcousticProfile::from_name(s).ok_or_else(|| {
+        format!(
+            "Invalid acoustic profile '{}'. Valid options: silent, balanced, max_cooling",
+            s
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -512,5 +529,19 @@ mod tests {
         assert_eq!(FanControlMode::Default.to_string(), "default");
         assert_eq!(FanControlMode::Custom.to_string(), "custom");
         assert_eq!(FanControlMode::Fixed.to_string(), "fixed");
+    }
+
+    #[test]
+    fn test_parse_acoustic_profile_valid() {
+        assert_eq!(parse_acoustic_profile("silent").unwrap(), AcousticProfile::Silent);
+        assert_eq!(parse_acoustic_profile("balanced").unwrap(), AcousticProfile::Balanced);
+        assert_eq!(parse_acoustic_profile("max_cooling").unwrap(), AcousticProfile::MaxCooling);
+        assert_eq!(parse_acoustic_profile("SILENT").unwrap(), AcousticProfile::Silent);
+    }
+
+    #[test]
+    fn test_parse_acoustic_profile_invalid() {
+        assert!(parse_acoustic_profile("invalid").is_err());
+        assert!(parse_acoustic_profile("").is_err());
     }
 }

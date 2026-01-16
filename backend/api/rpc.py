@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from ..core.ryzenadj import RyzenadjWrapper
     from ..core.safety import SafetyManager
+    from ..core.blackbox import BlackBox
     from ..platform.detect import PlatformInfo
     from ..tuning.autotune import AutotuneEngine, AutotuneConfig
     from ..tuning.runner import TestRunner
@@ -56,7 +57,8 @@ class DeckTuneRPC:
         profile_manager: Optional["ProfileManager"] = None,
         app_watcher: Optional["AppWatcher"] = None,
         benchmark_runner: Optional["BenchmarkRunner"] = None,
-        iron_seeker_engine: Optional["IronSeekerEngine"] = None
+        iron_seeker_engine: Optional["IronSeekerEngine"] = None,
+        blackbox: Optional["BlackBox"] = None
     ):
         """Initialize the RPC handler.
         
@@ -73,6 +75,7 @@ class DeckTuneRPC:
             app_watcher: Optional AppWatcher for detecting active games
             benchmark_runner: Optional BenchmarkRunner for performance benchmarking
             iron_seeker_engine: Optional IronSeekerEngine for per-core tuning
+            blackbox: Optional BlackBox for system metrics recording
         """
         self.platform = platform
         self.ryzenadj = ryzenadj
@@ -86,12 +89,21 @@ class DeckTuneRPC:
         self.app_watcher = app_watcher
         self.benchmark_runner = benchmark_runner
         self.iron_seeker_engine = iron_seeker_engine
+        self.blackbox = blackbox
         
         self._delay_task: Optional[asyncio.Task] = None
         self._autotune_task: Optional[asyncio.Task] = None
         self._binning_task: Optional[asyncio.Task] = None
         self._benchmark_task: Optional[asyncio.Task] = None
         self._iron_seeker_task: Optional[asyncio.Task] = None
+    
+    def set_blackbox(self, blackbox: "BlackBox") -> None:
+        """Set the BlackBox recorder.
+        
+        Args:
+            blackbox: BlackBox instance
+        """
+        self.blackbox = blackbox
     
     def set_autotune_engine(self, engine: "AutotuneEngine") -> None:
         """Set the autotune engine.
@@ -1885,3 +1897,510 @@ class DeckTuneRPC:
             result["last_results"] = stored_results.to_dict()
         
         return result
+
+    # ==================== Context Profile Management ====================
+    # Requirements: 1.1
+    
+    async def create_contextual_profile(self, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new contextual game profile.
+        
+        Contextual profiles can have the same app_id but different conditions,
+        allowing multiple profiles per game for different contexts (battery level,
+        power mode, temperature).
+        
+        Args:
+            profile_data: Dictionary with profile fields:
+                - app_id: Steam AppID (required)
+                - name: Profile name (required)
+                - cores: Undervolt values [core0, core1, core2, core3] (required)
+                - dynamic_enabled: Whether dynamic mode is enabled (optional, default False)
+                - dynamic_config: Dynamic mode configuration (optional)
+                - conditions: Context conditions dictionary (optional):
+                    - battery_threshold: Profile active when battery <= threshold (0-100)
+                    - power_mode: Profile active when power mode matches ("ac", "battery", or None)
+                    - temp_threshold: Profile active when temp >= threshold (0-100°C)
+                
+        Returns:
+            Dictionary with success status and created profile
+            
+        Requirements: 1.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            # Extract required fields
+            app_id = profile_data.get("app_id")
+            name = profile_data.get("name")
+            cores = profile_data.get("cores")
+            
+            # Validate required fields
+            if app_id is None:
+                return {"success": False, "error": "app_id is required"}
+            if not name:
+                return {"success": False, "error": "name is required"}
+            if not cores:
+                return {"success": False, "error": "cores is required"}
+            
+            # Extract optional fields
+            dynamic_enabled = profile_data.get("dynamic_enabled", False)
+            dynamic_config = profile_data.get("dynamic_config")
+            conditions_data = profile_data.get("conditions", {})
+            
+            # Create ContextCondition from conditions data
+            from ..dynamic.context import ContextCondition
+            conditions = ContextCondition(
+                battery_threshold=conditions_data.get("battery_threshold"),
+                power_mode=conditions_data.get("power_mode"),
+                temp_threshold=conditions_data.get("temp_threshold"),
+            )
+            
+            # Create contextual profile
+            profile = await self.profile_manager.create_contextual_profile(
+                app_id=app_id,
+                name=name,
+                cores=cores,
+                conditions=conditions,
+                dynamic_enabled=dynamic_enabled,
+                dynamic_config=dynamic_config
+            )
+            
+            if profile:
+                logger.info(f"Created contextual profile '{name}' (app_id: {app_id})")
+                return {
+                    "success": True,
+                    "profile": profile.to_dict()
+                }
+            else:
+                return {"success": False, "error": "Failed to create contextual profile (invalid data)"}
+                
+        except Exception as e:
+            logger.error(f"Failed to create contextual profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def update_contextual_profile(
+        self,
+        profile_name: str,
+        app_id: int,
+        updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update an existing contextual profile.
+        
+        Args:
+            profile_name: Name of the profile to update
+            app_id: Steam AppID of the profile
+            updates: Dictionary with fields to update:
+                - name: New profile name
+                - cores: New undervolt values
+                - dynamic_enabled: Whether dynamic mode is enabled
+                - dynamic_config: Dynamic mode configuration
+                - conditions: New context conditions dictionary
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 1.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            # Convert conditions dict to ContextCondition if provided
+            if "conditions" in updates:
+                from ..dynamic.context import ContextCondition
+                conditions_data = updates["conditions"]
+                updates["conditions"] = ContextCondition(
+                    battery_threshold=conditions_data.get("battery_threshold"),
+                    power_mode=conditions_data.get("power_mode"),
+                    temp_threshold=conditions_data.get("temp_threshold"),
+                )
+            
+            success = await self.profile_manager.update_contextual_profile(
+                profile_name=profile_name,
+                app_id=app_id,
+                **updates
+            )
+            
+            if success:
+                logger.info(f"Updated contextual profile '{profile_name}' for app_id {app_id}")
+                return {"success": True}
+            else:
+                return {"success": False, "error": f"Profile '{profile_name}' for app_id {app_id} not found"}
+                
+        except Exception as e:
+            logger.error(f"Failed to update contextual profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def delete_contextual_profile(
+        self,
+        profile_name: str,
+        app_id: int
+    ) -> Dict[str, Any]:
+        """Delete a contextual profile.
+        
+        Args:
+            profile_name: Name of the profile to delete
+            app_id: Steam AppID of the profile
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 1.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            success = await self.profile_manager.delete_contextual_profile(
+                profile_name=profile_name,
+                app_id=app_id
+            )
+            
+            if success:
+                logger.info(f"Deleted contextual profile '{profile_name}' for app_id {app_id}")
+                return {"success": True}
+            else:
+                return {"success": False, "error": f"Profile '{profile_name}' for app_id {app_id} not found"}
+                
+        except Exception as e:
+            logger.error(f"Failed to delete contextual profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_contextual_profiles(
+        self,
+        app_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Get contextual profiles, optionally filtered by app_id.
+        
+        Args:
+            app_id: Optional Steam AppID to filter by (None for all profiles)
+            
+        Returns:
+            Dictionary with success status and list of profiles
+            
+        Requirements: 1.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            profiles = self.profile_manager.get_contextual_profiles(app_id)
+            profiles_list = [profile.to_dict() for profile in profiles]
+            
+            return {
+                "success": True,
+                "profiles": profiles_list,
+                "count": len(profiles_list)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get contextual profiles: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_system_context(self) -> Dict[str, Any]:
+        """Get current system context (battery, power mode, temperature).
+        
+        Reads the current system state used for contextual profile matching.
+        
+        Returns:
+            Dictionary with success status and context data:
+            - battery_percent: Current battery level (0-100)
+            - power_mode: Current power mode ("ac" or "battery")
+            - temperature_c: Current CPU temperature in Celsius
+            
+        Requirements: 1.1
+        """
+        try:
+            from ..dynamic.context import SystemContext
+            
+            context = await SystemContext.read_current()
+            
+            return {
+                "success": True,
+                "context": context.to_dict()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get system context: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_active_profile(self) -> Dict[str, Any]:
+        """Get the currently active contextual profile.
+        
+        Returns the profile that is currently applied based on the
+        current app and system context.
+        
+        Returns:
+            Dictionary with success status and active profile (or None if global default)
+            
+        Requirements: 1.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            active_profile = self.profile_manager.get_active_profile()
+            
+            if active_profile:
+                return {
+                    "success": True,
+                    "profile": active_profile.to_dict(),
+                    "is_global_default": False
+                }
+            else:
+                # Return global default info
+                global_default = self.profile_manager.get_global_default()
+                return {
+                    "success": True,
+                    "profile": {
+                        "name": "Global Default",
+                        "app_id": None,
+                        "cores": global_default.get("cores", [0, 0, 0, 0]),
+                        "dynamic_enabled": global_default.get("dynamic_enabled", False),
+                        "dynamic_config": global_default.get("dynamic_config"),
+                        "conditions": {}
+                    },
+                    "is_global_default": True
+                }
+            
+        except Exception as e:
+            logger.error(f"Failed to get active profile: {e}")
+            return {"success": False, "error": str(e)}
+
+    # ==================== BlackBox Recording ====================
+    # Requirements: 3.3
+    
+    async def list_blackbox_recordings(self) -> Dict[str, Any]:
+        """List available BlackBox recordings.
+        
+        Returns the last 5 BlackBox recordings with timestamps and reasons.
+        Recordings are created when crashes or instability events are detected.
+        
+        Returns:
+            Dictionary with success status and list of recordings:
+            - recordings: List of dicts with filename, timestamp, reason
+            - count: Number of recordings
+            
+        Requirements: 3.3
+        """
+        if not self.blackbox:
+            return {"success": False, "error": "BlackBox not initialized"}
+        
+        try:
+            recordings = self.blackbox.list_recordings()
+            
+            return {
+                "success": True,
+                "recordings": recordings,
+                "count": len(recordings)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to list BlackBox recordings: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_blackbox_recording(self, filename: str) -> Dict[str, Any]:
+        """Get a specific BlackBox recording by filename.
+        
+        Loads and returns the full recording data including all metric samples.
+        
+        Args:
+            filename: Name of the recording file (e.g., "blackbox_20260116_123045.json")
+            
+        Returns:
+            Dictionary with success status and recording data:
+            - timestamp: ISO timestamp when recording was saved
+            - reason: Reason for the recording (e.g., "watchdog_timeout")
+            - duration_sec: Duration of recorded data in seconds
+            - samples: List of metric samples with:
+                - timestamp: Unix timestamp
+                - temperature_c: CPU temperature
+                - cpu_load_percent: CPU load percentage
+                - undervolt_values: Per-core undervolt values
+                - fan_speed_rpm: Fan speed
+                - fan_pwm: Fan PWM value
+            
+        Requirements: 3.3
+        """
+        if not self.blackbox:
+            return {"success": False, "error": "BlackBox not initialized"}
+        
+        if not filename:
+            return {"success": False, "error": "filename is required"}
+        
+        try:
+            recording = self.blackbox.load_recording(filename)
+            
+            if recording is None:
+                return {"success": False, "error": f"Recording '{filename}' not found"}
+            
+            return {
+                "success": True,
+                "recording": recording.to_dict()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get BlackBox recording: {e}")
+            return {"success": False, "error": str(e)}
+
+    # ==================== Acoustic Fan Profiles ====================
+    # Requirements: 4.4
+    
+    async def get_acoustic_profile(self) -> Dict[str, Any]:
+        """Get current acoustic fan profile.
+        
+        Returns the currently selected acoustic profile (Silent, Balanced,
+        MaxCooling, or Custom).
+        
+        Returns:
+            Dictionary with success status and profile info:
+            - profile: Current profile name ("silent", "balanced", "max_cooling", "custom")
+            - description: Human-readable description of the profile
+            
+        Requirements: 4.4
+        """
+        try:
+            # Get acoustic profile from settings
+            acoustic_data = self.settings.getSetting("acoustic_profile") or {}
+            profile = acoustic_data.get("profile", "balanced")
+            
+            # Profile descriptions
+            descriptions = {
+                "silent": "Prioritizes low noise (max 3000 RPM until 85°C)",
+                "balanced": "Balances noise and cooling (linear 30-70°C → 1500-4500 RPM)",
+                "max_cooling": "Maximum cooling performance (max RPM at 60°C+)",
+                "custom": "User-defined fan curve"
+            }
+            
+            return {
+                "success": True,
+                "profile": profile,
+                "description": descriptions.get(profile, "Unknown profile")
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get acoustic profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def set_acoustic_profile(self, profile: str) -> Dict[str, Any]:
+        """Set acoustic fan profile.
+        
+        Changes the fan curve to match the selected acoustic profile.
+        The selection is persisted and restored on boot.
+        
+        Args:
+            profile: Profile name - one of:
+                - "silent": Low noise priority (max 3000 RPM until 85°C)
+                - "balanced": Balance noise and cooling
+                - "max_cooling": Maximum cooling (max RPM at 60°C+)
+                - "custom": Use custom fan curve
+                
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 4.4
+        """
+        valid_profiles = ["silent", "balanced", "max_cooling", "custom"]
+        
+        if profile not in valid_profiles:
+            return {
+                "success": False,
+                "error": f"Invalid profile: {profile}. Must be one of: {', '.join(valid_profiles)}"
+            }
+        
+        try:
+            # Get current acoustic settings
+            acoustic_data = self.settings.getSetting("acoustic_profile") or {}
+            
+            # Update profile
+            acoustic_data["profile"] = profile
+            
+            # Persist
+            self.settings.setSetting("acoustic_profile", acoustic_data)
+            
+            logger.info(f"Set acoustic profile to: {profile}")
+            return {"success": True, "profile": profile}
+            
+        except Exception as e:
+            logger.error(f"Failed to set acoustic profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_pwm_smoothing_config(self) -> Dict[str, Any]:
+        """Get PWM smoothing configuration.
+        
+        Returns the current PWM smoothing settings that control how
+        fan speed changes are interpolated.
+        
+        Returns:
+            Dictionary with success status and config:
+            - enabled: Whether PWM smoothing is enabled
+            - ramp_time_sec: Time to ramp from 0 to 100% (default 2.0)
+            
+        Requirements: 5.1
+        """
+        try:
+            # Get PWM smoothing config from settings
+            smoothing_data = self.settings.getSetting("pwm_smoothing") or {}
+            
+            return {
+                "success": True,
+                "config": {
+                    "enabled": smoothing_data.get("enabled", True),
+                    "ramp_time_sec": smoothing_data.get("ramp_time_sec", 2.0)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get PWM smoothing config: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def set_pwm_smoothing_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Set PWM smoothing configuration.
+        
+        Configures how fan speed changes are interpolated to prevent
+        sudden RPM jumps.
+        
+        Args:
+            config: Dictionary with config fields:
+                - enabled: Whether PWM smoothing is enabled (optional)
+                - ramp_time_sec: Time to ramp from 0 to 100% in seconds (optional, 0.5-10.0)
+                
+        Returns:
+            Dictionary with success status and updated config
+            
+        Requirements: 5.1
+        """
+        try:
+            # Get current config
+            smoothing_data = self.settings.getSetting("pwm_smoothing") or {}
+            
+            # Update fields
+            if "enabled" in config:
+                smoothing_data["enabled"] = bool(config["enabled"])
+            
+            if "ramp_time_sec" in config:
+                ramp_time = float(config["ramp_time_sec"])
+                if not (0.5 <= ramp_time <= 10.0):
+                    return {
+                        "success": False,
+                        "error": f"ramp_time_sec must be between 0.5 and 10.0, got {ramp_time}"
+                    }
+                smoothing_data["ramp_time_sec"] = ramp_time
+            
+            # Persist
+            self.settings.setSetting("pwm_smoothing", smoothing_data)
+            
+            logger.info(f"Updated PWM smoothing config: enabled={smoothing_data.get('enabled', True)}, "
+                       f"ramp_time_sec={smoothing_data.get('ramp_time_sec', 2.0)}")
+            
+            return {
+                "success": True,
+                "config": {
+                    "enabled": smoothing_data.get("enabled", True),
+                    "ramp_time_sec": smoothing_data.get("ramp_time_sec", 2.0)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to set PWM smoothing config: {e}")
+            return {"success": False, "error": str(e)}

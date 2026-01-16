@@ -223,6 +223,41 @@ class EventEmitter:
         logger.info(f"Profile changed: {profile_name} (app_id: {app_id})")
         await self._emit_event("profile_changed", profile_data)
     
+    async def emit_context_changed(self, context: dict) -> None:
+        """Emit context change event.
+        
+        Args:
+            context: Dictionary containing current system context
+                    (battery_percent, power_mode, temperature_c)
+            
+        Requirements: 1.3, 1.4
+        """
+        logger.info(f"Context changed: {context}")
+        await self._emit_event("context_changed", context)
+    
+    async def emit_profile_switched_by_context(
+        self,
+        old_profile: Optional[str],
+        new_profile: str,
+        reason: str
+    ) -> None:
+        """Emit profile switched by context event.
+        
+        Args:
+            old_profile: Name of the previous profile (None if none)
+            new_profile: Name of the new profile
+            reason: Reason for the switch (e.g., "battery_threshold", "power_mode")
+            
+        Requirements: 1.3, 1.4
+        """
+        switch_data = {
+            "old_profile": old_profile,
+            "new_profile": new_profile,
+            "reason": reason
+        }
+        logger.info(f"Profile switched by context: {old_profile} -> {new_profile} ({reason})")
+        await self._emit_event("profile_switched_by_context", switch_data)
+    
     # Iron Seeker Events
     # Requirements: 5.1, 5.2, 5.3, 3.4
     
@@ -341,3 +376,113 @@ class EventEmitter:
             f"value {crashed_value}mV, restored: {restored_values}"
         )
         await self._emit_event("iron_seeker_recovery", recovery_data)
+
+    # Progressive Recovery Events
+    # Requirements: 2.5
+    
+    async def emit_progressive_recovery_started(
+        self,
+        original_values: list,
+        reduced_values: list,
+        reduction_amount: int
+    ) -> None:
+        """Emit progressive recovery started event.
+        
+        Args:
+            original_values: Values before reduction [c0, c1, c2, c3]
+            reduced_values: Values after reduction [c0, c1, c2, c3]
+            reduction_amount: Amount reduced in mV
+            
+        Requirements: 2.5
+        """
+        recovery_data = {
+            "originalValues": original_values,
+            "reducedValues": reduced_values,
+            "reductionAmount": reduction_amount
+        }
+        logger.info(
+            f"Progressive recovery started: {original_values} -> {reduced_values} "
+            f"(reduction: {reduction_amount}mV)"
+        )
+        await self._emit_event("progressive_recovery_started", recovery_data)
+    
+    async def emit_progressive_recovery_success(
+        self,
+        reduced_values: list,
+        heartbeats_waited: int
+    ) -> None:
+        """Emit progressive recovery success event.
+        
+        Args:
+            reduced_values: Values that became new LKG [c0, c1, c2, c3]
+            heartbeats_waited: Number of heartbeats waited for stability
+            
+        Requirements: 2.4, 2.5
+        """
+        success_data = {
+            "reducedValues": reduced_values,
+            "heartbeatsWaited": heartbeats_waited
+        }
+        logger.info(
+            f"Progressive recovery success: new LKG {reduced_values} "
+            f"(waited {heartbeats_waited} heartbeats)"
+        )
+        await self._emit_event("progressive_recovery_success", success_data)
+    
+    async def emit_progressive_recovery_failed(
+        self,
+        original_values: list,
+        lkg_values: list,
+        reason: str
+    ) -> None:
+        """Emit progressive recovery failed event.
+        
+        Args:
+            original_values: Values before recovery attempt [c0, c1, c2, c3]
+            lkg_values: LKG values rolled back to [c0, c1, c2, c3]
+            reason: Reason for failure (e.g., "instability_persisted")
+            
+        Requirements: 2.3, 2.5
+        """
+        failed_data = {
+            "originalValues": original_values,
+            "lkgValues": lkg_values,
+            "reason": reason
+        }
+        logger.info(
+            f"Progressive recovery failed: rolled back to LKG {lkg_values} "
+            f"(reason: {reason})"
+        )
+        await self._emit_event("progressive_recovery_failed", failed_data)
+
+    # BlackBox Events
+    # Requirements: 3.2
+    
+    async def emit_blackbox_saved(
+        self,
+        filename: str,
+        reason: str,
+        sample_count: int,
+        duration_sec: float
+    ) -> None:
+        """Emit blackbox saved event.
+        
+        Args:
+            filename: Name of the saved recording file
+            reason: Reason for saving (e.g., "watchdog_timeout", "crash_detected")
+            sample_count: Number of samples in the recording
+            duration_sec: Duration of recorded data in seconds
+            
+        Requirements: 3.2
+        """
+        saved_data = {
+            "filename": filename,
+            "reason": reason,
+            "sampleCount": sample_count,
+            "durationSec": duration_sec
+        }
+        logger.info(
+            f"BlackBox saved: {filename} (reason: {reason}, "
+            f"samples: {sample_count}, duration: {duration_sec:.1f}s)"
+        )
+        await self._emit_event("blackbox_saved", saved_data)

@@ -75,6 +75,7 @@ pub use config::{
     parse_fan_curve_point,
     validate_fan_curve_point,
     validate_fan_hysteresis,
+    parse_acoustic_profile,
 };
 
 pub use load_monitor::{
@@ -169,4 +170,5 @@ pub use fan::{
     CRITICAL_TEMP_C,
     HIGH_TEMP_C,
     ZERO_RPM_MAX_TEMP_C,
+    AcousticProfile,
 };

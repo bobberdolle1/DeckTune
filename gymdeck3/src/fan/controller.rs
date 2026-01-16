@@ -4,12 +4,14 @@
 //! - Temperature-based fan curve with linear interpolation
 //! - Hysteresis to prevent rapid speed changes on small temp fluctuations
 //! - Moving average smoothing for gradual transitions
+//! - PWM smoothing for gradual fan speed transitions
 //! - Safety overrides for critical temperatures
 
 use std::collections::VecDeque;
 
 use super::hwmon::{HwmonDevice, HwmonError, FanMode};
-use super::safety::{FanSafetyLimits, apply_safety_override};
+use super::safety::{FanSafetyLimits, SafetyOverride, apply_safety_override, check_safety_override};
+use super::smoother::{PWMSmoother, DEFAULT_RAMP_TIME_SEC};
 
 /// Default temperature hysteresis in °C
 pub const DEFAULT_HYSTERESIS_TEMP: i32 = 2;
@@ -176,6 +178,10 @@ pub struct FanControllerConfig {
     pub safety_limits: FanSafetyLimits,
     /// Minimum PWM change to actually write (reduces sysfs spam)
     pub min_pwm_change: u8,
+    /// Enable PWM smoothing for gradual transitions
+    pub pwm_smoothing_enabled: bool,
+    /// PWM smoothing ramp time in seconds (0 to 255 PWM)
+    pub pwm_ramp_time_sec: f32,
 }
 
 impl Default for FanControllerConfig {
@@ -185,6 +191,8 @@ impl Default for FanControllerConfig {
             smoothing_samples: DEFAULT_SMOOTHING_SAMPLES,
             safety_limits: FanSafetyLimits::default(),
             min_pwm_change: 3, // Don't write for changes < 3 PWM (~1%)
+            pwm_smoothing_enabled: true,
+            pwm_ramp_time_sec: DEFAULT_RAMP_TIME_SEC,
         }
     }
 }
@@ -222,6 +230,8 @@ pub struct FanController {
     last_pwm: u8,
     /// Whether controller is active (in manual mode)
     active: bool,
+    /// PWM smoother for gradual transitions
+    pwm_smoother: PWMSmoother,
 }
 
 impl FanController {
@@ -243,6 +253,7 @@ impl FanController {
             last_stable_temp: None,
             last_pwm: 0,
             active: false,
+            pwm_smoother: PWMSmoother::default(),
         }
     }
 
@@ -256,6 +267,10 @@ impl FanController {
         // Resize history buffer if needed
         while self.temp_history.len() > config.smoothing_samples {
             self.temp_history.pop_front();
+        }
+        // Update PWM smoother if ramp time changed
+        if (config.pwm_ramp_time_sec - self.config.pwm_ramp_time_sec).abs() > 0.01 {
+            self.pwm_smoother = PWMSmoother::new(config.pwm_ramp_time_sec);
         }
         self.config = config;
     }
@@ -273,6 +288,7 @@ impl FanController {
         self.active = false;
         self.temp_history.clear();
         self.last_stable_temp = None;
+        self.pwm_smoother.reset();
         Ok(())
     }
 
@@ -288,7 +304,7 @@ impl FanController {
         let mode = self.device.read_mode()?;
         let rpm = self.device.read_rpm();
 
-        let safety_override = super::safety::check_safety_override(temp_c, &self.config.safety_limits);
+        let safety_override = check_safety_override(temp_c, &self.config.safety_limits);
 
         Ok(FanStatus {
             temp_c,
@@ -296,7 +312,7 @@ impl FanController {
             speed_percent: FanCurve::pwm_to_speed(pwm),
             mode,
             rpm,
-            safety_override_active: safety_override != super::safety::SafetyOverride::None,
+            safety_override_active: safety_override != SafetyOverride::None,
         })
     }
 
@@ -336,11 +352,27 @@ impl FanController {
         // Apply safety overrides
         let safe_pwm = apply_safety_override(target_pwm, raw_temp, &self.config.safety_limits);
 
+        // Check if safety override is active (critical temperature)
+        let safety_override = check_safety_override(raw_temp, &self.config.safety_limits);
+        let is_critical = matches!(safety_override, SafetyOverride::ForcePwm(_));
+
+        // Apply PWM smoothing if enabled and not in critical state
+        let final_pwm = if self.config.pwm_smoothing_enabled && !is_critical {
+            self.pwm_smoother.set_target(safe_pwm);
+            self.pwm_smoother.update()
+        } else if is_critical {
+            // Bypass smoothing for emergency - force immediate max PWM
+            self.pwm_smoother.force_immediate(safe_pwm);
+            safe_pwm
+        } else {
+            safe_pwm
+        };
+
         // Only write if change is significant (reduces sysfs spam)
-        let pwm_diff = (safe_pwm as i16 - self.last_pwm as i16).unsigned_abs() as u8;
-        if pwm_diff >= self.config.min_pwm_change || safe_pwm == 0 || safe_pwm == 255 {
-            self.device.set_pwm(safe_pwm)?;
-            self.last_pwm = safe_pwm;
+        let pwm_diff = (final_pwm as i16 - self.last_pwm as i16).unsigned_abs() as u8;
+        if pwm_diff >= self.config.min_pwm_change || final_pwm == 0 || final_pwm == 255 {
+            self.device.set_pwm(final_pwm)?;
+            self.last_pwm = final_pwm;
         }
 
         Ok(self.last_pwm)
@@ -367,13 +399,24 @@ impl FanController {
         }
     }
 
-    /// Force a specific PWM value (bypasses curve)
+    /// Force a specific PWM value (bypasses curve and smoothing)
     pub fn force_pwm(&mut self, pwm: u8) -> Result<(), HwmonError> {
         if self.active {
+            self.pwm_smoother.force_immediate(pwm);
             self.device.set_pwm(pwm)?;
             self.last_pwm = pwm;
         }
         Ok(())
+    }
+
+    /// Get the PWM smoother (for advanced operations)
+    pub fn pwm_smoother(&self) -> &PWMSmoother {
+        &self.pwm_smoother
+    }
+
+    /// Get mutable PWM smoother reference
+    pub fn pwm_smoother_mut(&mut self) -> &mut PWMSmoother {
+        &mut self.pwm_smoother
     }
 
     /// Get the underlying device (for advanced operations)
@@ -489,5 +532,7 @@ mod tests {
         assert_eq!(config.hysteresis_temp, 2);
         assert_eq!(config.smoothing_samples, 5);
         assert_eq!(config.min_pwm_change, 3);
+        assert!(config.pwm_smoothing_enabled);
+        assert!((config.pwm_ramp_time_sec - 2.0).abs() < 0.1);
     }
 }

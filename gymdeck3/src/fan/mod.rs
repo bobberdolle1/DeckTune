@@ -64,6 +64,8 @@
 mod hwmon;
 mod controller;
 mod safety;
+mod acoustic;
+mod smoother;
 
 pub use hwmon::{
     HwmonDevice,
@@ -94,4 +96,11 @@ pub use safety::{
     check_safety_override,
     apply_safety_override,
     is_zero_rpm_safe,
+};
+
+pub use acoustic::AcousticProfile;
+
+pub use smoother::{
+    PWMSmoother,
+    DEFAULT_RAMP_TIME_SEC,
 };

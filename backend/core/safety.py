@@ -3,9 +3,10 @@
 import json
 import logging
 import os
-from typing import List, Optional, Tuple, Dict, Any, TYPE_CHECKING
+from typing import List, Optional, Tuple, Dict, Any, TYPE_CHECKING, Callable, Awaitable
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
+from enum import Enum
 
 from ..platform.detect import PlatformInfo
 from ..tuning.iron_seeker import IronSeekerState, IronSeekerStoredResult
@@ -14,6 +15,231 @@ if TYPE_CHECKING:
     from .ryzenadj import RyzenadjWrapper
 
 logger = logging.getLogger(__name__)
+
+
+class RecoveryStage(Enum):
+    """Stages of progressive recovery."""
+    INITIAL = "initial"      # No recovery in progress
+    REDUCED = "reduced"      # Values reduced, waiting for stability
+    ROLLBACK = "rollback"    # Full rollback performed
+
+
+@dataclass
+class RecoveryState:
+    """State of progressive recovery attempt.
+    
+    Feature: decktune-3.0-automation, Property 5: Progressive recovery first step
+    Validates: Requirements 2.1
+    """
+    stage: RecoveryStage = RecoveryStage.INITIAL
+    original_values: List[int] = field(default_factory=lambda: [0, 0, 0, 0])
+    reduced_values: List[int] = field(default_factory=lambda: [0, 0, 0, 0])
+    reduction_amount: int = 5  # mV reduced (default 5)
+    heartbeats_since_reduction: int = 0
+
+
+class ProgressiveRecovery:
+    """Smart rollback with gradual value reduction.
+    
+    Instead of immediately rolling back to LKG values on instability detection,
+    this class first attempts to reduce undervolt values by a small amount (5mV).
+    If stability is confirmed after the reduction, the reduced values become
+    the new LKG. If instability persists, a full rollback to LKG is performed.
+    
+    Feature: decktune-3.0-automation
+    Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5
+    """
+    
+    REDUCTION_STEP = 5           # mV to reduce on first attempt
+    STABILITY_HEARTBEATS = 2     # Heartbeats to wait after reduction
+    
+    def __init__(
+        self,
+        get_current_values: Callable[[], List[int]],
+        apply_values: Callable[[List[int]], Tuple[bool, Optional[str]]],
+        get_lkg: Callable[[], List[int]],
+        save_lkg: Callable[[List[int]], None],
+        emit_event: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None
+    ):
+        """Initialize progressive recovery.
+        
+        Args:
+            get_current_values: Function to get current undervolt values
+            apply_values: Function to apply new undervolt values
+            get_lkg: Function to get LKG values
+            save_lkg: Function to save new LKG values
+            emit_event: Optional async function to emit events
+        """
+        self._get_current_values = get_current_values
+        self._apply_values = apply_values
+        self._get_lkg = get_lkg
+        self._save_lkg = save_lkg
+        self._emit_event = emit_event
+        self._state = RecoveryState()
+    
+    @property
+    def state(self) -> RecoveryState:
+        """Get current recovery state."""
+        return self._state
+    
+    @property
+    def is_recovering(self) -> bool:
+        """Check if recovery is in progress."""
+        return self._state.stage == RecoveryStage.REDUCED
+    
+    def _reduce_values(self, values: List[int], reduction: int) -> List[int]:
+        """Reduce undervolt values by the specified amount.
+        
+        Reduces each value by `reduction` mV, clamped to not exceed 0mV.
+        Since undervolt values are negative, reducing means making them
+        less negative (closer to 0).
+        
+        Args:
+            values: Current undervolt values (negative integers)
+            reduction: Amount to reduce by (positive integer)
+            
+        Returns:
+            Reduced values, clamped to not exceed 0
+            
+        Feature: decktune-3.0-automation, Property 5: Progressive recovery first step
+        Validates: Requirements 2.1
+        """
+        return [min(v + reduction, 0) for v in values]
+    
+    def on_instability_detected(self) -> Tuple[bool, Optional[str], RecoveryState]:
+        """Handle instability detection.
+        
+        First attempt: reduce all values by REDUCTION_STEP (5mV).
+        If already in reduced state and instability persists: full rollback to LKG.
+        
+        Returns:
+            Tuple of (success, error_message, new_state)
+            
+        Feature: decktune-3.0-automation, Property 5: Progressive recovery first step
+        Validates: Requirements 2.1
+        """
+        if self._state.stage == RecoveryStage.INITIAL:
+            # First instability detection - try reduction
+            original_values = self._get_current_values()
+            reduced_values = self._reduce_values(original_values, self.REDUCTION_STEP)
+            
+            logger.info(
+                f"Progressive recovery: reducing values from {original_values} "
+                f"to {reduced_values} (reduction: {self.REDUCTION_STEP}mV)"
+            )
+            
+            success, error = self._apply_values(reduced_values)
+            
+            if success:
+                self._state = RecoveryState(
+                    stage=RecoveryStage.REDUCED,
+                    original_values=original_values,
+                    reduced_values=reduced_values,
+                    reduction_amount=self.REDUCTION_STEP,
+                    heartbeats_since_reduction=0
+                )
+                logger.info("Progressive recovery: values reduced, waiting for stability")
+                return True, None, self._state
+            else:
+                # Reduction failed, fall through to full rollback
+                logger.warning(f"Progressive recovery: reduction failed ({error}), performing full rollback")
+        
+        # Either already in reduced state with continued instability,
+        # or reduction failed - perform full rollback
+        return self._perform_full_rollback()
+    
+    def _perform_full_rollback(self) -> Tuple[bool, Optional[str], RecoveryState]:
+        """Perform full rollback to LKG values.
+        
+        Returns:
+            Tuple of (success, error_message, new_state)
+            
+        Feature: decktune-3.0-automation, Property 7: Recovery escalation
+        Validates: Requirements 2.3
+        """
+        lkg_values = self._get_lkg()
+        logger.warning(f"Progressive recovery: performing full rollback to LKG {lkg_values}")
+        
+        success, error = self._apply_values(lkg_values)
+        
+        self._state = RecoveryState(
+            stage=RecoveryStage.ROLLBACK,
+            original_values=self._state.original_values if self._state.stage != RecoveryStage.INITIAL else lkg_values,
+            reduced_values=lkg_values,
+            reduction_amount=0,
+            heartbeats_since_reduction=0
+        )
+        
+        if success:
+            logger.info("Progressive recovery: full rollback successful")
+        else:
+            logger.error(f"Progressive recovery: full rollback failed - {error}")
+        
+        return success, error, self._state
+    
+    def on_heartbeat(self) -> Tuple[bool, Optional[str]]:
+        """Track heartbeats during recovery.
+        
+        Called on each successful heartbeat. If in reduced state, increments
+        the heartbeat counter. When STABILITY_HEARTBEATS is reached, confirms
+        stability and updates LKG.
+        
+        Returns:
+            Tuple of (stability_confirmed, error_message)
+            - stability_confirmed: True if stability was just confirmed
+            - error_message: Error if LKG update failed
+            
+        Feature: decktune-3.0-automation, Property 6: Recovery stability wait
+        Validates: Requirements 2.2
+        """
+        if self._state.stage != RecoveryStage.REDUCED:
+            return False, None
+        
+        self._state.heartbeats_since_reduction += 1
+        logger.debug(
+            f"Progressive recovery: heartbeat {self._state.heartbeats_since_reduction}/"
+            f"{self.STABILITY_HEARTBEATS}"
+        )
+        
+        if self._state.heartbeats_since_reduction >= self.STABILITY_HEARTBEATS:
+            return self.confirm_stability()
+        
+        return False, None
+    
+    def confirm_stability(self) -> Tuple[bool, Optional[str]]:
+        """Called when stability confirmed after reduction.
+        
+        Updates LKG to the reduced values and resets recovery state.
+        
+        Returns:
+            Tuple of (success, error_message)
+            
+        Feature: decktune-3.0-automation, Property 8: Recovery success updates LKG
+        Validates: Requirements 2.4
+        """
+        if self._state.stage != RecoveryStage.REDUCED:
+            return False, "Not in reduced state"
+        
+        reduced_values = self._state.reduced_values
+        logger.info(f"Progressive recovery: stability confirmed, updating LKG to {reduced_values}")
+        
+        try:
+            self._save_lkg(reduced_values)
+            logger.info("Progressive recovery: LKG updated successfully")
+            
+            # Reset state
+            self._state = RecoveryState()
+            
+            return True, None
+        except Exception as e:
+            error_msg = f"Failed to update LKG: {e}"
+            logger.error(f"Progressive recovery: {error_msg}")
+            return False, error_msg
+    
+    def reset(self) -> None:
+        """Reset recovery state to initial."""
+        self._state = RecoveryState()
+        logger.debug("Progressive recovery: state reset")
 
 
 @dataclass

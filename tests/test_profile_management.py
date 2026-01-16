@@ -98,10 +98,11 @@ def profile_manager(mock_settings_manager, mock_ryzenadj, mock_dynamic_controlle
 app_ids = st.integers(min_value=1, max_value=999999)
 
 # Strategy for game names (non-empty strings, max 128 chars)
+# Filter out whitespace-only names since profile validation rejects them
 game_names = st.text(min_size=1, max_size=128, alphabet=st.characters(
     blacklist_categories=('Cs', 'Cc'),  # Exclude control characters
     blacklist_characters='\x00'
-))
+)).filter(lambda s: s.strip())
 
 # Strategy for undervolt values (valid range: -100 to 0 mV)
 undervolt_values = st.integers(min_value=-100, max_value=0)

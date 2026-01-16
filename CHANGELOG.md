@@ -6,7 +6,75 @@ All notable changes to DeckTune will be documented in this file.
 
 ### Major Changes - Intelligent Automation Features
 
-DeckTune 3.0 transforms the plugin from a manual tuning tool into an intelligent, adaptive system with five major automation features.
+DeckTune 3.0 transforms the plugin from a manual tuning tool into an intelligent, adaptive system with comprehensive automation features.
+
+#### Context-Aware Profile System (NEW!)
+- **Multi-condition profile activation** — profiles activate based on game + battery level + power mode + temperature
+- **Automatic context detection** — monitors battery level, AC/battery mode, and CPU temperature
+- **Smart profile selection** — most specific matching profile wins (more conditions = higher priority)
+- **Seamless transitions** — automatic re-evaluation when context changes (battery threshold crossed, charger plugged/unplugged)
+- **Fallback chain** — graceful degradation: context match → app-only match → global default
+
+**Implementation:**
+- New `ContextCondition` and `SystemContext` dataclasses in `backend/dynamic/context.py`
+- New `ContextMatcher` class for intelligent profile selection
+- Extended `ContextualProfile` with conditions field
+- Context monitoring in `ProfileManager` with threshold detection
+- 5 property-based tests validating context matching correctness
+
+#### Progressive Recovery System (NEW!)
+- **Smart rollback** — attempts to reduce undervolt by 5mV before full rollback
+- **Stability verification** — waits for 2 heartbeat cycles to confirm recovery
+- **Escalation logic** — proceeds to full LKG rollback if instability persists
+- **LKG auto-update** — successful recovery updates Last Known Good values
+- **Event notifications** — frontend receives recovery status updates
+
+**Implementation:**
+- New `ProgressiveRecovery` class in `backend/core/safety.py`
+- `RecoveryState` dataclass tracking recovery stages (initial → reduced → rollback)
+- Integration with `Watchdog` for automatic trigger on instability
+- 4 property-based tests validating recovery behavior
+
+#### BlackBox Recorder (NEW!)
+- **Ring buffer metrics** — maintains last 30 seconds of system metrics (60 samples at 500ms)
+- **Crash persistence** — automatically saves buffer to timestamped JSON on instability detection
+- **Post-mortem analysis** — includes temperature, CPU load, undervolt values, fan speed/PWM
+- **Recording management** — stores last 5 recordings, accessible via RPC
+- **FIFO behavior** — oldest samples automatically discarded when buffer full
+
+**Implementation:**
+- New `BlackBox` class in `backend/core/blackbox.py`
+- `MetricSample` dataclass with all required fields
+- Storage path: `/tmp/decktune_blackbox/`
+- RPC methods: `list_blackbox_recordings()`, `get_blackbox_recording()`
+- 2 property-based tests validating FIFO and persistence
+
+#### Acoustic Fan Profiles (NEW!)
+- **Silent profile** — prioritizes low noise (max 60% / ~3000 RPM until 85°C)
+- **Balanced profile** — linear curve 30-70°C → 30-90% for noise/cooling balance
+- **Max Cooling profile** — aggressive curve (100% at 60°C+)
+- **Custom profile** — user-defined curves via FanCurveEditor
+- **Safety override** — 90°C+ always forces 100% regardless of profile
+
+**Implementation:**
+- New `AcousticProfile` enum in `gymdeck3/src/fan/acoustic.rs`
+- Profile-specific `FanCurve` generation
+- CLI argument: `--acoustic-profile <silent|balanced|max_cooling|custom>`
+- Property-based tests for each profile's behavior
+
+#### PWM Smoothing (NEW!)
+- **Gradual transitions** — interpolates fan speed over configurable ramp time (default 2s)
+- **Linear interpolation** — smooth PWM changes between current and target
+- **Rate limiting** — configurable max RPM change per second (default 1000 RPM/s)
+- **Asymmetric rates** — decrease rate is 50% of increase rate to prevent thermal spikes
+- **Emergency bypass** — 90°C+ immediately sets max PWM, skipping smoothing
+
+**Implementation:**
+- New `PWMSmoother` struct in `gymdeck3/src/fan/smoother.rs`
+- Configurable `ramp_time_sec` parameter
+- `force_immediate()` method for emergency bypass
+- Integration with `FanController` update loop
+- 4 property-based tests validating smoothing behavior
 
 #### Iron Seeker - Per-Core Curve Optimizer (NEW!)
 - **Per-core undervolt discovery** — tests each CPU core individually, accounting for silicon lottery
