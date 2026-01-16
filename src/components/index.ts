@@ -28,3 +28,5 @@ export { SessionDetail } from "./SessionDetail";
 export { SessionComparisonView } from "./SessionComparison";
 
 export { SessionHistoryContainer } from "./SessionHistoryContainer";
+
+export { DeckTuneApp } from "./DeckTuneApp";

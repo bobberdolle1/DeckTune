@@ -2,6 +2,14 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.6] - 2026-01-16
+
+### Fixed
+- **Decky Loader compatibility** — switched to IIFE bundle format instead of ESM
+  - Custom rollup config with `format: "iife"` for proper Decky Loader loading
+  - Simplified index.tsx structure to match working plugins
+  - Created separate DeckTuneApp component for cleaner architecture
+
 ## [3.1.5] - 2026-01-16
 
 ### Fixed
