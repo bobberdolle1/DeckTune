@@ -2,27 +2,6 @@
 
 All notable changes to DeckTune will be documented in this file.
 
-## [3.1.11] - 2026-01-16
-
-### Fixed
-- **Decky Loader v3.2.1 compatibility** — plugin now loads correctly on latest Decky Loader
-  - Fixed SteamClient API compatibility (RegisterForOnResumeFromSuspend may not exist)
-  - Added graceful fallbacks for optional Steam client listeners
-  - Wrapped SteamClient calls in try-catch with existence checks
-- **Build configuration** — aligned with working Decky plugins
-  - Changed JSX transform to classic React (`jsx: "react"` with jsxFactory)
-  - Uses `window.SP_REACT.createElement` directly instead of jsx-runtime
-  - Downgraded `@decky/api` to 1.0.6 for compatibility
-  - Removed `react/jsx-runtime` from externals
-
-### Added
-- **DEPLOY.md** — comprehensive deployment guide with troubleshooting
-
-### Technical
-- tsconfig.json: `jsx: "react"` with `jsxFactory: "window.SP_REACT.createElement"`
-- Api.ts: SteamClient listeners wrapped in try-catch with optional chaining
-- Build output now matches SimpleDeckyTDP structure exactly
-
 ## [3.1.8] - 2026-01-16
 
 ### Fixed
