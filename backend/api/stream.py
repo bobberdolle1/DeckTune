@@ -33,7 +33,13 @@ class StatusStreamManager:
         self._subscribers: List[asyncio.Queue] = []
         self._buffer: deque = deque(maxlen=self.MAX_BUFFER)
         self._running = False
-        self._lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
+    
+    def _get_lock(self) -> asyncio.Lock:
+        """Get or create the async lock (lazy initialization for Python 3.9 compatibility)."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
     
     @property
     def subscriber_count(self) -> int:
@@ -79,7 +85,7 @@ class StatusStreamManager:
         """
         queue: asyncio.Queue = asyncio.Queue()
         
-        async with self._lock:
+        async with self._get_lock():
             self._subscribers.append(queue)
             logger.debug(f"New subscriber added, total: {len(self._subscribers)}")
             
@@ -94,7 +100,7 @@ class StatusStreamManager:
         except asyncio.CancelledError:
             pass
         finally:
-            async with self._lock:
+            async with self._get_lock():
                 if queue in self._subscribers:
                     self._subscribers.remove(queue)
                     logger.debug(f"Subscriber removed, total: {len(self._subscribers)}")
@@ -115,7 +121,7 @@ class StatusStreamManager:
         if not self._running:
             return
         
-        async with self._lock:
+        async with self._get_lock():
             if not self._subscribers:
                 # No subscribers, buffer the event
                 self._buffer.append(event)
@@ -153,7 +159,7 @@ class StatusStreamManager:
         
         Should be called when shutting down the stream manager.
         """
-        async with self._lock:
+        async with self._get_lock():
             # Cancel all subscriber queues by putting a sentinel
             for queue in self._subscribers:
                 try:

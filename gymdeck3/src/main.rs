@@ -138,7 +138,7 @@ fn init_fan_controller(args: &Args, verbose: bool) -> Option<FanController> {
     
     // Configure safety limits with zero RPM setting
     config.safety_limits = FanSafetyLimits {
-        zero_rpm_enabled: args.fan_zero_rpm,
+        allow_zero_rpm: args.fan_zero_rpm,
         ..Default::default()
     };
     

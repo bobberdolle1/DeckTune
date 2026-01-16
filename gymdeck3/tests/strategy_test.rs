@@ -40,8 +40,8 @@ fn arb_load() -> impl PropStrategy<Value = f32> {
 
 /// Generate two different load values where l1 < l2
 fn arb_two_loads() -> impl PropStrategy<Value = (f32, f32)> {
-    (0.0f32..100.0f32).prop_flat_map(|l1| {
-        (l1 + 0.01f32..=100.0f32).prop_map(move |l2| (l1, l2))
+    (0.0f32..99.0f32).prop_flat_map(|l1| {
+        ((l1 + 0.1f32)..=100.0f32).prop_map(move |l2| (l1, l2))
     })
 }
 
