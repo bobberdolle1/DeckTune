@@ -194,7 +194,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         for event in event_emitter.progress_events:
             assert "phase" in event, "Progress event missing 'phase' field"
@@ -239,7 +239,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         for event in event_emitter.progress_events:
             assert "core" in event, "Progress event missing 'core' field"
@@ -287,7 +287,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         for event in event_emitter.progress_events:
             assert "value" in event, "Progress event missing 'value' field"
@@ -338,7 +338,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         for event in event_emitter.progress_events:
             assert "eta" in event, "Progress event missing 'eta' field"
@@ -372,7 +372,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         # Should have emitted at least some progress events
         assert len(event_emitter.progress_events) > 0, (
@@ -409,7 +409,7 @@ class TestProgressEventStructure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(engine.run(config))
+        asyncio.run(engine.run(config))
         
         # Check for Phase A events
         phase_a_events = [e for e in event_emitter.progress_events if e["phase"] == "A"]

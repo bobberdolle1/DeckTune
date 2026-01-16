@@ -78,7 +78,7 @@ class TestTestResultStructure:
     def test_invalid_test_returns_error(self, test_name: str):
         """For invalid test names, result has error set."""
         runner = TestRunner()
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             runner.run_test(test_name)
         )
         

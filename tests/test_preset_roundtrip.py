@@ -95,12 +95,12 @@ def test_preset_roundtrip_serialization(preset):
     rpc = create_test_rpc()
     
     # Save the preset
-    asyncio.get_event_loop().run_until_complete(
+    asyncio.run(
         rpc.save_preset(preset)
     )
     
     # Export presets
-    exported_json = asyncio.get_event_loop().run_until_complete(
+    exported_json = asyncio.run(
         rpc.export_presets()
     )
     
@@ -108,14 +108,14 @@ def test_preset_roundtrip_serialization(preset):
     rpc2 = create_test_rpc()
     
     # Import presets
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         rpc2.import_presets(exported_json)
     )
     
     assert result["success"], f"Import failed: {result.get('error')}"
     
     # Get imported presets
-    imported_presets = asyncio.get_event_loop().run_until_complete(
+    imported_presets = asyncio.run(
         rpc2.get_presets()
     )
     
@@ -158,12 +158,12 @@ def test_multiple_presets_roundtrip(presets):
     
     # Save all presets
     for preset in presets:
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             rpc.save_preset(preset)
         )
     
     # Export presets
-    exported_json = asyncio.get_event_loop().run_until_complete(
+    exported_json = asyncio.run(
         rpc.export_presets()
     )
     
@@ -171,7 +171,7 @@ def test_multiple_presets_roundtrip(presets):
     rpc2 = create_test_rpc()
     
     # Import presets
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.run(
         rpc2.import_presets(exported_json)
     )
     
@@ -180,7 +180,7 @@ def test_multiple_presets_roundtrip(presets):
         f"Expected {len(presets)} imports, got {result['imported_count']}"
     
     # Get imported presets
-    imported_presets = asyncio.get_event_loop().run_until_complete(
+    imported_presets = asyncio.run(
         rpc2.get_presets()
     )
     

@@ -110,7 +110,7 @@ def test_diagnostics_archive_contents(cores, lkg_cores, status):
         with patch.dict(os.environ, {"HOME": temp_dir}):
             with patch("os.path.expanduser", return_value=temp_dir):
                 # Export diagnostics
-                result = asyncio.get_event_loop().run_until_complete(
+                result = asyncio.run(
                     rpc.export_diagnostics()
                 )
         
@@ -190,7 +190,7 @@ def test_diagnostics_archive_structure():
     with tempfile.TemporaryDirectory() as temp_dir:
         with patch.dict(os.environ, {"HOME": temp_dir}):
             with patch("os.path.expanduser", return_value=temp_dir):
-                result = asyncio.get_event_loop().run_until_complete(
+                result = asyncio.run(
                     rpc.export_diagnostics()
                 )
         

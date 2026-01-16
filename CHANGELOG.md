@@ -6,7 +6,34 @@ All notable changes to DeckTune will be documented in this file.
 
 ### Major Changes - Intelligent Automation Features
 
-DeckTune 3.0 transforms the plugin from a manual tuning tool into an intelligent, adaptive system with four major automation features.
+DeckTune 3.0 transforms the plugin from a manual tuning tool into an intelligent, adaptive system with five major automation features.
+
+#### Iron Seeker - Per-Core Curve Optimizer (NEW!)
+- **Per-core undervolt discovery** — tests each CPU core individually, accounting for silicon lottery
+- **Vdroop stress testing** — pulsating load pattern (100ms load/100ms idle) for detecting transient instability
+- **Quality tier classification** — Gold (≤-35mV), Silver (-34 to -20mV), Bronze (>-20mV) ratings per core
+- **Crash recovery** — automatic state persistence and boot recovery after system crash
+- **Configurable parameters**: step size (1-20mV), test duration (10-300s), safety margin (0-20mV)
+- **Progress tracking** with real-time updates, ETA calculation, and per-core results
+- **Preset integration** — save discovered values as presets with quality tier metadata
+
+**Implementation:**
+- New `IronSeekerEngine` class in `backend/tuning/iron_seeker.py`:
+  - `IronSeekerConfig`: Configuration with validation and clamping
+  - `CoreResult`: Per-core results with quality tier
+  - `IronSeekerResult`: Complete session results
+  - `IronSeekerState`: Persistent state for crash recovery
+  - `QualityTier`: Enum with Gold/Silver/Bronze classification
+- New `VdroopTester` class in `backend/tuning/vdroop.py`:
+  - Pulsating load generation using stress-ng with AVX2 workload
+  - MCE (Machine Check Exception) detection via dmesg
+  - Process failure and timeout detection
+- Extended `SafetyManager` for Iron Seeker state management:
+  - `create_iron_seeker_state()`, `load_iron_seeker_state()`, `clear_iron_seeker_state()`
+  - Boot recovery integration
+- RPC methods: `start_iron_seeker()`, `cancel_iron_seeker()`, `get_iron_seeker_status()`
+- Events: `iron_seeker_progress`, `iron_seeker_core_complete`, `iron_seeker_complete`, `iron_seeker_recovery`
+- 22 property-based tests validating all correctness properties
 
 #### Low-Level Fan Control (NEW!)
 - **Direct hwmon sysfs control** via Rust daemon (gymdeck3)

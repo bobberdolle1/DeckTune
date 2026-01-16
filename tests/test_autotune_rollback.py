@@ -255,7 +255,7 @@ class TestAutotuneRollbackOnFailure:
         )
         
         # Run autotune for core 0 only (simplified test)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             engine._phase_a(0, config)
         )
         
@@ -323,7 +323,7 @@ class TestAutotuneRollbackOnFailure:
             test_duration_long=120
         )
         
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             engine._phase_a(0, config)
         )
         
@@ -375,7 +375,7 @@ class TestAutotuneRollbackOnFailure:
             test_duration_long=120
         )
         
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             engine._phase_a(0, config)
         )
         

@@ -123,7 +123,7 @@ class TestErrorStatusPropagation:
             
             return success, error
         
-        success, error = asyncio.get_event_loop().run_until_complete(run_test())
+        success, error = asyncio.run(run_test())
         
         # Should fail
         assert success is False
@@ -147,7 +147,7 @@ class TestErrorStatusPropagation:
             
             return success, error
         
-        success, error = asyncio.get_event_loop().run_until_complete(run_test())
+        success, error = asyncio.run(run_test())
         
         # Should succeed
         assert success is True

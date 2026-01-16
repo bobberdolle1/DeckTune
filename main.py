@@ -224,6 +224,19 @@ class Plugin:
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
+            
+            # Emit Iron Seeker recovery event if applicable (Requirements: 3.4)
+            iron_seeker_recovery = self.safety.get_iron_seeker_recovery_info()
+            if iron_seeker_recovery is not None:
+                decky.logger.info(
+                    f"Iron Seeker crash recovery: core {iron_seeker_recovery['crashed_core']}, "
+                    f"value {iron_seeker_recovery['crashed_value']}mV"
+                )
+                await self.events.emit_iron_seeker_recovery(
+                    crashed_core=iron_seeker_recovery['crashed_core'],
+                    crashed_value=iron_seeker_recovery['crashed_value'],
+                    restored_values=iron_seeker_recovery['restored_values']
+                )
         
         decky.logger.info("DeckTune plugin initialized")
 

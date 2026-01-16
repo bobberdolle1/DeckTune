@@ -222,3 +222,122 @@ class EventEmitter:
         }
         logger.info(f"Profile changed: {profile_name} (app_id: {app_id})")
         await self._emit_event("profile_changed", profile_data)
+    
+    # Iron Seeker Events
+    # Requirements: 5.1, 5.2, 5.3, 3.4
+    
+    async def emit_iron_seeker_progress(
+        self,
+        core: int,
+        value: int,
+        iteration: int,
+        eta: int,
+        core_results: list
+    ) -> None:
+        """Emit Iron Seeker progress event.
+        
+        Args:
+            core: Current core being tested (0-3)
+            value: Current undervolt value being tested (mV, ≤0)
+            iteration: Current iteration number (≥1)
+            eta: Estimated time remaining in seconds (≥0)
+            core_results: Results so far [c0, c1, c2, c3] (array of 4 integers)
+            
+        Requirements: 5.1
+        """
+        progress_data = {
+            "core": core,
+            "value": value,
+            "iteration": iteration,
+            "eta": eta,
+            "coreResults": core_results
+        }
+        logger.debug(
+            f"Iron Seeker progress: core={core}, value={value}mV, "
+            f"iteration={iteration}, eta={eta}s"
+        )
+        await self._emit_event("iron_seeker_progress", progress_data)
+    
+    async def emit_iron_seeker_core_complete(
+        self,
+        core: int,
+        max_stable: int,
+        recommended: int,
+        tier: str
+    ) -> None:
+        """Emit Iron Seeker core completion event.
+        
+        Args:
+            core: Core that completed testing (0-3)
+            max_stable: Maximum stable undervolt found (mV)
+            recommended: Recommended value with safety margin (mV)
+            tier: Quality tier ("gold", "silver", or "bronze")
+            
+        Requirements: 5.2
+        """
+        core_data = {
+            "core": core,
+            "maxStable": max_stable,
+            "recommended": recommended,
+            "tier": tier
+        }
+        logger.info(
+            f"Iron Seeker core {core} complete: max_stable={max_stable}mV, "
+            f"recommended={recommended}mV, tier={tier}"
+        )
+        await self._emit_event("iron_seeker_core_complete", core_data)
+    
+    async def emit_iron_seeker_complete(
+        self,
+        cores: list,
+        duration: float,
+        recovered: bool,
+        aborted: bool
+    ) -> None:
+        """Emit Iron Seeker completion event.
+        
+        Args:
+            cores: List of CoreResult dictionaries for all 4 cores
+            duration: Total time in seconds (>0)
+            recovered: True if recovered from crash
+            aborted: True if cancelled or hit limit early
+            
+        Requirements: 5.3
+        """
+        complete_data = {
+            "cores": cores,
+            "duration": duration,
+            "recovered": recovered,
+            "aborted": aborted
+        }
+        logger.info(
+            f"Iron Seeker complete: duration={duration:.1f}s, "
+            f"recovered={recovered}, aborted={aborted}"
+        )
+        await self._emit_event("iron_seeker_complete", complete_data)
+    
+    async def emit_iron_seeker_recovery(
+        self,
+        crashed_core: int,
+        crashed_value: int,
+        restored_values: list
+    ) -> None:
+        """Emit Iron Seeker recovery event.
+        
+        Args:
+            crashed_core: Core that was being tested when crash occurred (0-3)
+            crashed_value: Value that was being tested when crash occurred (mV)
+            restored_values: Values restored after recovery [c0, c1, c2, c3]
+            
+        Requirements: 3.4
+        """
+        recovery_data = {
+            "crashedCore": crashed_core,
+            "crashedValue": crashed_value,
+            "restoredValues": restored_values
+        }
+        logger.info(
+            f"Iron Seeker recovery: crashed at core {crashed_core}, "
+            f"value {crashed_value}mV, restored: {restored_values}"
+        )
+        await self._emit_event("iron_seeker_recovery", recovery_data)

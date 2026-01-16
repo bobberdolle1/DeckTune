@@ -4,11 +4,119 @@ This guide covers the three major automation features introduced in DeckTune 3.0
 
 ## Table of Contents
 
-1. [Automated Silicon Binning](#automated-silicon-binning)
-2. [Per-Game Profiles](#per-game-profiles)
-3. [Benchmarking](#benchmarking)
-4. [Best Practices](#best-practices)
-5. [Troubleshooting](#troubleshooting)
+1. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
+2. [Automated Silicon Binning](#automated-silicon-binning)
+3. [Per-Game Profiles](#per-game-profiles)
+4. [Benchmarking](#benchmarking)
+5. [Best Practices](#best-practices)
+6. [Troubleshooting](#troubleshooting)
+
+---
+
+## Iron Seeker — Per-Core Curve Optimizer
+
+Iron Seeker is an advanced algorithm for automatically discovering optimal undervolt values for each CPU core individually. Unlike standard binning which applies the same value to all cores, Iron Seeker accounts for the "silicon lottery" — the varying quality of silicon in each core.
+
+### Why Per-Core Tuning?
+
+Every CPU core is unique:
+- **Strong cores** can handle deep undervolt (-40mV and below)
+- **Weak cores** require conservative values (-15mV)
+- **Standard binning** is limited by the weakest core
+
+Iron Seeker allows you to:
+- **Maximize performance** from strong cores
+- **Maintain stability** despite weak cores
+- **See quality ratings** for each core (Gold/Silver/Bronze)
+- **Automatically recover** from crashes
+
+### How Iron Seeker Works
+
+1. **Tests each core separately** (0, 1, 2, 3)
+2. **Uses Vdroop testing** — pulsating load pattern (100ms load / 100ms idle)
+3. **Steps down** from 0mV with configured step size until failure or limit
+4. **Saves state** before each test for crash recovery
+5. **Classifies quality** of each core
+
+### Vdroop Testing
+
+Unlike constant load testing, Vdroop creates a pulsating load pattern:
+- **100ms** — maximum load (AVX2 workload)
+- **100ms** — idle
+- **Repeats** throughout the test duration
+
+This reveals instability during transient load conditions that standard stress tests miss.
+
+### Quality Tiers
+
+| Tier | Range | Description |
+|------|-------|-------------|
+| 🥇 Gold | ≤ -35mV | Excellent silicon quality |
+| 🥈 Silver | -34 to -20mV | Average quality |
+| 🥉 Bronze | > -20mV | Requires conservative values |
+
+### How to Use
+
+1. **Open DeckTune** → Expert Mode → Tests
+
+2. **Click "Start Iron Seeker"**
+   - Close all games and heavy applications
+   - Connect charger
+   - Process takes 10-30 minutes
+
+3. **Monitor progress:**
+   - Current core and value being tested
+   - ETA to completion
+   - Results for already-tested cores
+
+4. **Review results:**
+   ```
+   Core 0: -35mV (Gold 🥇)
+   Core 1: -40mV (Gold 🥇)
+   Core 2: -25mV (Silver 🥈)
+   Core 3: -20mV (Bronze 🥉)
+   ```
+
+5. **Save as preset** for future use
+
+### Configuration Parameters
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Step Size | 1-20mV | 5mV | Increment between iterations |
+| Test Duration | 10-300s | 60s | Duration of each test |
+| Safety Margin | 0-20mV | 5mV | Buffer added to discovered values |
+| Vdroop Pulse | 50-500ms | 100ms | Load pulse duration |
+
+### Crash Recovery
+
+Iron Seeker has built-in crash protection:
+
+1. **Before each test** state is saved to disk
+2. **On reboot** DeckTune detects incomplete test
+3. **Automatically restores** last stable values
+4. **Records failed value** as unstable
+5. **Continues testing** from next value or core
+
+### Preset Integration
+
+After Iron Seeker completes, you can:
+- **Save results** as a new preset
+- **Include per-core values** in game profiles
+- **Export** for use on another device
+
+Iron Seeker presets contain:
+- Per-core values [V0, V1, V2, V3]
+- Quality tiers for each core
+- Discovery timestamp
+- Max stable and recommended values
+
+### Tips for Best Results
+
+- **Run on a cool device** — results will be more accurate
+- **Don't interrupt tests** unnecessarily — use Cancel button
+- **Test results** in real games before permanent use
+- **Re-run every 6-12 months** — chip characteristics may change
 
 ---
 
@@ -537,6 +645,29 @@ View past benchmark results:
 - Boot recovery will restore last stable value
 - Review failed value and adjust start point
 - Consider longer test duration
+
+### Iron Seeker Issues
+
+**Iron Seeker hangs on one core:**
+- Increase test_duration for more reliable testing
+- Decrease step_size for more precise search
+- Check if system is overheating
+- Try restarting — state will recover automatically
+
+**Iron Seeker shows all cores as Bronze:**
+- Your chip may have lower silicon quality
+- This is normal — not all chips support deep undervolt
+- Use discovered values anyway — they're still optimal for your chip
+
+**Iron Seeker doesn't recover after crash:**
+- Check file `/tmp/decktune_iron_seeker_state.json`
+- Restart the plugin
+- If problem persists, delete state file and start fresh
+
+**Vdroop test fails immediately:**
+- stress-ng may not be installed
+- Check Diagnostics for error messages
+- Verify system has enough resources
 
 ### Profile Issues
 

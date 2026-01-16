@@ -89,7 +89,7 @@ class TestWatchdogRollbackOnTimeout:
             assert watchdog.is_heartbeat_stale(), "Heartbeat should be stale"
             
             # Simulate what _trigger_rollback does
-            asyncio.get_event_loop().run_until_complete(watchdog._trigger_rollback())
+            asyncio.run(watchdog._trigger_rollback())
             
             # Verify rollback was called
             assert safety.rollback_called, "rollback_to_lkg should be called"
@@ -108,7 +108,7 @@ class TestWatchdogRollbackOnTimeout:
             watchdog, safety = create_test_watchdog(heartbeat_file, lkg_values)
             
             # Trigger rollback
-            asyncio.get_event_loop().run_until_complete(watchdog._trigger_rollback())
+            asyncio.run(watchdog._trigger_rollback())
             
             # Verify applied values equal LKG values
             assert safety.applied_values == lkg_values, \
@@ -181,7 +181,7 @@ class TestWatchdogRollbackOnTimeout:
             assert os.path.exists(heartbeat_file), "Heartbeat file should exist"
             
             # Trigger rollback
-            asyncio.get_event_loop().run_until_complete(watchdog._trigger_rollback())
+            asyncio.run(watchdog._trigger_rollback())
             
             # File should be cleared
             assert not os.path.exists(heartbeat_file), \
@@ -200,7 +200,7 @@ class TestWatchdogRollbackOnTimeout:
             watchdog._running = True  # Simulate running state
             
             # Trigger rollback
-            asyncio.get_event_loop().run_until_complete(watchdog._trigger_rollback())
+            asyncio.run(watchdog._trigger_rollback())
             
             # Watchdog should be stopped
             assert not watchdog._running, "Watchdog should be stopped after rollback"
@@ -228,7 +228,7 @@ class TestWatchdogRollbackOnTimeout:
                 watchdog.is_heartbeat_stale()
             
             # Trigger rollback once
-            asyncio.get_event_loop().run_until_complete(watchdog._trigger_rollback())
+            asyncio.run(watchdog._trigger_rollback())
             
             # Should only have one rollback
             assert safety.rollback_count == 1, \

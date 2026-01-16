@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from ..tuning.runner import TestRunner
     from ..tuning.binning import BinningEngine
     from ..tuning.benchmark import BenchmarkRunner
+    from ..tuning.iron_seeker import IronSeekerEngine
     from ..dynamic.profile_manager import ProfileManager
     from ..platform.appwatcher import AppWatcher
     from .events import EventEmitter
@@ -54,7 +55,8 @@ class DeckTuneRPC:
         binning_engine: Optional["BinningEngine"] = None,
         profile_manager: Optional["ProfileManager"] = None,
         app_watcher: Optional["AppWatcher"] = None,
-        benchmark_runner: Optional["BenchmarkRunner"] = None
+        benchmark_runner: Optional["BenchmarkRunner"] = None,
+        iron_seeker_engine: Optional["IronSeekerEngine"] = None
     ):
         """Initialize the RPC handler.
         
@@ -70,6 +72,7 @@ class DeckTuneRPC:
             profile_manager: Optional ProfileManager for per-game profiles
             app_watcher: Optional AppWatcher for detecting active games
             benchmark_runner: Optional BenchmarkRunner for performance benchmarking
+            iron_seeker_engine: Optional IronSeekerEngine for per-core tuning
         """
         self.platform = platform
         self.ryzenadj = ryzenadj
@@ -82,11 +85,13 @@ class DeckTuneRPC:
         self.profile_manager = profile_manager
         self.app_watcher = app_watcher
         self.benchmark_runner = benchmark_runner
+        self.iron_seeker_engine = iron_seeker_engine
         
         self._delay_task: Optional[asyncio.Task] = None
         self._autotune_task: Optional[asyncio.Task] = None
         self._binning_task: Optional[asyncio.Task] = None
         self._benchmark_task: Optional[asyncio.Task] = None
+        self._iron_seeker_task: Optional[asyncio.Task] = None
     
     def set_autotune_engine(self, engine: "AutotuneEngine") -> None:
         """Set the autotune engine.
@@ -135,6 +140,14 @@ class DeckTuneRPC:
             runner: BenchmarkRunner instance
         """
         self.benchmark_runner = runner
+    
+    def set_iron_seeker_engine(self, engine: "IronSeekerEngine") -> None:
+        """Set the Iron Seeker engine.
+        
+        Args:
+            engine: IronSeekerEngine instance
+        """
+        self.iron_seeker_engine = engine
     
     # ==================== Platform Info ====================
     
@@ -779,7 +792,7 @@ class DeckTuneRPC:
             home_dir = Path.home()
             export_path = home_dir / "decktune_profiles_export.json"
             
-            with open(export_path, 'w') as f:
+            with open(export_path, 'w', encoding='utf-8') as f:
                 f.write(json_data)
             
             logger.info(f"Exported profiles to {export_path}")
@@ -1168,7 +1181,7 @@ class DeckTuneRPC:
         if not log_content:
             log_content = "No plugin logs found"
         
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(log_content)
     
     async def _write_config(self, path: str) -> None:
@@ -1193,7 +1206,7 @@ class DeckTuneRPC:
             }
         }
         
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
     
     async def _write_system_info(self, path: str) -> None:
@@ -1235,7 +1248,7 @@ class DeckTuneRPC:
         # Python version
         info_lines.append(f"\nPython: {platform.python_version()}")
         
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write("\n".join(info_lines))
     
     async def _write_dmesg(self, path: str, lines: int) -> None:
@@ -1260,7 +1273,7 @@ class DeckTuneRPC:
         except Exception as e:
             dmesg_content = f"Failed to read dmesg: {e}"
         
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(dmesg_content)
     
     async def get_system_info(self) -> Dict[str, Any]:
@@ -1483,7 +1496,7 @@ class DeckTuneRPC:
         """Check if any long-running operation is active.
         
         Returns:
-            True if autotune, binning, or benchmark is running
+            True if autotune, binning, benchmark, or Iron Seeker is running
         """
         # Check autotune
         if self.autotune_engine and self.autotune_engine.is_running():
@@ -1495,6 +1508,10 @@ class DeckTuneRPC:
         
         # Check benchmark task
         if self._benchmark_task and not self._benchmark_task.done():
+            return True
+        
+        # Check Iron Seeker
+        if self.iron_seeker_engine and self.iron_seeker_engine.is_running():
             return True
         
         return False
@@ -1683,3 +1700,188 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to toggle fan control: {e}")
             return {"success": False, "error": str(e)}
+
+    # ==================== Iron Seeker ====================
+    # Requirements: 1.1, 3.5, 5.1, 5.2, 5.3, 3.4
+    
+    async def start_iron_seeker(self, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Start Iron Seeker per-core undervolt optimization.
+        
+        Iron Seeker tests each CPU core independently to find optimal
+        undervolt values, accounting for silicon lottery variations.
+        
+        Args:
+            config: Optional configuration dictionary with:
+                - step_size: Step increment in mV (1-20, default 5)
+                - test_duration: Test duration per iteration in seconds (10-300, default 60)
+                - safety_margin: Safety margin to add to results in mV (0-20, default 5)
+                - vdroop_pulse_ms: Pulse duration for Vdroop test in ms (default 100)
+                
+        Returns:
+            Dictionary with success status or error if already running
+            
+        Requirements: 1.1, 7.1, 7.2, 7.3
+        """
+        if self.iron_seeker_engine is None:
+            return {"success": False, "error": "Iron Seeker engine not configured"}
+        
+        if self.iron_seeker_engine.is_running():
+            return {"success": False, "error": "Iron Seeker already running"}
+        
+        # Check if other operations are running
+        if self._is_operation_running():
+            return {
+                "success": False,
+                "error": "Another operation is running. Please wait for it to complete."
+            }
+        
+        # Import here to avoid circular imports
+        from ..tuning.iron_seeker import IronSeekerConfig
+        
+        # Parse configuration
+        try:
+            if config:
+                iron_seeker_config = IronSeekerConfig(
+                    step_size=config.get("step_size", 5),
+                    test_duration=config.get("test_duration", 60),
+                    safety_margin=config.get("safety_margin", 5),
+                    vdroop_pulse_ms=config.get("vdroop_pulse_ms", 100)
+                )
+            else:
+                iron_seeker_config = IronSeekerConfig()
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid Iron Seeker config: {e}")
+            return {"success": False, "error": f"Invalid config: {e}"}
+        
+        logger.info(f"Starting Iron Seeker with config: step_size={iron_seeker_config.step_size}, "
+                   f"test_duration={iron_seeker_config.test_duration}, "
+                   f"safety_margin={iron_seeker_config.safety_margin}")
+        
+        # Get current undervolt values as initial values
+        initial_values = self.settings.getSetting("cores") or [0, 0, 0, 0]
+        
+        # Run Iron Seeker in background task
+        self._iron_seeker_task = asyncio.create_task(
+            self._run_iron_seeker(iron_seeker_config, initial_values)
+        )
+        
+        return {
+            "success": True,
+            "config": {
+                "step_size": iron_seeker_config.step_size,
+                "test_duration": iron_seeker_config.test_duration,
+                "safety_margin": iron_seeker_config.safety_margin,
+                "vdroop_pulse_ms": iron_seeker_config.vdroop_pulse_ms
+            }
+        }
+    
+    async def _run_iron_seeker(
+        self,
+        config: "IronSeekerConfig",
+        initial_values: List[int]
+    ) -> None:
+        """Run Iron Seeker and handle completion.
+        
+        Args:
+            config: IronSeekerConfig instance
+            initial_values: Initial undervolt values before Iron Seeker
+        """
+        from ..tuning.iron_seeker import IronSeekerStoredResult
+        
+        try:
+            result = await self.iron_seeker_engine.start(config, initial_values)
+            
+            # If not aborted, save results
+            if not result.aborted and result.cores:
+                # Create stored result format
+                stored_result = IronSeekerStoredResult.from_result(result)
+                
+                # Save to settings via safety manager
+                self.safety.save_iron_seeker_results(stored_result)
+                
+                # Also update current cores to recommended values
+                recommended_values = [c.recommended for c in result.cores]
+                self.settings.setSetting("cores", recommended_values)
+                self.settings.setSetting("status", "enabled")
+                
+                logger.info(f"Iron Seeker completed: recommended values = {recommended_values}")
+            else:
+                logger.info("Iron Seeker was aborted or produced no results")
+                
+        except asyncio.CancelledError:
+            logger.info("Iron Seeker task cancelled")
+            await self.event_emitter.emit_status("disabled")
+        except Exception as e:
+            logger.exception(f"Iron Seeker error: {e}")
+            await self.event_emitter.emit_status("error")
+        finally:
+            self._iron_seeker_task = None
+    
+    async def cancel_iron_seeker(self) -> Dict[str, Any]:
+        """Cancel running Iron Seeker session.
+        
+        Cancels the Iron Seeker process, restores previous undervolt values,
+        and clears the state file.
+        
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.5
+        """
+        if self.iron_seeker_engine is None:
+            return {"success": False, "error": "Iron Seeker engine not configured"}
+        
+        if not self.iron_seeker_engine.is_running():
+            return {"success": False, "error": "Iron Seeker not running"}
+        
+        logger.info("Cancelling Iron Seeker")
+        self.iron_seeker_engine.cancel()
+        
+        # Cancel the background task if it exists
+        if self._iron_seeker_task and not self._iron_seeker_task.done():
+            self._iron_seeker_task.cancel()
+            try:
+                await self._iron_seeker_task
+            except asyncio.CancelledError:
+                pass
+            self._iron_seeker_task = None
+        
+        return {"success": True}
+    
+    async def get_iron_seeker_status(self) -> Dict[str, Any]:
+        """Get current Iron Seeker status.
+        
+        Returns status information including:
+        - Whether Iron Seeker is running
+        - Current state if running (core, value, progress)
+        - Last results if available
+        
+        Returns:
+            Dictionary with status information
+            
+        Requirements: 1.1
+        """
+        if self.iron_seeker_engine is None:
+            return {"success": False, "error": "Iron Seeker engine not configured"}
+        
+        is_running = self.iron_seeker_engine.is_running()
+        
+        result = {
+            "success": True,
+            "running": is_running
+        }
+        
+        # If running, include current state from safety manager
+        if is_running:
+            state = self.safety.load_iron_seeker_state()
+            if state:
+                result["current_core"] = state.current_core
+                result["current_value"] = state.current_value
+                result["core_results"] = state.core_results
+        
+        # Include last saved results if available
+        stored_results = self.safety.load_iron_seeker_results()
+        if stored_results:
+            result["last_results"] = stored_results.to_dict()
+        
+        return result

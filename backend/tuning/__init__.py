@@ -2,6 +2,7 @@
 
 from .autotune import AutotuneEngine, AutotuneConfig, AutotuneResult
 from .runner import TestRunner, TestCase, TestResult
+from .vdroop import VdroopTester, VdroopTestResult
 
 __all__ = [
     "AutotuneEngine",
@@ -10,4 +11,6 @@ __all__ = [
     "TestRunner",
     "TestCase",
     "TestResult",
+    "VdroopTester",
+    "VdroopTestResult",
 ]
