@@ -2,6 +2,14 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.7] - 2026-01-16
+
+### Fixed
+- **Decky Loader compatibility** — reverted to standard ESM format with @decky/rollup
+  - Standard `@decky/rollup` config generates correct ESM output
+  - Output format: `export { index as default }` (official Decky format)
+  - Minimal test build to isolate and verify plugin loading
+
 ## [3.1.6] - 2026-01-16
 
 ### Fixed

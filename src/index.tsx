@@ -1,26 +1,20 @@
-/**
- * DeckTune - Main plugin entry point for Decky Loader.
- */
-
 import { definePlugin } from "@decky/api";
+import { PanelSection, PanelSectionRow } from "@decky/ui";
 import { FaMagic } from "react-icons/fa";
 
-import { DeckTuneProvider } from "./context";
-import { DeckTuneApp } from "./components/DeckTuneApp";
-
 export default definePlugin(() => {
-  console.log("DeckTune plugin loaded");
-
   return {
     name: "DeckTune",
     content: (
-      <DeckTuneProvider>
-        <DeckTuneApp />
-      </DeckTuneProvider>
+      <PanelSection title="DeckTune">
+        <PanelSectionRow>
+          <div>Hello from DeckTune!</div>
+        </PanelSectionRow>
+      </PanelSection>
     ),
     icon: <FaMagic />,
     onDismount() {
-      console.log("DeckTune plugin unloaded");
+      console.log("DeckTune unloaded");
     },
   };
 });
