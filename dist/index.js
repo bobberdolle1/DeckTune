@@ -1,5 +1,10 @@
-const manifest = {"name":"DeckTune"};
+const manifest$1 = {"name":"DeckTune","author":"DeckTune Team","version":"3.1.8","api_version":1,"flags":["root"],"publish":{"tags":["root","undervolt","autotune","performance","temperature","ryzenadj","curve optimizer","battery-saving","safety","stress-test","dynamic-mode","rust"],"description":"Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), and stress testing.","image":"https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"}};
+
+const manifest = manifest$1;
 const API_VERSION = 2;
+if (!manifest?.name) {
+    throw new Error('[@decky/api]: Failed to find plugin manifest.');
+}
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
 if (!internalAPIConnection) {
     throw new Error('[@decky/api]: Failed to connect to the loader as as the loader API was not initialized. This is likely a bug in Decky Loader.');

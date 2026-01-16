@@ -2,6 +2,18 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.8] - 2026-01-16
+
+### Fixed
+- **Decky Loader compatibility** — fixed manifest treeshaking issue
+  - Custom rollup plugin to inject full manifest with `moduleSideEffects: 'no-treeshake'`
+  - Full plugin.json manifest now embedded in bundle (was only `{"name":"DeckTune"}`)
+  - This fixes the "Unexpected token 'export'" error in Decky Loader
+
+### Technical
+- Custom `manifestPlugin()` in rollup.config.js to prevent treeshaking of manifest properties
+- Manifest now includes: name, author, version, api_version, flags, publish (tags, description, image)
+
 ## [3.1.7] - 2026-01-16
 
 ### Fixed

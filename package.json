@@ -1,6 +1,6 @@
 {
   "name": "decktune",
-  "version": "3.1.7",
+  "version": "3.1.8",
   "description": "Automated undervolting and tuning solution for Steam Deck with safety features",
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/react": "19.1.1",
     "@types/react-dom": "19.1.1",
+    "decky-frontend-lib": "^3.25.0",
     "rollup": "^4.53.3",
     "rollup-plugin-delete": "^3.0.2",
     "rollup-plugin-external-globals": "^0.13.0",
