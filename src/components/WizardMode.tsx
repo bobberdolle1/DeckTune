@@ -18,10 +18,13 @@ import {
   PanelSectionRow,
   ProgressBarWithInfo,
   Focusable,
+  SliderField,
+  ConfirmModal,
+  showModal,
 } from "@decky/ui";
-import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle, FaExclamationCircle } from "react-icons/fa";
-import { useAutotune, usePlatformInfo, useDeckTune, useBinaries } from "../context";
-import { AutotuneProgress, AutotuneResult, Preset } from "../api/types";
+import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle, FaExclamationCircle, FaMicrochip, FaCog, FaVial } from "react-icons/fa";
+import { useAutotune, usePlatformInfo, useDeckTune, useBinaries, useBinning } from "../context";
+import { AutotuneProgress, AutotuneResult, Preset, BinningConfig } from "../api/types";
 
 /**
  * Wizard goal options for Step 1.
@@ -153,12 +156,13 @@ const PanicDisableButton: FC = () => {
 
 /**
  * WizardMode component - 3-step wizard for beginner users.
- * Requirements: 4.5, 5.4, 6.1
+ * Requirements: 4.5, 5.4, 6.1, 8.1
  */
 export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
   const [step, setStep] = useState<WizardStep>(1);
   const [selectedGoal, setSelectedGoal] = useState<WizardGoal | null>(null);
   const { progress, result, isRunning, start, stop } = useAutotune();
+  const { progress: binningProgress, result: binningResult, isRunning: isBinningRunning, start: startBinning, stop: stopBinning } = useBinning();
   const { info: platformInfo } = usePlatformInfo();
   const { api, state } = useDeckTune();
   const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
@@ -175,6 +179,13 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
     }
   }, [result, step]);
 
+  // Handle binning completion - move to step 3
+  useEffect(() => {
+    if (binningResult && step === 2) {
+      setStep(3);
+    }
+  }, [binningResult, step]);
+
   /**
    * Handle goal selection and start autotune.
    * Requirements: 6.2, 6.3
@@ -189,12 +200,33 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
   };
 
   /**
+   * Handle binning button click.
+   * Requirements: 8.1
+   */
+  const handleBinningClick = async () => {
+    setSelectedGoal(null);
+    setStep(2);
+    await startBinning();
+  };
+
+  /**
+   * Handle benchmark button click.
+   * Requirements: 7.1, 7.4
+   */
+  const handleBenchmarkClick = async () => {
+    await api.runBenchmark();
+  };
+
+  /**
    * Handle cancel button click.
-   * Requirements: 6.3
+   * Requirements: 6.3, 8.1
    */
   const handleCancel = async () => {
     if (isRunning) {
       await stop();
+    }
+    if (isBinningRunning) {
+      await stopBinning();
     }
     setStep(1);
     setSelectedGoal(null);
@@ -228,6 +260,35 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
       }
       
       onComplete?.(result);
+    }
+  };
+
+  /**
+   * Handle Apply Recommended button click for binning results.
+   * Requirements: 8.4
+   */
+  const handleApplyBinningResult = async () => {
+    if (binningResult) {
+      // Apply the recommended value (max_stable + 5mV safety margin)
+      const cores = [binningResult.recommended, binningResult.recommended, binningResult.recommended, binningResult.recommended];
+      
+      // Check if a game is running - save as game preset
+      if (state.runningAppId && state.runningAppName) {
+        const preset: Preset = {
+          app_id: state.runningAppId,
+          label: state.runningAppName,
+          value: cores,
+          timeout: 0,
+          use_timeout: false,
+          created_at: new Date().toISOString(),
+          tested: true,
+        };
+        
+        await api.saveAndApply(cores, true, preset);
+      } else {
+        // No game running - apply as global values
+        await api.applyUndervolt(cores);
+      }
     }
   };
 
@@ -284,13 +345,16 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
       {step === 1 && (
         <GoalSelectionStep
           onSelect={handleGoalSelect}
+          onBinningClick={handleBinningClick}
+          onBenchmarkClick={handleBenchmarkClick}
           platformInfo={platformInfo}
           disabled={hasMissing}
+          isBinningRunning={isBinningRunning}
         />
       )}
 
-      {/* Step 2: Autotune Progress */}
-      {step === 2 && (
+      {/* Step 2: Autotune or Binning Progress */}
+      {step === 2 && !isBinningRunning && (
         <AutotuneProgressStep
           progress={progress}
           isRunning={isRunning}
@@ -299,12 +363,31 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
         />
       )}
 
+      {/* Step 2: Binning Progress */}
+      {step === 2 && isBinningRunning && (
+        <BinningProgressStep
+          progress={binningProgress}
+          isRunning={isBinningRunning}
+          onCancel={handleCancel}
+        />
+      )}
+
       {/* Step 3: Results Display */}
-      {step === 3 && result && (
+      {step === 3 && result && !binningResult && (
         <ResultsStep
           result={result}
           platformInfo={platformInfo}
           onApplyAndSave={handleApplyAndSave}
+          onStartOver={handleStartOver}
+        />
+      )}
+
+      {/* Step 3: Binning Results Display */}
+      {step === 3 && binningResult && (
+        <BinningResultsStep
+          result={binningResult}
+          platformInfo={platformInfo}
+          onApplyRecommended={handleApplyBinningResult}
           onStartOver={handleStartOver}
         />
       )}
@@ -379,18 +462,140 @@ const StepIndicator: FC<StepIndicatorProps> = ({ currentStep }) => {
 };
 
 /**
+ * Binning Configuration Dialog component.
+ * Requirements: 10.1, 10.2, 10.3, 10.4
+ */
+interface BinningConfigDialogProps {
+  config: BinningConfig | null;
+  onSave: (config: Partial<BinningConfig>) => Promise<void>;
+  onClose: () => void;
+}
+
+const BinningConfigDialog: FC<BinningConfigDialogProps> = ({ config, onSave, onClose }) => {
+  const [testDuration, setTestDuration] = useState(config?.test_duration || 60);
+  const [stepSize, setStepSize] = useState(config?.step_size || 5);
+  const [startValue, setStartValue] = useState(config?.start_value || -10);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave({
+        test_duration: testDuration,
+        step_size: stepSize,
+        start_value: startValue,
+      });
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: "16px" }}>
+      <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "16px" }}>
+        Binning Advanced Settings
+      </div>
+
+      <div style={{ marginBottom: "16px" }}>
+        <SliderField
+          label="Test Duration"
+          description={`${testDuration} seconds per test`}
+          value={testDuration}
+          min={30}
+          max={300}
+          step={10}
+          onChange={(value: number) => setTestDuration(value)}
+          showValue={true}
+        />
+      </div>
+
+      <div style={{ marginBottom: "16px" }}>
+        <SliderField
+          label="Step Size"
+          description={`${stepSize}mV increments`}
+          value={stepSize}
+          min={1}
+          max={10}
+          step={1}
+          onChange={(value: number) => setStepSize(value)}
+          showValue={true}
+        />
+      </div>
+
+      <div style={{ marginBottom: "24px" }}>
+        <SliderField
+          label="Starting Value"
+          description={`Begin testing at ${startValue}mV`}
+          value={startValue}
+          min={-20}
+          max={0}
+          step={1}
+          onChange={(value: number) => setStartValue(value)}
+          showValue={true}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "8px" }}>
+        <ButtonItem
+          layout="below"
+          onClick={handleSave}
+          disabled={isSaving}
+          style={{ flex: 1 }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#4caf50" }}>
+            <FaCheck />
+            <span>{isSaving ? "Saving..." : "Save"}</span>
+          </div>
+        </ButtonItem>
+        <ButtonItem
+          layout="below"
+          onClick={onClose}
+          disabled={isSaving}
+          style={{ flex: 1 }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            <FaTimes />
+            <span>Cancel</span>
+          </div>
+        </ButtonItem>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Step 1: Goal Selection component.
- * Requirements: 5.4, 6.2
+ * Requirements: 5.4, 6.2, 8.1, 10.1
  */
 interface GoalSelectionStepProps {
   onSelect: (goal: WizardGoal) => void;
+  onBinningClick: () => void;
+  onBenchmarkClick: () => void;
   platformInfo: { model: string; variant: string; safe_limit: number } | null;
   disabled?: boolean;
+  isBinningRunning?: boolean;
 }
 
-const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo, disabled = false }) => {
+const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, onBinningClick, onBenchmarkClick, platformInfo, disabled = false, isBinningRunning = false }) => {
   const { state } = useDeckTune();
+  const { config, getConfig, updateConfig } = useBinning();
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
   const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
+
+  // Load config on mount
+  useEffect(() => {
+    getConfig();
+  }, []);
+
+  const handleConfigClick = () => {
+    setShowConfigDialog(true);
+  };
+
+  const handleConfigSave = async (newConfig: Partial<BinningConfig>) => {
+    await updateConfig(newConfig);
+    setShowConfigDialog(false);
+  };
 
   return (
     <>
@@ -427,9 +632,165 @@ const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo,
         </PanelSectionRow>
       )}
       
+      {/* Binning Button - Requirements: 8.1 */}
       <PanelSectionRow>
-        <div style={{ fontSize: "14px", marginBottom: "12px" }}>
-          Select your tuning goal:
+        <div style={{ display: "flex", gap: "8px" }}>
+          <ButtonItem
+            layout="below"
+            onClick={onBinningClick}
+            disabled={disabled || isBinningRunning}
+            description="Automatically discover your chip's maximum stable undervolt"
+            style={{ flex: 1 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning) ? 0.5 : 1 }}>
+              <FaMicrochip style={{ color: "#ff9800" }} />
+              <span>Find Max Undervolt</span>
+              <span style={{ fontSize: "10px", color: "#8b929a", marginLeft: "auto" }}>
+                ~5-15 min
+              </span>
+            </div>
+          </ButtonItem>
+          <ButtonItem
+            layout="below"
+            onClick={handleConfigClick}
+            disabled={disabled || isBinningRunning}
+            style={{ width: "48px", padding: "0" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", opacity: (disabled || isBinningRunning) ? 0.5 : 1 }}>
+              <FaCog />
+            </div>
+          </ButtonItem>
+        </div>
+      </PanelSectionRow>
+
+      {/* Config Dialog Modal */}
+      {showConfigDialog && (
+        <ConfirmModal
+          strTitle="Binning Settings"
+          onOK={() => {}}
+          onCancel={() => setShowConfigDialog(false)}
+          bOKDisabled={true}
+          bCancelDisabled={true}
+        >
+          <BinningConfigDialog
+            config={config}
+            onSave={handleConfigSave}
+            onClose={() => setShowConfigDialog(false)}
+          />
+        </ConfirmModal>
+      )}
+      
+      {/* Run Benchmark button - Requirements: 7.1, 7.4 */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={onBenchmarkClick}
+          disabled={disabled || isBinningRunning || state.isBenchmarkRunning}
+          description="Run a 10-second performance benchmark"
+          style={{ marginTop: "8px" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning || state.isBenchmarkRunning) ? 0.5 : 1 }}>
+            {state.isBenchmarkRunning ? (
+              <>
+                <FaSpinner className="spin" style={{ color: "#4caf50" }} />
+                <span>Running...</span>
+              </>
+            ) : (
+              <>
+                <FaVial style={{ color: "#4caf50" }} />
+                <span>Run Benchmark</span>
+              </>
+            )}
+            <span style={{ fontSize: "10px", color: "#8b929a", marginLeft: "auto" }}>
+              10 sec
+            </span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {/* Benchmark Progress - Requirements: 7.4 */}
+      {state.isBenchmarkRunning && (
+        <PanelSectionRow>
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: "#1b5e20",
+              borderRadius: "8px",
+              marginTop: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <FaSpinner className="spin" style={{ color: "#4caf50" }} />
+              <span style={{ fontWeight: "bold" }}>Running benchmark...</span>
+            </div>
+            <div style={{ fontSize: "11px", color: "#a5d6a7", textAlign: "center" }}>
+              Testing performance (~10 seconds)
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
+      {/* Benchmark Result Display - Requirements: 7.3, 7.5 */}
+      {state.lastBenchmarkResult && !state.isBenchmarkRunning && (
+        <PanelSectionRow>
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: "#1b5e20",
+              borderRadius: "8px",
+              marginTop: "8px",
+              borderLeft: "4px solid #4caf50",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ fontWeight: "bold", fontSize: "13px" }}>Benchmark Complete</span>
+              <FaCheck style={{ color: "#4caf50" }} />
+            </div>
+            
+            {/* Score */}
+            <div style={{ marginBottom: "6px" }}>
+              <div style={{ fontSize: "10px", color: "#a5d6a7" }}>Score</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#4caf50" }}>
+                {state.lastBenchmarkResult.score.toFixed(2)} bogo ops/s
+              </div>
+            </div>
+
+            {/* Comparison with previous run */}
+            {state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
+              const current = state.benchmarkHistory[0];
+              const previous = state.benchmarkHistory[1];
+              const scoreDiff = current.score - previous.score;
+              const percentChange = ((scoreDiff / previous.score) * 100);
+              const improvement = scoreDiff > 0;
+              
+              return (
+                <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #2e7d32" }}>
+                  <div style={{ fontSize: "10px", color: "#a5d6a7", marginBottom: "4px" }}>
+                    vs Previous
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {improvement ? (
+                      <FaCheck style={{ color: "#4caf50", fontSize: "12px" }} />
+                    ) : (
+                      <FaTimes style={{ color: "#ff6b6b", fontSize: "12px" }} />
+                    )}
+                    <span style={{ fontSize: "12px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" }}>
+                      {improvement ? "+" : ""}{percentChange.toFixed(2)}%
+                    </span>
+                    <span style={{ fontSize: "10px", color: "#a5d6a7" }}>
+                      {improvement ? "improvement" : "degradation"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </PanelSectionRow>
+      )}
+      
+      <PanelSectionRow>
+        <div style={{ fontSize: "14px", marginBottom: "12px", marginTop: "12px" }}>
+          Or select your tuning goal:
         </div>
       </PanelSectionRow>
       {GOAL_OPTIONS.map((goal) => {
@@ -440,9 +801,9 @@ const GoalSelectionStep: FC<GoalSelectionStepProps> = ({ onSelect, platformInfo,
               layout="below"
               onClick={() => onSelect(goal.id)}
               description={goal.description}
-              disabled={disabled}
+              disabled={disabled || isBinningRunning}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: disabled ? 0.5 : 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning) ? 0.5 : 1 }}>
                 <Icon />
                 <span>{goal.label}</span>
                 <span style={{ fontSize: "10px", color: "#8b929a", marginLeft: "auto" }}>
@@ -756,6 +1117,271 @@ const ResultsStep: FC<ResultsStepProps> = ({
           >
             <FaCheck />
             <span>Apply & Save</span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem layout="below" onClick={onStartOver}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            <span>Start Over</span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+    </>
+  );
+};
+
+/**
+ * Step 2: Binning Progress component.
+ * Requirements: 8.1, 8.2
+ */
+interface BinningProgressStepProps {
+  progress: any | null;
+  isRunning: boolean;
+  onCancel: () => void;
+}
+
+const BinningProgressStep: FC<BinningProgressStepProps> = ({
+  progress,
+  isRunning,
+  onCancel,
+}) => {
+  // Format ETA
+  const formatEta = (seconds: number): string => {
+    if (seconds <= 0) return "Almost done...";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) {
+      return `${mins}:${secs.toString().padStart(2, '0')} remaining`;
+    }
+    return `${secs}s remaining`;
+  };
+
+  return (
+    <>
+      <PanelSectionRow>
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <FaSpinner
+            style={{
+              animation: "spin 1s linear infinite",
+              fontSize: "24px",
+              color: "#ff9800",
+            }}
+          />
+          <style>
+            {`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}
+          </style>
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
+          Finding Maximum Undervolt
+        </div>
+      </PanelSectionRow>
+
+      {progress && (
+        <>
+          <PanelSectionRow>
+            <ProgressBarWithInfo
+              label={`Iteration ${progress.iteration}`}
+              description={`Testing: ${progress.current_value}mV`}
+              nProgress={Math.min((progress.iteration / 20) * 100, 100)}
+              sOperationText={formatEta(progress.eta)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "12px",
+                color: "#8b929a",
+                marginTop: "8px",
+              }}
+            >
+              <span>Current: {progress.current_value}mV</span>
+              <span>Last Stable: {progress.last_stable}mV</span>
+            </div>
+          </PanelSectionRow>
+        </>
+      )}
+
+      {!progress && isRunning && (
+        <PanelSectionRow>
+          <div style={{ textAlign: "center", color: "#8b929a" }}>
+            Initializing binning...
+          </div>
+        </PanelSectionRow>
+      )}
+
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={onCancel}
+          style={{ marginTop: "16px" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" }}>
+            <FaTimes />
+            <span>Stop</span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+    </>
+  );
+};
+
+
+/**
+ * Step 3: Binning Results Display component.
+ * Requirements: 8.4
+ */
+interface BinningResultsStepProps {
+  result: any;
+  platformInfo: { model: string; variant: string; safe_limit: number } | null;
+  onApplyRecommended: () => void;
+  onStartOver: () => void;
+}
+
+const BinningResultsStep: FC<BinningResultsStepProps> = ({
+  result,
+  platformInfo,
+  onApplyRecommended,
+  onStartOver,
+}) => {
+  // Format duration
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${mins}m ${secs}s`;
+  };
+
+  return (
+    <>
+      {/* Status banner */}
+      <PanelSectionRow>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "12px",
+            backgroundColor: result.aborted ? "#b71c1c" : "#1b5e20",
+            borderRadius: "8px",
+            marginBottom: "16px",
+          }}
+        >
+          {result.aborted ? <FaTimes /> : <FaCheck />}
+          <span style={{ fontWeight: "bold" }}>
+            {result.aborted ? "Binning Incomplete" : "Binning Complete!"}
+          </span>
+        </div>
+      </PanelSectionRow>
+
+      {/* Summary stats */}
+      <PanelSectionRow>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            fontSize: "12px",
+            color: "#8b929a",
+            marginBottom: "16px",
+          }}
+        >
+          <span>Duration: {formatDuration(result.duration)}</span>
+          <span>Iterations: {result.iterations}</span>
+        </div>
+      </PanelSectionRow>
+
+      {/* Results display */}
+      <PanelSectionRow>
+        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
+          Discovered Values:
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <Focusable
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#23262e",
+              borderRadius: "8px",
+              borderLeft: `4px solid #ff9800`,
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#8b929a" }}>
+              Maximum Stable
+            </div>
+            <div
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                color: "#ff9800",
+              }}
+            >
+              {result.max_stable}mV
+            </div>
+            <div style={{ fontSize: "10px", color: "#8b929a" }}>
+              Most aggressive stable value found
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#23262e",
+              borderRadius: "8px",
+              borderLeft: `4px solid #4caf50`,
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#8b929a" }}>
+              Recommended (with 5mV safety margin)
+            </div>
+            <div
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                color: "#4caf50",
+              }}
+            >
+              {result.recommended}mV
+            </div>
+            <div style={{ fontSize: "10px", color: "#8b929a" }}>
+              Conservative value for daily use
+            </div>
+          </div>
+        </Focusable>
+      </PanelSectionRow>
+
+      {/* Action buttons */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={onApplyRecommended}
+          style={{ marginTop: "16px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              color: "#4caf50",
+            }}
+          >
+            <FaCheck />
+            <span>Apply Recommended</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>

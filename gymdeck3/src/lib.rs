@@ -16,6 +16,7 @@
 //! - **signals**: Signal handling (SIGTERM, SIGUSR1)
 //! - **watchdog**: Internal watchdog timer for safety
 //! - **safety**: Root check and value validation
+//! - **fan**: Fan control via hwmon sysfs (temperature curves, hysteresis, safety)
 //!
 //! # Testing
 //!
@@ -51,15 +52,19 @@ mod hysteresis;
 mod interpolation;
 mod ryzenadj;
 mod output;
+#[cfg(unix)]
 mod signals;
 mod watchdog;
 mod safety;
 pub mod strategy;
+pub mod fan;
 
 pub use config::{
     Args,
     Strategy,
     CoreConfig,
+    FanControlMode,
+    FanCurvePointConfig,
     validate_sample_interval,
     validate_sample_interval_value,
     validate_hysteresis,
@@ -67,6 +72,9 @@ pub use config::{
     parse_core_config,
     validate_core_config_values,
     validate_args,
+    parse_fan_curve_point,
+    validate_fan_curve_point,
+    validate_fan_hysteresis,
 };
 
 pub use load_monitor::{
@@ -114,17 +122,11 @@ pub use ryzenadj::{
 
 pub use output::{
     StatusOutput,
+    FanStatusOutput,
     TransitionOutput,
     ErrorOutput,
     OutputWriter,
     validate_status_output,
-};
-
-pub use signals::{
-    SignalState,
-    SignalHandler,
-    graceful_shutdown,
-    install_panic_hook,
 };
 
 pub use watchdog::{
@@ -132,6 +134,14 @@ pub use watchdog::{
     Watchdog,
     check_timeout,
     DEFAULT_WATCHDOG_TIMEOUT_SECS,
+};
+
+#[cfg(unix)]
+pub use signals::{
+    SignalState,
+    SignalHandler,
+    graceful_shutdown,
+    install_panic_hook,
 };
 
 pub use safety::{
@@ -142,4 +152,21 @@ pub use safety::{
     clamp_all_values,
     all_values_in_bounds,
     EXIT_CODE_NOT_ROOT,
+};
+
+// Fan control module re-exports
+pub use fan::{
+    FanController,
+    FanCurve,
+    FanCurvePoint,
+    FanControllerConfig,
+    FanStatus,
+    FanMode,
+    FanSafetyLimits,
+    HwmonDevice,
+    HwmonError,
+    find_steam_deck_hwmon,
+    CRITICAL_TEMP_C,
+    HIGH_TEMP_C,
+    ZERO_RPM_MAX_TEMP_C,
 };

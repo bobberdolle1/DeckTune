@@ -80,6 +80,178 @@ SAFE_UNDERVOLT_MIN = -35  # Most aggressive safe value (OLED)
 SAFE_UNDERVOLT_MAX = 0    # No undervolt
 EXPERT_UNDERVOLT_MIN = -100  # Expert mode allows deeper undervolt
 
+# Fan control constants
+FAN_TEMP_MIN = 0
+FAN_TEMP_MAX = 100
+FAN_SPEED_MIN = 0
+FAN_SPEED_MAX = 100
+FAN_HYSTERESIS_MIN = 1
+FAN_HYSTERESIS_MAX = 10
+
+
+@dataclass
+class FanCurvePoint:
+    """A point on the fan curve (temperature -> speed).
+    
+    Attributes:
+        temp_c: Temperature in Celsius (0-100)
+        speed_percent: Fan speed percentage (0-100)
+    """
+    temp_c: int = 50
+    speed_percent: int = 50
+    
+    def validate(self) -> List[str]:
+        """Validate fan curve point."""
+        errors = []
+        if not FAN_TEMP_MIN <= self.temp_c <= FAN_TEMP_MAX:
+            errors.append(f"temp_c ({self.temp_c}) must be in [{FAN_TEMP_MIN}, {FAN_TEMP_MAX}]")
+        if not FAN_SPEED_MIN <= self.speed_percent <= FAN_SPEED_MAX:
+            errors.append(f"speed_percent ({self.speed_percent}) must be in [{FAN_SPEED_MIN}, {FAN_SPEED_MAX}]")
+        return errors
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {"temp_c": self.temp_c, "speed_percent": self.speed_percent}
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "FanCurvePoint":
+        """Create from dictionary."""
+        return cls(
+            temp_c=data.get("temp_c", 50),
+            speed_percent=data.get("speed_percent", 50),
+        )
+
+
+@dataclass
+class FanConfig:
+    """Configuration for fan control.
+    
+    Attributes:
+        enabled: Whether fan control is enabled
+        mode: Fan control mode (default, custom, fixed)
+        curve: List of fan curve points (temp -> speed)
+        zero_rpm_enabled: Allow fan to stop completely below threshold
+        hysteresis_temp: Temperature hysteresis in °C (1-10)
+    """
+    enabled: bool = False
+    mode: str = "default"  # default, custom, fixed
+    curve: List[FanCurvePoint] = field(default_factory=lambda: [
+        FanCurvePoint(40, 20),
+        FanCurvePoint(50, 30),
+        FanCurvePoint(60, 45),
+        FanCurvePoint(70, 60),
+        FanCurvePoint(80, 80),
+        FanCurvePoint(85, 100),
+    ])
+    zero_rpm_enabled: bool = False
+    hysteresis_temp: int = 2
+    
+    def validate(self) -> List[str]:
+        """Validate fan configuration."""
+        errors = []
+        
+        # Validate mode
+        if self.mode not in ("default", "custom", "fixed"):
+            errors.append(f"mode '{self.mode}' must be one of (default, custom, fixed)")
+        
+        # Validate hysteresis
+        if not FAN_HYSTERESIS_MIN <= self.hysteresis_temp <= FAN_HYSTERESIS_MAX:
+            errors.append(
+                f"hysteresis_temp ({self.hysteresis_temp}) must be in "
+                f"[{FAN_HYSTERESIS_MIN}, {FAN_HYSTERESIS_MAX}]"
+            )
+        
+        # Validate curve if custom mode
+        if self.mode == "custom":
+            if len(self.curve) < 2:
+                errors.append("curve must have at least 2 points for custom mode")
+            else:
+                prev_temp = -1
+                for i, point in enumerate(self.curve):
+                    point_errors = point.validate()
+                    for err in point_errors:
+                        errors.append(f"curve[{i}]: {err}")
+                    if point.temp_c <= prev_temp:
+                        errors.append(f"curve[{i}]: temperatures must be strictly increasing")
+                    prev_temp = point.temp_c
+        
+        return errors
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "enabled": self.enabled,
+            "mode": self.mode,
+            "curve": [p.to_dict() for p in self.curve],
+            "zero_rpm_enabled": self.zero_rpm_enabled,
+            "hysteresis_temp": self.hysteresis_temp,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "FanConfig":
+        """Create from dictionary."""
+        curve_data = data.get("curve", [])
+        curve = [FanCurvePoint.from_dict(p) for p in curve_data]
+        if not curve:
+            curve = [
+                FanCurvePoint(40, 20),
+                FanCurvePoint(50, 30),
+                FanCurvePoint(60, 45),
+                FanCurvePoint(70, 60),
+                FanCurvePoint(80, 80),
+                FanCurvePoint(85, 100),
+            ]
+        return cls(
+            enabled=data.get("enabled", False),
+            mode=data.get("mode", "default"),
+            curve=curve,
+            zero_rpm_enabled=data.get("zero_rpm_enabled", False),
+            hysteresis_temp=data.get("hysteresis_temp", 2),
+        )
+
+
+@dataclass
+class FanStatus:
+    """Status information for fan control.
+    
+    Attributes:
+        temp_c: Current temperature in °C
+        pwm: Current PWM value (0-255)
+        speed_percent: Current speed percentage (0-100)
+        rpm: Fan RPM if available
+        mode: Current fan mode
+        safety_override: Whether safety override is active
+    """
+    temp_c: int = 0
+    pwm: int = 0
+    speed_percent: int = 0
+    rpm: Optional[int] = None
+    mode: str = "default"
+    safety_override: bool = False
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "temp_c": self.temp_c,
+            "pwm": self.pwm,
+            "speed_percent": self.speed_percent,
+            "rpm": self.rpm,
+            "mode": self.mode,
+            "safety_override": self.safety_override,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "FanStatus":
+        """Create from dictionary."""
+        return cls(
+            temp_c=data.get("temp_c", 0),
+            pwm=data.get("pwm", 0),
+            speed_percent=data.get("speed_percent", 0),
+            rpm=data.get("rpm"),
+            mode=data.get("mode", "default"),
+            safety_override=data.get("safety_override", False),
+        )
+
 
 @dataclass
 class CoreConfig:
@@ -184,6 +356,7 @@ class DynamicConfig:
         expert_mode: If True, allow extended undervolt range
         simple_mode: If True, single value applies to all cores
         simple_value: The single undervolt value used in simple mode (mV)
+        fan_config: Fan control configuration
     """
     strategy: str = "balanced"
     sample_interval_ms: int = 100
@@ -193,6 +366,7 @@ class DynamicConfig:
     expert_mode: bool = False
     simple_mode: bool = False
     simple_value: int = -25
+    fan_config: FanConfig = field(default_factory=FanConfig)
     
     def validate(self) -> List[str]:
         """Validate the entire configuration.
@@ -248,6 +422,11 @@ class DynamicConfig:
             for i, core in enumerate(self.cores):
                 if core.custom_curve is None:
                     errors.append(f"cores[{i}]: custom strategy requires custom_curve")
+        
+        # Validate fan configuration
+        fan_errors = self.fan_config.validate()
+        for err in fan_errors:
+            errors.append(f"fan_config: {err}")
                     
         return errors
     
@@ -313,6 +492,7 @@ class DynamicConfig:
             "expert_mode": self.expert_mode,
             "simple_mode": self.simple_mode,
             "simple_value": self.simple_value,
+            "fan_config": self.fan_config.to_dict(),
         }
     
     @classmethod
@@ -325,6 +505,10 @@ class DynamicConfig:
             cores.append(CoreConfig())
         cores = cores[:4]
         
+        # Parse fan config
+        fan_data = data.get("fan_config", {})
+        fan_config = FanConfig.from_dict(fan_data) if fan_data else FanConfig()
+        
         return cls(
             strategy=data.get("strategy", "balanced"),
             sample_interval_ms=data.get("sample_interval_ms", 100),
@@ -334,6 +518,7 @@ class DynamicConfig:
             expert_mode=data.get("expert_mode", False),
             simple_mode=data.get("simple_mode", False),
             simple_value=data.get("simple_value", -25),
+            fan_config=fan_config,
         )
 
 
@@ -348,6 +533,7 @@ class DynamicStatus:
         strategy: Current strategy name
         uptime_ms: Time since gymdeck3 started in milliseconds
         error: Error message if any
+        fan: Fan status if fan control is enabled
     """
     running: bool = False
     load: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0])
@@ -355,10 +541,11 @@ class DynamicStatus:
     strategy: str = ""
     uptime_ms: int = 0
     error: Optional[str] = None
+    fan: Optional[FanStatus] = None
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "running": self.running,
             "load": self.load,
             "values": self.values,
@@ -366,6 +553,9 @@ class DynamicStatus:
             "uptime_ms": self.uptime_ms,
             "error": self.error,
         }
+        if self.fan is not None:
+            result["fan"] = self.fan.to_dict()
+        return result
     
     @classmethod
     def from_json_line(cls, data: dict, running: bool = True) -> "DynamicStatus":
@@ -373,6 +563,10 @@ class DynamicStatus:
         msg_type = data.get("type", "")
         
         if msg_type == "status":
+            # Parse fan status if present
+            fan_data = data.get("fan")
+            fan_status = FanStatus.from_dict(fan_data) if fan_data else None
+            
             return cls(
                 running=running,
                 load=data.get("load", [0.0, 0.0, 0.0, 0.0]),
@@ -380,6 +574,7 @@ class DynamicStatus:
                 strategy=data.get("strategy", ""),
                 uptime_ms=data.get("uptime_ms", 0),
                 error=None,
+                fan=fan_status,
             )
         elif msg_type == "error":
             return cls(

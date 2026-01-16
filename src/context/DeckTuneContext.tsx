@@ -11,7 +11,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getApiInstance, Api, State, PlatformInfo, AutotuneProgress, AutotuneResult, TestHistoryEntry } from "../api";
+import { getApiInstance, Api, State, PlatformInfo, AutotuneProgress, AutotuneResult, TestHistoryEntry, BinningProgress, BinningResult, BinningConfig, GameProfile } from "../api";
 
 // Declare SP_REACT for Decky environment
 declare const SP_REACT: typeof import("react");
@@ -55,6 +55,10 @@ export const initialState: State = {
   presets: [],
   currentPreset: null,
   
+  // Game Profiles (new in v3.0)
+  gameProfiles: [],
+  activeProfile: null,
+  
   // Settings
   settings: {
     isGlobal: false,
@@ -83,10 +87,21 @@ export const initialState: State = {
   autotuneResult: null,
   isAutotuning: false,
   
+  // Binning state
+  binningProgress: null,
+  binningResult: null,
+  isBinning: false,
+  binningConfig: null,
+  
   // Test state (new properties)
   testHistory: [],
   currentTest: null,
   isTestRunning: false,
+  
+  // Benchmark state (new in v3.0)
+  benchmarkHistory: [],
+  isBenchmarkRunning: false,
+  lastBenchmarkResult: null,
   
   // Binary availability
   missingBinaries: [],
@@ -213,6 +228,45 @@ export const useBinaries = () => {
     missing: state.missingBinaries,
     hasMissing: state.missingBinaries.length > 0,
     check: checkBinaries,
+  };
+};
+
+/**
+ * Hook to access binning state.
+ * Requirements: 8.1, 8.2, 8.3, 8.4
+ */
+export const useBinning = () => {
+  const { state, api } = useDeckTune();
+  return {
+    progress: state.binningProgress,
+    result: state.binningResult,
+    isRunning: state.isBinning,
+    config: state.binningConfig,
+    start: (config?: Partial<BinningConfig>) => api.startBinning(config),
+    stop: () => api.stopBinning(),
+    getConfig: () => api.getBinningConfig(),
+    updateConfig: (config: Partial<BinningConfig>) => api.updateBinningConfig(config),
+  };
+};
+
+/**
+ * Hook to access profile management.
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 5.1
+ */
+export const useProfiles = () => {
+  const { state, api } = useDeckTune();
+  return {
+    profiles: state.gameProfiles || [],
+    activeProfile: state.activeProfile,
+    runningAppId: state.runningAppId,
+    runningAppName: state.runningAppName,
+    createProfile: (profile: Omit<GameProfile, 'created_at' | 'last_used'>) => api.createProfile(profile),
+    getProfiles: () => api.getProfiles(),
+    updateProfile: (appId: number, updates: Partial<GameProfile>) => api.updateProfile(appId, updates),
+    deleteProfile: (appId: number) => api.deleteProfile(appId),
+    createProfileForCurrentGame: () => api.createProfileForCurrentGame(),
+    exportProfiles: () => api.exportGameProfiles(),
+    importProfiles: (jsonData: string, strategy: "skip" | "overwrite" | "rename") => api.importGameProfiles(jsonData, strategy),
   };
 };
 

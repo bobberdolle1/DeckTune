@@ -19,12 +19,18 @@ from backend.core.safety import SafetyManager
 from backend.platform.detect import detect_platform
 from backend.tuning.autotune import AutotuneEngine
 from backend.tuning.runner import TestRunner
+from backend.tuning.binning import BinningEngine
+from backend.tuning.benchmark import BenchmarkRunner
 from backend.api.events import EventEmitter
 from backend.api.rpc import DeckTuneRPC
 from backend.watchdog import Watchdog
 from backend.dynamic.controller import DynamicController
 from backend.dynamic.config import DynamicConfig, CoreConfig
 from backend.dynamic.migration import migrate_dynamic_settings, is_old_format
+from backend.dynamic.profile_manager import ProfileManager
+from backend.platform.appwatcher import AppWatcher
+from backend.gpu.unlocker import GpuUnlocker
+from backend.gpu.curve import GpuCurveController
 
 # Environment paths
 SETTINGS_DIR = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
@@ -87,9 +93,17 @@ class Plugin:
         self.event_emitter = None
         self.test_runner = None
         self.autotune_engine = None
+        self.binning_engine = None
+        self.benchmark_runner = None
         self.watchdog = None
         self.rpc = None
         self.dynamic_controller = None  # New gymdeck3 controller
+        self.profile_manager = None  # Per-game profile manager
+        self.app_watcher = None  # Steam app watcher
+        
+        # GPU components
+        self.gpu_unlocker = None
+        self.gpu_curve = None
 
     async def init(self):
         """Initialize plugin and all modules."""
@@ -138,7 +152,22 @@ class Plugin:
         # 6. Initialize watchdog
         self.watchdog = Watchdog(self.safety)
         
-        # 7. Initialize RPC handler
+        # 7. Initialize binning engine
+        from backend.tuning.binning import BinningEngine
+        self.binning_engine = BinningEngine(
+            ryzenadj=self.ryzenadj,
+            runner=self.test_runner,
+            safety=self.safety,
+            event_emitter=self.event_emitter
+        )
+        
+        # 7.5. Initialize benchmark runner
+        from backend.tuning.benchmark import BenchmarkRunner
+        self.benchmark_runner = BenchmarkRunner(
+            test_runner=self.test_runner
+        )
+        
+        # 8. Initialize RPC handler
         self.rpc = DeckTuneRPC(
             platform=self.platform,
             ryzenadj=self.ryzenadj,
@@ -146,10 +175,12 @@ class Plugin:
             event_emitter=self.event_emitter,
             settings_manager=settings,
             autotune_engine=self.autotune_engine,
-            test_runner=self.test_runner
+            test_runner=self.test_runner,
+            binning_engine=self.binning_engine,
+            benchmark_runner=self.benchmark_runner
         )
         
-        # 8. Initialize DynamicController for gymdeck3
+        # 9. Initialize DynamicController for gymdeck3
         gymdeck3_path = os.path.join(PLUGIN_DIR, GYMDECK3_CLI_PATH) if PLUGIN_DIR else GYMDECK3_CLI_PATH
         ryzenadj_path = os.path.join(PLUGIN_DIR, RYZENADJ_CLI_PATH) if PLUGIN_DIR else RYZENADJ_CLI_PATH
         
@@ -160,7 +191,36 @@ class Plugin:
             safety_manager=self.safety,
         )
         
-        # 9. Check for boot recovery (Requirement: Integration)
+        # 10. Initialize ProfileManager for per-game profiles
+        self.profile_manager = ProfileManager(
+            settings_manager=settings,
+            ryzenadj=self.ryzenadj,
+            dynamic_controller=self.dynamic_controller,
+            event_emitter=self.event_emitter
+        )
+        
+        # Set profile manager in RPC
+        self.rpc.set_profile_manager(self.profile_manager)
+        
+        # 11. Initialize AppWatcher for automatic profile switching
+        self.app_watcher = AppWatcher(
+            profile_manager=self.profile_manager,
+            poll_interval=2.0
+        )
+        
+        # Set app watcher in RPC
+        self.rpc.set_app_watcher(self.app_watcher)
+        
+        # Start AppWatcher
+        await self.app_watcher.start()
+        decky.logger.info("AppWatcher started for automatic profile switching")
+        
+        # 12. Initialize GPU controllers
+        self.gpu_unlocker = GpuUnlocker()
+        self.gpu_curve = GpuCurveController()
+        decky.logger.info("GPU controllers initialized")
+        
+        # 13. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -245,6 +305,29 @@ class Plugin:
         """Stop running autotune."""
         return await self.rpc.stop_autotune()
 
+    # ==================== Silicon Binning ====================
+    # Requirements: 8.1, 8.2, 8.3, 8.4, 10.1, 10.2, 10.3, 10.4, 10.5
+    
+    async def start_binning(self, config):
+        """Start silicon binning process."""
+        return await self.rpc.start_binning(config)
+    
+    async def stop_binning(self):
+        """Stop running binning session."""
+        return await self.rpc.stop_binning()
+    
+    async def get_binning_status(self):
+        """Get current binning status."""
+        return await self.rpc.get_binning_status()
+    
+    async def get_binning_config(self):
+        """Get current binning configuration."""
+        return await self.rpc.get_binning_config()
+    
+    async def update_binning_config(self, config):
+        """Update binning configuration."""
+        return await self.rpc.update_binning_config(config)
+
     # ==================== Tests (delegated to RPC) ====================
     
     async def check_binaries(self):
@@ -258,6 +341,17 @@ class Plugin:
     async def get_test_history(self):
         """Get last 10 test results."""
         return await self.rpc.get_test_history()
+    
+    # ==================== Benchmark ====================
+    # Requirements: 7.1, 7.4, 7.5
+    
+    async def run_benchmark(self):
+        """Run 10-second performance benchmark."""
+        return await self.rpc.run_benchmark()
+    
+    async def get_benchmark_history(self):
+        """Get last 20 benchmark results with comparisons."""
+        return await self.rpc.get_benchmark_history()
 
     # ==================== Preset Management (delegated to RPC) ====================
 
@@ -285,6 +379,37 @@ class Plugin:
     async def import_presets(self, json_data):
         """Import presets from JSON."""
         return await self.rpc.import_presets(json_data)
+
+    # ==================== Profile Management (Per-Game Profiles) ====================
+    # Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 5.2, 5.3, 5.4
+    
+    async def create_profile(self, profile_data):
+        """Create a new game profile."""
+        return await self.rpc.create_profile(profile_data)
+    
+    async def get_profiles(self):
+        """Get all game profiles."""
+        return await self.rpc.get_profiles()
+    
+    async def update_profile(self, app_id, updates):
+        """Update an existing game profile."""
+        return await self.rpc.update_profile(app_id, updates)
+    
+    async def delete_profile(self, app_id):
+        """Delete a game profile."""
+        return await self.rpc.delete_profile(app_id)
+    
+    async def create_profile_for_current_game(self):
+        """Create a profile for the currently running game."""
+        return await self.rpc.create_profile_for_current_game()
+    
+    async def export_profiles(self):
+        """Export all profiles to JSON file."""
+        return await self.rpc.export_profiles()
+    
+    async def import_profiles(self, json_data, strategy="skip"):
+        """Import profiles from JSON."""
+        return await self.rpc.import_profiles(json_data, strategy)
 
     # ==================== Diagnostics (delegated to RPC) ====================
     
@@ -579,3 +704,230 @@ class Plugin:
         
         # Delegate to standard apply
         return await self.apply_undervolt(clamped_cores, timeout)
+
+    # ==================== GPU Undervolt (Experimental) ====================
+    
+    async def check_gpu_unlock_status(self):
+        """Check if GPU OverDrive is unlocked.
+        
+        Returns:
+            Dictionary with:
+            - unlocked: bool (currently active in kernel)
+            - configured: bool (set in GRUB, needs reboot)
+            - supported: bool (voltage curve available)
+        """
+        decky.logger.info("Checking GPU unlock status...")
+        
+        unlocked = await self.gpu_unlocker.is_unlocked()
+        configured = await self.gpu_unlocker.is_configured()
+        supported = await self.gpu_curve.is_supported()
+        
+        return {
+            "unlocked": unlocked,
+            "configured": configured,
+            "supported": supported,
+            "needs_reboot": configured and not unlocked
+        }
+    
+    async def unlock_gpu_overdrive(self):
+        """Unlock GPU OverDrive by modifying GRUB config.
+        
+        WARNING: This modifies system boot configuration!
+        Requires reboot to take effect.
+        
+        Returns:
+            Dictionary with success status and message
+        """
+        decky.logger.warning("⚠️  GPU OverDrive unlock requested")
+        
+        # Check if already unlocked
+        if await self.gpu_unlocker.is_unlocked():
+            return {
+                "success": True,
+                "message": "GPU OverDrive is already unlocked",
+                "needs_reboot": False
+            }
+        
+        # Apply unlock
+        success, error = await self.gpu_unlocker.apply_unlock()
+        
+        if success:
+            return {
+                "success": True,
+                "message": "GPU OverDrive unlock applied. REBOOT REQUIRED!",
+                "needs_reboot": True
+            }
+        else:
+            return {
+                "success": False,
+                "error": error,
+                "needs_reboot": False
+            }
+    
+    async def lock_gpu_overdrive(self):
+        """Remove GPU OverDrive unlock (restore defaults).
+        
+        Returns:
+            Dictionary with success status and message
+        """
+        decky.logger.info("Removing GPU OverDrive unlock...")
+        
+        success, error = await self.gpu_unlocker.remove_unlock()
+        
+        if success:
+            return {
+                "success": True,
+                "message": "GPU OverDrive lock restored. REBOOT REQUIRED!",
+                "needs_reboot": True
+            }
+        else:
+            return {
+                "success": False,
+                "error": error,
+                "needs_reboot": False
+            }
+    
+    async def get_gpu_curve(self):
+        """Get current GPU voltage curve.
+        
+        Returns:
+            Dictionary with curve points, range, and raw data
+        """
+        decky.logger.info("Reading GPU voltage curve...")
+        
+        curve = await self.gpu_curve.get_curve()
+        
+        if curve is None:
+            return {
+                "success": False,
+                "error": "Failed to read voltage curve"
+            }
+        
+        # Convert CurvePoint objects to dicts for JSON serialization
+        points_dict = []
+        if curve.get("points"):
+            for point in curve["points"]:
+                points_dict.append({
+                    "index": point.index,
+                    "frequency_mhz": point.frequency_mhz,
+                    "voltage_mv": point.voltage_mv
+                })
+        
+        range_dict = None
+        if curve.get("range"):
+            r = curve["range"]
+            range_dict = {
+                "sclk_min_mhz": r.sclk_min_mhz,
+                "sclk_max_mhz": r.sclk_max_mhz,
+                "vddc_min_mv": r.vddc_min_mv,
+                "vddc_max_mv": r.vddc_max_mv
+            }
+        
+        return {
+            "success": True,
+            "supported": curve.get("supported", False),
+            "points": points_dict,
+            "range": range_dict,
+            "raw": curve.get("raw", "")
+        }
+    
+    async def apply_gpu_voltage_offset(self, offset_mv):
+        """Apply voltage offset to GPU.
+        
+        Args:
+            offset_mv: Voltage offset in millivolts (negative for undervolt)
+            
+        Returns:
+            Dictionary with success status
+        """
+        decky.logger.warning(f"⚠️  Applying GPU voltage offset: {offset_mv}mV")
+        
+        # Check if supported
+        if not await self.gpu_curve.is_supported():
+            return {
+                "success": False,
+                "error": "GPU voltage control not supported. Try unlocking GPU OverDrive first."
+            }
+        
+        # Apply offset
+        success, error = await self.gpu_curve.set_voltage_offset(offset_mv)
+        
+        if success:
+            decky.logger.info(f"✅ GPU voltage offset applied: {offset_mv}mV")
+            return {
+                "success": True,
+                "message": f"GPU voltage offset applied: {offset_mv}mV"
+            }
+        else:
+            decky.logger.error(f"Failed to apply GPU voltage offset: {error}")
+            return {
+                "success": False,
+                "error": error
+            }
+    
+    async def reset_gpu_curve(self):
+        """Reset GPU voltage curve to defaults.
+        
+        Returns:
+            Dictionary with success status
+        """
+        decky.logger.info("Resetting GPU voltage curve...")
+        
+        success, error = await self.gpu_curve.reset()
+        
+        if success:
+            return {
+                "success": True,
+                "message": "GPU voltage curve reset to defaults"
+            }
+        else:
+            return {
+                "success": False,
+                "error": error
+            }
+
+    # ==================== Fan Control ====================
+    # Requirements: Fan Control Integration (Phase 4)
+    
+    async def get_fan_config(self):
+        """Get current fan control configuration."""
+        return await self.rpc.get_fan_config()
+    
+    async def set_fan_config(self, config):
+        """Update fan control configuration."""
+        return await self.rpc.set_fan_config(config)
+    
+    async def set_fan_curve(self, points):
+        """Set custom fan curve points."""
+        return await self.rpc.set_fan_curve(points)
+    
+    async def set_fan_mode(self, mode):
+        """Set fan control mode (default, custom, fixed)."""
+        return await self.rpc.set_fan_mode(mode)
+    
+    async def enable_fan_control(self, enabled):
+        """Enable or disable fan control."""
+        return await self.rpc.enable_fan_control(enabled)
+
+    # ==================== Plugin Lifecycle ====================
+    
+    async def _unload(self):
+        """Clean up resources when plugin is unloaded.
+        
+        Stops AppWatcher and any other background tasks.
+        
+        Requirements: 4.6
+        """
+        decky.logger.info("Unloading DeckTune plugin...")
+        
+        # Stop AppWatcher
+        if self.app_watcher and self.app_watcher.is_running():
+            await self.app_watcher.stop()
+            decky.logger.info("AppWatcher stopped")
+        
+        # Stop dynamic controller if running
+        if self.dynamic_controller and self.dynamic_controller.is_running():
+            await self.dynamic_controller.stop()
+            decky.logger.info("DynamicController stopped")
+        
+        decky.logger.info("DeckTune plugin unloaded")

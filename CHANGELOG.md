@@ -2,6 +2,137 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.0.0] - 2026-01-16
+
+### Major Changes - Intelligent Automation Features
+
+DeckTune 3.0 transforms the plugin from a manual tuning tool into an intelligent, adaptive system with four major automation features.
+
+#### Low-Level Fan Control (NEW!)
+- **Direct hwmon sysfs control** via Rust daemon (gymdeck3)
+- **Custom fan curves** with visual SVG editor and drag-and-drop points
+- **Temperature-based interpolation** with smooth transitions
+- **Hysteresis control** prevents rapid speed changes (1-10°C configurable)
+- **Safety overrides**: 90°C+ forces 100% PWM, 85°C+ enforces minimum 80%
+- **Zero RPM mode** allows fan to stop below 45°C (optional, with warning)
+- **Fail-safe Drop trait** returns control to BIOS on daemon exit/crash
+- **Three modes**: Default (BIOS), Custom (curve), Fixed (constant speed)
+
+**Implementation:**
+- New `fan/` module in gymdeck3 Rust daemon:
+  - `hwmon.rs`: Low-level sysfs I/O for `/sys/class/hwmon`
+  - `controller.rs`: Curve calculation, smoothing, hysteresis
+  - `safety.rs`: Hard limits and Drop trait for BIOS fallback
+- Python backend integration:
+  - `FanConfig`, `FanCurvePoint`, `FanStatus` dataclasses
+  - `DynamicConfig.fan_config` field with validation
+  - RPC methods: `get_fan_config()`, `set_fan_config()`, `set_fan_curve()`, `set_fan_mode()`, `enable_fan_control()`
+- Frontend `FanCurveEditor.tsx` component:
+  - Interactive SVG graph with drag-and-drop points
+  - Click to add, drag to move, double-click to remove
+  - Live temperature/RPM display
+  - Safety override indicator
+- CLI arguments: `--fan-control`, `--fan-mode`, `--fan-curve`, `--fan-zero-rpm`, `--fan-hysteresis`
+
+#### Automated Silicon Binning
+- **Automatic limit discovery** through iterative stress testing
+- **Crash recovery** with persistent state management
+- **Safety guarantees** with boot recovery and rollback
+- **Configurable parameters**: test duration (30-300s), step size (1-10mV), start value (0 to -20mV)
+- **Smart recommendations** with 5mV safety margin
+- **Progress tracking** with real-time updates and ETA
+- **Cancellation support** with instant rollback to previous values
+
+**Implementation:**
+- New `BinningEngine` class in `backend/tuning/binning.py`
+- State persistence to `/tmp/decktune_binning_state.json`
+- Extended `SafetyManager` for binning state management
+- RPC methods: `start_binning()`, `stop_binning()`, `get_binning_status()`, `get_binning_config()`, `update_binning_config()`
+- UI integration in Wizard Mode with progress display and result summary
+
+#### Per-Game Profiles with Automatic Switching
+- **Automatic profile switching** based on running Steam game
+- **Quick-create** profiles from current settings while game is running
+- **Global default** fallback for games without specific profiles
+- **Import/Export** functionality for sharing and backup
+- **Seamless transitions** within 500ms on game launch
+- **AppID detection** via Steam appmanifest files and process scanning
+
+**Implementation:**
+- New `ProfileManager` class in `backend/dynamic/profile_manager.py`
+- New `AppWatcher` class in `backend/platform/appwatcher.py` for game detection
+- Profile storage in Decky settings with version metadata
+- RPC methods: `create_profile()`, `get_profiles()`, `update_profile()`, `delete_profile()`, `create_profile_for_current_game()`, `export_profiles()`, `import_profiles()`
+- UI integration in Expert Mode Presets tab with profile list and management
+
+#### Built-in Benchmarking System
+- **Quick 10-second benchmarks** using stress-ng matrix operations
+- **Automatic comparison** with previous results
+- **History tracking** of last 20 benchmark runs
+- **Performance metrics** with score, duration, and undervolt values
+- **Before/after testing** to measure tuning impact
+
+**Implementation:**
+- New `BenchmarkRunner` class in `backend/tuning/benchmark.py`
+- Benchmark history storage in Decky settings
+- RPC methods: `run_benchmark()`, `get_benchmark_history()`
+- UI integration in both Wizard and Expert modes
+
+#### Enhanced Visualization
+- **Dual Y-axes** for CPU load and undervolt values
+- **60-second rolling window** with 1-second resolution
+- **Profile change markers** showing when profiles switch
+- **Static line display** for manual mode
+- **Real-time updates** with smooth animations
+
+**Implementation:**
+- Extended `LoadGraph` component in `src/components/LoadGraph.tsx`
+- New `GraphDataPoint` interface with profile tracking
+- Event listeners for profile changes and binning progress
+
+### Testing & Quality
+- **Property-based testing** for new features
+  - 44 new correctness properties (hypothesis)
+  - Comprehensive coverage of binning, profiles, and benchmarking
+- **Integration tests** for complete workflows
+  - Binning crash recovery scenarios
+  - Profile auto-switching on game launch
+  - Benchmark before/after comparisons
+
+### API Changes
+- **New RPC methods** (backward compatible):
+  - Binning: `start_binning()`, `stop_binning()`, `get_binning_status()`, `get_binning_config()`, `update_binning_config()`
+  - Profiles: `create_profile()`, `get_profiles()`, `update_profile()`, `delete_profile()`, `create_profile_for_current_game()`, `export_profiles()`, `import_profiles()`
+  - Benchmarking: `run_benchmark()`, `get_benchmark_history()`
+- **New events**:
+  - `binning_progress`: Real-time binning updates
+  - `binning_complete`: Binning completion with results
+  - `profile_changed`: Profile switch notifications
+
+### Breaking Changes
+- **None** - All changes are backward compatible
+- Existing presets and settings are preserved
+- No migration required
+
+### Migration Notes
+- **Automatic migration** from v2.x settings format
+- **Profile storage** uses new format but old presets remain accessible
+- **Binning state** is ephemeral and doesn't affect existing configurations
+- **Benchmark history** starts fresh (no historical data migration)
+
+### Technical Improvements
+- Modular architecture with clear separation of concerns
+- Comprehensive error handling for all new features
+- Persistent state management for crash recovery
+- Event-driven UI updates for responsive feedback
+- Type-safe TypeScript interfaces for all new data structures
+
+### Documentation
+- Updated README with new feature sections
+- Added user guides for binning, profiles, and benchmarking
+- Updated architecture diagrams
+- Comprehensive inline code documentation
+
 ## [2.0.0] - 2026-01-15
 
 ### Major Changes - Dynamic Mode Refactor (gymdeck3)
@@ -48,49 +179,49 @@ All notable changes to DeckTune will be documented in this file.
 ## [1.0.0] - 2026-01-15
 
 ### Added
-- **Autotune Engine** — автоматический поиск оптимальных значений андервольта
-  - Quick mode: быстрый поиск с шагом 5 и 30-секундными тестами
-  - Thorough mode: точный поиск с бинарным уточнением и 2-минутными тестами
-- **Platform Detection** — автоматическое определение модели Steam Deck
-  - LCD (Jupiter): лимит -30
-  - OLED (Galileo): лимит -35
-  - Unknown: консервативный лимит -25
-- **Safety System** — многоуровневая система безопасности
-  - Watchdog с heartbeat мониторингом
-  - Автоматический откат при зависании
-  - Boot recovery при перезагрузке во время тюнинга
+- **Autotune Engine** — automatic discovery of optimal undervolt values
+  - Quick mode: fast search with step 5 and 30-second tests
+  - Thorough mode: precise search with binary refinement and 2-minute tests
+- **Platform Detection** — automatic Steam Deck model detection
+  - LCD (Jupiter): limit -30
+  - OLED (Galileo): limit -35
+  - Unknown: conservative limit -25
+- **Safety System** — multi-level protection system
+  - Watchdog with heartbeat monitoring
+  - Automatic rollback on freeze
+  - Boot recovery on reboot during tuning
   - LKG (Last Known Good) persistence
-  - Panic Disable кнопка
-- **Stress Test Suite** — встроенные стресс-тесты
+  - Panic Disable button
+- **Stress Test Suite** — built-in stress tests
   - CPU Quick/Long (stress-ng)
   - RAM Quick/Thorough (memtester)
   - Combo (CPU + RAM)
-- **Preset Management** — управление пресетами
-  - Глобальные и per-game пресеты
-  - Автоприменение при запуске игры
-  - Экспорт/импорт в JSON
-- **Wizard Mode** — простой интерфейс для новичков
-  - 3-шаговый мастер настройки
-  - Выбор цели (Quiet, Balanced, Max Battery, Max Performance)
-- **Expert Mode** — расширенный интерфейс
-  - Manual: ручная настройка ядер
-  - Presets: управление пресетами
-  - Tests: запуск тестов
-  - Diagnostics: логи и экспорт
-- **Diagnostics Export** — экспорт диагностики одной кнопкой
-  - Логи плагина
-  - Конфигурация и LKG
-  - Системная информация
+- **Preset Management** — preset management
+  - Global and per-game presets
+  - Auto-apply on game launch
+  - Export/import to JSON
+- **Wizard Mode** — simple interface for beginners
+  - 3-step setup wizard
+  - Goal selection (Quiet, Balanced, Max Battery, Max Performance)
+- **Expert Mode** — advanced interface
+  - Manual: per-core value adjustment
+  - Presets: preset management
+  - Tests: run tests manually
+  - Diagnostics: logs and export
+- **Diagnostics Export** — one-click diagnostics export
+  - Plugin logs
+  - Configuration and LKG
+  - System information
   - dmesg
-- **Dynamic Mode** — интеграция с gymdeck3
-  - Автоматическая подстройка под нагрузку
-  - Стратегии: Default, Aggressive, Manual
+- **Dynamic Mode** — integration with gymdeck3
+  - Automatic adjustment based on load
+  - Strategies: Default, Aggressive, Manual
 
 ### Technical
-- Модульная архитектура backend (core, platform, tuning, api)
-- Property-based testing с hypothesis (16 свойств, 91 тест)
-- TypeScript/React frontend с Decky UI
-- Python 3.10+ backend с type hints
+- Modular backend architecture (core, platform, tuning, api)
+- Property-based testing with hypothesis (16 properties, 91 tests)
+- TypeScript/React frontend with Decky UI
+- Python 3.10+ backend with type hints
 
 ## [0.x] - Previous Versions
 

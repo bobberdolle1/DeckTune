@@ -12,8 +12,12 @@
 
 - **Auto Platform Detection** — LCD (Jupiter) or OLED (Galileo) with appropriate limits
 - **Autotune** — automatic discovery of optimal values for your specific chip
+- **Automated Silicon Binning** — discover your chip's maximum stable undervolt automatically
+- **Per-Game Profiles** — automatic profile switching based on running game
+- **Low-Level Fan Control** — custom fan curves with visual editor and safety overrides
 - **Safety System** — watchdog, automatic rollback on freeze, LKG (Last Known Good)
 - **Built-in Stress Tests** — CPU, RAM, Combo for stability verification
+- **Benchmarking** — quick performance testing with before/after comparison
 - **Presets** — global and per-game settings with auto-apply
 - **Diagnostics** — one-click export of logs and system info
 - **Dynamic Mode** — automatic adjustment based on load (gymdeck3)
@@ -40,6 +44,8 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 4. Install the plugin from the archive
 
 ### Usage
+
+**📖 For detailed guides, see [User Guide](docs/USER_GUIDE.md)**
 
 #### Wizard Mode (for beginners)
 
@@ -82,6 +88,139 @@ Dynamic Mode automatically adjusts undervolt values based on real-time CPU load,
 #### Panic Disable Button
 
 The red "Panic Disable" button is always available — instantly resets all values to 0.
+
+### Automated Silicon Binning
+
+Silicon Binning automatically discovers your chip's maximum stable undervolt through iterative testing with crash recovery.
+
+**How it works:**
+1. Starts at -10mV and tests progressively lower values in -5mV steps
+2. Each iteration runs a 60-second stress test (CPU + memory)
+3. State is persisted before each test for crash recovery
+4. If system crashes, boot recovery detects it and restores last stable value
+5. Recommends a safe value with 5mV safety margin
+
+**Usage (Wizard Mode):**
+1. Click "Find Max Undervolt" button
+2. Wait for binning to complete (typically 5-15 minutes)
+3. Review discovered maximum and recommended value
+4. Click "Apply Recommended" to use the safe value
+
+**Configuration (Advanced):**
+- Test Duration: 30-300 seconds per iteration (default: 60s)
+- Step Size: 1-10mV increments (default: 5mV)
+- Start Value: 0 to -20mV starting point (default: -10mV)
+
+**Safety Features:**
+- Persistent state for crash recovery
+- Maximum iteration limit (20 attempts)
+- Platform limit enforcement
+- Consecutive failure abort (3 failures)
+- Cancellation with instant rollback
+
+### Per-Game Profiles
+
+Automatically switch undervolt settings based on the currently running Steam game.
+
+**Features:**
+- **Automatic Detection**: Monitors Steam's active game via AppID
+- **Quick-Create**: Save current settings as profile for active game
+- **Global Default**: Fallback settings when no game-specific profile exists
+- **Import/Export**: Share profiles with other users or backup settings
+- **Profile Switching**: Seamless transitions within 500ms
+
+**Usage:**
+1. Launch a game and tune settings to your preference
+2. Click "Save as Profile for [Game Name]" in Expert Mode
+3. Profile automatically applies whenever you launch that game
+4. Create profiles for different games (performance vs battery life)
+
+**Profile Management (Expert Mode → Presets Tab):**
+- View all profiles with game names and settings
+- Edit existing profiles
+- Delete profiles (reverts to global default)
+- Export all profiles to JSON file
+- Import profiles with conflict resolution
+
+**Detection Methods:**
+- Primary: Steam appmanifest files (`~/.steam/steam/steamapps/`)
+- Fallback: Process scanning (`/proc` for `-applaunch` argument)
+- Polling: 2-second intervals with 5-second debouncing
+
+### Benchmarking
+
+Quick performance testing to measure the impact of your undervolt settings.
+
+**Features:**
+- **10-Second Tests**: Fast stress-ng matrix operations
+- **Score Comparison**: Automatic before/after comparison
+- **History Tracking**: Last 20 benchmark results saved
+- **Undervolt Recording**: Tracks which settings were used for each test
+
+**Usage:**
+1. Run benchmark with current settings (baseline)
+2. Adjust undervolt values
+3. Run benchmark again
+4. View percentage improvement/degradation
+5. Compare any two results from history
+
+**Benchmark Output:**
+- Score: Operations per second (bogo ops/s)
+- Duration: Actual test time
+- Cores Used: Undervolt values during test
+- Comparison: Score difference and percentage change
+
+**Available in both Wizard and Expert modes.**
+
+### Low-Level Fan Control
+
+DeckTune 3.0 introduces direct fan control via hwmon sysfs, integrated into the gymdeck3 Rust daemon.
+
+**Features:**
+- **Custom Fan Curves**: Visual SVG editor with drag-and-drop points
+- **Three Modes**: Default (BIOS), Custom (curve), Fixed (constant speed)
+- **Temperature Interpolation**: Smooth transitions between curve points
+- **Hysteresis Control**: Prevents rapid speed changes (1-10°C configurable)
+- **Safety Overrides**: 90°C+ forces 100% PWM, 85°C+ enforces minimum 80%
+- **Zero RPM Mode**: Allow fan to stop below 45°C (optional, with warning)
+- **Fail-Safe**: Drop trait returns control to BIOS on daemon exit/crash
+
+**Usage (Expert Mode → Fan Control):**
+1. Enable "Fan Control" toggle
+2. Select mode: Default, Custom, or Fixed
+3. For Custom mode, edit the curve on the SVG graph:
+   - Click to add points
+   - Drag points to adjust
+   - Double-click to remove points
+4. Configure hysteresis (2-5°C recommended)
+5. Optionally enable Zero RPM (use with caution!)
+6. Save settings
+
+**Example Curve:**
+```
+40°C → 20%   (quiet at idle)
+50°C → 30%   (light load)
+60°C → 45%   (medium load)
+70°C → 60%   (gaming)
+80°C → 80%   (heavy gaming)
+85°C → 100%  (maximum cooling)
+```
+
+**Safety Features:**
+- Temperature ≥ 90°C: Forces 100% PWM (ignores curve)
+- Temperature ≥ 85°C: Minimum 80% PWM enforced
+- Zero RPM only allowed below 45°C when explicitly enabled
+- Drop trait automatically returns control to BIOS on exit
+
+**CLI Arguments (gymdeck3):**
+```bash
+gymdeck3 balanced 100000 \
+  --fan-control \
+  --fan-mode custom \
+  --fan-curve 40:20 --fan-curve 60:50 --fan-curve 80:100 \
+  --fan-hysteresis 3 \
+  --fan-zero-rpm  # optional, enables Zero RPM
+```
 
 ### Architecture
 
@@ -241,8 +380,12 @@ MIT License — see [LICENSE](LICENSE)
 
 - **Автоматическое определение модели** — LCD (Jupiter) или OLED (Galileo) с соответствующими лимитами
 - **Autotune** — автоматический поиск оптимальных значений для вашего конкретного чипа
+- **Автоматический Silicon Binning** — автоматическое определение максимального стабильного андервольта
+- **Профили для игр** — автоматическое переключение профилей в зависимости от запущенной игры
+- **Низкоуровневое управление кулером** — кастомные кривые с визуальным редактором и защитой от перегрева
 - **Система безопасности** — watchdog, автоматический откат при зависании, LKG (Last Known Good)
 - **Встроенные стресс-тесты** — CPU, RAM, Combo для проверки стабильности
+- **Бенчмаркинг** — быстрое тестирование производительности с сравнением до/после
 - **Пресеты** — глобальные и per-game настройки с автоприменением
 - **Диагностика** — экспорт логов и системной информации одной кнопкой
 - **Динамический режим** — автоматическая подстройка под нагрузку (gymdeck3)
@@ -269,6 +412,8 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 4. Установите плагин из архива
 
 ### Использование
+
+**📖 Подробные руководства см. в [User Guide](docs/USER_GUIDE.md)**
 
 #### Wizard Mode (для новичков)
 
@@ -311,6 +456,89 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 #### Кнопка Panic Disable
 
 Красная кнопка "Panic Disable" всегда доступна — мгновенно сбрасывает все значения в 0.
+
+### Автоматический Silicon Binning
+
+Silicon Binning автоматически определяет максимальный стабильный андервольт вашего чипа через итеративное тестирование с восстановлением после сбоев.
+
+**Как это работает:**
+1. Начинает с -10mV и тестирует постепенно более низкие значения с шагом -5mV
+2. Каждая итерация запускает 60-секундный стресс-тест (CPU + память)
+3. Состояние сохраняется перед каждым тестом для восстановления после сбоя
+4. Если система зависает, восстановление при загрузке обнаруживает это и восстанавливает последнее стабильное значение
+5. Рекомендует безопасное значение с запасом 5mV
+
+**Использование (Wizard Mode):**
+1. Нажмите кнопку "Find Max Undervolt"
+2. Дождитесь завершения binning (обычно 5-15 минут)
+3. Просмотрите обнаруженный максимум и рекомендуемое значение
+4. Нажмите "Apply Recommended" для использования безопасного значения
+
+**Конфигурация (Расширенные настройки):**
+- Длительность теста: 30-300 секунд на итерацию (по умолчанию: 60s)
+- Размер шага: 1-10mV приращения (по умолчанию: 5mV)
+- Начальное значение: от 0 до -20mV (по умолчанию: -10mV)
+
+**Функции безопасности:**
+- Постоянное состояние для восстановления после сбоя
+- Максимальный лимит итераций (20 попыток)
+- Соблюдение лимитов платформы
+- Прерывание при последовательных сбоях (3 сбоя)
+- Отмена с мгновенным откатом
+
+### Профили для игр
+
+Автоматическое переключение настроек андервольта в зависимости от текущей запущенной игры Steam.
+
+**Возможности:**
+- **Автоматическое определение**: Мониторит активную игру Steam через AppID
+- **Быстрое создание**: Сохранение текущих настроек как профиля для активной игры
+- **Глобальный по умолчанию**: Резервные настройки, когда нет профиля для конкретной игры
+- **Импорт/Экспорт**: Обмен профилями с другими пользователями или резервное копирование настроек
+- **Переключение профилей**: Плавные переходы в течение 500ms
+
+**Использование:**
+1. Запустите игру и настройте параметры по своему усмотрению
+2. Нажмите "Save as Profile for [Game Name]" в Expert Mode
+3. Профиль автоматически применяется при каждом запуске этой игры
+4. Создавайте профили для разных игр (производительность vs время работы)
+
+**Управление профилями (Expert Mode → вкладка Presets):**
+- Просмотр всех профилей с названиями игр и настройками
+- Редактирование существующих профилей
+- Удаление профилей (возврат к глобальному по умолчанию)
+- Экспорт всех профилей в JSON файл
+- Импорт профилей с разрешением конфликтов
+
+**Методы определения:**
+- Основной: Файлы appmanifest Steam (`~/.steam/steam/steamapps/`)
+- Резервный: Сканирование процессов (`/proc` для аргумента `-applaunch`)
+- Опрос: Интервалы 2 секунды с 5-секундным debouncing
+
+### Бенчмаркинг
+
+Быстрое тестирование производительности для измерения влияния настроек андервольта.
+
+**Возможности:**
+- **10-секундные тесты**: Быстрые матричные операции stress-ng
+- **Сравнение результатов**: Автоматическое сравнение до/после
+- **Отслеживание истории**: Сохранение последних 20 результатов бенчмарка
+- **Запись андервольта**: Отслеживание настроек, использованных для каждого теста
+
+**Использование:**
+1. Запустите бенчмарк с текущими настройками (базовая линия)
+2. Настройте значения андервольта
+3. Запустите бенчмарк снова
+4. Просмотрите процентное улучшение/ухудшение
+5. Сравните любые два результата из истории
+
+**Вывод бенчмарка:**
+- Оценка: Операций в секунду (bogo ops/s)
+- Длительность: Фактическое время теста
+- Использованные ядра: Значения андервольта во время теста
+- Сравнение: Разница в оценке и процентное изменение
+
+**Доступно в режимах Wizard и Expert.**
 
 ### Архитектура
 

@@ -13,5 +13,7 @@ export {
   useTests,
   usePlatformInfo,
   useBinaries,
+  useBinning,
+  useProfiles,
   initialState,
 } from "./DeckTuneContext";

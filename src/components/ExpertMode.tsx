@@ -44,9 +44,10 @@ import {
   FaExclamationCircle,
   FaRocket,
 } from "react-icons/fa";
-import { useDeckTune, usePlatformInfo, useTests, useBinaries } from "../context";
-import { Preset, TestHistoryEntry, TestResult } from "../api/types";
+import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
+import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
 import { LoadGraph } from "./LoadGraph";
+import { PresetsTabNew } from "./PresetsTabNew";
 
 /**
  * Tab type for Expert Mode navigation.
@@ -454,6 +455,18 @@ const ManualTab: FC = () => {
   };
 
   /**
+   * Run benchmark - 10 second stress test.
+   * Requirements: 7.1, 7.4
+   */
+  const handleRunBenchmark = async () => {
+    try {
+      await api.runBenchmark();
+    } catch (e) {
+      console.error("Benchmark failed:", e);
+    }
+  };
+
+  /**
    * Get color for value indicator.
    */
   const getValueColor = (value: number): string => {
@@ -808,6 +821,173 @@ const ManualTab: FC = () => {
         </PanelSectionRow>
       )}
 
+      {/* Run Benchmark button - Requirements: 7.1, 7.4 */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleRunBenchmark}
+          disabled={isApplying || isTesting || isTuning || state.isBenchmarkRunning}
+          style={{ marginTop: "8px" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff9800" }}>
+            {state.isBenchmarkRunning ? (
+              <>
+                <FaSpinner className="spin" />
+                <span>Running Benchmark...</span>
+              </>
+            ) : (
+              <>
+                <FaVial />
+                <span>Run Benchmark</span>
+              </>
+            )}
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {/* Benchmark Progress - Requirements: 7.4 */}
+      {state.isBenchmarkRunning && (
+        <PanelSectionRow>
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: "#23262e",
+              borderRadius: "8px",
+              marginTop: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <FaSpinner className="spin" style={{ color: "#ff9800" }} />
+              <span style={{ fontWeight: "bold" }}>Running benchmark...</span>
+            </div>
+            <ProgressBarWithInfo
+              label="Benchmark Progress"
+              description="Testing performance with stress-ng"
+              nProgress={50}
+              sOperationText="~10 seconds"
+            />
+            <div style={{ fontSize: "11px", color: "#8b929a", marginTop: "8px", textAlign: "center" }}>
+              All tuning controls are disabled during benchmark
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
+      {/* Benchmark Result Display - Requirements: 7.3, 7.5 */}
+      {state.lastBenchmarkResult && !state.isBenchmarkRunning && (
+        <PanelSectionRow>
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: "#1b5e20",
+              borderRadius: "8px",
+              marginTop: "8px",
+              borderLeft: "4px solid #4caf50",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ fontWeight: "bold", fontSize: "14px" }}>Latest Benchmark</span>
+              <FaCheck style={{ color: "#4caf50" }} />
+            </div>
+            
+            {/* Score */}
+            <div style={{ marginBottom: "8px" }}>
+              <div style={{ fontSize: "11px", color: "#a5d6a7" }}>Score</div>
+              <div style={{ fontSize: "20px", fontWeight: "bold", color: "#4caf50" }}>
+                {state.lastBenchmarkResult.score.toFixed(2)} bogo ops/s
+              </div>
+            </div>
+
+            {/* Undervolt values used */}
+            <div style={{ marginBottom: "8px" }}>
+              <div style={{ fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" }}>Undervolt Values Used</div>
+              <div style={{ fontSize: "12px", color: "#c8e6c9" }}>
+                [{state.lastBenchmarkResult.cores_used.join(", ")}] mV
+              </div>
+            </div>
+
+            {/* Comparison with previous run */}
+            {state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
+              const current = state.benchmarkHistory[0];
+              const previous = state.benchmarkHistory[1];
+              const scoreDiff = current.score - previous.score;
+              const percentChange = ((scoreDiff / previous.score) * 100);
+              const improvement = scoreDiff > 0;
+              
+              return (
+                <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #2e7d32" }}>
+                  <div style={{ fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" }}>
+                    Comparison with Previous Run
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {improvement ? (
+                      <FaCheck style={{ color: "#4caf50" }} />
+                    ) : (
+                      <FaTimes style={{ color: "#ff6b6b" }} />
+                    )}
+                    <span style={{ fontSize: "13px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" }}>
+                      {improvement ? "+" : ""}{percentChange.toFixed(2)}%
+                    </span>
+                    <span style={{ fontSize: "11px", color: "#a5d6a7" }}>
+                      ({improvement ? "+" : ""}{scoreDiff.toFixed(2)} bogo ops/s)
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Timestamp */}
+            <div style={{ fontSize: "10px", color: "#81c784", marginTop: "8px" }}>
+              {new Date(state.lastBenchmarkResult.timestamp).toLocaleString()}
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
+      {/* Benchmark History - Requirements: 7.5 */}
+      {state.benchmarkHistory && state.benchmarkHistory.length > 0 && (
+        <>
+          <PanelSectionRow>
+            <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
+              Benchmark History (Last 10)
+            </div>
+          </PanelSectionRow>
+
+          {state.benchmarkHistory.slice(0, 10).map((result, index) => (
+            <PanelSectionRow key={index}>
+              <div
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#23262e",
+                  borderRadius: "6px",
+                  marginBottom: "6px",
+                  borderLeft: `3px solid #4caf50`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: "bold", fontSize: "13px", color: "#4caf50" }}>
+                      {result.score.toFixed(2)} bogo ops/s
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#8b929a", marginTop: "2px" }}>
+                      Cores: [{result.cores_used.join(", ")}] mV
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "11px", color: "#8b929a" }}>
+                      {new Date(result.timestamp).toLocaleDateString()}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#8b929a" }}>
+                      {new Date(result.timestamp).toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PanelSectionRow>
+          ))}
+        </>
+      )}
+
       {/* Current status */}
       <PanelSectionRow>
         <div
@@ -845,282 +1025,10 @@ const ManualTab: FC = () => {
 
 
 /**
- * Presets tab component.
- * Requirements: 7.3
- * 
- * Features:
- * - Preset list with edit/delete/export
- * - Import preset button
+ * Presets tab component - now uses PresetsTabNew with profile management.
+ * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
  */
-const PresetsTab: FC = () => {
-  const { state, api } = useDeckTune();
-  const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importJson, setImportJson] = useState("");
-  const [importError, setImportError] = useState<string | null>(null);
-
-  /**
-   * Handle preset deletion.
-   */
-  const handleDelete = async (appId: number) => {
-    await api.deletePreset(appId);
-  };
-
-  /**
-   * Handle preset export (single preset).
-   */
-  const handleExportSingle = async (preset: Preset) => {
-    const json = JSON.stringify([preset], null, 2);
-    // In a real implementation, this would trigger a file download
-    console.log("Export preset:", json);
-    // For now, copy to clipboard simulation
-    alert(`Preset exported:\n${json}`);
-  };
-
-  /**
-   * Handle export all presets.
-   */
-  const handleExportAll = async () => {
-    const json = await api.exportPresets();
-    console.log("Export all presets:", json);
-    alert(`All presets exported:\n${json}`);
-  };
-
-  /**
-   * Handle import presets.
-   */
-  const handleImport = async () => {
-    setImportError(null);
-    try {
-      const result = await api.importPresets(importJson);
-      if (result.success) {
-        setIsImporting(false);
-        setImportJson("");
-        alert(`Successfully imported ${result.imported_count} preset(s)`);
-      } else {
-        setImportError(result.error || "Import failed");
-      }
-    } catch (e) {
-      setImportError("Invalid JSON format");
-    }
-  };
-
-  /**
-   * Handle preset edit save.
-   */
-  const handleSaveEdit = async () => {
-    if (editingPreset) {
-      await api.updatePreset(editingPreset);
-      setEditingPreset(null);
-    }
-  };
-
-  /**
-   * Format core values for display.
-   */
-  const formatCoreValues = (values: number[]): string => {
-    return values.map((v, i) => `C${i}:${v}`).join(" ");
-  };
-
-  return (
-    <>
-      {/* Header with export all and import buttons */}
-      <PanelSectionRow>
-        <Focusable
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "16px",
-          }}
-        >
-          <ButtonItem layout="below" onClick={handleExportAll}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaDownload />
-              <span>Export All</span>
-            </div>
-          </ButtonItem>
-
-          <ButtonItem layout="below" onClick={() => setIsImporting(true)}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaUpload />
-              <span>Import</span>
-            </div>
-          </ButtonItem>
-        </Focusable>
-      </PanelSectionRow>
-
-      {/* Import dialog */}
-      {isImporting && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Import Presets
-            </div>
-            <TextField
-              label="JSON Data"
-              value={importJson}
-              onChange={(e: any) => setImportJson(e.target.value)}
-              style={{ marginBottom: "8px" }}
-            />
-            {importError && (
-              <div style={{ color: "#f44336", fontSize: "12px", marginBottom: "8px" }}>
-                {importError}
-              </div>
-            )}
-            <Focusable style={{ display: "flex", gap: "8px" }}>
-              <ButtonItem layout="below" onClick={handleImport}>
-                <span>Import</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => { setIsImporting(false); setImportJson(""); setImportError(null); }}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Edit dialog */}
-      {editingPreset && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Edit Preset: {editingPreset.label}
-            </div>
-            <TextField
-              label="Label"
-              value={editingPreset.label}
-              onChange={(e: any) => setEditingPreset({ ...editingPreset, label: e.target.value })}
-              style={{ marginBottom: "8px" }}
-            />
-            <ToggleField
-              label="Use Timeout"
-              checked={editingPreset.use_timeout}
-              onChange={(checked: boolean) => setEditingPreset({ ...editingPreset, use_timeout: checked })}
-            />
-            {editingPreset.use_timeout && (
-              <SliderField
-                label="Timeout (seconds)"
-                value={editingPreset.timeout}
-                min={0}
-                max={60}
-                step={5}
-                showValue={true}
-                onChange={(value: number) => setEditingPreset({ ...editingPreset, timeout: value })}
-              />
-            )}
-            <Focusable style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-              <ButtonItem layout="below" onClick={handleSaveEdit}>
-                <span>Save</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => setEditingPreset(null)}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Preset list */}
-      <PanelSectionRow>
-        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          Saved Presets ({state.presets.length})
-        </div>
-      </PanelSectionRow>
-
-      {state.presets.length === 0 ? (
-        <PanelSectionRow>
-          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px" }}>
-            No presets saved yet. Use "Tune for this game" or save from Manual tab.
-          </div>
-        </PanelSectionRow>
-      ) : (
-        state.presets.map((preset) => (
-          <PanelSectionRow key={preset.app_id}>
-            <div
-              style={{
-                padding: "12px",
-                backgroundColor: "#23262e",
-                borderRadius: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: "bold", fontSize: "14px" }}>{preset.label}</div>
-                  <div style={{ fontSize: "12px", color: "#8b929a" }}>
-                    {formatCoreValues(preset.value)}
-                  </div>
-                  {preset.use_timeout && (
-                    <div style={{ fontSize: "10px", color: "#ff9800" }}>
-                      Timeout: {preset.timeout}s
-                    </div>
-                  )}
-                  {preset.tested && (
-                    <div style={{ fontSize: "10px", color: "#4caf50" }}>
-                      ✓ Tested
-                    </div>
-                  )}
-                </div>
-                <Focusable style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    onClick={() => setEditingPreset(preset)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#1a9fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleExportSingle(preset)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#8b929a",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FaDownload />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(preset.app_id)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#f44336",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FaTrash />
-                  </button>
-                </Focusable>
-              </div>
-            </div>
-          </PanelSectionRow>
-        ))
-      )}
-    </>
-  );
-};
+const PresetsTab: FC = PresetsTabNew;
 
 
 /**

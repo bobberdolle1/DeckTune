@@ -226,6 +226,10 @@ class Api extends SimpleEventEmitter {
         addEventListener("test_complete", this.onTestComplete.bind(this));
         addEventListener("update_status", this.onStatusUpdate.bind(this));
         addEventListener("dynamic_status", this.onDynamicStatus.bind(this));
+        addEventListener("binning_progress", this.onBinningProgress.bind(this));
+        addEventListener("binning_complete", this.onBinningComplete.bind(this));
+        addEventListener("binning_error", this.onBinningError.bind(this));
+        addEventListener("profile_changed", this.onProfileChanged.bind(this));
         if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
             return await this.handleMainRunningApp();
         }
@@ -303,6 +307,63 @@ class Api extends SimpleEventEmitter {
      */
     onDynamicStatus(status) {
         this.setState({ dynamicStatus: status });
+    }
+    /**
+     * Handle binning progress events from backend.
+     * Requirements: 8.1, 8.2
+     */
+    onBinningProgress(progress) {
+        this.setState({ binningProgress: progress });
+    }
+    /**
+     * Handle binning complete events from backend.
+     * Requirements: 8.3, 8.4
+     */
+    onBinningComplete(result) {
+        this.setState({
+            binningResult: result,
+            binningProgress: null,
+            isBinning: false,
+        });
+    }
+    /**
+     * Handle binning error events from backend.
+     * Requirements: 8.3
+     */
+    onBinningError(error) {
+        this.setState({
+            isBinning: false,
+            binningProgress: null,
+        });
+        // Error will be shown in UI via result or status
+    }
+    /**
+     * Handle profile change events from backend.
+     * Requirements: 4.4
+     *
+     * Updates state with active profile name and shows notification.
+     */
+    onProfileChanged(data) {
+        // Update active profile in state
+        if (data.app_id !== null) {
+            // Find the profile in our local state
+            const profile = this.state.gameProfiles?.find(p => p.app_id === data.app_id);
+            if (profile) {
+                this.setState({ activeProfile: profile });
+            }
+        }
+        else {
+            // Global default - clear active profile
+            this.setState({ activeProfile: null });
+        }
+        // Show notification via Decky toast (if available)
+        if (typeof DFL !== 'undefined' && DFL.Toaster) {
+            DFL.Toaster.toast({
+                title: "Profile Switched",
+                body: `Now using: ${data.profile_name}`,
+                duration: 3000,
+            });
+        }
     }
     /**
      * Handle app lifetime notifications from Steam.
@@ -493,6 +554,77 @@ class Api extends SimpleEventEmitter {
                 isAutotuning: false,
                 autotuneProgress: null,
             });
+        }
+        return result;
+    }
+    // ==================== Binning Methods ====================
+    // Requirements: 8.1, 8.2, 8.3, 8.4, 10.1
+    /**
+     * Start silicon binning process.
+     * Requirements: 8.1
+     *
+     * @param config - Optional binning configuration
+     * @returns Promise with success status
+     */
+    async startBinning(config) {
+        const result = (await call("start_binning", config || {}));
+        if (result.success) {
+            this.setState({
+                isBinning: true,
+                binningProgress: null,
+                binningResult: null,
+            });
+        }
+        return result;
+    }
+    /**
+     * Stop running binning process.
+     * Requirements: 8.1
+     *
+     * @returns Promise with success status
+     */
+    async stopBinning() {
+        const result = (await call("stop_binning"));
+        if (result.success) {
+            this.setState({
+                isBinning: false,
+                binningProgress: null,
+            });
+        }
+        return result;
+    }
+    /**
+     * Get current binning status.
+     * Requirements: 8.1
+     *
+     * @returns Current binning state or null
+     */
+    async getBinningStatus() {
+        return (await call("get_binning_status"));
+    }
+    /**
+     * Get binning configuration.
+     * Requirements: 10.1
+     *
+     * @returns Current binning configuration
+     */
+    async getBinningConfig() {
+        const config = (await call("get_binning_config"));
+        this.setState({ binningConfig: config });
+        return config;
+    }
+    /**
+     * Update binning configuration.
+     * Requirements: 10.1, 10.2, 10.3, 10.4
+     *
+     * @param config - Partial configuration to update
+     * @returns Promise with success status
+     */
+    async updateBinningConfig(config) {
+        const result = (await call("update_binning_config", config));
+        if (result.success) {
+            // Refresh config from backend
+            await this.getBinningConfig();
         }
         return result;
     }
@@ -760,6 +892,168 @@ class Api extends SimpleEventEmitter {
     async getExpertModeStatus() {
         return await call("get_expert_mode_status");
     }
+    // ==================== Profile Management Methods ====================
+    // Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 9.1, 9.2
+    /**
+     * Create a new game profile.
+     * Requirements: 3.1, 5.1
+     *
+     * @param profile - Profile data to create
+     * @returns Promise with success status
+     */
+    async createProfile(profile) {
+        const result = await call("create_profile", profile);
+        if (result.success && result.profile) {
+            // Add to local state
+            const profiles = [...(this.state.gameProfiles || []), result.profile];
+            this.setState({ gameProfiles: profiles });
+        }
+        return result;
+    }
+    /**
+     * Get all game profiles.
+     * Requirements: 3.2
+     *
+     * @returns Array of all game profiles
+     */
+    async getProfiles() {
+        const profiles = await call("get_profiles");
+        this.setState({ gameProfiles: profiles });
+        return profiles;
+    }
+    /**
+     * Update an existing game profile.
+     * Requirements: 3.3
+     *
+     * @param appId - Steam AppID of the profile to update
+     * @param updates - Partial profile data to update
+     * @returns Promise with success status
+     */
+    async updateProfile(appId, updates) {
+        const result = await call("update_profile", appId, updates);
+        if (result.success && result.profile) {
+            // Update local state
+            const profiles = [...(this.state.gameProfiles || [])];
+            const index = profiles.findIndex(p => p.app_id === appId);
+            if (index !== -1) {
+                profiles[index] = result.profile;
+                this.setState({ gameProfiles: profiles });
+            }
+        }
+        return result;
+    }
+    /**
+     * Delete a game profile.
+     * Requirements: 3.4
+     *
+     * @param appId - Steam AppID of the profile to delete
+     * @returns Promise with success status
+     */
+    async deleteProfile(appId) {
+        const result = await call("delete_profile", appId);
+        if (result.success) {
+            // Remove from local state
+            const profiles = (this.state.gameProfiles || []).filter(p => p.app_id !== appId);
+            this.setState({ gameProfiles: profiles });
+            // If this was the active profile, clear it
+            if (this.state.activeProfile?.app_id === appId) {
+                this.setState({ activeProfile: null });
+            }
+        }
+        return result;
+    }
+    /**
+     * Create a profile for the currently running game.
+     * Requirements: 5.1, 5.2, 5.3, 5.4
+     *
+     * Automatically populates app_id and game name from the running game.
+     * Captures current undervolt and dynamic mode settings.
+     *
+     * @returns Promise with success status and created profile
+     */
+    async createProfileForCurrentGame() {
+        if (!this.state.runningAppId || !this.state.runningAppName) {
+            return {
+                success: false,
+                error: "No game is currently running"
+            };
+        }
+        const result = await call("create_profile_for_current_game");
+        if (result.success && result.profile) {
+            // Add to local state
+            const profiles = [...(this.state.gameProfiles || []), result.profile];
+            this.setState({
+                gameProfiles: profiles,
+                activeProfile: result.profile
+            });
+        }
+        return result;
+    }
+    /**
+     * Export all game profiles as JSON.
+     * Requirements: 9.1
+     *
+     * @returns JSON string containing all profiles
+     */
+    async exportGameProfiles() {
+        return await call("export_profiles");
+    }
+    /**
+     * Import game profiles from JSON.
+     * Requirements: 9.2, 9.3, 9.4
+     *
+     * @param jsonData - JSON string containing profiles to import
+     * @param mergeStrategy - How to handle conflicts: "skip", "overwrite", "rename"
+     * @returns Promise with import result
+     */
+    async importGameProfiles(jsonData, mergeStrategy = "skip") {
+        const result = await call("import_profiles", jsonData, mergeStrategy);
+        if (result.success) {
+            // Refresh profiles from backend
+            await this.getProfiles();
+        }
+        return result;
+    }
+    // ==================== Benchmark Methods ====================
+    // Requirements: 7.1, 7.3, 7.5
+    /**
+     * Run a 10-second benchmark using stress-ng.
+     * Requirements: 7.1, 7.4
+     *
+     * Blocks other operations during execution.
+     *
+     * @returns Promise with benchmark result
+     */
+    async runBenchmark() {
+        // Set running state before starting
+        this.setState({ isBenchmarkRunning: true });
+        const response = await call("run_benchmark");
+        if (response.success && response.result) {
+            // Update state with new result
+            this.setState({
+                isBenchmarkRunning: false,
+                lastBenchmarkResult: response.result,
+            });
+            // Refresh benchmark history
+            await this.getBenchmarkHistory();
+        }
+        else {
+            // Clear running state on error
+            this.setState({ isBenchmarkRunning: false });
+        }
+        return response;
+    }
+    /**
+     * Get benchmark history (last 20 results).
+     * Requirements: 7.5
+     *
+     * @returns Array of benchmark results with comparisons
+     */
+    async getBenchmarkHistory() {
+        const history = await call("get_benchmark_history");
+        this.setState({ benchmarkHistory: history });
+        return history;
+    }
     // ==================== Server Events ====================
     /**
      * Handle server events.
@@ -793,6 +1087,10 @@ class Api extends SimpleEventEmitter {
         removeEventListener("test_complete", this.onTestComplete.bind(this));
         removeEventListener("update_status", this.onStatusUpdate.bind(this));
         removeEventListener("dynamic_status", this.onDynamicStatus.bind(this));
+        removeEventListener("binning_progress", this.onBinningProgress.bind(this));
+        removeEventListener("binning_complete", this.onBinningComplete.bind(this));
+        removeEventListener("binning_error", this.onBinningError.bind(this));
+        removeEventListener("profile_changed", this.onProfileChanged.bind(this));
     }
 }
 
@@ -825,6 +1123,9 @@ const initialState = {
     // Presets
     presets: [],
     currentPreset: null,
+    // Game Profiles (new in v3.0)
+    gameProfiles: [],
+    activeProfile: null,
     // Settings
     settings: {
         isGlobal: false,
@@ -850,10 +1151,19 @@ const initialState = {
     autotuneProgress: null,
     autotuneResult: null,
     isAutotuning: false,
+    // Binning state
+    binningProgress: null,
+    binningResult: null,
+    isBinning: false,
+    binningConfig: null,
     // Test state (new properties)
     testHistory: [],
     currentTest: null,
     isTestRunning: false,
+    // Benchmark state (new in v3.0)
+    benchmarkHistory: [],
+    isBenchmarkRunning: false,
+    lastBenchmarkResult: null,
     // Binary availability
     missingBinaries: [],
 };
@@ -954,6 +1264,43 @@ const useBinaries = () => {
         check: checkBinaries,
     };
 };
+/**
+ * Hook to access binning state.
+ * Requirements: 8.1, 8.2, 8.3, 8.4
+ */
+const useBinning = () => {
+    const { state, api } = useDeckTune();
+    return {
+        progress: state.binningProgress,
+        result: state.binningResult,
+        isRunning: state.isBinning,
+        config: state.binningConfig,
+        start: (config) => api.startBinning(config),
+        stop: () => api.stopBinning(),
+        getConfig: () => api.getBinningConfig(),
+        updateConfig: (config) => api.updateBinningConfig(config),
+    };
+};
+/**
+ * Hook to access profile management.
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 5.1
+ */
+const useProfiles = () => {
+    const { state, api } = useDeckTune();
+    return {
+        profiles: state.gameProfiles || [],
+        activeProfile: state.activeProfile,
+        runningAppId: state.runningAppId,
+        runningAppName: state.runningAppName,
+        createProfile: (profile) => api.createProfile(profile),
+        getProfiles: () => api.getProfiles(),
+        updateProfile: (appId, updates) => api.updateProfile(appId, updates),
+        deleteProfile: (appId) => api.deleteProfile(appId),
+        createProfileForCurrentGame: () => api.createProfileForCurrentGame(),
+        exportProfiles: () => api.exportGameProfiles(),
+        importProfiles: (jsonData, strategy) => api.importGameProfiles(jsonData, strategy),
+    };
+};
 
 /**
  * WizardMode component for DeckTune.
@@ -1047,12 +1394,13 @@ const PanicDisableButton$1 = () => {
 };
 /**
  * WizardMode component - 3-step wizard for beginner users.
- * Requirements: 4.5, 5.4, 6.1
+ * Requirements: 4.5, 5.4, 6.1, 8.1
  */
 const WizardMode = ({ onComplete, onCancel }) => {
     const [step, setStep] = SP_REACT.useState(1);
     const [selectedGoal, setSelectedGoal] = SP_REACT.useState(null);
     const { progress, result, isRunning, start, stop } = useAutotune();
+    const { progress: binningProgress, result: binningResult, isRunning: isBinningRunning, start: startBinning, stop: stopBinning } = useBinning();
     const { info: platformInfo } = usePlatformInfo();
     const { api, state } = useDeckTune();
     const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
@@ -1066,6 +1414,12 @@ const WizardMode = ({ onComplete, onCancel }) => {
             setStep(3);
         }
     }, [result, step]);
+    // Handle binning completion - move to step 3
+    SP_REACT.useEffect(() => {
+        if (binningResult && step === 2) {
+            setStep(3);
+        }
+    }, [binningResult, step]);
     /**
      * Handle goal selection and start autotune.
      * Requirements: 6.2, 6.3
@@ -1079,12 +1433,31 @@ const WizardMode = ({ onComplete, onCancel }) => {
         }
     };
     /**
+     * Handle binning button click.
+     * Requirements: 8.1
+     */
+    const handleBinningClick = async () => {
+        setSelectedGoal(null);
+        setStep(2);
+        await startBinning();
+    };
+    /**
+     * Handle benchmark button click.
+     * Requirements: 7.1, 7.4
+     */
+    const handleBenchmarkClick = async () => {
+        await api.runBenchmark();
+    };
+    /**
      * Handle cancel button click.
-     * Requirements: 6.3
+     * Requirements: 6.3, 8.1
      */
     const handleCancel = async () => {
         if (isRunning) {
             await stop();
+        }
+        if (isBinningRunning) {
+            await stopBinning();
         }
         setStep(1);
         setSelectedGoal(null);
@@ -1119,6 +1492,33 @@ const WizardMode = ({ onComplete, onCancel }) => {
         }
     };
     /**
+     * Handle Apply Recommended button click for binning results.
+     * Requirements: 8.4
+     */
+    const handleApplyBinningResult = async () => {
+        if (binningResult) {
+            // Apply the recommended value (max_stable + 5mV safety margin)
+            const cores = [binningResult.recommended, binningResult.recommended, binningResult.recommended, binningResult.recommended];
+            // Check if a game is running - save as game preset
+            if (state.runningAppId && state.runningAppName) {
+                const preset = {
+                    app_id: state.runningAppId,
+                    label: state.runningAppName,
+                    value: cores,
+                    timeout: 0,
+                    use_timeout: false,
+                    created_at: new Date().toISOString(),
+                    tested: true,
+                };
+                await api.saveAndApply(cores, true, preset);
+            }
+            else {
+                // No game running - apply as global values
+                await api.applyUndervolt(cores);
+            }
+        }
+    };
+    /**
      * Reset wizard to start over.
      */
     const handleStartOver = () => {
@@ -1147,9 +1547,11 @@ const WizardMode = ({ onComplete, onCancel }) => {
                     React.createElement("div", { style: { fontSize: "11px", color: "#ffcc80", marginTop: "4px" } }, "Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder."))))),
         React.createElement(DFL.PanelSectionRow, null,
             React.createElement(StepIndicator, { currentStep: step })),
-        step === 1 && (React.createElement(GoalSelectionStep, { onSelect: handleGoalSelect, platformInfo: platformInfo, disabled: hasMissing })),
-        step === 2 && (React.createElement(AutotuneProgressStep, { progress: progress, isRunning: isRunning, onCancel: handleCancel, selectedGoal: selectedGoal })),
-        step === 3 && result && (React.createElement(ResultsStep, { result: result, platformInfo: platformInfo, onApplyAndSave: handleApplyAndSave, onStartOver: handleStartOver }))));
+        step === 1 && (React.createElement(GoalSelectionStep, { onSelect: handleGoalSelect, onBinningClick: handleBinningClick, onBenchmarkClick: handleBenchmarkClick, platformInfo: platformInfo, disabled: hasMissing, isBinningRunning: isBinningRunning })),
+        step === 2 && !isBinningRunning && (React.createElement(AutotuneProgressStep, { progress: progress, isRunning: isRunning, onCancel: handleCancel, selectedGoal: selectedGoal })),
+        step === 2 && isBinningRunning && (React.createElement(BinningProgressStep, { progress: binningProgress, isRunning: isBinningRunning, onCancel: handleCancel })),
+        step === 3 && result && !binningResult && (React.createElement(ResultsStep, { result: result, platformInfo: platformInfo, onApplyAndSave: handleApplyAndSave, onStartOver: handleStartOver })),
+        step === 3 && binningResult && (React.createElement(BinningResultsStep, { result: binningResult, platformInfo: platformInfo, onApplyRecommended: handleApplyBinningResult, onStartOver: handleStartOver }))));
 };
 const StepIndicator = ({ currentStep }) => {
     const steps = [
@@ -1185,9 +1587,59 @@ const StepIndicator = ({ currentStep }) => {
                 marginLeft: "8px",
             } })))))));
 };
-const GoalSelectionStep = ({ onSelect, platformInfo, disabled = false }) => {
+const BinningConfigDialog = ({ config, onSave, onClose }) => {
+    const [testDuration, setTestDuration] = SP_REACT.useState(config?.test_duration || 60);
+    const [stepSize, setStepSize] = SP_REACT.useState(config?.step_size || 5);
+    const [startValue, setStartValue] = SP_REACT.useState(config?.start_value || -10);
+    const [isSaving, setIsSaving] = SP_REACT.useState(false);
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await onSave({
+                test_duration: testDuration,
+                step_size: stepSize,
+                start_value: startValue,
+            });
+            onClose();
+        }
+        finally {
+            setIsSaving(false);
+        }
+    };
+    return (React.createElement("div", { style: { padding: "16px" } },
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: "bold", marginBottom: "16px" } }, "Binning Advanced Settings"),
+        React.createElement("div", { style: { marginBottom: "16px" } },
+            React.createElement(DFL.SliderField, { label: "Test Duration", description: `${testDuration} seconds per test`, value: testDuration, min: 30, max: 300, step: 10, onChange: (value) => setTestDuration(value), showValue: true })),
+        React.createElement("div", { style: { marginBottom: "16px" } },
+            React.createElement(DFL.SliderField, { label: "Step Size", description: `${stepSize}mV increments`, value: stepSize, min: 1, max: 10, step: 1, onChange: (value) => setStepSize(value), showValue: true })),
+        React.createElement("div", { style: { marginBottom: "24px" } },
+            React.createElement(DFL.SliderField, { label: "Starting Value", description: `Begin testing at ${startValue}mV`, value: startValue, min: -20, max: 0, step: 1, onChange: (value) => setStartValue(value), showValue: true })),
+        React.createElement("div", { style: { display: "flex", gap: "8px" } },
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, disabled: isSaving, style: { flex: 1 } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#4caf50" } },
+                    React.createElement(FaCheck, null),
+                    React.createElement("span", null, isSaving ? "Saving..." : "Save"))),
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onClose, disabled: isSaving, style: { flex: 1 } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                    React.createElement(FaTimes, null),
+                    React.createElement("span", null, "Cancel"))))));
+};
+const GoalSelectionStep = ({ onSelect, onBinningClick, onBenchmarkClick, platformInfo, disabled = false, isBinningRunning = false }) => {
     const { state } = useDeckTune();
+    const { config, getConfig, updateConfig } = useBinning();
+    const [showConfigDialog, setShowConfigDialog] = SP_REACT.useState(false);
     const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
+    // Load config on mount
+    SP_REACT.useEffect(() => {
+        getConfig();
+    }, []);
+    const handleConfigClick = () => {
+        setShowConfigDialog(true);
+    };
+    const handleConfigSave = async (newConfig) => {
+        await updateConfig(newConfig);
+        setShowConfigDialog(false);
+    };
     return (React.createElement(React.Fragment, null,
         platformInfo && (React.createElement(DFL.PanelSectionRow, null,
             React.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
@@ -1212,12 +1664,76 @@ const GoalSelectionStep = ({ onSelect, platformInfo, disabled = false }) => {
                         React.createElement("strong", null, state.runningAppName))),
                 React.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginTop: "4px" } }, "Tuning will be saved as a preset for this game")))),
         React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: { fontSize: "14px", marginBottom: "12px" } }, "Select your tuning goal:")),
+            React.createElement("div", { style: { display: "flex", gap: "8px" } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onBinningClick, disabled: disabled || isBinningRunning, description: "Automatically discover your chip's maximum stable undervolt", style: { flex: 1 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning) ? 0.5 : 1 } },
+                        React.createElement(FaMicrochip, { style: { color: "#ff9800" } }),
+                        React.createElement("span", null, "Find Max Undervolt"),
+                        React.createElement("span", { style: { fontSize: "10px", color: "#8b929a", marginLeft: "auto" } }, "~5-15 min"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleConfigClick, disabled: disabled || isBinningRunning, style: { width: "48px", padding: "0" } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", opacity: (disabled || isBinningRunning) ? 0.5 : 1 } },
+                        React.createElement(FaCog, null))))),
+        showConfigDialog && (React.createElement(DFL.ConfirmModal, { strTitle: "Binning Settings", onOK: () => { }, onCancel: () => setShowConfigDialog(false), bOKDisabled: true, bCancelDisabled: true },
+            React.createElement(BinningConfigDialog, { config: config, onSave: handleConfigSave, onClose: () => setShowConfigDialog(false) }))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onBenchmarkClick, disabled: disabled || isBinningRunning || state.isBenchmarkRunning, description: "Run a 10-second performance benchmark", style: { marginTop: "8px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning || state.isBenchmarkRunning) ? 0.5 : 1 } },
+                    state.isBenchmarkRunning ? (React.createElement(React.Fragment, null,
+                        React.createElement(FaSpinner, { className: "spin", style: { color: "#4caf50" } }),
+                        React.createElement("span", null, "Running..."))) : (React.createElement(React.Fragment, null,
+                        React.createElement(FaVial, { style: { color: "#4caf50" } }),
+                        React.createElement("span", null, "Run Benchmark"))),
+                    React.createElement("span", { style: { fontSize: "10px", color: "#8b929a", marginLeft: "auto" } }, "10 sec")))),
+        state.isBenchmarkRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1b5e20",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+                    React.createElement(FaSpinner, { className: "spin", style: { color: "#4caf50" } }),
+                    React.createElement("span", { style: { fontWeight: "bold" } }, "Running benchmark...")),
+                React.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7", textAlign: "center" } }, "Testing performance (~10 seconds)")))),
+        state.lastBenchmarkResult && !state.isBenchmarkRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1b5e20",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                    borderLeft: "4px solid #4caf50",
+                } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
+                    React.createElement("span", { style: { fontWeight: "bold", fontSize: "13px" } }, "Benchmark Complete"),
+                    React.createElement(FaCheck, { style: { color: "#4caf50" } })),
+                React.createElement("div", { style: { marginBottom: "6px" } },
+                    React.createElement("div", { style: { fontSize: "10px", color: "#a5d6a7" } }, "Score"),
+                    React.createElement("div", { style: { fontSize: "18px", fontWeight: "bold", color: "#4caf50" } },
+                        state.lastBenchmarkResult.score.toFixed(2),
+                        " bogo ops/s")),
+                state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
+                    const current = state.benchmarkHistory[0];
+                    const previous = state.benchmarkHistory[1];
+                    const scoreDiff = current.score - previous.score;
+                    const percentChange = ((scoreDiff / previous.score) * 100);
+                    const improvement = scoreDiff > 0;
+                    return (React.createElement("div", { style: { marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #2e7d32" } },
+                        React.createElement("div", { style: { fontSize: "10px", color: "#a5d6a7", marginBottom: "4px" } }, "vs Previous"),
+                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
+                            improvement ? (React.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "12px" } })) : (React.createElement(FaTimes, { style: { color: "#ff6b6b", fontSize: "12px" } })),
+                            React.createElement("span", { style: { fontSize: "12px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" } },
+                                improvement ? "+" : "",
+                                percentChange.toFixed(2),
+                                "%"),
+                            React.createElement("span", { style: { fontSize: "10px", color: "#a5d6a7" } }, improvement ? "improvement" : "degradation"))));
+                })()))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", marginBottom: "12px", marginTop: "12px" } }, "Or select your tuning goal:")),
         GOAL_OPTIONS.map((goal) => {
             const Icon = goal.icon;
             return (React.createElement(DFL.PanelSectionRow, { key: goal.id },
-                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelect(goal.id), description: goal.description, disabled: disabled },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", opacity: disabled ? 0.5 : 1 } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelect(goal.id), description: goal.description, disabled: disabled || isBinningRunning },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", opacity: (disabled || isBinningRunning) ? 0.5 : 1 } },
                         React.createElement(Icon, null),
                         React.createElement("span", null, goal.label),
                         React.createElement("span", { style: { fontSize: "10px", color: "#8b929a", marginLeft: "auto" } }, goal.mode === "thorough" ? "~10 min" : "~3 min")))));
@@ -1407,57 +1923,230 @@ const ResultsStep = ({ result, platformInfo, onApplyAndSave, onStartOver, }) => 
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
                     React.createElement("span", null, "Start Over"))))));
 };
+const BinningProgressStep = ({ progress, isRunning, onCancel, }) => {
+    // Format ETA
+    const formatEta = (seconds) => {
+        if (seconds <= 0)
+            return "Almost done...";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins > 0) {
+            return `${mins}:${secs.toString().padStart(2, '0')} remaining`;
+        }
+        return `${secs}s remaining`;
+    };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { textAlign: "center", marginBottom: "16px" } },
+                React.createElement(FaSpinner, { style: {
+                        animation: "spin 1s linear infinite",
+                        fontSize: "24px",
+                        color: "#ff9800",
+                    } }),
+                React.createElement("style", null, `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Finding Maximum Undervolt")),
+        progress && (React.createElement(React.Fragment, null,
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement(DFL.ProgressBarWithInfo, { label: `Iteration ${progress.iteration}`, description: `Testing: ${progress.current_value}mV`, nProgress: Math.min((progress.iteration / 20) * 100, 100), sOperationText: formatEta(progress.eta) })),
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: {
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "12px",
+                        color: "#8b929a",
+                        marginTop: "8px",
+                    } },
+                    React.createElement("span", null,
+                        "Current: ",
+                        progress.current_value,
+                        "mV"),
+                    React.createElement("span", null,
+                        "Last Stable: ",
+                        progress.last_stable,
+                        "mV"))))),
+        !progress && isRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "Initializing binning..."))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, style: { marginTop: "16px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
+                    React.createElement(FaTimes, null),
+                    React.createElement("span", null, "Stop"))))));
+};
+const BinningResultsStep = ({ result, platformInfo, onApplyRecommended, onStartOver, }) => {
+    // Format duration
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `${mins}m ${secs}s`;
+    };
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px",
+                    backgroundColor: result.aborted ? "#b71c1c" : "#1b5e20",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                result.aborted ? React.createElement(FaTimes, null) : React.createElement(FaCheck, null),
+                React.createElement("span", { style: { fontWeight: "bold" } }, result.aborted ? "Binning Incomplete" : "Binning Complete!"))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    justifyContent: "space-around",
+                    fontSize: "12px",
+                    color: "#8b929a",
+                    marginBottom: "16px",
+                } },
+                React.createElement("span", null,
+                    "Duration: ",
+                    formatDuration(result.duration)),
+                React.createElement("span", null,
+                    "Iterations: ",
+                    result.iterations))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Discovered Values:")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                } },
+                React.createElement("div", { style: {
+                        padding: "16px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "8px",
+                        borderLeft: `4px solid #ff9800`,
+                    } },
+                    React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, "Maximum Stable"),
+                    React.createElement("div", { style: {
+                            fontSize: "24px",
+                            fontWeight: "bold",
+                            color: "#ff9800",
+                        } },
+                        result.max_stable,
+                        "mV"),
+                    React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, "Most aggressive stable value found")),
+                React.createElement("div", { style: {
+                        padding: "16px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "8px",
+                        borderLeft: `4px solid #4caf50`,
+                    } },
+                    React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, "Recommended (with 5mV safety margin)"),
+                    React.createElement("div", { style: {
+                            fontSize: "24px",
+                            fontWeight: "bold",
+                            color: "#4caf50",
+                        } },
+                        result.recommended,
+                        "mV"),
+                    React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, "Conservative value for daily use")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onApplyRecommended, style: { marginTop: "16px" } },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#4caf50",
+                    } },
+                    React.createElement(FaCheck, null),
+                    React.createElement("span", null, "Apply Recommended")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                    React.createElement("span", null, "Start Over"))))));
+};
 
 /**
- * LoadGraph component for displaying real-time CPU load.
+ * LoadGraph component for displaying real-time CPU load and undervolt values.
  *
- * Feature: dynamic-mode-refactor
- * Requirements: 15.1
+ * Feature: decktune-3.0-automation
+ * Requirements: 6.3, 6.4
  *
- * Displays per-core CPU load percentages when dynamic mode is active.
- * Shows historical data with a simple line graph visualization.
+ * Displays per-core CPU load percentages and applied undervolt values.
+ * Shows historical data with dual Y-axes and profile change markers.
+ * Implements 60-second rolling window with 1-second resolution.
  */
 
 const MAX_HISTORY_POINTS = 60; // Keep 60 data points (1 minute at 1Hz)
-const GRAPH_HEIGHT = 100;
+const GRAPH_HEIGHT = 120;
 const GRAPH_WIDTH = 300;
+const MARGIN_LEFT = 35;
+const MARGIN_RIGHT = 35;
 /**
- * Get color for a specific core.
+ * Get color for a specific core (load lines).
  */
 const getCoreColor = (coreIndex) => {
     const colors = ["#1a9fff", "#4caf50", "#ff9800", "#f44336"];
     return colors[coreIndex] || "#8b929a";
 };
 /**
- * LoadGraph component - displays real-time CPU load graph.
- * Requirements: 15.1
+ * Get color for undervolt value lines (orange tones).
  */
-const LoadGraph = ({ load, isActive }) => {
+const getValueColor = (coreIndex) => {
+    const colors = ["#ff9800", "#ffb74d", "#ffa726", "#ff8a65"];
+    return colors[coreIndex] || "#ff9800";
+};
+/**
+ * LoadGraph component - displays real-time CPU load and undervolt values.
+ * Requirements: 6.3, 6.4
+ */
+const LoadGraph = ({ load, values, isActive, activeProfile }) => {
     const [history, setHistory] = SP_REACT.useState([]);
+    const [previousProfile, setPreviousProfile] = SP_REACT.useState(activeProfile);
     const canvasRef = SP_REACT.useRef(null);
-    // Update history when load changes
+    const updateIntervalRef = SP_REACT.useRef(null);
+    // Update history at 1-second intervals (Requirements: 6.3)
     SP_REACT.useEffect(() => {
-        if (!isActive || load.length !== 4) {
+        if (!isActive || load.length !== 4 || values.length !== 4) {
             // Clear history when not active
             setHistory([]);
+            setPreviousProfile(undefined);
+            if (updateIntervalRef.current) {
+                clearInterval(updateIntervalRef.current);
+                updateIntervalRef.current = null;
+            }
             return;
         }
-        setHistory((prev) => {
-            const newHistory = [
-                ...prev,
-                {
+        // Detect profile change
+        const profileChanged = activeProfile !== previousProfile && previousProfile !== undefined;
+        // Add new data point
+        const addDataPoint = () => {
+            setHistory((prev) => {
+                const newPoint = {
                     timestamp: Date.now(),
-                    values: [...load],
-                },
-            ];
-            // Keep only the last MAX_HISTORY_POINTS
-            if (newHistory.length > MAX_HISTORY_POINTS) {
-                return newHistory.slice(-MAX_HISTORY_POINTS);
+                    load: [...load],
+                    values: [...values],
+                    profile: profileChanged ? activeProfile : undefined,
+                };
+                const newHistory = [...prev, newPoint];
+                // Keep only the last MAX_HISTORY_POINTS (60-second rolling window)
+                if (newHistory.length > MAX_HISTORY_POINTS) {
+                    return newHistory.slice(-MAX_HISTORY_POINTS);
+                }
+                return newHistory;
+            });
+            if (profileChanged) {
+                setPreviousProfile(activeProfile);
             }
-            return newHistory;
-        });
-    }, [load, isActive]);
-    // Draw the graph on canvas
+        };
+        // Add initial point immediately
+        addDataPoint();
+        // Set up 1-second interval
+        updateIntervalRef.current = setInterval(addDataPoint, 1000);
+        return () => {
+            if (updateIntervalRef.current) {
+                clearInterval(updateIntervalRef.current);
+            }
+        };
+    }, [load, values, isActive, activeProfile, previousProfile]);
+    // Draw the graph on canvas with dual Y-axes (Requirements: 6.3, 6.4)
     SP_REACT.useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || history.length === 0) {
@@ -1476,20 +2165,45 @@ const LoadGraph = ({ load, isActive }) => {
         for (let i = 0; i <= 4; i++) {
             const y = (i * GRAPH_HEIGHT) / 4;
             ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(GRAPH_WIDTH, y);
+            ctx.moveTo(MARGIN_LEFT, y);
+            ctx.lineTo(GRAPH_WIDTH - MARGIN_RIGHT, y);
             ctx.stroke();
         }
-        // Draw load lines for each core
-        const pointSpacing = GRAPH_WIDTH / (MAX_HISTORY_POINTS - 1);
+        // Calculate graph area
+        const graphWidth = GRAPH_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+        const pointSpacing = graphWidth / (MAX_HISTORY_POINTS - 1);
+        // Draw profile change markers (Requirements: 6.3)
+        history.forEach((point, index) => {
+            if (point.profile) {
+                const x = MARGIN_LEFT + index * pointSpacing;
+                // Draw vertical line
+                ctx.strokeStyle = "#4caf50";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, GRAPH_HEIGHT);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                // Draw label
+                ctx.fillStyle = "#4caf50";
+                ctx.font = "9px sans-serif";
+                ctx.save();
+                ctx.translate(x + 2, GRAPH_HEIGHT - 5);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(point.profile || "Profile", 0, 0);
+                ctx.restore();
+            }
+        });
+        // Draw load lines for each core (blue tones, left Y-axis)
         for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
             ctx.strokeStyle = getCoreColor(coreIndex);
             ctx.lineWidth = 2;
             ctx.beginPath();
             let firstPoint = true;
             history.forEach((point, index) => {
-                const x = index * pointSpacing;
-                const loadValue = point.values[coreIndex] || 0;
+                const x = MARGIN_LEFT + index * pointSpacing;
+                const loadValue = point.load[coreIndex] || 0;
                 // Invert Y axis (0% at bottom, 100% at top)
                 const y = GRAPH_HEIGHT - (loadValue / 100) * GRAPH_HEIGHT;
                 if (firstPoint) {
@@ -1502,8 +2216,49 @@ const LoadGraph = ({ load, isActive }) => {
             });
             ctx.stroke();
         }
-    }, [history]);
-    if (!isActive) {
+        // Draw undervolt value lines (orange tones, right Y-axis)
+        // Requirements: 6.3, 6.4
+        const minValue = -50; // Minimum expected undervolt value
+        const maxValue = 0; // Maximum expected undervolt value
+        const valueRange = maxValue - minValue;
+        for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
+            ctx.strokeStyle = getValueColor(coreIndex);
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 2]);
+            ctx.beginPath();
+            let firstPoint = true;
+            history.forEach((point, index) => {
+                const x = MARGIN_LEFT + index * pointSpacing;
+                const value = point.values[coreIndex] || 0;
+                // Map value to graph height (0mV at top, -50mV at bottom)
+                const normalizedValue = (value - minValue) / valueRange;
+                const y = GRAPH_HEIGHT - normalizedValue * GRAPH_HEIGHT;
+                if (firstPoint) {
+                    ctx.moveTo(x, y);
+                    firstPoint = false;
+                }
+                else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        // If dynamic mode is inactive, draw static line (Requirements: 6.4)
+        if (!isActive && values.length === 4) {
+            const avgValue = values.reduce((sum, v) => sum + v, 0) / values.length;
+            const normalizedValue = (avgValue - minValue) / valueRange;
+            const y = GRAPH_HEIGHT - normalizedValue * GRAPH_HEIGHT;
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(MARGIN_LEFT, y);
+            ctx.lineTo(GRAPH_WIDTH - MARGIN_RIGHT, y);
+            ctx.stroke();
+        }
+    }, [history, isActive, values]);
+    if (!isActive && values.length === 0) {
         return null;
     }
     return (React.createElement("div", { style: {
@@ -1519,13 +2274,13 @@ const LoadGraph = ({ load, isActive }) => {
                 marginBottom: "12px",
             } },
             React.createElement(FaMicrochip, { style: { color: "#1a9fff" } }),
-            React.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, "CPU Load (Real-time)")),
+            React.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, isActive ? "CPU Load & Undervolt (Real-time)" : "Undervolt Values (Manual Mode)")),
         React.createElement("div", { style: {
                 display: "grid",
                 gridTemplateColumns: "repeat(4, 1fr)",
                 gap: "8px",
                 marginBottom: "12px",
-            } }, load.map((value, index) => (React.createElement("div", { key: index, style: {
+            } }, load.map((loadValue, index) => (React.createElement("div", { key: index, style: {
                 padding: "6px",
                 backgroundColor: "#1a1d23",
                 borderRadius: "4px",
@@ -1535,13 +2290,20 @@ const LoadGraph = ({ load, isActive }) => {
             React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
                 "Core ",
                 index),
-            React.createElement("div", { style: {
+            isActive && (React.createElement("div", { style: {
                     fontSize: "16px",
                     fontWeight: "bold",
                     color: getCoreColor(index),
                 } },
-                value.toFixed(1),
-                "%"))))),
+                loadValue.toFixed(1),
+                "%")),
+            React.createElement("div", { style: {
+                    fontSize: isActive ? "11px" : "16px",
+                    fontWeight: isActive ? "normal" : "bold",
+                    color: getValueColor(index),
+                } },
+                values[index] || 0,
+                "mV"))))),
         React.createElement("div", { style: {
                 position: "relative",
                 width: "100%",
@@ -1566,31 +2328,552 @@ const LoadGraph = ({ load, isActive }) => {
                     pointerEvents: "none",
                 } }, [100, 75, 50, 25, 0].map((value) => (React.createElement("div", { key: value, style: {
                     fontSize: "9px",
-                    color: "#8b929a",
+                    color: "#1a9fff",
                     lineHeight: "1",
                 } },
                 value,
-                "%"))))),
+                "%")))),
+            React.createElement("div", { style: {
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    padding: "2px 4px",
+                    pointerEvents: "none",
+                } }, [0, -12, -25, -37, -50].map((value) => (React.createElement("div", { key: value, style: {
+                    fontSize: "9px",
+                    color: "#ff9800",
+                    lineHeight: "1",
+                    textAlign: "right",
+                } }, value))))),
         React.createElement("div", { style: {
                 display: "flex",
                 justifyContent: "center",
-                gap: "16px",
+                gap: "12px",
                 marginTop: "8px",
-                fontSize: "11px",
-            } }, [0, 1, 2, 3].map((index) => (React.createElement("div", { key: index, style: {
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
+                fontSize: "10px",
+                flexWrap: "wrap",
             } },
-            React.createElement("div", { style: {
-                    width: "12px",
-                    height: "3px",
-                    backgroundColor: getCoreColor(index),
-                    borderRadius: "2px",
-                } }),
-            React.createElement("span", { style: { color: "#8b929a" } },
-                "Core ",
-                index)))))));
+            isActive && (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: {
+                            width: "16px",
+                            height: "3px",
+                            backgroundColor: "#1a9fff",
+                            borderRadius: "2px",
+                        } }),
+                    React.createElement("span", { style: { color: "#8b929a" } }, "Load (solid)")),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: {
+                            width: "16px",
+                            height: "2px",
+                            background: "repeating-linear-gradient(to right, #ff9800 0, #ff9800 3px, transparent 3px, transparent 5px)",
+                            borderRadius: "2px",
+                        } }),
+                    React.createElement("span", { style: { color: "#8b929a" } }, "Undervolt (dashed)")),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                    React.createElement("div", { style: {
+                            width: "3px",
+                            height: "16px",
+                            background: "repeating-linear-gradient(to bottom, #4caf50 0, #4caf50 5px, transparent 5px, transparent 8px)",
+                            borderRadius: "2px",
+                        } }),
+                    React.createElement("span", { style: { color: "#8b929a" } }, "Profile change")))),
+            !isActive && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                React.createElement("div", { style: {
+                        width: "16px",
+                        height: "3px",
+                        backgroundColor: "#ff9800",
+                        borderRadius: "2px",
+                    } }),
+                React.createElement("span", { style: { color: "#8b929a" } }, "Manual undervolt"))))));
+};
+
+/**
+ * Updated Presets tab component with Game Profile management.
+ * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
+ *
+ * Features:
+ * - Game profile list with edit/delete
+ * - Quick-create button when game is running
+ * - Import/export profile buttons
+ * - Legacy preset list with edit/delete/export
+ * - Import preset button
+ */
+
+const PresetsTabNew = () => {
+    const { state, api } = useDeckTune();
+    const { profiles, activeProfile, runningAppId, runningAppName, createProfileForCurrentGame, deleteProfile, exportProfiles, importProfiles } = useProfiles();
+    const [editingPreset, setEditingPreset] = SP_REACT.useState(null);
+    const [editingProfile, setEditingProfile] = SP_REACT.useState(null);
+    const [isImporting, setIsImporting] = SP_REACT.useState(false);
+    const [isImportingProfiles, setIsImportingProfiles] = SP_REACT.useState(false);
+    const [importJson, setImportJson] = SP_REACT.useState("");
+    const [importProfileJson, setImportProfileJson] = SP_REACT.useState("");
+    const [importError, setImportError] = SP_REACT.useState(null);
+    const [importProfileError, setImportProfileError] = SP_REACT.useState(null);
+    const [mergeStrategy, setMergeStrategy] = SP_REACT.useState("skip");
+    const [isCreatingProfile, setIsCreatingProfile] = SP_REACT.useState(false);
+    const [showCreateDialog, setShowCreateDialog] = SP_REACT.useState(false);
+    const [newProfileData, setNewProfileData] = SP_REACT.useState({
+        app_id: 0,
+        name: "",
+        cores: [...state.cores],
+        dynamic_enabled: false,
+    });
+    // Load profiles on mount
+    SP_REACT.useEffect(() => {
+        const loadProfiles = async () => {
+            try {
+                await api.getProfiles();
+            }
+            catch (e) {
+                console.error("Failed to load profiles:", e);
+            }
+        };
+        loadProfiles();
+    }, [api]);
+    /**
+     * Handle quick-create profile for current game.
+     * Requirements: 5.1, 5.3, 5.4
+     */
+    const handleQuickCreate = async () => {
+        setIsCreatingProfile(true);
+        try {
+            const result = await createProfileForCurrentGame();
+            if (result.success) {
+                alert(`Profile created for ${runningAppName}`);
+            }
+            else {
+                alert(`Failed to create profile: ${result.error}`);
+            }
+        }
+        catch (e) {
+            alert(`Error creating profile: ${String(e)}`);
+        }
+        finally {
+            setIsCreatingProfile(false);
+        }
+    };
+    /**
+     * Handle profile deletion.
+     * Requirements: 3.4
+     */
+    const handleDeleteProfile = async (appId) => {
+        if (confirm("Are you sure you want to delete this profile?")) {
+            try {
+                const result = await deleteProfile(appId);
+                if (!result.success) {
+                    alert(`Failed to delete profile: ${result.error}`);
+                }
+            }
+            catch (e) {
+                alert(`Error deleting profile: ${String(e)}`);
+            }
+        }
+    };
+    /**
+     * Handle profile export (all profiles).
+     * Requirements: 9.1
+     */
+    const handleExportProfiles = async () => {
+        try {
+            const result = await exportProfiles();
+            if (result.success && result.json) {
+                console.log("Export profiles:", result.json);
+                alert(`Profiles exported successfully!\n\nPath: ${result.path || "clipboard"}`);
+            }
+            else {
+                alert(`Failed to export profiles: ${result.error}`);
+            }
+        }
+        catch (e) {
+            alert(`Error exporting profiles: ${String(e)}`);
+        }
+    };
+    /**
+     * Handle profile import.
+     * Requirements: 9.2, 9.3, 9.4
+     */
+    const handleImportProfiles = async () => {
+        setImportProfileError(null);
+        try {
+            const result = await importProfiles(importProfileJson, mergeStrategy);
+            if (result.success) {
+                setIsImportingProfiles(false);
+                setImportProfileJson("");
+                alert(`Successfully imported ${result.imported_count} profile(s)${result.conflicts.length > 0 ? `\nConflicts: ${result.conflicts.length}` : ""}`);
+            }
+            else {
+                setImportProfileError(result.error || "Import failed");
+            }
+        }
+        catch (e) {
+            setImportProfileError("Invalid JSON format");
+        }
+    };
+    /**
+     * Handle preset deletion.
+     */
+    const handleDelete = async (appId) => {
+        await api.deletePreset(appId);
+    };
+    /**
+     * Handle preset export (single preset).
+     */
+    const handleExportSingle = async (preset) => {
+        const json = JSON.stringify([preset], null, 2);
+        console.log("Export preset:", json);
+        alert(`Preset exported:\n${json}`);
+    };
+    /**
+     * Handle export all presets.
+     */
+    const handleExportAll = async () => {
+        const json = await api.exportPresets();
+        console.log("Export all presets:", json);
+        alert(`All presets exported:\n${json}`);
+    };
+    /**
+     * Handle import presets.
+     */
+    const handleImport = async () => {
+        setImportError(null);
+        try {
+            const result = await api.importPresets(importJson);
+            if (result.success) {
+                setIsImporting(false);
+                setImportJson("");
+                alert(`Successfully imported ${result.imported_count} preset(s)`);
+            }
+            else {
+                setImportError(result.error || "Import failed");
+            }
+        }
+        catch (e) {
+            setImportError("Invalid JSON format");
+        }
+    };
+    /**
+     * Handle preset edit save.
+     */
+    const handleSaveEdit = async () => {
+        if (editingPreset) {
+            await api.updatePreset(editingPreset);
+            setEditingPreset(null);
+        }
+    };
+    /**
+     * Handle profile edit save.
+     * Requirements: 3.3
+     */
+    const handleSaveProfileEdit = async () => {
+        if (editingProfile) {
+            try {
+                const result = await api.updateProfile(editingProfile.app_id, {
+                    name: editingProfile.name,
+                    cores: editingProfile.cores,
+                    dynamic_enabled: editingProfile.dynamic_enabled,
+                });
+                if (result.success) {
+                    setEditingProfile(null);
+                }
+                else {
+                    alert(`Failed to update profile: ${result.error}`);
+                }
+            }
+            catch (e) {
+                alert(`Error updating profile: ${String(e)}`);
+            }
+        }
+    };
+    /**
+     * Handle create profile dialog.
+     * Requirements: 3.1, 5.1
+     */
+    const handleCreateProfile = async () => {
+        if (!newProfileData.name || newProfileData.app_id === 0) {
+            alert("Please enter a game name and AppID");
+            return;
+        }
+        try {
+            const result = await api.createProfile({
+                app_id: newProfileData.app_id,
+                name: newProfileData.name,
+                cores: newProfileData.cores,
+                dynamic_enabled: newProfileData.dynamic_enabled,
+                dynamic_config: newProfileData.dynamic_enabled ? state.dynamicSettings : null,
+            });
+            if (result.success) {
+                setShowCreateDialog(false);
+                setNewProfileData({
+                    app_id: 0,
+                    name: "",
+                    cores: [...state.cores],
+                    dynamic_enabled: false,
+                });
+                alert(`Profile created for ${newProfileData.name}`);
+            }
+            else {
+                alert(`Failed to create profile: ${result.error}`);
+            }
+        }
+        catch (e) {
+            alert(`Error creating profile: ${String(e)}`);
+        }
+    };
+    /**
+     * Format core values for display.
+     */
+    const formatCoreValues = (values) => {
+        return values.map((v, i) => `C${i}:${v}`).join(" ");
+    };
+    // Check if a game is currently running
+    const isGameRunning = runningAppId !== null && runningAppName !== null;
+    return (SP_REACT.createElement(SP_REACT.Fragment, null,
+        SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: { fontSize: "16px", fontWeight: "bold", marginBottom: "12px", marginTop: "8px" } }, "Game Profiles")),
+        isGameRunning && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleQuickCreate, disabled: isCreatingProfile, style: {
+                    backgroundColor: "#1a9fff",
+                    marginBottom: "12px",
+                } },
+                SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isCreatingProfile ? (SP_REACT.createElement(SP_REACT.Fragment, null,
+                    SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    SP_REACT.createElement("span", null, "Creating..."))) : (SP_REACT.createElement(SP_REACT.Fragment, null,
+                    SP_REACT.createElement(FaRocket, null),
+                    SP_REACT.createElement("span", null,
+                        "Save as Profile for ",
+                        runningAppName))))))),
+        SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    gap: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowCreateDialog(true), style: { flex: 1 } },
+                    SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                        SP_REACT.createElement(FaEdit, null),
+                        SP_REACT.createElement("span", null, "Create Profile"))),
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportProfiles, style: { flex: 1 } },
+                    SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                        SP_REACT.createElement(FaDownload, null),
+                        SP_REACT.createElement("span", null, "Export All"))),
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setIsImportingProfiles(true), style: { flex: 1 } },
+                    SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                        SP_REACT.createElement(FaUpload, null),
+                        SP_REACT.createElement("span", null, "Import"))))),
+        showCreateDialog && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Create New Profile"),
+                SP_REACT.createElement(DFL.TextField, { label: "Game Name", value: newProfileData.name, onChange: (e) => setNewProfileData({ ...newProfileData, name: e.target.value }), style: { marginBottom: "8px" } }),
+                SP_REACT.createElement(DFL.TextField, { label: "Steam AppID", value: String(newProfileData.app_id), onChange: (e) => setNewProfileData({ ...newProfileData, app_id: parseInt(e.target.value) || 0 }), style: { marginBottom: "8px" } }),
+                SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
+                    "Cores: ",
+                    formatCoreValues(newProfileData.cores)),
+                SP_REACT.createElement(DFL.ToggleField, { label: "Enable Dynamic Mode", checked: newProfileData.dynamic_enabled, onChange: (checked) => setNewProfileData({ ...newProfileData, dynamic_enabled: checked }) }),
+                SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleCreateProfile },
+                        SP_REACT.createElement("span", null, "Create")),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowCreateDialog(false) },
+                        SP_REACT.createElement("span", null, "Cancel")))))),
+        isImportingProfiles && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Import Profiles"),
+                SP_REACT.createElement(DFL.TextField, { label: "JSON Data", value: importProfileJson, onChange: (e) => setImportProfileJson(e.target.value), style: { marginBottom: "8px" } }),
+                SP_REACT.createElement(DFL.DropdownItem, { label: "Merge Strategy", menuLabel: "Merge Strategy", rgOptions: [
+                        { data: "skip", label: "Skip conflicts (keep existing)" },
+                        { data: "overwrite", label: "Overwrite conflicts" },
+                        { data: "rename", label: "Rename conflicts" },
+                    ], selectedOption: mergeStrategy, onChange: (option) => setMergeStrategy(option.data) }),
+                importProfileError && (SP_REACT.createElement("div", { style: { color: "#f44336", fontSize: "12px", marginBottom: "8px", marginTop: "8px" } }, importProfileError)),
+                SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleImportProfiles },
+                        SP_REACT.createElement("span", null, "Import")),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => { setIsImportingProfiles(false); setImportProfileJson(""); setImportProfileError(null); } },
+                        SP_REACT.createElement("span", null, "Cancel")))))),
+        editingProfile && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                    "Edit Profile: ",
+                    editingProfile.name),
+                SP_REACT.createElement(DFL.TextField, { label: "Game Name", value: editingProfile.name, onChange: (e) => setEditingProfile({ ...editingProfile, name: e.target.value }), style: { marginBottom: "8px" } }),
+                SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
+                    "Cores: ",
+                    formatCoreValues(editingProfile.cores)),
+                SP_REACT.createElement(DFL.ToggleField, { label: "Enable Dynamic Mode", checked: editingProfile.dynamic_enabled, onChange: (checked) => setEditingProfile({ ...editingProfile, dynamic_enabled: checked }) }),
+                SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSaveProfileEdit },
+                        SP_REACT.createElement("span", null, "Save")),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setEditingProfile(null) },
+                        SP_REACT.createElement("span", null, "Cancel")))))),
+        profiles.length === 0 ? (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "12px" } },
+                "No game profiles yet. ",
+                isGameRunning ? "Click the button above to create one!" : "Launch a game and create a profile."))) : (profiles.map((profile) => {
+            const isActive = activeProfile?.app_id === profile.app_id || runningAppId === profile.app_id;
+            return (SP_REACT.createElement(DFL.PanelSectionRow, { key: profile.app_id },
+                SP_REACT.createElement("div", { style: {
+                        padding: "12px",
+                        backgroundColor: isActive ? "#1a3a5c" : "#23262e",
+                        borderRadius: "8px",
+                        marginBottom: "8px",
+                        border: isActive ? "2px solid #1a9fff" : "none",
+                    } },
+                    SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                        SP_REACT.createElement("div", { style: { flex: 1 } },
+                            SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                                SP_REACT.createElement("div", { style: { fontWeight: "bold", fontSize: "14px" } }, profile.name),
+                                isActive && (SP_REACT.createElement("div", { style: {
+                                        fontSize: "10px",
+                                        padding: "2px 6px",
+                                        backgroundColor: "#1a9fff",
+                                        borderRadius: "4px",
+                                        fontWeight: "bold",
+                                    } }, "ACTIVE"))),
+                            SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginTop: "2px" } },
+                                "AppID: ",
+                                profile.app_id),
+                            SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginTop: "4px" } }, formatCoreValues(profile.cores)),
+                            profile.dynamic_enabled && (SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#4caf50", marginTop: "2px" } }, "\u26A1 Dynamic Mode Enabled"))),
+                        SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
+                            SP_REACT.createElement("button", { onClick: () => setEditingProfile(profile), style: {
+                                    padding: "8px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    color: "#1a9fff",
+                                    cursor: "pointer",
+                                }, title: "Edit profile" },
+                                SP_REACT.createElement(FaEdit, null)),
+                            SP_REACT.createElement("button", { onClick: () => handleDeleteProfile(profile.app_id), style: {
+                                    padding: "8px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    color: "#f44336",
+                                    cursor: "pointer",
+                                }, title: "Delete profile" },
+                                SP_REACT.createElement(FaTrash, null)))))));
+        })),
+        SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: { borderTop: "1px solid #3d4450", margin: "16px 0" } })),
+        SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: { fontSize: "16px", fontWeight: "bold", marginBottom: "12px" } }, "Legacy Presets")),
+        SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportAll },
+                    SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        SP_REACT.createElement(FaDownload, null),
+                        SP_REACT.createElement("span", null, "Export All"))),
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setIsImporting(true) },
+                    SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        SP_REACT.createElement(FaUpload, null),
+                        SP_REACT.createElement("span", null, "Import"))))),
+        isImporting && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Import Presets"),
+                SP_REACT.createElement(DFL.TextField, { label: "JSON Data", value: importJson, onChange: (e) => setImportJson(e.target.value), style: { marginBottom: "8px" } }),
+                importError && (SP_REACT.createElement("div", { style: { color: "#f44336", fontSize: "12px", marginBottom: "8px" } }, importError)),
+                SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleImport },
+                        SP_REACT.createElement("span", null, "Import")),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => { setIsImporting(false); setImportJson(""); setImportError(null); } },
+                        SP_REACT.createElement("span", null, "Cancel")))))),
+        editingPreset && (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                } },
+                SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                    "Edit Preset: ",
+                    editingPreset.label),
+                SP_REACT.createElement(DFL.TextField, { label: "Label", value: editingPreset.label, onChange: (e) => setEditingPreset({ ...editingPreset, label: e.target.value }), style: { marginBottom: "8px" } }),
+                SP_REACT.createElement(DFL.ToggleField, { label: "Use Timeout", checked: editingPreset.use_timeout, onChange: (checked) => setEditingPreset({ ...editingPreset, use_timeout: checked }) }),
+                editingPreset.use_timeout && (SP_REACT.createElement(DFL.SliderField, { label: "Timeout (seconds)", value: editingPreset.timeout, min: 0, max: 60, step: 5, showValue: true, onChange: (value) => setEditingPreset({ ...editingPreset, timeout: value }) })),
+                SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSaveEdit },
+                        SP_REACT.createElement("span", null, "Save")),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setEditingPreset(null) },
+                        SP_REACT.createElement("span", null, "Cancel")))))),
+        state.presets.length === 0 ? (SP_REACT.createElement(DFL.PanelSectionRow, null,
+            SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "12px" } }, "No legacy presets saved."))) : (state.presets.map((preset) => (SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.app_id },
+            SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginBottom: "8px",
+                } },
+                SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                    SP_REACT.createElement("div", null,
+                        SP_REACT.createElement("div", { style: { fontWeight: "bold", fontSize: "14px" } }, preset.label),
+                        SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, formatCoreValues(preset.value)),
+                        preset.use_timeout && (SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#ff9800" } },
+                            "Timeout: ",
+                            preset.timeout,
+                            "s")),
+                        preset.tested && (SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#4caf50" } }, "\u2713 Tested"))),
+                    SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
+                        SP_REACT.createElement("button", { onClick: () => setEditingPreset(preset), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#1a9fff",
+                                cursor: "pointer",
+                            } },
+                            SP_REACT.createElement(FaEdit, null)),
+                        SP_REACT.createElement("button", { onClick: () => handleExportSingle(preset), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#8b929a",
+                                cursor: "pointer",
+                            } },
+                            SP_REACT.createElement(FaDownload, null)),
+                        SP_REACT.createElement("button", { onClick: () => handleDelete(preset.app_id), style: {
+                                padding: "8px",
+                                backgroundColor: "transparent",
+                                border: "none",
+                                color: "#f44336",
+                                cursor: "pointer",
+                            } },
+                            SP_REACT.createElement(FaTrash, null))))))))),
+        SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
 };
 
 /**
@@ -1924,6 +3207,18 @@ const ManualTab = () => {
         }
     };
     /**
+     * Run benchmark - 10 second stress test.
+     * Requirements: 7.1, 7.4
+     */
+    const handleRunBenchmark = async () => {
+        try {
+            await api.runBenchmark();
+        }
+        catch (e) {
+            console.error("Benchmark failed:", e);
+        }
+    };
+    /**
      * Get color for value indicator.
      */
     const getValueColor = (value) => {
@@ -2093,6 +3388,91 @@ const ManualTab = () => {
                         "Tune for ",
                         state.runningAppName))))))),
         React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunBenchmark, disabled: isApplying || isTesting || isTuning || state.isBenchmarkRunning, style: { marginTop: "8px" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff9800" } }, state.isBenchmarkRunning ? (React.createElement(React.Fragment, null,
+                    React.createElement(FaSpinner, { className: "spin" }),
+                    React.createElement("span", null, "Running Benchmark..."))) : (React.createElement(React.Fragment, null,
+                    React.createElement(FaVial, null),
+                    React.createElement("span", null, "Run Benchmark")))))),
+        state.isBenchmarkRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+                    React.createElement(FaSpinner, { className: "spin", style: { color: "#ff9800" } }),
+                    React.createElement("span", { style: { fontWeight: "bold" } }, "Running benchmark...")),
+                React.createElement(DFL.ProgressBarWithInfo, { label: "Benchmark Progress", description: "Testing performance with stress-ng", nProgress: 50, sOperationText: "~10 seconds" }),
+                React.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginTop: "8px", textAlign: "center" } }, "All tuning controls are disabled during benchmark")))),
+        state.lastBenchmarkResult && !state.isBenchmarkRunning && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1b5e20",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                    borderLeft: "4px solid #4caf50",
+                } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
+                    React.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, "Latest Benchmark"),
+                    React.createElement(FaCheck, { style: { color: "#4caf50" } })),
+                React.createElement("div", { style: { marginBottom: "8px" } },
+                    React.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7" } }, "Score"),
+                    React.createElement("div", { style: { fontSize: "20px", fontWeight: "bold", color: "#4caf50" } },
+                        state.lastBenchmarkResult.score.toFixed(2),
+                        " bogo ops/s")),
+                React.createElement("div", { style: { marginBottom: "8px" } },
+                    React.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" } }, "Undervolt Values Used"),
+                    React.createElement("div", { style: { fontSize: "12px", color: "#c8e6c9" } },
+                        "[",
+                        state.lastBenchmarkResult.cores_used.join(", "),
+                        "] mV")),
+                state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
+                    const current = state.benchmarkHistory[0];
+                    const previous = state.benchmarkHistory[1];
+                    const scoreDiff = current.score - previous.score;
+                    const percentChange = ((scoreDiff / previous.score) * 100);
+                    const improvement = scoreDiff > 0;
+                    return (React.createElement("div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #2e7d32" } },
+                        React.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" } }, "Comparison with Previous Run"),
+                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                            improvement ? (React.createElement(FaCheck, { style: { color: "#4caf50" } })) : (React.createElement(FaTimes, { style: { color: "#ff6b6b" } })),
+                            React.createElement("span", { style: { fontSize: "13px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" } },
+                                improvement ? "+" : "",
+                                percentChange.toFixed(2),
+                                "%"),
+                            React.createElement("span", { style: { fontSize: "11px", color: "#a5d6a7" } },
+                                "(",
+                                improvement ? "+" : "",
+                                scoreDiff.toFixed(2),
+                                " bogo ops/s)"))));
+                })(),
+                React.createElement("div", { style: { fontSize: "10px", color: "#81c784", marginTop: "8px" } }, new Date(state.lastBenchmarkResult.timestamp).toLocaleString())))),
+        state.benchmarkHistory && state.benchmarkHistory.length > 0 && (React.createElement(React.Fragment, null,
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Benchmark History (Last 10)")),
+            state.benchmarkHistory.slice(0, 10).map((result, index) => (React.createElement(DFL.PanelSectionRow, { key: index },
+                React.createElement("div", { style: {
+                        padding: "10px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "6px",
+                        marginBottom: "6px",
+                        borderLeft: `3px solid #4caf50`,
+                    } },
+                    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                        React.createElement("div", null,
+                            React.createElement("div", { style: { fontWeight: "bold", fontSize: "13px", color: "#4caf50" } },
+                                result.score.toFixed(2),
+                                " bogo ops/s"),
+                            React.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginTop: "2px" } },
+                                "Cores: [",
+                                result.cores_used.join(", "),
+                                "] mV")),
+                        React.createElement("div", { style: { textAlign: "right" } },
+                            React.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, new Date(result.timestamp).toLocaleDateString()),
+                            React.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, new Date(result.timestamp).toLocaleTimeString()))))))))),
+        React.createElement(DFL.PanelSectionRow, null,
             React.createElement("div", { style: {
                     marginTop: "12px",
                     padding: "8px",
@@ -2118,174 +3498,10 @@ const ManualTab = () => {
         `)));
 };
 /**
- * Presets tab component.
- * Requirements: 7.3
- *
- * Features:
- * - Preset list with edit/delete/export
- * - Import preset button
+ * Presets tab component - now uses PresetsTabNew with profile management.
+ * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
  */
-const PresetsTab = () => {
-    const { state, api } = useDeckTune();
-    const [editingPreset, setEditingPreset] = SP_REACT.useState(null);
-    const [isImporting, setIsImporting] = SP_REACT.useState(false);
-    const [importJson, setImportJson] = SP_REACT.useState("");
-    const [importError, setImportError] = SP_REACT.useState(null);
-    /**
-     * Handle preset deletion.
-     */
-    const handleDelete = async (appId) => {
-        await api.deletePreset(appId);
-    };
-    /**
-     * Handle preset export (single preset).
-     */
-    const handleExportSingle = async (preset) => {
-        const json = JSON.stringify([preset], null, 2);
-        // In a real implementation, this would trigger a file download
-        console.log("Export preset:", json);
-        // For now, copy to clipboard simulation
-        alert(`Preset exported:\n${json}`);
-    };
-    /**
-     * Handle export all presets.
-     */
-    const handleExportAll = async () => {
-        const json = await api.exportPresets();
-        console.log("Export all presets:", json);
-        alert(`All presets exported:\n${json}`);
-    };
-    /**
-     * Handle import presets.
-     */
-    const handleImport = async () => {
-        setImportError(null);
-        try {
-            const result = await api.importPresets(importJson);
-            if (result.success) {
-                setIsImporting(false);
-                setImportJson("");
-                alert(`Successfully imported ${result.imported_count} preset(s)`);
-            }
-            else {
-                setImportError(result.error || "Import failed");
-            }
-        }
-        catch (e) {
-            setImportError("Invalid JSON format");
-        }
-    };
-    /**
-     * Handle preset edit save.
-     */
-    const handleSaveEdit = async () => {
-        if (editingPreset) {
-            await api.updatePreset(editingPreset);
-            setEditingPreset(null);
-        }
-    };
-    /**
-     * Format core values for display.
-     */
-    const formatCoreValues = (values) => {
-        return values.map((v, i) => `C${i}:${v}`).join(" ");
-    };
-    return (React.createElement(React.Fragment, null,
-        React.createElement(DFL.PanelSectionRow, null,
-            React.createElement(DFL.Focusable, { style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "16px",
-                } },
-                React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportAll },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                        React.createElement(FaDownload, null),
-                        React.createElement("span", null, "Export All"))),
-                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setIsImporting(true) },
-                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                        React.createElement(FaUpload, null),
-                        React.createElement("span", null, "Import"))))),
-        isImporting && (React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                } },
-                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Import Presets"),
-                React.createElement(DFL.TextField, { label: "JSON Data", value: importJson, onChange: (e) => setImportJson(e.target.value), style: { marginBottom: "8px" } }),
-                importError && (React.createElement("div", { style: { color: "#f44336", fontSize: "12px", marginBottom: "8px" } }, importError)),
-                React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleImport },
-                        React.createElement("span", null, "Import")),
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => { setIsImporting(false); setImportJson(""); setImportError(null); } },
-                        React.createElement("span", null, "Cancel")))))),
-        editingPreset && (React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                } },
-                React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
-                    "Edit Preset: ",
-                    editingPreset.label),
-                React.createElement(DFL.TextField, { label: "Label", value: editingPreset.label, onChange: (e) => setEditingPreset({ ...editingPreset, label: e.target.value }), style: { marginBottom: "8px" } }),
-                React.createElement(DFL.ToggleField, { label: "Use Timeout", checked: editingPreset.use_timeout, onChange: (checked) => setEditingPreset({ ...editingPreset, use_timeout: checked }) }),
-                editingPreset.use_timeout && (React.createElement(DFL.SliderField, { label: "Timeout (seconds)", value: editingPreset.timeout, min: 0, max: 60, step: 5, showValue: true, onChange: (value) => setEditingPreset({ ...editingPreset, timeout: value }) })),
-                React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginTop: "12px" } },
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSaveEdit },
-                        React.createElement("span", null, "Save")),
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setEditingPreset(null) },
-                        React.createElement("span", null, "Cancel")))))),
-        React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
-                "Saved Presets (",
-                state.presets.length,
-                ")")),
-        state.presets.length === 0 ? (React.createElement(DFL.PanelSectionRow, null,
-            React.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px" } }, "No presets saved yet. Use \"Tune for this game\" or save from Manual tab."))) : (state.presets.map((preset) => (React.createElement(DFL.PanelSectionRow, { key: preset.app_id },
-            React.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                    marginBottom: "8px",
-                } },
-                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                    React.createElement("div", null,
-                        React.createElement("div", { style: { fontWeight: "bold", fontSize: "14px" } }, preset.label),
-                        React.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, formatCoreValues(preset.value)),
-                        preset.use_timeout && (React.createElement("div", { style: { fontSize: "10px", color: "#ff9800" } },
-                            "Timeout: ",
-                            preset.timeout,
-                            "s")),
-                        preset.tested && (React.createElement("div", { style: { fontSize: "10px", color: "#4caf50" } }, "\u2713 Tested"))),
-                    React.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" } },
-                        React.createElement("button", { onClick: () => setEditingPreset(preset), style: {
-                                padding: "8px",
-                                backgroundColor: "transparent",
-                                border: "none",
-                                color: "#1a9fff",
-                                cursor: "pointer",
-                            } },
-                            React.createElement(FaEdit, null)),
-                        React.createElement("button", { onClick: () => handleExportSingle(preset), style: {
-                                padding: "8px",
-                                backgroundColor: "transparent",
-                                border: "none",
-                                color: "#8b929a",
-                                cursor: "pointer",
-                            } },
-                            React.createElement(FaDownload, null)),
-                        React.createElement("button", { onClick: () => handleDelete(preset.app_id), style: {
-                                padding: "8px",
-                                backgroundColor: "transparent",
-                                border: "none",
-                                color: "#f44336",
-                                cursor: "pointer",
-                            } },
-                            React.createElement(FaTrash, null)))))))))));
-};
+const PresetsTab = PresetsTabNew;
 /**
  * Available test options.
  */

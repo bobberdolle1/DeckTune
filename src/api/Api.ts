@@ -22,6 +22,12 @@ import {
   DynamicStatus,
   ServerEvent,
   StatusString,
+  BinningConfig,
+  BinningState,
+  BinningResult,
+  BinningProgress,
+  GameProfile,
+  BenchmarkResult,
 } from "./types";
 
 // Simple EventEmitter implementation
@@ -130,6 +136,10 @@ export class Api extends SimpleEventEmitter {
     addEventListener("test_complete", this.onTestComplete.bind(this));
     addEventListener("update_status", this.onStatusUpdate.bind(this));
     addEventListener("dynamic_status", this.onDynamicStatus.bind(this));
+    addEventListener("binning_progress", this.onBinningProgress.bind(this));
+    addEventListener("binning_complete", this.onBinningComplete.bind(this));
+    addEventListener("binning_error", this.onBinningError.bind(this));
+    addEventListener("profile_changed", this.onProfileChanged.bind(this));
 
     if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
       return await this.handleMainRunningApp();
@@ -222,6 +232,67 @@ export class Api extends SimpleEventEmitter {
    */
   private onDynamicStatus(status: DynamicStatus): void {
     this.setState({ dynamicStatus: status });
+  }
+
+  /**
+   * Handle binning progress events from backend.
+   * Requirements: 8.1, 8.2
+   */
+  private onBinningProgress(progress: BinningProgress): void {
+    this.setState({ binningProgress: progress });
+  }
+
+  /**
+   * Handle binning complete events from backend.
+   * Requirements: 8.3, 8.4
+   */
+  private onBinningComplete(result: BinningResult): void {
+    this.setState({
+      binningResult: result,
+      binningProgress: null,
+      isBinning: false,
+    });
+  }
+
+  /**
+   * Handle binning error events from backend.
+   * Requirements: 8.3
+   */
+  private onBinningError(error: { message: string }): void {
+    this.setState({
+      isBinning: false,
+      binningProgress: null,
+    });
+    // Error will be shown in UI via result or status
+  }
+
+  /**
+   * Handle profile change events from backend.
+   * Requirements: 4.4
+   * 
+   * Updates state with active profile name and shows notification.
+   */
+  private onProfileChanged(data: { profile_name: string; app_id: number | null }): void {
+    // Update active profile in state
+    if (data.app_id !== null) {
+      // Find the profile in our local state
+      const profile = this.state.gameProfiles?.find(p => p.app_id === data.app_id);
+      if (profile) {
+        this.setState({ activeProfile: profile });
+      }
+    } else {
+      // Global default - clear active profile
+      this.setState({ activeProfile: null });
+    }
+    
+    // Show notification via Decky toast (if available)
+    if (typeof DFL !== 'undefined' && DFL.Toaster) {
+      DFL.Toaster.toast({
+        title: "Profile Switched",
+        body: `Now using: ${data.profile_name}`,
+        duration: 3000,
+      });
+    }
   }
 
   /**
@@ -437,6 +508,89 @@ export class Api extends SimpleEventEmitter {
         isAutotuning: false,
         autotuneProgress: null,
       });
+    }
+    
+    return result;
+  }
+
+  // ==================== Binning Methods ====================
+  // Requirements: 8.1, 8.2, 8.3, 8.4, 10.1
+
+  /**
+   * Start silicon binning process.
+   * Requirements: 8.1
+   * 
+   * @param config - Optional binning configuration
+   * @returns Promise with success status
+   */
+  async startBinning(config?: Partial<BinningConfig>): Promise<{ success: boolean; error?: string }> {
+    const result = (await call("start_binning", config || {})) as { success: boolean; error?: string };
+    
+    if (result.success) {
+      this.setState({
+        isBinning: true,
+        binningProgress: null,
+        binningResult: null,
+      });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Stop running binning process.
+   * Requirements: 8.1
+   * 
+   * @returns Promise with success status
+   */
+  async stopBinning(): Promise<{ success: boolean; error?: string }> {
+    const result = (await call("stop_binning")) as { success: boolean; error?: string };
+    
+    if (result.success) {
+      this.setState({
+        isBinning: false,
+        binningProgress: null,
+      });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get current binning status.
+   * Requirements: 8.1
+   * 
+   * @returns Current binning state or null
+   */
+  async getBinningStatus(): Promise<BinningState | null> {
+    return (await call("get_binning_status")) as BinningState | null;
+  }
+
+  /**
+   * Get binning configuration.
+   * Requirements: 10.1
+   * 
+   * @returns Current binning configuration
+   */
+  async getBinningConfig(): Promise<BinningConfig> {
+    const config = (await call("get_binning_config")) as BinningConfig;
+    this.setState({ binningConfig: config });
+    return config;
+  }
+
+  /**
+   * Update binning configuration.
+   * Requirements: 10.1, 10.2, 10.3, 10.4
+   * 
+   * @param config - Partial configuration to update
+   * @returns Promise with success status
+   */
+  async updateBinningConfig(config: Partial<BinningConfig>): Promise<{ success: boolean; error?: string }> {
+    const result = (await call("update_binning_config", config)) as { success: boolean; error?: string };
+    
+    if (result.success) {
+      // Refresh config from backend
+      await this.getBinningConfig();
     }
     
     return result;
@@ -800,6 +954,252 @@ export class Api extends SimpleEventEmitter {
     };
   }
 
+  // ==================== Profile Management Methods ====================
+  // Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 9.1, 9.2
+
+  /**
+   * Create a new game profile.
+   * Requirements: 3.1, 5.1
+   * 
+   * @param profile - Profile data to create
+   * @returns Promise with success status
+   */
+  async createProfile(profile: Omit<GameProfile, 'created_at' | 'last_used'>): Promise<{
+    success: boolean;
+    profile?: GameProfile;
+    error?: string;
+  }> {
+    const result = await call("create_profile", profile) as {
+      success: boolean;
+      profile?: GameProfile;
+      error?: string;
+    };
+    
+    if (result.success && result.profile) {
+      // Add to local state
+      const profiles = [...(this.state.gameProfiles || []), result.profile];
+      this.setState({ gameProfiles: profiles });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get all game profiles.
+   * Requirements: 3.2
+   * 
+   * @returns Array of all game profiles
+   */
+  async getProfiles(): Promise<GameProfile[]> {
+    const profiles = await call("get_profiles") as GameProfile[];
+    this.setState({ gameProfiles: profiles });
+    return profiles;
+  }
+
+  /**
+   * Update an existing game profile.
+   * Requirements: 3.3
+   * 
+   * @param appId - Steam AppID of the profile to update
+   * @param updates - Partial profile data to update
+   * @returns Promise with success status
+   */
+  async updateProfile(appId: number, updates: Partial<GameProfile>): Promise<{
+    success: boolean;
+    profile?: GameProfile;
+    error?: string;
+  }> {
+    const result = await call("update_profile", appId, updates) as {
+      success: boolean;
+      profile?: GameProfile;
+      error?: string;
+    };
+    
+    if (result.success && result.profile) {
+      // Update local state
+      const profiles = [...(this.state.gameProfiles || [])];
+      const index = profiles.findIndex(p => p.app_id === appId);
+      if (index !== -1) {
+        profiles[index] = result.profile;
+        this.setState({ gameProfiles: profiles });
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Delete a game profile.
+   * Requirements: 3.4
+   * 
+   * @param appId - Steam AppID of the profile to delete
+   * @returns Promise with success status
+   */
+  async deleteProfile(appId: number): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const result = await call("delete_profile", appId) as {
+      success: boolean;
+      error?: string;
+    };
+    
+    if (result.success) {
+      // Remove from local state
+      const profiles = (this.state.gameProfiles || []).filter(p => p.app_id !== appId);
+      this.setState({ gameProfiles: profiles });
+      
+      // If this was the active profile, clear it
+      if (this.state.activeProfile?.app_id === appId) {
+        this.setState({ activeProfile: null });
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Create a profile for the currently running game.
+   * Requirements: 5.1, 5.2, 5.3, 5.4
+   * 
+   * Automatically populates app_id and game name from the running game.
+   * Captures current undervolt and dynamic mode settings.
+   * 
+   * @returns Promise with success status and created profile
+   */
+  async createProfileForCurrentGame(): Promise<{
+    success: boolean;
+    profile?: GameProfile;
+    error?: string;
+  }> {
+    if (!this.state.runningAppId || !this.state.runningAppName) {
+      return {
+        success: false,
+        error: "No game is currently running"
+      };
+    }
+    
+    const result = await call("create_profile_for_current_game") as {
+      success: boolean;
+      profile?: GameProfile;
+      error?: string;
+    };
+    
+    if (result.success && result.profile) {
+      // Add to local state
+      const profiles = [...(this.state.gameProfiles || []), result.profile];
+      this.setState({ 
+        gameProfiles: profiles,
+        activeProfile: result.profile
+      });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Export all game profiles as JSON.
+   * Requirements: 9.1
+   * 
+   * @returns JSON string containing all profiles
+   */
+  async exportGameProfiles(): Promise<{
+    success: boolean;
+    json?: string;
+    path?: string;
+    error?: string;
+  }> {
+    return await call("export_profiles") as {
+      success: boolean;
+      json?: string;
+      path?: string;
+      error?: string;
+    };
+  }
+
+  /**
+   * Import game profiles from JSON.
+   * Requirements: 9.2, 9.3, 9.4
+   * 
+   * @param jsonData - JSON string containing profiles to import
+   * @param mergeStrategy - How to handle conflicts: "skip", "overwrite", "rename"
+   * @returns Promise with import result
+   */
+  async importGameProfiles(jsonData: string, mergeStrategy: "skip" | "overwrite" | "rename" = "skip"): Promise<{
+    success: boolean;
+    imported_count: number;
+    conflicts: number[];
+    error?: string;
+  }> {
+    const result = await call("import_profiles", jsonData, mergeStrategy) as {
+      success: boolean;
+      imported_count: number;
+      conflicts: number[];
+      error?: string;
+    };
+    
+    if (result.success) {
+      // Refresh profiles from backend
+      await this.getProfiles();
+    }
+    
+    return result;
+  }
+
+  // ==================== Benchmark Methods ====================
+  // Requirements: 7.1, 7.3, 7.5
+
+  /**
+   * Run a 10-second benchmark using stress-ng.
+   * Requirements: 7.1, 7.4
+   * 
+   * Blocks other operations during execution.
+   * 
+   * @returns Promise with benchmark result
+   */
+  async runBenchmark(): Promise<{
+    success: boolean;
+    result?: BenchmarkResult;
+    error?: string;
+  }> {
+    // Set running state before starting
+    this.setState({ isBenchmarkRunning: true });
+    
+    const response = await call("run_benchmark") as {
+      success: boolean;
+      result?: BenchmarkResult;
+      error?: string;
+    };
+    
+    if (response.success && response.result) {
+      // Update state with new result
+      this.setState({
+        isBenchmarkRunning: false,
+        lastBenchmarkResult: response.result,
+      });
+      
+      // Refresh benchmark history
+      await this.getBenchmarkHistory();
+    } else {
+      // Clear running state on error
+      this.setState({ isBenchmarkRunning: false });
+    }
+    
+    return response;
+  }
+
+  /**
+   * Get benchmark history (last 20 results).
+   * Requirements: 7.5
+   * 
+   * @returns Array of benchmark results with comparisons
+   */
+  async getBenchmarkHistory(): Promise<BenchmarkResult[]> {
+    const history = await call("get_benchmark_history") as BenchmarkResult[];
+    this.setState({ benchmarkHistory: history });
+    return history;
+  }
+
   // ==================== Server Events ====================
 
   /**
@@ -837,6 +1237,10 @@ export class Api extends SimpleEventEmitter {
     removeEventListener("test_complete", this.onTestComplete.bind(this));
     removeEventListener("update_status", this.onStatusUpdate.bind(this));
     removeEventListener("dynamic_status", this.onDynamicStatus.bind(this));
+    removeEventListener("binning_progress", this.onBinningProgress.bind(this));
+    removeEventListener("binning_complete", this.onBinningComplete.bind(this));
+    removeEventListener("binning_error", this.onBinningError.bind(this));
+    removeEventListener("profile_changed", this.onProfileChanged.bind(this));
   }
 }
 

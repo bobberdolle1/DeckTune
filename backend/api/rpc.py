@@ -10,6 +10,8 @@ and diagnostics methods.
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -18,6 +20,10 @@ if TYPE_CHECKING:
     from ..platform.detect import PlatformInfo
     from ..tuning.autotune import AutotuneEngine, AutotuneConfig
     from ..tuning.runner import TestRunner
+    from ..tuning.binning import BinningEngine
+    from ..tuning.benchmark import BenchmarkRunner
+    from ..dynamic.profile_manager import ProfileManager
+    from ..platform.appwatcher import AppWatcher
     from .events import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -44,7 +50,11 @@ class DeckTuneRPC:
         event_emitter: "EventEmitter",
         settings_manager,
         autotune_engine: Optional["AutotuneEngine"] = None,
-        test_runner: Optional["TestRunner"] = None
+        test_runner: Optional["TestRunner"] = None,
+        binning_engine: Optional["BinningEngine"] = None,
+        profile_manager: Optional["ProfileManager"] = None,
+        app_watcher: Optional["AppWatcher"] = None,
+        benchmark_runner: Optional["BenchmarkRunner"] = None
     ):
         """Initialize the RPC handler.
         
@@ -56,6 +66,10 @@ class DeckTuneRPC:
             settings_manager: Decky settings manager instance
             autotune_engine: Optional AutotuneEngine for autotune operations
             test_runner: Optional TestRunner for stress tests
+            binning_engine: Optional BinningEngine for silicon binning
+            profile_manager: Optional ProfileManager for per-game profiles
+            app_watcher: Optional AppWatcher for detecting active games
+            benchmark_runner: Optional BenchmarkRunner for performance benchmarking
         """
         self.platform = platform
         self.ryzenadj = ryzenadj
@@ -64,9 +78,15 @@ class DeckTuneRPC:
         self.settings = settings_manager
         self.autotune_engine = autotune_engine
         self.test_runner = test_runner
+        self.binning_engine = binning_engine
+        self.profile_manager = profile_manager
+        self.app_watcher = app_watcher
+        self.benchmark_runner = benchmark_runner
         
         self._delay_task: Optional[asyncio.Task] = None
         self._autotune_task: Optional[asyncio.Task] = None
+        self._binning_task: Optional[asyncio.Task] = None
+        self._benchmark_task: Optional[asyncio.Task] = None
     
     def set_autotune_engine(self, engine: "AutotuneEngine") -> None:
         """Set the autotune engine.
@@ -83,6 +103,38 @@ class DeckTuneRPC:
             runner: TestRunner instance
         """
         self.test_runner = runner
+    
+    def set_binning_engine(self, engine: "BinningEngine") -> None:
+        """Set the binning engine.
+        
+        Args:
+            engine: BinningEngine instance
+        """
+        self.binning_engine = engine
+    
+    def set_profile_manager(self, manager: "ProfileManager") -> None:
+        """Set the profile manager.
+        
+        Args:
+            manager: ProfileManager instance
+        """
+        self.profile_manager = manager
+    
+    def set_app_watcher(self, watcher: "AppWatcher") -> None:
+        """Set the app watcher.
+        
+        Args:
+            watcher: AppWatcher instance
+        """
+        self.app_watcher = watcher
+    
+    def set_benchmark_runner(self, runner: "BenchmarkRunner") -> None:
+        """Set the benchmark runner.
+        
+        Args:
+            runner: BenchmarkRunner instance
+        """
+        self.benchmark_runner = runner
     
     # ==================== Platform Info ====================
     
@@ -275,6 +327,501 @@ class DeckTuneRPC:
         self._cancel_autotune()
         
         return {"success": True}
+    
+    # ==================== Silicon Binning ====================
+    
+    async def start_binning(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start silicon binning process.
+        
+        Args:
+            config: Dictionary with optional keys:
+                   - test_duration: Test duration in seconds (30-300)
+                   - step_size: Step size in mV (1-10)
+                   - start_value: Starting value in mV (-20 to 0)
+                   
+        Returns:
+            Dictionary with success status or error if already running
+            
+        Requirements: 8.1, 10.1
+        """
+        if self.binning_engine is None:
+            return {"success": False, "error": "Binning engine not configured"}
+        
+        if self.binning_engine.is_running():
+            return {"success": False, "error": "Binning already running"}
+        
+        # Import here to avoid circular imports
+        from ..tuning.binning import BinningConfig
+        
+        # Validate and extract config parameters
+        try:
+            test_duration = config.get("test_duration", 60)
+            step_size = config.get("step_size", 5)
+            start_value = config.get("start_value", -10)
+            
+            # Validate ranges
+            if not (30 <= test_duration <= 300):
+                return {"success": False, "error": f"test_duration must be between 30 and 300, got {test_duration}"}
+            
+            if not (1 <= step_size <= 10):
+                return {"success": False, "error": f"step_size must be between 1 and 10, got {step_size}"}
+            
+            if not (-20 <= start_value <= 0):
+                return {"success": False, "error": f"start_value must be between -20 and 0, got {start_value}"}
+            
+            # Create BinningConfig
+            binning_config = BinningConfig(
+                start_value=start_value,
+                step_size=step_size,
+                test_duration=test_duration,
+                max_iterations=config.get("max_iterations", 20),
+                consecutive_fail_limit=config.get("consecutive_fail_limit", 3)
+            )
+            
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid binning config: {e}")
+            return {"success": False, "error": f"Invalid config: {e}"}
+        
+        logger.info(f"Starting binning with config: {binning_config}")
+        
+        # Run binning in background task
+        self._binning_task = asyncio.create_task(
+            self._run_binning(binning_config)
+        )
+        
+        return {"success": True, "config": {
+            "test_duration": test_duration,
+            "step_size": step_size,
+            "start_value": start_value
+        }}
+    
+    async def _run_binning(self, config: "BinningConfig") -> None:
+        """Run binning and handle completion.
+        
+        Args:
+            config: BinningConfig instance
+        """
+        try:
+            result = await self.binning_engine.start(config)
+            
+            # Emit completion event
+            await self.event_emitter.emit_binning_complete(result)
+            
+            logger.info(f"Binning completed: max_stable={result.max_stable}, "
+                       f"recommended={result.recommended}")
+                
+        except asyncio.CancelledError:
+            logger.info("Binning task cancelled")
+            await self.event_emitter.emit_status("disabled")
+        except Exception as e:
+            logger.exception(f"Binning error: {e}")
+            await self.event_emitter.emit_binning_error(str(e))
+    
+    async def stop_binning(self) -> Dict[str, Any]:
+        """Cancel running binning session.
+        
+        Returns:
+            Dictionary with success status
+        """
+        if self.binning_engine is None:
+            return {"success": False, "error": "Binning engine not configured"}
+        
+        if not self.binning_engine.is_running():
+            return {"success": False, "error": "Binning not running"}
+        
+        logger.info("Stopping binning")
+        self.binning_engine.cancel()
+        
+        if self._binning_task and not self._binning_task.done():
+            self._binning_task.cancel()
+            self._binning_task = None
+        
+        return {"success": True}
+    
+    async def get_binning_status(self) -> Dict[str, Any]:
+        """Get current binning status.
+        
+        Returns:
+            Dictionary with running status and current state if active
+        """
+        if self.binning_engine is None:
+            return {"success": False, "error": "Binning engine not configured"}
+        
+        is_running = self.binning_engine.is_running()
+        
+        result = {
+            "success": True,
+            "running": is_running
+        }
+        
+        # If running, include current state from safety manager
+        if is_running:
+            state = self.safety.load_binning_state()
+            if state:
+                result["current_value"] = state.get("current_value")
+                result["last_stable"] = state.get("last_stable")
+                result["iteration"] = state.get("iteration")
+        
+        return result
+    
+    async def get_binning_config(self) -> Dict[str, Any]:
+        """Get current binning configuration.
+        
+        Returns:
+            Dictionary with binning config settings
+            
+        Requirements: 10.1, 10.5
+        """
+        config = self.settings.getSetting("binning_config") or {
+            "test_duration": 60,
+            "step_size": 5,
+            "start_value": -10,
+            "max_iterations": 20,
+            "consecutive_fail_limit": 3
+        }
+        
+        return {"success": True, "config": config}
+    
+    async def update_binning_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Update binning configuration.
+        
+        Args:
+            config: Dictionary with config keys to update:
+                   - test_duration: Test duration in seconds (30-300)
+                   - step_size: Step size in mV (1-10)
+                   - start_value: Starting value in mV (-20 to 0)
+                   
+        Returns:
+            Dictionary with success status and updated config
+            
+        Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
+        """
+        # Get current config
+        current_config = self.settings.getSetting("binning_config") or {
+            "test_duration": 60,
+            "step_size": 5,
+            "start_value": -10,
+            "max_iterations": 20,
+            "consecutive_fail_limit": 3
+        }
+        
+        # Validate and update each field
+        if "test_duration" in config:
+            test_duration = config["test_duration"]
+            if not (30 <= test_duration <= 300):
+                return {"success": False, "error": f"test_duration must be between 30 and 300, got {test_duration}"}
+            current_config["test_duration"] = test_duration
+        
+        if "step_size" in config:
+            step_size = config["step_size"]
+            if not (1 <= step_size <= 10):
+                return {"success": False, "error": f"step_size must be between 1 and 10, got {step_size}"}
+            current_config["step_size"] = step_size
+        
+        if "start_value" in config:
+            start_value = config["start_value"]
+            if not (-20 <= start_value <= 0):
+                return {"success": False, "error": f"start_value must be between -20 and 0, got {start_value}"}
+            current_config["start_value"] = start_value
+        
+        if "max_iterations" in config:
+            current_config["max_iterations"] = config["max_iterations"]
+        
+        if "consecutive_fail_limit" in config:
+            current_config["consecutive_fail_limit"] = config["consecutive_fail_limit"]
+        
+        # Persist config
+        self.settings.setSetting("binning_config", current_config)
+        
+        logger.info(f"Updated binning config: {current_config}")
+        return {"success": True, "config": current_config}
+    
+    # ==================== Profile Management ====================
+    # Requirements: 3.1, 3.2, 3.3, 3.4
+    
+    async def create_profile(self, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new game profile.
+        
+        Args:
+            profile_data: Dictionary with profile fields:
+                - app_id: Steam AppID (required)
+                - name: Game name (required)
+                - cores: Undervolt values [core0, core1, core2, core3] (required)
+                - dynamic_enabled: Whether dynamic mode is enabled (optional, default False)
+                - dynamic_config: Dynamic mode configuration (optional)
+                
+        Returns:
+            Dictionary with success status and created profile
+            
+        Requirements: 3.1
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            # Extract required fields
+            app_id = profile_data.get("app_id")
+            name = profile_data.get("name")
+            cores = profile_data.get("cores")
+            
+            # Validate required fields
+            if app_id is None:
+                return {"success": False, "error": "app_id is required"}
+            if not name:
+                return {"success": False, "error": "name is required"}
+            if not cores:
+                return {"success": False, "error": "cores is required"}
+            
+            # Extract optional fields
+            dynamic_enabled = profile_data.get("dynamic_enabled", False)
+            dynamic_config = profile_data.get("dynamic_config")
+            
+            # Create profile
+            profile = await self.profile_manager.create_profile(
+                app_id=app_id,
+                name=name,
+                cores=cores,
+                dynamic_enabled=dynamic_enabled,
+                dynamic_config=dynamic_config
+            )
+            
+            if profile:
+                logger.info(f"Created profile for '{name}' (app_id: {app_id})")
+                return {
+                    "success": True,
+                    "profile": profile.to_dict()
+                }
+            else:
+                return {"success": False, "error": "Failed to create profile (may already exist or invalid data)"}
+                
+        except Exception as e:
+            logger.error(f"Failed to create profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_profiles(self) -> Dict[str, Any]:
+        """Get all game profiles.
+        
+        Returns:
+            Dictionary with success status and list of profiles
+            
+        Requirements: 3.2
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            profiles = self.profile_manager.get_all_profiles()
+            profiles_list = [profile.to_dict() for profile in profiles]
+            
+            return {
+                "success": True,
+                "profiles": profiles_list,
+                "count": len(profiles_list)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get profiles: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def update_profile(self, app_id: int, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing game profile.
+        
+        Args:
+            app_id: Steam AppID of profile to update
+            updates: Dictionary with fields to update (name, cores, dynamic_enabled, dynamic_config)
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.3
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            success = await self.profile_manager.update_profile(app_id, **updates)
+            
+            if success:
+                logger.info(f"Updated profile for app_id: {app_id}")
+                return {"success": True}
+            else:
+                return {"success": False, "error": f"Profile with app_id {app_id} not found"}
+                
+        except Exception as e:
+            logger.error(f"Failed to update profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def delete_profile(self, app_id: int) -> Dict[str, Any]:
+        """Delete a game profile.
+        
+        Args:
+            app_id: Steam AppID of profile to delete
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.4
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            success = await self.profile_manager.delete_profile(app_id)
+            
+            if success:
+                logger.info(f"Deleted profile for app_id: {app_id}")
+                return {"success": True}
+            else:
+                return {"success": False, "error": f"Profile with app_id {app_id} not found"}
+                
+        except Exception as e:
+            logger.error(f"Failed to delete profile: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def create_profile_for_current_game(self) -> Dict[str, Any]:
+        """Create a profile for the currently running game.
+        
+        Detects the current AppID from AppWatcher, auto-populates the app_id
+        and game name, and captures current undervolt and dynamic settings.
+        
+        Returns:
+            Dictionary with success status and created profile, or error if no game is running
+            
+        Requirements: 5.1, 5.2, 5.3, 5.4
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        if not self.app_watcher:
+            return {"success": False, "error": "AppWatcher not initialized"}
+        
+        try:
+            # Get current AppID from AppWatcher
+            current_app_id = self.app_watcher.get_current_app_id()
+            
+            if current_app_id is None:
+                logger.info("No game is currently running")
+                return {
+                    "success": False,
+                    "error": "No game is currently running. Launch a game first, then try again."
+                }
+            
+            # Check if profile already exists
+            existing_profile = self.profile_manager.get_profile(current_app_id)
+            if existing_profile:
+                return {
+                    "success": False,
+                    "error": f"Profile for app_id {current_app_id} already exists. Use update instead."
+                }
+            
+            # Try to get game name from Steam (simplified - just use AppID for now)
+            # In a full implementation, we could parse appmanifest files for the game name
+            game_name = f"Game {current_app_id}"
+            
+            # Try to get a better name from appmanifest
+            try:
+                from pathlib import Path
+                import re
+                
+                steamapps_dir = Path.home() / ".steam" / "steam" / "steamapps"
+                manifest_file = steamapps_dir / f"appmanifest_{current_app_id}.acf"
+                
+                if manifest_file.exists():
+                    with open(manifest_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    
+                    # Look for "name" field
+                    name_match = re.search(r'"name"\s+"([^"]+)"', content)
+                    if name_match:
+                        game_name = name_match.group(1)
+                        logger.info(f"Found game name from appmanifest: {game_name}")
+            except Exception as e:
+                logger.debug(f"Could not get game name from appmanifest: {e}")
+            
+            # Create profile from current settings
+            profile = await self.profile_manager.create_from_current(
+                app_id=current_app_id,
+                name=game_name
+            )
+            
+            if profile:
+                logger.info(f"Created profile for current game '{game_name}' (app_id: {current_app_id})")
+                return {
+                    "success": True,
+                    "profile": profile.to_dict(),
+                    "message": f"Profile created for {game_name}"
+                }
+            else:
+                return {"success": False, "error": "Failed to create profile from current settings"}
+                
+        except Exception as e:
+            logger.error(f"Failed to create profile for current game: {e}")
+            return {"success": False, "error": str(e)}
+    
+    # ==================== Profile Import/Export ====================
+    
+    async def export_profiles(self) -> Dict[str, Any]:
+        """Export all profiles to JSON file in home directory.
+        
+        Returns:
+            Dictionary with success status and file path
+            
+        Requirements: 9.5
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            # Export profiles as JSON string
+            json_data = self.profile_manager.export_profiles()
+            
+            # Save to home directory
+            home_dir = Path.home()
+            export_path = home_dir / "decktune_profiles_export.json"
+            
+            with open(export_path, 'w') as f:
+                f.write(json_data)
+            
+            logger.info(f"Exported profiles to {export_path}")
+            return {
+                "success": True,
+                "file_path": str(export_path),
+                "profile_count": len(self.profile_manager.get_all_profiles())
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to export profiles: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def import_profiles(
+        self,
+        json_data: str,
+        strategy: str = "skip"
+    ) -> Dict[str, Any]:
+        """Import profiles from JSON data.
+        
+        Args:
+            json_data: JSON string containing profiles to import
+            strategy: Merge strategy - "skip", "overwrite", or "rename"
+            
+        Returns:
+            Dictionary with import results
+            
+        Requirements: 9.5
+        """
+        if not self.profile_manager:
+            return {"success": False, "error": "ProfileManager not initialized"}
+        
+        try:
+            # Import profiles
+            result = await self.profile_manager.import_profiles(json_data, strategy)
+            
+            logger.info(f"Import complete: {result['imported_count']} imported, {result['skipped_count']} skipped")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to import profiles: {e}")
+            return {"success": False, "error": str(e)}
     
     # ==================== Tests ====================
     
@@ -755,3 +1302,384 @@ class DeckTuneRPC:
         info["lkg_cores"] = self.settings.getSetting("lkg_cores") or [0, 0, 0, 0]
         
         return info
+
+    # ==================== Benchmark ====================
+    # Requirements: 7.1, 7.4, 7.5
+    
+    async def run_benchmark(self) -> Dict[str, Any]:
+        """Run 10-second performance benchmark.
+        
+        Blocks other operations during benchmark execution.
+        Stores result in benchmark_history (keeps last 20).
+        
+        Returns:
+            Dictionary with benchmark result and comparison with previous run
+            
+        Requirements: 7.1, 7.4, 7.5
+        """
+        if self.benchmark_runner is None:
+            return {"success": False, "error": "Benchmark runner not configured"}
+        
+        # Check if benchmark or other operations are running
+        if self._is_operation_running():
+            return {
+                "success": False,
+                "error": "Another operation is running. Please wait for it to complete."
+            }
+        
+        logger.info("Starting benchmark")
+        
+        # Get current undervolt values for recording
+        cores_used = self.settings.getSetting("cores") or [0, 0, 0, 0]
+        
+        # Run benchmark in background task
+        self._benchmark_task = asyncio.create_task(
+            self._run_benchmark_task(cores_used)
+        )
+        
+        try:
+            result = await self._benchmark_task
+            return result
+        except asyncio.CancelledError:
+            logger.info("Benchmark task cancelled")
+            return {"success": False, "error": "Benchmark cancelled"}
+        except Exception as e:
+            logger.exception(f"Benchmark error: {e}")
+            return {"success": False, "error": str(e)}
+        finally:
+            self._benchmark_task = None
+    
+    async def _run_benchmark_task(self, cores_used: List[int]) -> Dict[str, Any]:
+        """Execute benchmark and store result.
+        
+        Args:
+            cores_used: Current undervolt values
+            
+        Returns:
+            Dictionary with benchmark result
+        """
+        try:
+            # Run the benchmark
+            result = await self.benchmark_runner.run_benchmark(cores_used)
+            
+            # Store result in history
+            self._add_to_benchmark_history(result)
+            
+            # Get comparison with previous result if available
+            history = self.settings.getSetting("benchmark_history") or []
+            comparison = None
+            
+            if len(history) >= 2:
+                # Compare with previous result (second to last)
+                from ..tuning.benchmark import BenchmarkResult
+                
+                prev_entry = history[-2]
+                prev_result = BenchmarkResult(
+                    score=prev_entry["score"],
+                    duration=prev_entry["duration"],
+                    cores_used=prev_entry["cores_used"],
+                    timestamp=prev_entry["timestamp"]
+                )
+                
+                comparison = self.benchmark_runner.compare_results(prev_result, result)
+            
+            logger.info(f"Benchmark completed: score={result.score:.2f} bogo ops/s")
+            
+            return {
+                "success": True,
+                "result": {
+                    "score": result.score,
+                    "duration": result.duration,
+                    "cores_used": result.cores_used,
+                    "timestamp": result.timestamp
+                },
+                "comparison": comparison
+            }
+            
+        except RuntimeError as e:
+            logger.error(f"Benchmark failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _add_to_benchmark_history(self, result) -> None:
+        """Add benchmark result to history, keeping last 20.
+        
+        Args:
+            result: BenchmarkResult object
+        """
+        history = self.settings.getSetting("benchmark_history") or []
+        
+        entry = {
+            "score": result.score,
+            "duration": result.duration,
+            "cores_used": result.cores_used,
+            "timestamp": result.timestamp
+        }
+        
+        history.append(entry)
+        
+        # Keep only last 20 entries
+        if len(history) > 20:
+            history = history[-20:]
+        
+        self.settings.setSetting("benchmark_history", history)
+    
+    async def get_benchmark_history(self) -> Dict[str, Any]:
+        """Get last 20 benchmark results.
+        
+        Includes comparison with previous result for each entry if available.
+        
+        Returns:
+            Dictionary with success status and list of benchmark results
+            
+        Requirements: 7.5
+        """
+        history = self.settings.getSetting("benchmark_history") or []
+        
+        # Add comparisons to each result (except the first)
+        results_with_comparison = []
+        
+        for i, entry in enumerate(history):
+            result_dict = {
+                "score": entry["score"],
+                "duration": entry["duration"],
+                "cores_used": entry["cores_used"],
+                "timestamp": entry["timestamp"],
+                "comparison": None
+            }
+            
+            # Add comparison with previous result if available
+            if i > 0 and self.benchmark_runner:
+                from ..tuning.benchmark import BenchmarkResult
+                
+                prev_entry = history[i - 1]
+                prev_result = BenchmarkResult(
+                    score=prev_entry["score"],
+                    duration=prev_entry["duration"],
+                    cores_used=prev_entry["cores_used"],
+                    timestamp=prev_entry["timestamp"]
+                )
+                
+                current_result = BenchmarkResult(
+                    score=entry["score"],
+                    duration=entry["duration"],
+                    cores_used=entry["cores_used"],
+                    timestamp=entry["timestamp"]
+                )
+                
+                result_dict["comparison"] = self.benchmark_runner.compare_results(
+                    prev_result,
+                    current_result
+                )
+            
+            results_with_comparison.append(result_dict)
+        
+        return {
+            "success": True,
+            "history": results_with_comparison,
+            "count": len(results_with_comparison)
+        }
+    
+    def _is_operation_running(self) -> bool:
+        """Check if any long-running operation is active.
+        
+        Returns:
+            True if autotune, binning, or benchmark is running
+        """
+        # Check autotune
+        if self.autotune_engine and self.autotune_engine.is_running():
+            return True
+        
+        # Check binning
+        if self.binning_engine and self.binning_engine.is_running():
+            return True
+        
+        # Check benchmark task
+        if self._benchmark_task and not self._benchmark_task.done():
+            return True
+        
+        return False
+
+    # ==================== Fan Control ====================
+    # Requirements: Fan Control Integration (Phase 4)
+    
+    async def get_fan_config(self) -> Dict[str, Any]:
+        """Get current fan control configuration.
+        
+        Returns:
+            Dictionary with fan config settings
+        """
+        from ..dynamic.config import FanConfig
+        
+        fan_data = self.settings.getSetting("fan_config") or {}
+        fan_config = FanConfig.from_dict(fan_data)
+        
+        return {
+            "success": True,
+            "config": fan_config.to_dict()
+        }
+    
+    async def set_fan_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Update fan control configuration.
+        
+        Args:
+            config: Dictionary with fan config fields:
+                - enabled: Whether fan control is enabled
+                - mode: Fan control mode (default, custom, fixed)
+                - curve: List of {temp_c, speed_percent} points
+                - zero_rpm_enabled: Allow fan to stop completely
+                - hysteresis_temp: Temperature hysteresis in °C
+                
+        Returns:
+            Dictionary with success status and updated config
+        """
+        from ..dynamic.config import FanConfig, FanCurvePoint
+        
+        try:
+            # Get current config
+            current_data = self.settings.getSetting("fan_config") or {}
+            current_config = FanConfig.from_dict(current_data)
+            
+            # Update fields
+            if "enabled" in config:
+                current_config.enabled = config["enabled"]
+            
+            if "mode" in config:
+                mode = config["mode"]
+                if mode not in ("default", "custom", "fixed"):
+                    return {"success": False, "error": f"Invalid mode: {mode}"}
+                current_config.mode = mode
+            
+            if "curve" in config:
+                curve_data = config["curve"]
+                if not isinstance(curve_data, list):
+                    return {"success": False, "error": "curve must be a list"}
+                current_config.curve = [FanCurvePoint.from_dict(p) for p in curve_data]
+            
+            if "zero_rpm_enabled" in config:
+                current_config.zero_rpm_enabled = config["zero_rpm_enabled"]
+            
+            if "hysteresis_temp" in config:
+                hysteresis = config["hysteresis_temp"]
+                if not (1 <= hysteresis <= 10):
+                    return {"success": False, "error": f"hysteresis_temp must be 1-10, got {hysteresis}"}
+                current_config.hysteresis_temp = hysteresis
+            
+            # Validate
+            errors = current_config.validate()
+            if errors:
+                return {"success": False, "error": "; ".join(errors)}
+            
+            # Persist
+            self.settings.setSetting("fan_config", current_config.to_dict())
+            
+            logger.info(f"Updated fan config: enabled={current_config.enabled}, mode={current_config.mode}")
+            return {"success": True, "config": current_config.to_dict()}
+            
+        except Exception as e:
+            logger.error(f"Failed to update fan config: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def set_fan_curve(self, points: List[Dict[str, int]]) -> Dict[str, Any]:
+        """Set custom fan curve points.
+        
+        Args:
+            points: List of {temp_c, speed_percent} dictionaries
+                   Must have at least 2 points with increasing temperatures
+                   
+        Returns:
+            Dictionary with success status
+        """
+        from ..dynamic.config import FanConfig, FanCurvePoint
+        
+        try:
+            if not isinstance(points, list) or len(points) < 2:
+                return {"success": False, "error": "Fan curve requires at least 2 points"}
+            
+            # Parse and validate points
+            curve = []
+            prev_temp = -1
+            
+            for i, p in enumerate(points):
+                temp_c = p.get("temp_c", 0)
+                speed_percent = p.get("speed_percent", 0)
+                
+                if not (0 <= temp_c <= 100):
+                    return {"success": False, "error": f"Point {i}: temp_c must be 0-100"}
+                if not (0 <= speed_percent <= 100):
+                    return {"success": False, "error": f"Point {i}: speed_percent must be 0-100"}
+                if temp_c <= prev_temp:
+                    return {"success": False, "error": f"Point {i}: temperatures must be strictly increasing"}
+                
+                curve.append(FanCurvePoint(temp_c=temp_c, speed_percent=speed_percent))
+                prev_temp = temp_c
+            
+            # Update config
+            current_data = self.settings.getSetting("fan_config") or {}
+            current_config = FanConfig.from_dict(current_data)
+            current_config.curve = curve
+            current_config.mode = "custom"  # Auto-switch to custom mode
+            
+            # Persist
+            self.settings.setSetting("fan_config", current_config.to_dict())
+            
+            logger.info(f"Set fan curve with {len(curve)} points")
+            return {"success": True, "curve": [p.to_dict() for p in curve]}
+            
+        except Exception as e:
+            logger.error(f"Failed to set fan curve: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def set_fan_mode(self, mode: str) -> Dict[str, Any]:
+        """Set fan control mode.
+        
+        Args:
+            mode: Fan mode - "default" (BIOS), "custom" (curve), or "fixed"
+            
+        Returns:
+            Dictionary with success status
+        """
+        from ..dynamic.config import FanConfig
+        
+        if mode not in ("default", "custom", "fixed"):
+            return {"success": False, "error": f"Invalid mode: {mode}. Must be default, custom, or fixed"}
+        
+        try:
+            current_data = self.settings.getSetting("fan_config") or {}
+            current_config = FanConfig.from_dict(current_data)
+            current_config.mode = mode
+            
+            # Persist
+            self.settings.setSetting("fan_config", current_config.to_dict())
+            
+            logger.info(f"Set fan mode to: {mode}")
+            return {"success": True, "mode": mode}
+            
+        except Exception as e:
+            logger.error(f"Failed to set fan mode: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def enable_fan_control(self, enabled: bool) -> Dict[str, Any]:
+        """Enable or disable fan control.
+        
+        Args:
+            enabled: Whether to enable fan control
+            
+        Returns:
+            Dictionary with success status
+        """
+        from ..dynamic.config import FanConfig
+        
+        try:
+            current_data = self.settings.getSetting("fan_config") or {}
+            current_config = FanConfig.from_dict(current_data)
+            current_config.enabled = enabled
+            
+            # Persist
+            self.settings.setSetting("fan_config", current_config.to_dict())
+            
+            logger.info(f"Fan control {'enabled' if enabled else 'disabled'}")
+            return {"success": True, "enabled": enabled}
+            
+        except Exception as e:
+            logger.error(f"Failed to toggle fan control: {e}")
+            return {"success": False, "error": str(e)}

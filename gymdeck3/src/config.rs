@@ -56,6 +56,61 @@ pub struct Args {
     /// Enable verbose debug logging to stderr
     #[arg(long, short)]
     pub verbose: bool,
+
+    // ==================== Fan Control Options ====================
+
+    /// Enable fan control
+    #[arg(long = "fan-control")]
+    pub fan_control: bool,
+
+    /// Fan control mode
+    #[arg(long = "fan-mode", value_enum, default_value = "default")]
+    pub fan_mode: FanControlMode,
+
+    /// Fan curve points in format TEMP:SPEED (can be specified multiple times)
+    /// Example: --fan-curve 40:20 --fan-curve 60:50 --fan-curve 80:100
+    #[arg(long = "fan-curve", value_parser = parse_fan_curve_point)]
+    pub fan_curve: Vec<FanCurvePointConfig>,
+
+    /// Enable Zero RPM mode (fan stops below 45°C)
+    #[arg(long = "fan-zero-rpm")]
+    pub fan_zero_rpm: bool,
+
+    /// Fan temperature hysteresis in °C (1-10)
+    #[arg(long = "fan-hysteresis", default_value = "2", value_parser = validate_fan_hysteresis)]
+    pub fan_hysteresis: i32,
+}
+
+/// Fan control mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum FanControlMode {
+    /// BIOS/EC automatic control (default)
+    #[default]
+    Default,
+    /// Custom curve control
+    Custom,
+    /// Fixed speed (use with --fan-curve for single point)
+    Fixed,
+}
+
+impl std::fmt::Display for FanControlMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FanControlMode::Default => write!(f, "default"),
+            FanControlMode::Custom => write!(f, "custom"),
+            FanControlMode::Fixed => write!(f, "fixed"),
+        }
+    }
+}
+
+/// Fan curve point configuration
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FanCurvePointConfig {
+    /// Temperature in Celsius
+    pub temp_c: i32,
+    /// Fan speed percentage (0-100)
+    pub speed_percent: u8,
 }
 
 /// Adaptation strategy for dynamic undervolt control
@@ -277,7 +332,79 @@ pub fn validate_args(args: &Args) -> Result<(), String> {
         return Err("ryzenadj-path cannot be empty".to_string());
     }
 
+    // Validate fan curve if fan control is enabled
+    if args.fan_control && args.fan_mode == FanControlMode::Custom {
+        if args.fan_curve.len() < 2 {
+            return Err("Fan curve requires at least 2 points".to_string());
+        }
+    }
+
     Ok(())
+}
+
+/// Parse fan curve point from string format: TEMP:SPEED
+/// Example: "60:50" means 60°C -> 50% speed
+pub fn parse_fan_curve_point(s: &str) -> Result<FanCurvePointConfig, String> {
+    let parts: Vec<&str> = s.split(':').collect();
+    if parts.len() != 2 {
+        return Err(format!(
+            "Invalid fan curve point '{}'. Expected format: TEMP:SPEED (e.g., 60:50)",
+            s
+        ));
+    }
+
+    let temp_c: i32 = parts[0]
+        .parse()
+        .map_err(|_| format!("Invalid temperature '{}': must be an integer", parts[0]))?;
+
+    let speed_percent: u8 = parts[1]
+        .parse()
+        .map_err(|_| format!("Invalid speed '{}': must be 0-100", parts[1]))?;
+
+    validate_fan_curve_point(temp_c, speed_percent)
+}
+
+/// Validate fan curve point values
+pub fn validate_fan_curve_point(temp_c: i32, speed_percent: u8) -> Result<FanCurvePointConfig, String> {
+    if temp_c < 0 || temp_c > 100 {
+        return Err(format!(
+            "Temperature {} must be between 0 and 100°C",
+            temp_c
+        ));
+    }
+
+    if speed_percent > 100 {
+        return Err(format!(
+            "Speed {} must be between 0 and 100%",
+            speed_percent
+        ));
+    }
+
+    Ok(FanCurvePointConfig {
+        temp_c,
+        speed_percent,
+    })
+}
+
+/// Validate fan hysteresis is within 1-10°C
+pub fn validate_fan_hysteresis(s: &str) -> Result<i32, String> {
+    let val: i32 = s
+        .parse()
+        .map_err(|_| format!("'{}' is not a valid number", s))?;
+
+    if val < 1 {
+        return Err(format!(
+            "Fan hysteresis {}°C is too small (minimum: 1°C)",
+            val
+        ));
+    }
+    if val > 10 {
+        return Err(format!(
+            "Fan hysteresis {}°C is too large (maximum: 10°C)",
+            val
+        ));
+    }
+    Ok(val)
 }
 
 #[cfg(test)]
@@ -337,5 +464,53 @@ mod tests {
         assert_eq!(Strategy::Balanced.to_string(), "balanced");
         assert_eq!(Strategy::Aggressive.to_string(), "aggressive");
         assert_eq!(Strategy::Custom.to_string(), "custom");
+    }
+
+    // ==================== Fan Config Tests ====================
+
+    #[test]
+    fn test_parse_fan_curve_point_valid() {
+        let point = parse_fan_curve_point("60:50").unwrap();
+        assert_eq!(point.temp_c, 60);
+        assert_eq!(point.speed_percent, 50);
+
+        let point = parse_fan_curve_point("40:0").unwrap();
+        assert_eq!(point.temp_c, 40);
+        assert_eq!(point.speed_percent, 0);
+
+        let point = parse_fan_curve_point("85:100").unwrap();
+        assert_eq!(point.temp_c, 85);
+        assert_eq!(point.speed_percent, 100);
+    }
+
+    #[test]
+    fn test_parse_fan_curve_point_invalid() {
+        // Wrong format
+        assert!(parse_fan_curve_point("60").is_err());
+        assert!(parse_fan_curve_point("60:50:30").is_err());
+        assert!(parse_fan_curve_point("invalid").is_err());
+
+        // Invalid values
+        assert!(parse_fan_curve_point("-10:50").is_err()); // Negative temp
+        assert!(parse_fan_curve_point("110:50").is_err()); // Temp > 100
+        assert!(parse_fan_curve_point("60:150").is_err()); // Speed > 100
+    }
+
+    #[test]
+    fn test_validate_fan_hysteresis() {
+        assert!(validate_fan_hysteresis("1").is_ok());
+        assert!(validate_fan_hysteresis("5").is_ok());
+        assert!(validate_fan_hysteresis("10").is_ok());
+
+        assert!(validate_fan_hysteresis("0").is_err());
+        assert!(validate_fan_hysteresis("11").is_err());
+        assert!(validate_fan_hysteresis("invalid").is_err());
+    }
+
+    #[test]
+    fn test_fan_control_mode_display() {
+        assert_eq!(FanControlMode::Default.to_string(), "default");
+        assert_eq!(FanControlMode::Custom.to_string(), "custom");
+        assert_eq!(FanControlMode::Fixed.to_string(), "fixed");
     }
 }

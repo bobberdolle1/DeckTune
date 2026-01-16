@@ -314,6 +314,21 @@ class DynamicController:
                 # In per-core mode, use individual core settings
                 args.append(f"--core={i}:{core.min_mv}:{core.max_mv}:{core.threshold}")
         
+        # Add fan control arguments if enabled
+        fan = config.fan_config
+        if fan.enabled:
+            args.append("--fan-control")
+            args.append(f"--fan-mode={fan.mode}")
+            args.append(f"--fan-hysteresis={fan.hysteresis_temp}")
+            
+            if fan.zero_rpm_enabled:
+                args.append("--fan-zero-rpm")
+            
+            # Add fan curve points for custom mode
+            if fan.mode == "custom" and fan.curve:
+                for point in fan.curve:
+                    args.append(f"--fan-curve={point.temp_c}:{point.speed_percent}")
+        
         return args
     
     async def _read_output(self) -> None:

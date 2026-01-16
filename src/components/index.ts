@@ -12,3 +12,6 @@ export { ExpertMode } from "./ExpertMode";
 export type { ExpertTab } from "./ExpertMode";
 
 export { LoadGraph } from "./LoadGraph";
+
+export { FanCurveEditor } from "./FanCurveEditor";
+export type { FanConfig, FanCurvePoint, FanStatus } from "./FanCurveEditor";

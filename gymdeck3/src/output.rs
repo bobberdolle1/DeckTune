@@ -23,6 +23,48 @@ pub struct StatusOutput {
     pub strategy: String,
     /// Uptime in milliseconds since daemon start
     pub uptime_ms: u64,
+    /// Fan status (optional, only if fan control is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fan: Option<FanStatusOutput>,
+}
+
+/// Fan status output
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FanStatusOutput {
+    /// Current temperature in °C
+    pub temp_c: i32,
+    /// Current PWM value (0-255)
+    pub pwm: u8,
+    /// Current speed percentage (0-100)
+    pub speed_percent: u8,
+    /// Fan mode (default, custom, fixed)
+    pub mode: String,
+    /// Fan RPM if available
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rpm: Option<u32>,
+    /// Whether safety override is active
+    pub safety_override: bool,
+}
+
+impl FanStatusOutput {
+    /// Create a new fan status output
+    pub fn new(
+        temp_c: i32,
+        pwm: u8,
+        speed_percent: u8,
+        mode: &str,
+        rpm: Option<u32>,
+        safety_override: bool,
+    ) -> Self {
+        Self {
+            temp_c,
+            pwm,
+            speed_percent,
+            mode: mode.to_string(),
+            rpm,
+            safety_override,
+        }
+    }
 }
 
 impl StatusOutput {
@@ -39,6 +81,25 @@ impl StatusOutput {
             values,
             strategy: strategy.to_string(),
             uptime_ms,
+            fan: None,
+        }
+    }
+
+    /// Create a new status output message with fan status
+    pub fn with_fan(
+        load: Vec<f32>,
+        values: Vec<i32>,
+        strategy: Strategy,
+        uptime_ms: u64,
+        fan: FanStatusOutput,
+    ) -> Self {
+        Self {
+            msg_type: "status".to_string(),
+            load,
+            values,
+            strategy: strategy.to_string(),
+            uptime_ms,
+            fan: Some(fan),
         }
     }
 

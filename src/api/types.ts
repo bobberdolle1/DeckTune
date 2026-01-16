@@ -145,6 +145,10 @@ export interface State {
   presets: Preset[];
   currentPreset: Preset | null;
   
+  // Game Profiles (new in v3.0)
+  gameProfiles: GameProfile[];
+  activeProfile: GameProfile | null;
+  
   // Settings
   settings: Settings;
   dynamicSettings: DynamicSettings;
@@ -159,10 +163,21 @@ export interface State {
   autotuneResult: AutotuneResult | null;
   isAutotuning: boolean;
   
+  // Binning state
+  binningProgress: BinningProgress | null;
+  binningResult: BinningResult | null;
+  isBinning: boolean;
+  binningConfig: BinningConfig | null;
+  
   // Test state
   testHistory: TestHistoryEntry[];
   currentTest: string | null;
   isTestRunning: boolean;
+  
+  // Benchmark state (new in v3.0)
+  benchmarkHistory: BenchmarkResult[];
+  isBenchmarkRunning: boolean;
+  lastBenchmarkResult: BenchmarkResult | null;
   
   // Binary availability (for SteamOS compatibility warnings)
   missingBinaries: string[];
@@ -177,10 +192,133 @@ export interface ServerEvent {
 }
 
 /**
+ * Binning configuration for silicon limit discovery.
+ */
+export interface BinningConfig {
+  start_value: number;      // Starting undervolt (mV), default -10
+  step_size: number;        // Step increment (mV), default 5
+  test_duration: number;    // Test duration per iteration (seconds), default 60
+  max_iterations: number;   // Safety limit, default 20
+  consecutive_fail_limit: number;  // Abort after N consecutive failures, default 3
+}
+
+/**
+ * Binning state for crash recovery.
+ */
+export interface BinningState {
+  active: boolean;          // Is binning currently running?
+  current_value: number;    // Value being tested
+  last_stable: number;      // Last value that passed
+  iteration: number;        // Current iteration number
+  failed_values: number[];  // Values that failed
+  timestamp: string;        // ISO timestamp
+}
+
+/**
+ * Binning result after completion.
+ */
+export interface BinningResult {
+  max_stable: number;       // Maximum stable value found
+  recommended: number;      // Recommended value (max_stable + 5mV safety margin)
+  iterations: number;       // Number of iterations run
+  duration: number;         // Total time in seconds
+  aborted: boolean;         // True if aborted early
+}
+
+/**
+ * Binning progress event data.
+ */
+export interface BinningProgress {
+  current_value: number;    // Value being tested
+  iteration: number;        // Current iteration number
+  last_stable: number;      // Last successful value
+  eta: number;              // Estimated time remaining in seconds
+}
+
+/**
+ * Game profile configuration for per-game settings.
+ * Requirements: 3.1
+ */
+export interface GameProfile {
+  app_id: number;           // Steam AppID
+  name: string;             // Game name (from Steam)
+  cores: number[];          // Undervolt values [core0, core1, core2, core3]
+  dynamic_enabled: boolean; // Use dynamic mode?
+  dynamic_config: DynamicSettings | null;  // Dynamic mode settings
+  created_at: string;       // ISO timestamp
+  last_used: string | null; // Last time profile was applied
+}
+
+/**
+ * Profile import result.
+ */
+export interface ProfileImportResult {
+  success: boolean;
+  imported_count: number;
+  conflicts: number[];      // AppIDs that conflicted
+  error?: string;
+}
+
+/**
+ * Benchmark result from stress-ng execution.
+ * Requirements: 7.1, 7.2, 7.5
+ */
+export interface BenchmarkResult {
+  score: number;            // Operations per second (bogo ops/s)
+  duration: number;         // Actual test duration in seconds
+  cores_used: number[];     // Undervolt values during test [core0, core1, core2, core3]
+  timestamp: string;        // ISO timestamp
+}
+
+/**
+ * Benchmark comparison result.
+ * Requirements: 7.3
+ */
+export interface BenchmarkComparison {
+  score_diff: number;       // Difference in scores (current - baseline)
+  percent_change: number;   // Percentage change ((current - baseline) / baseline * 100)
+  improvement: boolean;     // True if current score is better than baseline
+}
+
+/**
  * RPC response types.
  */
 export interface RpcResponse<T = any> {
   success: boolean;
   error?: string;
   data?: T;
+}
+
+/**
+ * Fan curve point (temperature -> speed).
+ * Requirements: Fan Control Integration
+ */
+export interface FanCurvePoint {
+  temp_c: number;
+  speed_percent: number;
+}
+
+/**
+ * Fan control configuration.
+ * Requirements: Fan Control Integration
+ */
+export interface FanConfig {
+  enabled: boolean;
+  mode: "default" | "custom" | "fixed";
+  curve: FanCurvePoint[];
+  zero_rpm_enabled: boolean;
+  hysteresis_temp: number;
+}
+
+/**
+ * Fan status from gymdeck3.
+ * Requirements: Fan Control Integration
+ */
+export interface FanStatus {
+  temp_c: number;
+  pwm: number;
+  speed_percent: number;
+  mode: string;
+  rpm?: number;
+  safety_override: boolean;
 }

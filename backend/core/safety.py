@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import List, Optional, Tuple, TYPE_CHECKING
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
 from ..platform.detect import PlatformInfo
@@ -13,6 +13,17 @@ if TYPE_CHECKING:
     from .ryzenadj import RyzenadjWrapper
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class BinningState:
+    """Persistent state for binning crash recovery."""
+    active: bool  # Is binning currently running?
+    current_value: int  # Value being tested
+    last_stable: int  # Last value that passed
+    iteration: int  # Current iteration number
+    failed_values: List[int]  # Values that failed
+    timestamp: str  # ISO timestamp
 
 
 @dataclass
@@ -50,6 +61,7 @@ class SafetyManager:
     """Manages LKG values, rollback, and safety limits."""
     
     TUNING_FLAG_FILE = "/tmp/decktune_tuning_flag"
+    BINNING_STATE_FILE = "/tmp/decktune_binning_state.json"
     
     def __init__(self, settings_manager, platform: PlatformInfo, 
                  ryzenadj: Optional["RyzenadjWrapper"] = None):
@@ -186,9 +198,41 @@ class SafetyManager:
         1. Remove the tuning flag
         2. Rollback to LKG values if ryzenadj is configured
         
+        If a binning state file exists with active=True (indicating binning
+        was in progress when system stopped), this method will:
+        1. Restore the last_stable value
+        2. Log the failed test value
+        3. Clear the binning state
+        
         Returns:
             True if recovery was performed
         """
+        recovery_performed = False
+        
+        # Check for binning crash recovery first
+        binning_state = self.load_binning_state()
+        if binning_state is not None and binning_state.active:
+            logger.warning(
+                f"Binning crash detected - failed value: {binning_state.current_value}, "
+                f"restoring last_stable: {binning_state.last_stable}"
+            )
+            
+            # Restore last_stable value if ryzenadj is configured
+            if self.ryzenadj is not None:
+                last_stable_values = [binning_state.last_stable] * 4
+                success, error = self.ryzenadj.apply_values(last_stable_values)
+                if success:
+                    logger.info(f"Binning recovery: restored last_stable value {binning_state.last_stable}")
+                else:
+                    logger.error(f"Binning recovery: failed to restore last_stable - {error}")
+            else:
+                logger.warning("Binning recovery: RyzenadjWrapper not configured, skipping value restore")
+            
+            # Clear the binning state
+            self.clear_binning_state()
+            recovery_performed = True
+        
+        # Check for regular tuning flag
         if self.has_tuning_flag():
             logger.warning("Tuning flag detected on boot - performing recovery")
             # Tuning was in progress - need to rollback
@@ -202,5 +246,99 @@ class SafetyManager:
             else:
                 logger.warning("Boot recovery: RyzenadjWrapper not configured, skipping rollback")
             
-            return True
-        return False
+            recovery_performed = True
+        
+        return recovery_performed
+    
+    def create_binning_state(
+        self,
+        current_value: int,
+        last_stable: int,
+        iteration: int,
+        failed_values: Optional[List[int]] = None
+    ) -> None:
+        """Create binning state file for crash recovery.
+        
+        Args:
+            current_value: Value currently being tested
+            last_stable: Last value that passed testing
+            iteration: Current iteration number
+            failed_values: List of values that failed (optional)
+        """
+        state = BinningState(
+            active=True,
+            current_value=current_value,
+            last_stable=last_stable,
+            iteration=iteration,
+            failed_values=failed_values or [],
+            timestamp=datetime.now().isoformat()
+        )
+        
+        try:
+            with open(self.BINNING_STATE_FILE, 'w') as f:
+                json.dump(asdict(state), f, indent=2)
+            logger.debug(f"Created binning state: iteration={iteration}, current={current_value}, last_stable={last_stable}")
+        except IOError as e:
+            logger.warning(f"Failed to create binning state file: {e}")
+    
+    def update_binning_state(
+        self,
+        current_value: int,
+        last_stable: int,
+        iteration: int,
+        failed_values: Optional[List[int]] = None
+    ) -> None:
+        """Update existing binning state file.
+        
+        Args:
+            current_value: Value currently being tested
+            last_stable: Last value that passed testing
+            iteration: Current iteration number
+            failed_values: List of values that failed (optional)
+        """
+        # Same implementation as create - overwrites the file
+        self.create_binning_state(current_value, last_stable, iteration, failed_values)
+    
+    def clear_binning_state(self) -> None:
+        """Remove binning state file after completion or cancellation."""
+        try:
+            if os.path.exists(self.BINNING_STATE_FILE):
+                os.remove(self.BINNING_STATE_FILE)
+                logger.debug("Cleared binning state file")
+        except IOError as e:
+            logger.warning(f"Failed to clear binning state file: {e}")
+    
+    def load_binning_state(self) -> Optional[BinningState]:
+        """Load binning state from disk.
+        
+        Returns:
+            BinningState if file exists and is valid, None otherwise
+        """
+        if not os.path.exists(self.BINNING_STATE_FILE):
+            return None
+        
+        try:
+            with open(self.BINNING_STATE_FILE, 'r') as f:
+                data = json.load(f)
+            
+            # Validate required fields
+            required_fields = ['active', 'current_value', 'last_stable', 'iteration', 'failed_values', 'timestamp']
+            if not all(field in data for field in required_fields):
+                logger.warning("Binning state file missing required fields")
+                return None
+            
+            state = BinningState(
+                active=data['active'],
+                current_value=data['current_value'],
+                last_stable=data['last_stable'],
+                iteration=data['iteration'],
+                failed_values=data['failed_values'],
+                timestamp=data['timestamp']
+            )
+            
+            logger.debug(f"Loaded binning state: iteration={state.iteration}, current={state.current_value}, last_stable={state.last_stable}")
+            return state
+            
+        except (IOError, json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Failed to load binning state file: {e}")
+            return None
