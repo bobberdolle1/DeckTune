@@ -18,7 +18,6 @@ export default defineConfig({
     }),
     externalGlobals({
       react: 'SP_REACT',
-      'react/jsx-runtime': 'SP_JSX',
       'react-dom': 'SP_REACTDOM',
       '@decky/ui': 'DFL',
       '@decky/manifest': JSON.stringify(manifest)
@@ -35,12 +34,10 @@ export default defineConfig({
     }),
   ],
   context: "window",
-  external: ["react", "react/jsx-runtime", "react-dom", "@decky/ui", "@decky/manifest"],
-  treeshake: false,
+  external: ["react", "react-dom", "@decky/ui", "@decky/manifest"],
   output: {
     globals: {
       react: "SP_REACT",
-      'react/jsx-runtime': 'SP_JSX',
       "react-dom": "SP_REACTDOM",
       "@decky/ui": "DFL",
       "@decky/manifest": JSON.stringify(manifest),

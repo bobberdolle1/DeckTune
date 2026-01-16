@@ -120,17 +120,30 @@ export class Api extends SimpleEventEmitter {
     await this.fetchPlatformInfo();
     await this.fetchTestHistory();
 
-    // Register Steam client listeners
-    this.registeredListeners.push(
-      SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
-        this.onAppLifetimeNotification.bind(this)
-      )
-    );
-    this.registeredListeners.push(
-      SteamClient.System.RegisterForOnResumeFromSuspend(
-        this.onResumeFromSuspend.bind(this)
-      )
-    );
+    // Register Steam client listeners (with fallbacks for API changes)
+    try {
+      if (SteamClient?.GameSessions?.RegisterForAppLifetimeNotifications) {
+        this.registeredListeners.push(
+          SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
+            this.onAppLifetimeNotification.bind(this)
+          )
+        );
+      }
+    } catch (e) {
+      console.warn("DeckTune: Failed to register app lifetime listener:", e);
+    }
+
+    try {
+      if (SteamClient?.System?.RegisterForOnResumeFromSuspend) {
+        this.registeredListeners.push(
+          SteamClient.System.RegisterForOnResumeFromSuspend(
+            this.onResumeFromSuspend.bind(this)
+          )
+        );
+      }
+    } catch (e) {
+      console.warn("DeckTune: Failed to register suspend listener:", e);
+    }
 
     // Register backend event listeners
     addEventListener("tuning_progress", this.onTuningProgress.bind(this));
