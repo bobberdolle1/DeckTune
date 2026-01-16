@@ -103,6 +103,10 @@ export const initialState: State = {
   isBenchmarkRunning: false,
   lastBenchmarkResult: null,
   
+  // Telemetry state (new in v3.1)
+  // Requirements: 2.1, 2.2, 2.3, 2.4
+  telemetrySamples: [],
+  
   // Binary availability
   missingBinaries: [],
 };
@@ -267,6 +271,19 @@ export const useProfiles = () => {
     createProfileForCurrentGame: () => api.createProfileForCurrentGame(),
     exportProfiles: () => api.exportGameProfiles(),
     importProfiles: (jsonData: string, strategy: "skip" | "overwrite" | "rename") => api.importGameProfiles(jsonData, strategy),
+  };
+};
+
+/**
+ * Hook to access telemetry data for real-time graphs.
+ * Requirements: 2.3, 2.4
+ * Feature: decktune-3.1-reliability-ux
+ */
+export const useTelemetry = () => {
+  const { state } = useDeckTune();
+  return {
+    samples: state.telemetrySamples || [],
+    hasData: (state.telemetrySamples || []).length > 0,
   };
 };
 

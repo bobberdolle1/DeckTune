@@ -102,8 +102,11 @@ from .config import DynamicConfig, DynamicStatus
 
 if TYPE_CHECKING:
     from ..api.events import EventEmitter
+    from ..api.stream import StatusStreamManager
     from ..core.safety import SafetyManager
     from ..core.blackbox import BlackBox, MetricSample
+    from ..core.telemetry import TelemetryManager, TelemetrySample
+    from ..core.session_manager import SessionManager, Session
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +129,9 @@ class DynamicController:
         event_emitter: "EventEmitter",
         safety_manager: Optional["SafetyManager"] = None,
         blackbox: Optional["BlackBox"] = None,
+        telemetry_manager: Optional["TelemetryManager"] = None,
+        session_manager: Optional["SessionManager"] = None,
+        status_stream_manager: Optional["StatusStreamManager"] = None,
     ):
         """Initialize the dynamic controller.
         
@@ -135,18 +141,25 @@ class DynamicController:
             event_emitter: EventEmitter for frontend communication
             safety_manager: Optional SafetyManager for LKG persistence
             blackbox: Optional BlackBox for metrics recording
+            telemetry_manager: Optional TelemetryManager for telemetry collection
+            session_manager: Optional SessionManager for session tracking
+            status_stream_manager: Optional StatusStreamManager for SSE status updates
         """
         self._ryzenadj_path = ryzenadj_path
         self._gymdeck3_path = gymdeck3_path
         self._event_emitter = event_emitter
         self._safety_manager = safety_manager
         self._blackbox = blackbox
+        self._telemetry_manager = telemetry_manager
+        self._session_manager = session_manager
+        self._status_stream_manager = status_stream_manager
         
         self._process: Optional[asyncio.subprocess.Process] = None
         self._config: Optional[DynamicConfig] = None
         self._status = DynamicStatus()
         self._reader_task: Optional[asyncio.Task] = None
         self._running = False
+        self._current_session_id: Optional[str] = None
     
     def is_running(self) -> bool:
         """Check if gymdeck3 is currently running."""
@@ -162,6 +175,39 @@ class DynamicController:
         Validates: Requirements 3.1
         """
         self._blackbox = blackbox
+    
+    def set_telemetry_manager(self, telemetry_manager: "TelemetryManager") -> None:
+        """Set the TelemetryManager instance for telemetry collection.
+        
+        Args:
+            telemetry_manager: TelemetryManager instance for recording telemetry
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 2.1, 2.2
+        """
+        self._telemetry_manager = telemetry_manager
+    
+    def set_session_manager(self, session_manager: "SessionManager") -> None:
+        """Set the SessionManager instance for session tracking.
+        
+        Args:
+            session_manager: SessionManager instance for tracking sessions
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.1, 8.2
+        """
+        self._session_manager = session_manager
+    
+    def set_status_stream_manager(self, status_stream_manager: "StatusStreamManager") -> None:
+        """Set the StatusStreamManager instance for SSE status updates.
+        
+        Args:
+            status_stream_manager: StatusStreamManager instance for streaming status
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 4.1, 4.2, 4.3, 4.4
+        """
+        self._status_stream_manager = status_stream_manager
     
     async def start(self, config: DynamicConfig) -> bool:
         """Start gymdeck3 with the given configuration.
@@ -206,8 +252,19 @@ class DynamicController:
             self._running = True
             self._status = DynamicStatus(running=True, strategy=config.strategy)
             
+            # Update status stream manager running state
+            # Feature: decktune-3.1-reliability-ux
+            # Validates: Requirements 4.3
+            if self._status_stream_manager is not None:
+                self._status_stream_manager.set_running(True)
+            
             # Start reader task for stdout
             self._reader_task = asyncio.create_task(self._read_output())
+            
+            # Start session tracking
+            # Feature: decktune-3.1-reliability-ux
+            # Validates: Requirements 8.1
+            await self._start_session()
             
             await self._event_emitter.emit_status("dynamic_running")
             logger.info(f"gymdeck3 started with PID {self._process.pid}")
@@ -256,6 +313,17 @@ class DynamicController:
             self._process = None
             self._running = False
             self._status = DynamicStatus(running=False)
+            
+            # Update status stream manager running state
+            # Feature: decktune-3.1-reliability-ux
+            # Validates: Requirements 4.3
+            if self._status_stream_manager is not None:
+                self._status_stream_manager.set_running(False)
+            
+            # End session tracking
+            # Feature: decktune-3.1-reliability-ux
+            # Validates: Requirements 8.2
+            await self._end_session()
             
             await self._event_emitter.emit_status("disabled")
             logger.info("gymdeck3 stopped")
@@ -382,6 +450,12 @@ class DynamicController:
                 error=f"Process exited with code {returncode}"
             )
             
+            # Update status stream manager running state
+            # Feature: decktune-3.1-reliability-ux
+            # Validates: Requirements 4.3
+            if self._status_stream_manager is not None:
+                self._status_stream_manager.set_running(False)
+            
             # Persist BlackBox on crash
             # Feature: decktune-3.0-automation, Validates: Requirements 3.2
             await self.persist_blackbox(f"gymdeck3_crash_code_{returncode}")
@@ -402,6 +476,8 @@ class DynamicController:
             await self._emit_dynamic_status()
             # Record sample to BlackBox if available
             self._record_blackbox_sample()
+            # Record telemetry sample if available
+            await self._record_telemetry_sample()
             
         elif msg_type == "transition":
             # Log transition for debugging
@@ -456,6 +532,50 @@ class DynamicController:
         
         self._blackbox.record_sample(sample)
     
+    async def _record_telemetry_sample(self) -> None:
+        """Record current status to TelemetryManager and emit to frontend.
+        
+        Creates a TelemetrySample from current status and records it
+        to the TelemetryManager buffer. Also emits telemetry event to frontend
+        and records to active session.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 2.1, 2.2, 8.1
+        """
+        # Get temperature from fan data if available
+        temp_c = 0.0
+        if self._status.fan is not None:
+            temp_c = self._status.fan.temp_c
+        
+        # Calculate average CPU load
+        avg_load = sum(self._status.load) / len(self._status.load) if self._status.load else 0.0
+        
+        # Get power from status (if available, otherwise estimate)
+        # Note: Power data may come from ryzenadj or be estimated
+        power_w = getattr(self._status, 'power_w', 0.0)
+        
+        # Record to TelemetryManager if available
+        if self._telemetry_manager is not None:
+            # Import here to avoid circular imports
+            from ..core.telemetry import TelemetrySample
+            
+            sample = TelemetrySample(
+                timestamp=time.time(),
+                temperature_c=temp_c,
+                power_w=power_w,
+                load_percent=avg_load
+            )
+            
+            self._telemetry_manager.record_sample(sample)
+            
+            # Emit telemetry event to frontend
+            await self._event_emitter._emit_event("telemetry_sample", sample.to_dict())
+        
+        # Record to active session
+        # Feature: decktune-3.1-reliability-ux
+        # Validates: Requirements 8.1
+        self._record_session_sample(temp_c, power_w)
+    
     async def persist_blackbox(self, reason: str) -> Optional[str]:
         """Persist BlackBox buffer to disk.
         
@@ -485,5 +605,130 @@ class DynamicController:
         return filename
     
     async def _emit_dynamic_status(self) -> None:
-        """Emit dynamic status event to frontend."""
-        await self._event_emitter._emit_event("dynamic_status", self._status.to_dict())
+        """Emit dynamic status event to frontend via SSE.
+        
+        Uses StatusStreamManager for SSE delivery if available,
+        falls back to direct event emission otherwise.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 4.1, 4.2
+        """
+        status_dict = self._status.to_dict()
+        
+        # Use SSE via StatusStreamManager if available
+        # Feature: decktune-3.1-reliability-ux
+        # Validates: Requirements 4.1, 4.2
+        if self._status_stream_manager is not None:
+            await self._status_stream_manager.publish({
+                "type": "dynamic_status",
+                "data": status_dict
+            })
+        
+        # Also emit via EventEmitter for backward compatibility
+        await self._event_emitter._emit_event("dynamic_status", status_dict)
+    
+    async def _start_session(self) -> None:
+        """Start a new session when gymdeck3 starts.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.1
+        """
+        if self._session_manager is None:
+            return
+        
+        # Get game info from app watcher if available
+        game_name = None
+        app_id = None
+        
+        session = self._session_manager.start_session(
+            game_name=game_name,
+            app_id=app_id
+        )
+        self._current_session_id = session.id
+        logger.info(f"Started session {session.id} for dynamic mode")
+    
+    async def _end_session(self) -> None:
+        """End the current session when gymdeck3 stops.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.2
+        """
+        if self._session_manager is None or self._current_session_id is None:
+            return
+        
+        metrics = self._session_manager.end_session(self._current_session_id)
+        if metrics:
+            logger.info(
+                f"Ended session {self._current_session_id}, "
+                f"duration: {metrics.duration_sec:.1f}s, "
+                f"avg_temp: {metrics.avg_temperature_c:.1f}°C"
+            )
+            # Emit session ended event to frontend
+            await self._event_emitter._emit_event("session_ended", {
+                "session_id": self._current_session_id,
+                "metrics": metrics.to_dict()
+            })
+        
+        self._current_session_id = None
+    
+    def _record_session_sample(self, temp_c: float, power_w: float) -> None:
+        """Record a telemetry sample to the active session.
+        
+        Args:
+            temp_c: Temperature in Celsius
+            power_w: Power in Watts
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.1
+        """
+        if self._session_manager is None or self._current_session_id is None:
+            return
+        
+        self._session_manager.add_sample(
+            temperature_c=temp_c,
+            power_w=power_w
+        )
+    
+    def get_session_diagnostics(self) -> dict:
+        """Get session history for diagnostics export.
+        
+        Returns:
+            Dictionary containing session history summary
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.8
+        """
+        if self._session_manager is None:
+            return {"session_count": 0, "active_session": None, "recent_sessions": []}
+        
+        return self._session_manager.export_for_diagnostics()
+
+    async def subscribe_status(self):
+        """Subscribe to status updates via SSE.
+        
+        Returns an async iterator that yields status events.
+        Automatically delivers buffered events on reconnection.
+        
+        Returns:
+            AsyncIterator yielding status event dictionaries, or None if
+            StatusStreamManager is not configured
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 4.2, 4.4
+        """
+        if self._status_stream_manager is None:
+            logger.warning("Cannot subscribe to status: StatusStreamManager not configured")
+            return None
+        
+        return self._status_stream_manager.subscribe()
+    
+    def get_status_stream_manager(self) -> Optional["StatusStreamManager"]:
+        """Get the StatusStreamManager instance.
+        
+        Returns:
+            StatusStreamManager instance or None if not configured
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 4.2
+        """
+        return self._status_stream_manager

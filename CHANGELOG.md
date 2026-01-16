@@ -2,6 +2,149 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.0] - 2026-01-16
+
+### Reliability & UX Improvements
+
+DeckTune 3.1 focuses on reliability improvements, performance optimizations, and UX enhancements for a more polished user experience.
+
+#### Crash Recovery Metrics (NEW!)
+- **Persistent crash counter** — tracks how many times crash recovery has saved your system
+- **Detailed crash history** — stores last 50 crash events with timestamps, crashed values, restored values, and recovery reason
+- **Diagnostics integration** — complete crash history included in diagnostics export
+- **FIFO management** — oldest entries automatically removed when limit reached
+
+**Implementation:**
+- New `CrashMetricsManager` class in `backend/core/crash_metrics.py`
+- `CrashRecord` and `CrashMetrics` dataclasses with serialization
+- Integration with `SafetyManager.check_boot_recovery()`
+- RPC method: `get_crash_metrics()`
+- 2 property-based tests validating FIFO limit and record completeness
+
+#### Real-Time Telemetry Graphs (NEW!)
+- **Live temperature graph** — scrolling line graph showing last 60 seconds of CPU temperature
+- **Live power graph** — scrolling line graph showing last 60 seconds of power consumption
+- **Hover tooltips** — exact value and timestamp on hover
+- **Circular buffer** — stores up to 300 samples (5 minutes) at 1Hz
+- **SSE integration** — real-time updates via server-sent events
+
+**Implementation:**
+- New `TelemetryManager` class in `backend/core/telemetry.py`
+- `TelemetrySample` dataclass with timestamp, temperature, power, load
+- New `TelemetryGraph.tsx` React component with SVG rendering
+- RPC method: `get_telemetry(seconds)`
+- 1 property-based test validating circular buffer behavior
+
+#### Platform Detection Caching (NEW!)
+- **Faster startup** — cached platform data eliminates DMI read on every launch
+- **30-day TTL** — cache automatically expires and refreshes
+- **Corruption resilience** — graceful fallback to fresh detection on invalid cache
+- **Manual re-detection** — RPC method to force fresh detection
+
+**Implementation:**
+- New `PlatformCache` class in `backend/platform/cache.py`
+- `CachedPlatform` dataclass with model, variant, safe_limit, cached_at
+- Integration with `detect_platform()` function
+- RPC method: `redetect_platform()`
+- 2 property-based tests validating cache validity and corruption resilience
+
+#### Streaming Status Updates (NEW!)
+- **Server-sent events** — replaces polling for real-time status updates
+- **< 100ms latency** — status updates forwarded to frontend within 100ms
+- **Automatic reconnection** — resumes streaming without page reload
+- **Buffer management** — up to 10 updates buffered during delivery failures
+- **Smart filtering** — no events emitted when gymdeck3 is not running
+
+**Implementation:**
+- New `StatusStreamManager` class in `backend/api/stream.py`
+- Subscriber management with asyncio.Queue
+- Integration with `DynamicController` event emission
+- 2 property-based tests validating buffer limit and no-events-when-stopped
+
+#### Setup Wizard (NEW!)
+- **First-run detection** — automatically shows wizard for new users
+- **Step-by-step guidance** — welcome, explanation, goal selection, confirmation
+- **Goal estimates** — shows estimated battery improvement and temperature reduction
+- **Skip/cancel support** — exit at any step without applying changes
+- **Re-run option** — "Run Setup Wizard" available in settings
+
+**Implementation:**
+- New `SetupWizard.tsx` React component with multi-step UI
+- `WizardState` TypeScript interface for state management
+- `GOAL_ESTIMATES` constant with battery/temp estimates per goal
+- RPC methods: `get_wizard_state()`, `complete_wizard()`, `reset_wizard()`
+- 2 property-based tests validating cancellation safety and goal estimates
+
+#### Session History with Metrics (NEW!)
+- **Automatic session tracking** — creates session record when gymdeck3 starts
+- **Comprehensive metrics** — duration, avg/min/max temperature, avg power, estimated battery savings
+- **Session history** — view last 30 sessions with key metrics
+- **Session comparison** — side-by-side comparison of any two sessions
+- **Archival system** — sessions beyond 100 moved to archive file
+- **Diagnostics integration** — session history included in export
+
+**Implementation:**
+- New `SessionManager` class in `backend/core/session_manager.py`
+- `Session` and `SessionMetrics` dataclasses with UUID generation
+- New `SessionHistory.tsx`, `SessionDetail.tsx`, `SessionComparison.tsx` components
+- RPC methods: `get_session_history()`, `get_session()`, `compare_sessions()`
+- 3 property-based tests validating history limit, metrics calculation, and comparison symmetry
+
+#### Rust Config Fuzzing Infrastructure (NEW!)
+- **No-panic guarantee** — config parser handles arbitrary byte sequences without crashing
+- **Graceful error handling** — invalid inputs return descriptive error messages
+- **Fuzzing dictionary** — includes all config field names for targeted fuzzing
+- **Code coverage** — fuzzing reports coverage percentage for config module
+
+**Implementation:**
+- New `tests/config_fuzzing_test.rs` with proptest-based fuzzing
+- Fuzzing dictionary at `gymdeck3/fuzz/dict/config.dict`
+- 1 property-based test validating no-panic guarantee
+
+#### Frontend-Backend Integration Tests (NEW!)
+- **RPC contract tests** — verify all methods return expected response shapes
+- **Event payload tests** — verify event structure matches TypeScript types
+- **Error response tests** — verify error responses include code and message
+- **Schema compliance** — all responses validated against expected schemas
+
+**Implementation:**
+- New `tests/test_rpc_contract.py` with comprehensive contract tests
+- New `tests/test_rpc_response_schema.py` for schema validation
+- New `tests/test_rpc_error_response.py` for error structure validation
+- 3 property-based tests validating RPC response schema, error structure, and contract compliance
+
+### Testing & Quality
+- **15 new correctness properties** covering all v3.1 features
+- **507 Python tests** passing (including all property-based tests)
+- **319 Rust tests** passing (including config fuzzing)
+- **Comprehensive coverage** of crash metrics, telemetry, caching, sessions, streaming, wizard, and RPC contracts
+
+### API Changes
+- **New RPC methods** (backward compatible):
+  - Crash Metrics: `get_crash_metrics()`
+  - Telemetry: `get_telemetry(seconds)`
+  - Platform: `redetect_platform()`
+  - Sessions: `get_session_history(limit)`, `get_session(id)`, `compare_sessions(id1, id2)`
+  - Wizard: `get_wizard_state()`, `complete_wizard(goal)`, `reset_wizard()`
+- **New events**:
+  - `telemetry_sample`: Real-time telemetry data
+  - `session_started`: Session creation notification
+  - `session_ended`: Session completion with metrics
+
+### Breaking Changes
+- **None** — All changes are backward compatible
+- Existing settings and presets are preserved
+- No migration required
+
+### Technical Improvements
+- Server-sent events for real-time updates (replaces polling)
+- Platform detection caching for faster startup
+- Circular buffers for efficient memory usage
+- Comprehensive error handling for all new features
+- Type-safe TypeScript interfaces for all new data structures
+
+---
+
 ## [3.0.0] - 2026-01-16
 
 ### Major Changes - Intelligent Automation Features

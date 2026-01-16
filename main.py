@@ -303,6 +303,14 @@ class Plugin:
     async def get_platform_info(self):
         """Return platform detection results."""
         return await self.rpc.get_platform_info()
+    
+    async def redetect_platform(self):
+        """Force fresh platform detection, clearing any cached data.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 3.4
+        """
+        return await self.rpc.redetect_platform()
 
     # ==================== Autotune (delegated to RPC) ====================
     
@@ -921,6 +929,102 @@ class Plugin:
     async def enable_fan_control(self, enabled):
         """Enable or disable fan control."""
         return await self.rpc.enable_fan_control(enabled)
+
+    # ==================== Crash Metrics (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 1.2
+    
+    async def get_crash_metrics(self):
+        """Get crash recovery metrics.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 1.2
+        """
+        return await self.rpc.get_crash_metrics()
+    
+    # ==================== Telemetry (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 2.3, 2.4
+    
+    async def get_telemetry(self, seconds=60):
+        """Get recent telemetry samples.
+        
+        Args:
+            seconds: Number of seconds of data to retrieve (default 60)
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 2.3, 2.4
+        """
+        return await self.rpc.get_telemetry(seconds)
+    
+    # ==================== Session History (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 8.4, 8.5, 8.6
+    
+    async def get_session_history(self, limit=30):
+        """Get session history.
+        
+        Args:
+            limit: Maximum number of sessions to return (default 30)
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.4
+        """
+        return await self.rpc.get_session_history(limit)
+    
+    async def get_session(self, session_id):
+        """Get a specific session by ID.
+        
+        Args:
+            session_id: UUID of the session to retrieve
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.5
+        """
+        return await self.rpc.get_session(session_id)
+    
+    async def compare_sessions(self, id1, id2):
+        """Compare two sessions.
+        
+        Args:
+            id1: UUID of first session
+            id2: UUID of second session
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.6
+        """
+        return await self.rpc.compare_sessions(id1, id2)
+    
+    # ==================== Wizard (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 5.5, 5.6
+    
+    async def get_wizard_state(self):
+        """Get wizard settings state.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.5, 5.6
+        """
+        return await self.rpc.get_wizard_state()
+    
+    async def complete_wizard(self, goal):
+        """Complete the setup wizard with selected goal.
+        
+        Args:
+            goal: Selected goal - one of: quiet, balanced, battery, performance
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.5
+        """
+        return await self.rpc.complete_wizard(goal)
+    
+    async def reset_wizard(self):
+        """Reset wizard state to allow re-running.
+        
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.6
+        """
+        return await self.rpc.reset_wizard()
 
     # ==================== Plugin Lifecycle ====================
     

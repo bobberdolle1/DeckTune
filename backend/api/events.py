@@ -486,3 +486,37 @@ class EventEmitter:
             f"samples: {sample_count}, duration: {duration_sec:.1f}s)"
         )
         await self._emit_event("blackbox_saved", saved_data)
+
+    # Telemetry Events
+    # Feature: decktune-3.1-reliability-ux
+    # Validates: Requirements 2.1, 2.2
+    
+    async def emit_telemetry_sample(
+        self,
+        timestamp: float,
+        temperature_c: float,
+        power_w: float,
+        load_percent: float
+    ) -> None:
+        """Emit telemetry sample event.
+        
+        Args:
+            timestamp: Unix timestamp of the sample
+            temperature_c: CPU temperature in Celsius
+            power_w: Power consumption in Watts
+            load_percent: CPU load percentage (0-100)
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 2.1, 2.2
+        """
+        sample_data = {
+            "timestamp": timestamp,
+            "temperature_c": temperature_c,
+            "power_w": power_w,
+            "load_percent": load_percent
+        }
+        logger.debug(
+            f"Telemetry sample: temp={temperature_c:.1f}°C, "
+            f"power={power_w:.1f}W, load={load_percent:.1f}%"
+        )
+        await self._emit_event("telemetry_sample", sample_data)

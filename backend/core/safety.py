@@ -13,6 +13,7 @@ from ..tuning.iron_seeker import IronSeekerState, IronSeekerStoredResult
 
 if TYPE_CHECKING:
     from .ryzenadj import RyzenadjWrapper
+    from .crash_metrics import CrashMetricsManager
 
 logger = logging.getLogger(__name__)
 
@@ -292,19 +293,33 @@ class SafetyManager:
     IRON_SEEKER_STATE_FILE = "/tmp/decktune_iron_seeker_state.json"
     
     def __init__(self, settings_manager, platform: PlatformInfo, 
-                 ryzenadj: Optional["RyzenadjWrapper"] = None):
+                 ryzenadj: Optional["RyzenadjWrapper"] = None,
+                 crash_metrics_manager: Optional["CrashMetricsManager"] = None):
         """Initialize the safety manager.
         
         Args:
             settings_manager: Decky settings manager instance
             platform: Detected platform information
             ryzenadj: Optional RyzenadjWrapper for applying values during rollback
+            crash_metrics_manager: Optional CrashMetricsManager for recording crash events
         """
         self.settings_manager = settings_manager
         self.platform = platform
         self.ryzenadj = ryzenadj
+        self.crash_metrics_manager = crash_metrics_manager
         self._lkg_values: List[int] = [0, 0, 0, 0]
         self._load_lkg_from_settings()
+    
+    def set_crash_metrics_manager(self, crash_metrics_manager: "CrashMetricsManager") -> None:
+        """Set the CrashMetricsManager instance.
+        
+        Args:
+            crash_metrics_manager: CrashMetricsManager instance
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 1.1
+        """
+        self.crash_metrics_manager = crash_metrics_manager
     
     def _load_lkg_from_settings(self) -> None:
         """Load LKG values from settings on init."""
@@ -425,21 +440,27 @@ class SafetyManager:
         system stopped), this method will:
         1. Remove the tuning flag
         2. Rollback to LKG values if ryzenadj is configured
+        3. Record crash event to crash metrics
         
         If a binning state file exists with active=True (indicating binning
         was in progress when system stopped), this method will:
         1. Restore the last_stable value
         2. Log the failed test value
         3. Clear the binning state
+        4. Record crash event to crash metrics
         
         If an Iron Seeker state file exists with active=True (indicating
         Iron Seeker was in progress when system stopped), this method will:
         1. Restore the stable values (core_results)
         2. Log the crashed core and value
         3. Clear the Iron Seeker state
+        4. Record crash event to crash metrics
         
         Returns:
             True if recovery was performed
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 1.1, 1.3
         """
         recovery_performed = False
         
@@ -451,6 +472,10 @@ class SafetyManager:
                 f"value {iron_seeker_state.current_value}mV, "
                 f"restoring stable values: {iron_seeker_state.core_results}"
             )
+            
+            # Build crashed values (current test values)
+            crashed_values = iron_seeker_state.core_results.copy()
+            crashed_values[iron_seeker_state.current_core] = iron_seeker_state.current_value
             
             # Store recovery info for event emission
             self._last_iron_seeker_recovery = {
@@ -470,6 +495,14 @@ class SafetyManager:
             else:
                 logger.warning("Iron Seeker recovery: RyzenadjWrapper not configured, skipping value restore")
             
+            # Record crash to metrics (Feature: decktune-3.1-reliability-ux)
+            if self.crash_metrics_manager is not None:
+                self.crash_metrics_manager.record_crash(
+                    crashed_values=crashed_values,
+                    restored_values=iron_seeker_state.core_results.copy(),
+                    reason="iron_seeker_crash"
+                )
+            
             # Clear the Iron Seeker state
             self.clear_iron_seeker_state()
             recovery_performed = True
@@ -482,6 +515,9 @@ class SafetyManager:
                 f"restoring last_stable: {binning_state.last_stable}"
             )
             
+            crashed_values = [binning_state.current_value] * 4
+            restored_values = [binning_state.last_stable] * 4
+            
             # Restore last_stable value if ryzenadj is configured
             if self.ryzenadj is not None:
                 last_stable_values = [binning_state.last_stable] * 4
@@ -493,6 +529,14 @@ class SafetyManager:
             else:
                 logger.warning("Binning recovery: RyzenadjWrapper not configured, skipping value restore")
             
+            # Record crash to metrics (Feature: decktune-3.1-reliability-ux)
+            if self.crash_metrics_manager is not None:
+                self.crash_metrics_manager.record_crash(
+                    crashed_values=crashed_values,
+                    restored_values=restored_values,
+                    reason="binning_crash"
+                )
+            
             # Clear the binning state
             self.clear_binning_state()
             recovery_performed = True
@@ -503,6 +547,10 @@ class SafetyManager:
             # Tuning was in progress - need to rollback
             self.remove_tuning_flag()
             
+            # Get current values (crashed) and LKG values (to restore)
+            current_values = self.settings_manager.getSetting("cores") or [0, 0, 0, 0]
+            lkg_values = self.load_lkg()
+            
             # Attempt to rollback to LKG values
             if self.ryzenadj is not None:
                 success, error = self.rollback_to_lkg()
@@ -510,6 +558,14 @@ class SafetyManager:
                     logger.error(f"Boot recovery rollback failed: {error}")
             else:
                 logger.warning("Boot recovery: RyzenadjWrapper not configured, skipping rollback")
+            
+            # Record crash to metrics (Feature: decktune-3.1-reliability-ux)
+            if self.crash_metrics_manager is not None:
+                self.crash_metrics_manager.record_crash(
+                    crashed_values=current_values,
+                    restored_values=lkg_values,
+                    reason="boot_recovery"
+                )
             
             recovery_performed = True
         

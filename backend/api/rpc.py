@@ -176,6 +176,37 @@ class DeckTuneRPC:
             "detected": self.platform.detected
         }
     
+    async def redetect_platform(self) -> Dict[str, Any]:
+        """Force fresh platform detection, clearing any cached data.
+        
+        Clears the platform cache and performs fresh DMI detection.
+        Updates the internal platform reference with the new detection result.
+        
+        Returns:
+            Dictionary with model, variant, safe_limit, and detected status
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 3.4
+        """
+        from ..platform.detect import redetect_platform as _redetect
+        
+        logger.info("Manual platform re-detection requested")
+        
+        # Perform fresh detection
+        new_platform = _redetect()
+        
+        # Update internal reference
+        self.platform = new_platform
+        
+        logger.info(f"Platform re-detected: {new_platform.model} ({new_platform.variant})")
+        
+        return {
+            "model": new_platform.model,
+            "variant": new_platform.variant,
+            "safe_limit": new_platform.safe_limit,
+            "detected": new_platform.detected
+        }
+    
     # ==================== Undervolt Control ====================
     
     async def apply_undervolt(
@@ -2403,4 +2434,326 @@ class DeckTuneRPC:
             
         except Exception as e:
             logger.error(f"Failed to set PWM smoothing config: {e}")
+            return {"success": False, "error": str(e)}
+
+
+    # ==================== Crash Metrics (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 1.2
+    
+    async def get_crash_metrics(self) -> Dict[str, Any]:
+        """Get crash recovery metrics.
+        
+        Returns crash recovery statistics including total count,
+        last crash date, and history of crash events.
+        
+        Returns:
+            Dictionary with success status and CrashMetrics data:
+            - total_count: Total number of crash recoveries
+            - last_crash_date: ISO 8601 timestamp of last crash
+            - history: List of CrashRecord objects
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 1.2
+        """
+        try:
+            from ..core.crash_metrics import CrashMetricsManager
+            
+            # Get or create crash metrics manager
+            if not hasattr(self, '_crash_metrics_manager'):
+                self._crash_metrics_manager = CrashMetricsManager(self.settings)
+            
+            metrics = self._crash_metrics_manager.get_metrics()
+            
+            return {
+                "success": True,
+                "metrics": metrics.to_dict()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get crash metrics: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_crash_metrics_manager(self, manager) -> None:
+        """Set the crash metrics manager.
+        
+        Args:
+            manager: CrashMetricsManager instance
+        """
+        self._crash_metrics_manager = manager
+    
+    # ==================== Telemetry (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 2.3, 2.4
+    
+    async def get_telemetry(self, seconds: int = 60) -> Dict[str, Any]:
+        """Get recent telemetry samples.
+        
+        Returns temperature, power, and load data for the specified
+        time window.
+        
+        Args:
+            seconds: Number of seconds of data to retrieve (default 60)
+            
+        Returns:
+            Dictionary with success status and telemetry samples:
+            - samples: List of TelemetrySample objects
+            - count: Number of samples returned
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 2.3, 2.4
+        """
+        try:
+            from ..core.telemetry import TelemetryManager
+            
+            # Get or create telemetry manager
+            if not hasattr(self, '_telemetry_manager'):
+                self._telemetry_manager = TelemetryManager()
+            
+            samples = self._telemetry_manager.get_recent(seconds)
+            
+            return {
+                "success": True,
+                "samples": [s.to_dict() for s in samples],
+                "count": len(samples)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get telemetry: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_telemetry_manager(self, manager) -> None:
+        """Set the telemetry manager.
+        
+        Args:
+            manager: TelemetryManager instance
+        """
+        self._telemetry_manager = manager
+    
+    # ==================== Session History (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 8.4, 8.5, 8.6
+    
+    async def get_session_history(self, limit: int = 30) -> Dict[str, Any]:
+        """Get session history.
+        
+        Returns recent gaming sessions with metrics.
+        
+        Args:
+            limit: Maximum number of sessions to return (default 30)
+            
+        Returns:
+            Dictionary with success status and session list:
+            - sessions: List of Session objects
+            - count: Number of sessions returned
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.4
+        """
+        try:
+            from ..core.session_manager import SessionManager
+            
+            # Get or create session manager
+            if not hasattr(self, '_session_manager'):
+                self._session_manager = SessionManager(self.settings)
+            
+            sessions = self._session_manager.get_history(limit)
+            
+            return {
+                "success": True,
+                "sessions": [s.to_dict() for s in sessions],
+                "count": len(sessions)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get session history: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_session(self, session_id: str) -> Dict[str, Any]:
+        """Get a specific session by ID.
+        
+        Returns detailed session information including metrics and samples.
+        
+        Args:
+            session_id: UUID of the session to retrieve
+            
+        Returns:
+            Dictionary with success status and session data
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.5
+        """
+        try:
+            from ..core.session_manager import SessionManager
+            
+            # Get or create session manager
+            if not hasattr(self, '_session_manager'):
+                self._session_manager = SessionManager(self.settings)
+            
+            session = self._session_manager.get_session(session_id)
+            
+            if session is None:
+                return {
+                    "success": False,
+                    "error": f"Session not found: {session_id}"
+                }
+            
+            return {
+                "success": True,
+                "session": session.to_dict()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get session: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def compare_sessions(self, id1: str, id2: str) -> Dict[str, Any]:
+        """Compare two sessions.
+        
+        Returns side-by-side metric comparison with differences.
+        The diff values are calculated as (session1 - session2).
+        
+        Args:
+            id1: UUID of first session
+            id2: UUID of second session
+            
+        Returns:
+            Dictionary with success status and comparison data:
+            - session1: First session data
+            - session2: Second session data
+            - diff: Metric differences (session1 - session2)
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 8.6
+        """
+        try:
+            from ..core.session_manager import SessionManager
+            
+            # Get or create session manager
+            if not hasattr(self, '_session_manager'):
+                self._session_manager = SessionManager(self.settings)
+            
+            comparison = self._session_manager.compare_sessions(id1, id2)
+            
+            if comparison is None:
+                return {
+                    "success": False,
+                    "error": "One or both sessions not found or have no metrics"
+                }
+            
+            return {
+                "success": True,
+                **comparison
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to compare sessions: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_session_manager(self, manager) -> None:
+        """Set the session manager.
+        
+        Args:
+            manager: SessionManager instance
+        """
+        self._session_manager = manager
+    
+    # ==================== Wizard (v3.1) ====================
+    # Feature: decktune-3.1-reliability-ux
+    # Requirements: 5.5, 5.6
+    
+    async def get_wizard_state(self) -> Dict[str, Any]:
+        """Get wizard settings state.
+        
+        Returns the current wizard settings including whether first run
+        is complete and the selected goal.
+        
+        Returns:
+            Dictionary with success status and wizard settings:
+            - first_run_complete: Whether first run wizard is complete
+            - wizard_goal: Selected goal (quiet, balanced, battery, performance)
+            - wizard_completed_at: ISO 8601 timestamp of completion
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.5, 5.6
+        """
+        try:
+            first_run_complete = self.settings.getSetting("first_run_complete") or False
+            wizard_goal = self.settings.getSetting("wizard_goal")
+            wizard_completed_at = self.settings.getSetting("wizard_completed_at")
+            
+            return {
+                "success": True,
+                "wizard_state": {
+                    "first_run_complete": first_run_complete,
+                    "wizard_goal": wizard_goal,
+                    "wizard_completed_at": wizard_completed_at
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get wizard state: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def complete_wizard(self, goal: str) -> Dict[str, Any]:
+        """Complete the setup wizard with selected goal.
+        
+        Saves the user's goal preference and marks first run as complete.
+        
+        Args:
+            goal: Selected goal - one of: quiet, balanced, battery, performance
+            
+        Returns:
+            Dictionary with success status
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.5
+        """
+        valid_goals = ["quiet", "balanced", "battery", "performance"]
+        
+        if goal not in valid_goals:
+            return {
+                "success": False,
+                "error": f"Invalid goal: {goal}. Must be one of: {', '.join(valid_goals)}"
+            }
+        
+        try:
+            from datetime import datetime
+            
+            self.settings.setSetting("wizard_goal", goal)
+            self.settings.setSetting("wizard_completed_at", datetime.now().isoformat())
+            self.settings.setSetting("first_run_complete", True)
+            
+            logger.info(f"Wizard completed with goal: {goal}")
+            
+            return {
+                "success": True,
+                "goal": goal
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to complete wizard: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def reset_wizard(self) -> Dict[str, Any]:
+        """Reset wizard state to allow re-running.
+        
+        Clears first_run_complete flag so wizard will show again.
+        Does not clear the previously selected goal.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: decktune-3.1-reliability-ux
+        Validates: Requirements 5.6
+        """
+        try:
+            self.settings.setSetting("first_run_complete", False)
+            
+            logger.info("Wizard state reset - will show on next load")
+            
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to reset wizard: {e}")
             return {"success": False, "error": str(e)}

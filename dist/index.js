@@ -91,12 +91,18 @@ function IconBase(props) {
 }
 
 // THIS FILE IS AUTO GENERATED
-function FaBalanceScale (props) {
+function FaArrowLeft (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M257.5 445.1l-22.2 22.2c-9.4 9.4-24.6 9.4-33.9 0L7 273c-9.4-9.4-9.4-24.6 0-33.9L201.4 44.7c9.4-9.4 24.6-9.4 33.9 0l22.2 22.2c9.5 9.5 9.3 25-.4 34.3L136.6 216H424c13.3 0 24 10.7 24 24v32c0 13.3-10.7 24-24 24H136.6l120.5 114.8c9.8 9.3 10 24.8.4 34.3z"}}]})(props);
+}function FaArrowRight (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z"}}]})(props);
+}function FaBalanceScale (props) {
   return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M256 336h-.02c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0C-2.06 328.75.02 320.33.02 336H0c0 44.18 57.31 80 128 80s128-35.82 128-80zM128 176l72 144H56l72-144zm511.98 160c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0-87.12 174.26-85.04 165.84-85.04 181.51H384c0 44.18 57.31 80 128 80s128-35.82 128-80h-.02zM440 320l72-144 72 144H440zm88 128H352V153.25c23.51-10.29 41.16-31.48 46.39-57.25H528c8.84 0 16-7.16 16-16V48c0-8.84-7.16-16-16-16H383.64C369.04 12.68 346.09 0 320 0s-49.04 12.68-63.64 32H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h129.61c5.23 25.76 22.87 46.96 46.39 57.25V448H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z"}}]})(props);
 }function FaBan (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.108 117.892c65.448 65.448 70 165.481 20.677 235.637L150.47 105.216c70.204-49.356 170.226-44.735 235.638 20.676zM125.892 386.108c-65.448-65.448-70-165.481-20.677-235.637L361.53 406.784c-70.203 49.356-170.226 44.736-235.638-20.676z"}}]})(props);
 }function FaBatteryFull (props) {
   return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M544 160v64h32v64h-32v64H64V160h480m16-64H48c-26.51 0-48 21.49-48 48v224c0 26.51 21.49 48 48 48h512c26.51 0 48-21.49 48-48v-16h8c13.255 0 24-10.745 24-24V184c0-13.255-10.745-24-24-24h-8v-16c0-26.51-21.49-48-48-48zm-48 96H96v128h416V192z"}}]})(props);
+}function FaBolt (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 320 512"},"child":[{"tag":"path","attr":{"d":"M296 160H180.6l42.6-129.8C227.2 15 215.7 0 200 0H56C44 0 33.8 8.9 32.2 20.8l-32 240C-1.7 275.2 9.5 288 24 288h118.7L96.6 482.5c-3.6 15.2 8 29.5 23.3 29.5 8.4 0 16.4-4.4 20.8-12l176-304c9.3-15.9-2.2-36-20.7-36z"}}]})(props);
 }function FaCheck (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"}}]})(props);
 }function FaCog (props) {
@@ -137,6 +143,8 @@ function FaBalanceScale (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M296 384h-80c-13.3 0-24-10.7-24-24V192h-87.7c-17.8 0-26.7-21.5-14.1-34.1L242.3 5.7c7.5-7.5 19.8-7.5 27.3 0l152.2 152.2c12.6 12.6 3.7 34.1-14.1 34.1H320v168c0 13.3-10.7 24-24 24zm216-8v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h136v8c0 30.9 25.1 56 56 56h80c30.9 0 56-25.1 56-56v-8h136c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"}}]})(props);
 }function FaVial (props) {
   return GenIcon({"attr":{"viewBox":"0 0 480 512"},"child":[{"tag":"path","attr":{"d":"M477.7 186.1L309.5 18.3c-3.1-3.1-8.2-3.1-11.3 0l-34 33.9c-3.1 3.1-3.1 8.2 0 11.3l11.2 11.1L33 316.5c-38.8 38.7-45.1 102-9.4 143.5 20.6 24 49.5 36 78.4 35.9 26.4 0 52.8-10 72.9-30.1l246.3-245.7 11.2 11.1c3.1 3.1 8.2 3.1 11.3 0l34-33.9c3.1-3 3.1-8.1 0-11.2zM318 256H161l148-147.7 78.5 78.3L318 256z"}}]})(props);
+}function FaWrench (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M507.73 109.1c-2.24-9.03-13.54-12.09-20.12-5.51l-74.36 74.36-67.88-11.31-11.31-67.88 74.36-74.36c6.62-6.62 3.43-17.9-5.66-20.16-47.38-11.74-99.55.91-136.58 37.93-39.64 39.64-50.55 97.1-34.05 147.2L18.74 402.76c-24.99 24.99-24.99 65.51 0 90.5 24.99 24.99 65.51 24.99 90.5 0l213.21-213.21c50.12 16.71 107.47 5.68 147.37-34.22 37.07-37.07 49.7-89.32 37.91-136.73zM64 472c-13.25 0-24-10.75-24-24 0-13.26 10.75-24 24-24s24 10.74 24 24c0 13.25-10.75 24-24 24z"}}]})(props);
 }
 
 /**
@@ -230,6 +238,7 @@ class Api extends SimpleEventEmitter {
         addEventListener("binning_complete", this.onBinningComplete.bind(this));
         addEventListener("binning_error", this.onBinningError.bind(this));
         addEventListener("profile_changed", this.onProfileChanged.bind(this));
+        addEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
         if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
             return await this.handleMainRunningApp();
         }
@@ -364,6 +373,22 @@ class Api extends SimpleEventEmitter {
                 duration: 3000,
             });
         }
+    }
+    /**
+     * Handle telemetry sample events from backend.
+     * Requirements: 2.1, 2.2, 2.3, 2.4
+     *
+     * Feature: decktune-3.1-reliability-ux
+     * Adds new telemetry sample to state, maintaining 60-second window.
+     */
+    onTelemetrySample(sample) {
+        const now = Date.now() / 1000;
+        const cutoffTime = now - 60;
+        // Filter old samples and add new one
+        const currentSamples = this.state.telemetrySamples || [];
+        const filteredSamples = currentSamples.filter(s => s.timestamp >= cutoffTime);
+        const newSamples = [...filteredSamples, sample].slice(-60);
+        this.setState({ telemetrySamples: newSamples });
     }
     /**
      * Handle app lifetime notifications from Steam.
@@ -1054,6 +1079,40 @@ class Api extends SimpleEventEmitter {
         this.setState({ benchmarkHistory: history });
         return history;
     }
+    // ==================== Session History Methods ====================
+    // Requirements: 8.4, 8.5, 8.6
+    /**
+     * Get session history.
+     * Requirements: 8.4
+     *
+     * @param limit - Maximum number of sessions to return (default 30)
+     * @returns Array of sessions, most recent first
+     */
+    async getSessionHistory(limit = 30) {
+        const sessions = await call("get_session_history", limit);
+        return sessions || [];
+    }
+    /**
+     * Get a specific session by ID.
+     * Requirements: 8.5
+     *
+     * @param sessionId - UUID of the session to retrieve
+     * @returns Session if found, null otherwise
+     */
+    async getSession(sessionId) {
+        return await call("get_session", sessionId);
+    }
+    /**
+     * Compare two sessions and return metric differences.
+     * Requirements: 8.6
+     *
+     * @param id1 - ID of first session
+     * @param id2 - ID of second session
+     * @returns Comparison result with diff values
+     */
+    async compareSessions(id1, id2) {
+        return await call("compare_sessions", id1, id2);
+    }
     // ==================== Server Events ====================
     /**
      * Handle server events.
@@ -1091,6 +1150,7 @@ class Api extends SimpleEventEmitter {
         removeEventListener("binning_complete", this.onBinningComplete.bind(this));
         removeEventListener("binning_error", this.onBinningError.bind(this));
         removeEventListener("profile_changed", this.onProfileChanged.bind(this));
+        removeEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
     }
 }
 
@@ -1164,6 +1224,9 @@ const initialState = {
     benchmarkHistory: [],
     isBenchmarkRunning: false,
     lastBenchmarkResult: null,
+    // Telemetry state (new in v3.1)
+    // Requirements: 2.1, 2.2, 2.3, 2.4
+    telemetrySamples: [],
     // Binary availability
     missingBinaries: [],
 };
@@ -1546,14 +1609,14 @@ const WizardMode = ({ onComplete, onCancel }) => {
                         React.createElement("strong", null, missingBinaries.join(", "))),
                     React.createElement("div", { style: { fontSize: "11px", color: "#ffcc80", marginTop: "4px" } }, "Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder."))))),
         React.createElement(DFL.PanelSectionRow, null,
-            React.createElement(StepIndicator, { currentStep: step })),
+            React.createElement(StepIndicator$1, { currentStep: step })),
         step === 1 && (React.createElement(GoalSelectionStep, { onSelect: handleGoalSelect, onBinningClick: handleBinningClick, onBenchmarkClick: handleBenchmarkClick, platformInfo: platformInfo, disabled: hasMissing, isBinningRunning: isBinningRunning })),
         step === 2 && !isBinningRunning && (React.createElement(AutotuneProgressStep, { progress: progress, isRunning: isRunning, onCancel: handleCancel, selectedGoal: selectedGoal })),
         step === 2 && isBinningRunning && (React.createElement(BinningProgressStep, { progress: binningProgress, isRunning: isBinningRunning, onCancel: handleCancel })),
         step === 3 && result && !binningResult && (React.createElement(ResultsStep, { result: result, platformInfo: platformInfo, onApplyAndSave: handleApplyAndSave, onStartOver: handleStartOver })),
         step === 3 && binningResult && (React.createElement(BinningResultsStep, { result: binningResult, platformInfo: platformInfo, onApplyRecommended: handleApplyBinningResult, onStartOver: handleStartOver }))));
 };
-const StepIndicator = ({ currentStep }) => {
+const StepIndicator$1 = ({ currentStep }) => {
     const steps = [
         { num: 1, label: "Goal" },
         { num: 2, label: "Tuning" },
@@ -3803,49 +3866,796 @@ const formatUptime = (seconds) => {
 };
 
 /**
+ * SetupWizard component for DeckTune first-run experience.
+ *
+ * Feature: decktune-3.1-reliability-ux, Setup Wizard
+ * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+ *
+ * Provides a guided setup process for new users:
+ * - Step 1: Welcome with introduction
+ * - Step 2: Explanation of undervolting benefits/risks
+ * - Step 3: Goal selection with estimates
+ * - Step 4: Confirmation and completion
+ */
+
+// ============================================================================
+// Constants
+// Requirements: 5.4
+// ============================================================================
+/**
+ * Goal estimates for each preset goal.
+ * Requirements: 5.4
+ *
+ * These estimates are based on typical Steam Deck undervolting results.
+ * Actual results vary based on silicon quality and workload.
+ */
+const GOAL_ESTIMATES = {
+    quiet: {
+        batteryImprovement: "+10-15%",
+        tempReduction: "-8-12°C",
+        description: "Prioritizes lower temperatures and quieter fan operation. Best for casual gaming and media consumption.",
+    },
+    balanced: {
+        batteryImprovement: "+15-20%",
+        tempReduction: "-5-8°C",
+        description: "Good balance between performance, battery life, and thermals. Recommended for most users.",
+    },
+    battery: {
+        batteryImprovement: "+20-30%",
+        tempReduction: "-3-5°C",
+        description: "Maximizes battery life with aggressive power savings. Ideal for long gaming sessions away from power.",
+    },
+    performance: {
+        batteryImprovement: "+5-10%",
+        tempReduction: "-2-4°C",
+        description: "Finds the most aggressive stable undervolt for maximum efficiency. For users who want every bit of optimization.",
+    },
+};
+/**
+ * Goal display information.
+ * Requirements: 5.3
+ */
+const GOAL_INFO = {
+    quiet: {
+        label: "Quiet/Cool",
+        icon: FaLeaf,
+        color: "#4caf50",
+    },
+    balanced: {
+        label: "Balanced",
+        icon: FaBalanceScale,
+        color: "#2196f3",
+    },
+    battery: {
+        label: "Max Battery",
+        icon: FaBatteryFull,
+        color: "#ff9800",
+    },
+    performance: {
+        label: "Max Performance",
+        icon: FaRocket,
+        color: "#f44336",
+    },
+};
+const STEP_ORDER = ['welcome', 'explanation', 'goal', 'confirm'];
+const StepIndicator = ({ currentStep }) => {
+    const steps = [
+        { id: 'welcome', label: 'Welcome' },
+        { id: 'explanation', label: 'Learn' },
+        { id: 'goal', label: 'Goal' },
+        { id: 'confirm', label: 'Confirm' },
+    ];
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    return (React.createElement(DFL.Focusable, { style: {
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            marginBottom: "16px",
+        } }, steps.map((s, index) => (React.createElement("div", { key: s.id, style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+        } },
+        React.createElement("div", { style: {
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: currentIndex >= index ? "#1a9fff" : "#3d4450",
+                color: currentIndex >= index ? "#fff" : "#8b929a",
+                fontWeight: "bold",
+                fontSize: "12px",
+            } }, currentIndex > index ? React.createElement(FaCheck, { size: 10 }) : index + 1),
+        React.createElement("span", { style: {
+                color: currentIndex >= index ? "#fff" : "#8b929a",
+                fontSize: "10px",
+                display: index < steps.length - 1 ? "none" : "inline",
+            } }, s.label),
+        index < steps.length - 1 && (React.createElement("div", { style: {
+                width: "16px",
+                height: "2px",
+                backgroundColor: currentIndex > index ? "#1a9fff" : "#3d4450",
+            } })))))));
+};
+const WelcomeStep = ({ onNext, onSkip }) => {
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    textAlign: "center",
+                    padding: "16px",
+                } },
+                React.createElement(FaBolt, { style: {
+                        fontSize: "48px",
+                        color: "#1a9fff",
+                        marginBottom: "16px",
+                    } }),
+                React.createElement("div", { style: {
+                        fontSize: "18px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                    } }, "Welcome to DeckTune!"),
+                React.createElement("div", { style: {
+                        fontSize: "13px",
+                        color: "#8b929a",
+                        lineHeight: "1.5",
+                    } }, "Let's set up your Steam Deck for optimal performance and battery life. This wizard will guide you through the process."))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#1a9fff",
+                    } },
+                    React.createElement("span", null, "Get Started"),
+                    React.createElement(FaArrowRight, null)))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    React.createElement("span", null, "Skip Setup"))))));
+};
+const ExplanationStep = ({ onNext, onBack, onSkip }) => {
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1a3a5c",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                } },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                    } },
+                    React.createElement(FaInfoCircle, { style: { color: "#1a9fff" } }),
+                    React.createElement("span", { style: { fontWeight: "bold" } }, "What is Undervolting?")),
+                React.createElement("div", { style: {
+                        fontSize: "12px",
+                        color: "#b0bec5",
+                        lineHeight: "1.5",
+                    } }, "Undervolting reduces the voltage supplied to your CPU while maintaining the same performance. This results in lower temperatures, quieter fans, and longer battery life."))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    display: "flex",
+                    gap: "8px",
+                    marginBottom: "12px",
+                } },
+                React.createElement("div", { style: {
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "#1b5e20",
+                        borderRadius: "8px",
+                    } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "6px",
+                        } },
+                        React.createElement(FaCheck, { style: { color: "#4caf50" } }),
+                        React.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Benefits")),
+                    React.createElement("ul", { style: {
+                            fontSize: "10px",
+                            color: "#a5d6a7",
+                            margin: 0,
+                            paddingLeft: "16px",
+                            lineHeight: "1.6",
+                        } },
+                        React.createElement("li", null, "Lower temperatures"),
+                        React.createElement("li", null, "Quieter fan operation"),
+                        React.createElement("li", null, "Extended battery life"),
+                        React.createElement("li", null, "Same performance"))),
+                React.createElement("div", { style: {
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "#5c4813",
+                        borderRadius: "8px",
+                    } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "6px",
+                        } },
+                        React.createElement(FaExclamationTriangle, { style: { color: "#ff9800" } }),
+                        React.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Risks")),
+                    React.createElement("ul", { style: {
+                            fontSize: "10px",
+                            color: "#ffe0b2",
+                            margin: 0,
+                            paddingLeft: "16px",
+                            lineHeight: "1.6",
+                        } },
+                        React.createElement("li", null, "System instability if too aggressive"),
+                        React.createElement("li", null, "Requires testing"),
+                        React.createElement("li", null, "Results vary by chip"))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "10px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    textAlign: "center",
+                } },
+                React.createElement(FaCheck, { style: { color: "#4caf50", marginRight: "6px" } }),
+                "DeckTune includes automatic safety features and crash recovery.")),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        React.createElement(FaArrowLeft, null),
+                        React.createElement("span", null, "Back"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: "#1a9fff",
+                        } },
+                        React.createElement("span", null, "Next"),
+                        React.createElement(FaArrowRight, null))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    React.createElement("span", null, "Skip Setup"))))));
+};
+const GoalStep = ({ selectedGoal, onSelectGoal, onNext, onBack, onSkip, }) => {
+    const goals = ['quiet', 'balanced', 'battery', 'performance'];
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    marginBottom: "8px",
+                } }, "Choose Your Goal"),
+            React.createElement("div", { style: {
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    marginBottom: "12px",
+                } }, "Select what matters most to you. You can change this later.")),
+        goals.map((goal) => {
+            const info = GOAL_INFO[goal];
+            const estimate = GOAL_ESTIMATES[goal];
+            const Icon = info.icon;
+            const isSelected = selectedGoal === goal;
+            return (React.createElement(DFL.PanelSectionRow, { key: goal },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelectGoal(goal), style: {
+                        border: isSelected ? `2px solid ${info.color}` : "2px solid transparent",
+                        borderRadius: "8px",
+                    } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "12px",
+                            padding: "4px",
+                        } },
+                        React.createElement("div", { style: {
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                backgroundColor: isSelected ? info.color : "#3d4450",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                            } },
+                            React.createElement(Icon, { style: { color: "#fff", fontSize: "16px" } })),
+                        React.createElement("div", { style: { flex: 1, textAlign: "left" } },
+                            React.createElement("div", { style: {
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    color: isSelected ? info.color : "#fff",
+                                } }, info.label),
+                            React.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginTop: "2px",
+                                } },
+                                estimate.description.split('.')[0],
+                                ".")),
+                        isSelected && (React.createElement(FaCheck, { style: { color: info.color, fontSize: "14px" } }))))));
+        }),
+        selectedGoal && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } },
+                React.createElement("div", { style: {
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                        color: GOAL_INFO[selectedGoal].color,
+                    } }, "Estimated Improvements"),
+                React.createElement("div", { style: {
+                        display: "flex",
+                        gap: "16px",
+                    } },
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                marginBottom: "4px",
+                            } },
+                            React.createElement(FaBatteryFull, { style: { color: "#4caf50", fontSize: "12px" } }),
+                            React.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Battery")),
+                        React.createElement("div", { style: {
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                color: "#4caf50",
+                            } }, GOAL_ESTIMATES[selectedGoal].batteryImprovement)),
+                    React.createElement("div", { style: { flex: 1 } },
+                        React.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                marginBottom: "4px",
+                            } },
+                            React.createElement(FaThermometerHalf, { style: { color: "#2196f3", fontSize: "12px" } }),
+                            React.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Temperature")),
+                        React.createElement("div", { style: {
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                color: "#2196f3",
+                            } }, GOAL_ESTIMATES[selectedGoal].tempReduction))),
+                React.createElement("div", { style: {
+                        fontSize: "9px",
+                        color: "#666",
+                        marginTop: "8px",
+                        fontStyle: "italic",
+                    } }, "* Actual results vary based on silicon quality and workload")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        React.createElement(FaArrowLeft, null),
+                        React.createElement("span", null, "Back"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, disabled: !selectedGoal, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: selectedGoal ? "#1a9fff" : "#8b929a",
+                            opacity: selectedGoal ? 1 : 0.5,
+                        } },
+                        React.createElement("span", null, "Next"),
+                        React.createElement(FaArrowRight, null))))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    React.createElement("span", null, "Skip Setup"))))));
+};
+const ConfirmStep = ({ selectedGoal, onConfirm, onBack, onCancel, isLoading, }) => {
+    const info = GOAL_INFO[selectedGoal];
+    const Icon = info.icon;
+    return (React.createElement(React.Fragment, null,
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    textAlign: "center",
+                    padding: "16px",
+                } },
+                React.createElement("div", { style: {
+                        width: "64px",
+                        height: "64px",
+                        borderRadius: "50%",
+                        backgroundColor: info.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 16px",
+                    } },
+                    React.createElement(Icon, { style: { color: "#fff", fontSize: "28px" } })),
+                React.createElement("div", { style: {
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                    } }, "Ready to Start!"),
+                React.createElement("div", { style: {
+                        fontSize: "12px",
+                        color: "#8b929a",
+                    } },
+                    "You've selected ",
+                    React.createElement("strong", { style: { color: info.color } }, info.label)))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } },
+                React.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "8px" } }, "What happens next:"),
+                React.createElement("ul", { style: {
+                        fontSize: "11px",
+                        color: "#b0bec5",
+                        margin: 0,
+                        paddingLeft: "20px",
+                        lineHeight: "1.8",
+                    } },
+                    React.createElement("li", null, "Your preferences will be saved"),
+                    React.createElement("li", null, "DeckTune will be configured for your goal"),
+                    React.createElement("li", null, "You can run autotune to find optimal values"),
+                    React.createElement("li", null, "Settings can be changed anytime in Expert mode")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(DFL.ButtonItem, { layout: "below", onClick: onConfirm, disabled: isLoading, style: { marginTop: "12px" } },
+                React.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#4caf50",
+                    } },
+                    React.createElement(FaCheck, null),
+                    React.createElement("span", null, isLoading ? "Saving..." : "Complete Setup")))),
+        React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: { display: "flex", gap: "8px" } },
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, disabled: isLoading, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        React.createElement(FaArrowLeft, null),
+                        React.createElement("span", null, "Back"))),
+                React.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, disabled: isLoading, style: { flex: 1 } },
+                    React.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: "#ff6b6b",
+                        } },
+                        React.createElement(FaTimes, null),
+                        React.createElement("span", null, "Cancel")))))));
+};
+// ============================================================================
+// Main Component
+// Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+// ============================================================================
+/**
+ * SetupWizard component - guided first-run experience.
+ *
+ * Requirements:
+ * - 5.1: Display welcome wizard on first run
+ * - 5.2: Explain undervolting benefits/risks
+ * - 5.3: Offer preset goals with explanations
+ * - 5.4: Show estimated improvements for selected goal
+ * - 5.5: Save preferences on completion
+ * - 5.6: Allow re-running wizard from settings
+ * - 5.7: Allow skip/cancel without applying changes
+ */
+const SetupWizard = ({ onComplete, onCancel, onSkip, }) => {
+    const { api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const [wizardState, setWizardState] = SP_REACT.useState({
+        step: 'welcome',
+        selectedGoal: null,
+    });
+    const [isLoading, setIsLoading] = SP_REACT.useState(false);
+    const [error, setError] = SP_REACT.useState(null);
+    /**
+     * Navigate to next step.
+     */
+    const goToNextStep = () => {
+        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
+        const currentIndex = stepOrder.indexOf(wizardState.step);
+        if (currentIndex < stepOrder.length - 1) {
+            setWizardState((prev) => ({
+                ...prev,
+                step: stepOrder[currentIndex + 1],
+            }));
+        }
+    };
+    /**
+     * Navigate to previous step.
+     */
+    const goToPreviousStep = () => {
+        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
+        const currentIndex = stepOrder.indexOf(wizardState.step);
+        if (currentIndex > 0) {
+            setWizardState((prev) => ({
+                ...prev,
+                step: stepOrder[currentIndex - 1],
+            }));
+        }
+    };
+    /**
+     * Handle goal selection.
+     * Requirements: 5.3
+     */
+    const handleSelectGoal = (goal) => {
+        setWizardState((prev) => ({
+            ...prev,
+            selectedGoal: goal,
+        }));
+    };
+    /**
+     * Handle wizard completion.
+     * Requirements: 5.5
+     *
+     * Saves preferences and marks first_run_complete.
+     */
+    const handleComplete = async () => {
+        if (!wizardState.selectedGoal)
+            return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Save wizard settings via RPC
+            await api.saveSetting('wizard_goal', wizardState.selectedGoal);
+            await api.saveSetting('wizard_completed_at', new Date().toISOString());
+            await api.saveSetting('first_run_complete', true);
+            setWizardState((prev) => ({
+                ...prev,
+                step: 'complete',
+            }));
+            onComplete?.(wizardState.selectedGoal);
+        }
+        catch (e) {
+            setError(String(e));
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    /**
+     * Handle wizard cancellation.
+     * Requirements: 5.7
+     *
+     * Does not modify any settings or apply any values.
+     */
+    const handleCancel = () => {
+        // Reset state without saving anything
+        setWizardState({
+            step: 'welcome',
+            selectedGoal: null,
+        });
+        onCancel?.();
+    };
+    /**
+     * Handle wizard skip.
+     * Requirements: 5.7
+     *
+     * Marks first_run_complete but doesn't apply any settings.
+     */
+    const handleSkip = async () => {
+        try {
+            // Only mark as complete, don't save any goal
+            await api.saveSetting('first_run_complete', true);
+            onSkip?.();
+        }
+        catch (e) {
+            // Silently fail - user can still use the plugin
+            onSkip?.();
+        }
+    };
+    return (React.createElement(DFL.PanelSection, { title: "Setup Wizard" },
+        platformInfo && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    textAlign: "center",
+                    marginBottom: "8px",
+                } },
+                "Detected: ",
+                platformInfo.variant,
+                " (",
+                platformInfo.model,
+                ")"))),
+        wizardState.step !== 'complete' && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement(StepIndicator, { currentStep: wizardState.step }))),
+        error && (React.createElement(DFL.PanelSectionRow, null,
+            React.createElement("div", { style: {
+                    padding: "8px",
+                    backgroundColor: "#b71c1c",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    color: "#fff",
+                    textAlign: "center",
+                } }, error))),
+        wizardState.step === 'welcome' && (React.createElement(WelcomeStep, { onNext: goToNextStep, onSkip: handleSkip })),
+        wizardState.step === 'explanation' && (React.createElement(ExplanationStep, { onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
+        wizardState.step === 'goal' && (React.createElement(GoalStep, { selectedGoal: wizardState.selectedGoal, onSelectGoal: handleSelectGoal, onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
+        wizardState.step === 'confirm' && wizardState.selectedGoal && (React.createElement(ConfirmStep, { selectedGoal: wizardState.selectedGoal, onConfirm: handleComplete, onBack: goToPreviousStep, onCancel: handleCancel, isLoading: isLoading })),
+        wizardState.step === 'complete' && (React.createElement(React.Fragment, null,
+            React.createElement(DFL.PanelSectionRow, null,
+                React.createElement("div", { style: {
+                        textAlign: "center",
+                        padding: "24px",
+                    } },
+                    React.createElement("div", { style: {
+                            width: "64px",
+                            height: "64px",
+                            borderRadius: "50%",
+                            backgroundColor: "#4caf50",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 16px",
+                        } },
+                        React.createElement(FaCheck, { style: { color: "#fff", fontSize: "28px" } })),
+                    React.createElement("div", { style: {
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            marginBottom: "8px",
+                        } }, "Setup Complete!"),
+                    React.createElement("div", { style: {
+                            fontSize: "12px",
+                            color: "#8b929a",
+                        } }, "DeckTune is ready to use. Head to Wizard mode to run autotune and find your optimal undervolt values.")))))));
+};
+
+/**
  * DeckTune - Main plugin entry point for Decky Loader.
  *
  * This file registers the plugin with Decky Loader and provides
  * the main UI component that appears in the Quick Access Menu.
+ *
+ * Requirements: 5.1, 5.6 - First-run detection and wizard trigger
  */
 
 /**
- * Main content component with mode switching.
+ * Main content component with mode switching and first-run detection.
+ *
+ * Requirements:
+ * - 5.1: Display welcome wizard on first run
+ * - 5.6: Allow re-running wizard from settings
  */
 const DeckTuneContent = () => {
     const [mode, setMode] = SP_REACT.useState("wizard");
-    const { state } = useDeckTune();
-    return (React.createElement(React.Fragment, null,
-        React.createElement(DFL.PanelSection, null,
-            React.createElement(DFL.PanelSectionRow, null,
-                React.createElement("div", { style: {
+    const [showSetupWizard, setShowSetupWizard] = SP_REACT.useState(false);
+    const [isFirstRun, setIsFirstRun] = SP_REACT.useState(null);
+    const { state, api } = useDeckTune();
+    // Check first-run status on mount
+    // Requirements: 5.1
+    SP_REACT.useEffect(() => {
+        const checkFirstRun = async () => {
+            try {
+                const firstRunComplete = await api.getSetting('first_run_complete');
+                const isNew = firstRunComplete !== true;
+                setIsFirstRun(isNew);
+                if (isNew) {
+                    setShowSetupWizard(true);
+                }
+            }
+            catch (e) {
+                // If setting doesn't exist, treat as first run
+                setIsFirstRun(true);
+                setShowSetupWizard(true);
+            }
+        };
+        checkFirstRun();
+    }, [api]);
+    /**
+     * Handle setup wizard completion.
+     * Requirements: 5.5
+     */
+    const handleSetupComplete = (goal) => {
+        setShowSetupWizard(false);
+        setIsFirstRun(false);
+    };
+    /**
+     * Handle setup wizard cancellation.
+     * Requirements: 5.7
+     */
+    const handleSetupCancel = () => {
+        setShowSetupWizard(false);
+    };
+    /**
+     * Handle setup wizard skip.
+     * Requirements: 5.7
+     */
+    const handleSetupSkip = () => {
+        setShowSetupWizard(false);
+        setIsFirstRun(false);
+    };
+    /**
+     * Re-run setup wizard.
+     * Requirements: 5.6
+     */
+    const handleRunSetupWizard = () => {
+        setShowSetupWizard(true);
+    };
+    // Show setup wizard for first-run or when manually triggered
+    // Requirements: 5.1, 5.6
+    if (showSetupWizard) {
+        return (SP_REACT.createElement(SetupWizard, { onComplete: handleSetupComplete, onCancel: handleSetupCancel, onSkip: handleSetupSkip }));
+    }
+    // Loading state while checking first-run
+    if (isFirstRun === null) {
+        return (SP_REACT.createElement(DFL.PanelSection, { title: "DeckTune" },
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
+    }
+    return (SP_REACT.createElement(SP_REACT.Fragment, null,
+        SP_REACT.createElement(DFL.PanelSection, null,
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement("div", { style: {
                         display: "flex",
                         justifyContent: "center",
                         gap: "8px",
                         marginBottom: "8px",
                     } },
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard") },
-                        React.createElement("div", { style: {
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard") },
+                        SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 gap: "6px",
                                 color: mode === "wizard" ? "#1a9fff" : "#8b929a"
                             } },
-                            React.createElement(FaMagic, null),
-                            React.createElement("span", null, "Wizard"))),
-                    React.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert") },
-                        React.createElement("div", { style: {
+                            SP_REACT.createElement(FaMagic, null),
+                            SP_REACT.createElement("span", null, "Wizard"))),
+                    SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert") },
+                        SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 gap: "6px",
                                 color: mode === "expert" ? "#1a9fff" : "#8b929a"
                             } },
-                            React.createElement(FaCog, null),
-                            React.createElement("span", null, "Expert"))))),
-            React.createElement(DFL.PanelSectionRow, null,
-                React.createElement("div", { style: {
+                            SP_REACT.createElement(FaCog, null),
+                            SP_REACT.createElement("span", null, "Expert"))))),
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement("div", { style: {
                         textAlign: "center",
                         fontSize: "12px",
                         color: "#8b929a",
@@ -3854,14 +4664,26 @@ const DeckTuneContent = () => {
                         borderRadius: "4px",
                     } },
                     "Status: ",
-                    React.createElement("span", { style: {
+                    SP_REACT.createElement("span", { style: {
                             color: state.status === "enabled" || state.status === "DYNAMIC RUNNING"
                                 ? "#4caf50"
                                 : state.status === "error"
                                     ? "#f44336"
                                     : "#8b929a"
-                        } }, state.status)))),
-        mode === "wizard" ? React.createElement(WizardMode, null) : React.createElement(ExpertMode, null)));
+                        } }, state.status))),
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunSetupWizard },
+                    SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            color: "#8b929a",
+                            fontSize: "11px"
+                        } },
+                        SP_REACT.createElement(FaWrench, null),
+                        SP_REACT.createElement("span", null, "Run Setup Wizard"))))),
+        mode === "wizard" ? SP_REACT.createElement(WizardMode, null) : SP_REACT.createElement(ExpertMode, null)));
 };
 /**
  * Main plugin component wrapped with context provider.
@@ -3895,19 +4717,19 @@ const DeckTunePlugin = () => {
         };
     }, []);
     if (error) {
-        return (React.createElement(DFL.PanelSection, { title: "DeckTune" },
-            React.createElement(DFL.PanelSectionRow, null,
-                React.createElement("div", { style: { color: "#f44336", textAlign: "center", padding: "16px" } },
+        return (SP_REACT.createElement(DFL.PanelSection, { title: "DeckTune" },
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement("div", { style: { color: "#f44336", textAlign: "center", padding: "16px" } },
                     "Failed to initialize: ",
                     error))));
     }
     if (!initialized) {
-        return (React.createElement(DFL.PanelSection, { title: "DeckTune" },
-            React.createElement(DFL.PanelSectionRow, null,
-                React.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
+        return (SP_REACT.createElement(DFL.PanelSection, { title: "DeckTune" },
+            SP_REACT.createElement(DFL.PanelSectionRow, null,
+                SP_REACT.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
     }
-    return (React.createElement(DeckTuneProvider, null,
-        React.createElement(DeckTuneContent, null)));
+    return (SP_REACT.createElement(DeckTuneProvider, null,
+        SP_REACT.createElement(DeckTuneContent, null)));
 };
 /**
  * Plugin definition for Decky Loader.
@@ -3916,11 +4738,11 @@ var index = DFL.definePlugin(() => {
     console.log("DeckTune plugin loaded");
     return {
         // Plugin title shown in Decky menu
-        title: React.createElement("div", { className: DFL.staticClasses.Title }, "DeckTune"),
+        title: SP_REACT.createElement("div", { className: DFL.staticClasses.Title }, "DeckTune"),
         // Main plugin content
-        content: React.createElement(DeckTunePlugin, null),
+        content: SP_REACT.createElement(DeckTunePlugin, null),
         // Plugin icon (shown in Quick Access Menu)
-        icon: React.createElement(FaMagic, null),
+        icon: SP_REACT.createElement(FaMagic, null),
         // Called when plugin is unloaded
         onDismount() {
             console.log("DeckTune plugin unloaded");

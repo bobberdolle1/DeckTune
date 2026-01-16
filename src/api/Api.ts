@@ -28,6 +28,8 @@ import {
   BinningProgress,
   GameProfile,
   BenchmarkResult,
+  Session,
+  SessionComparison,
 } from "./types";
 
 // Simple EventEmitter implementation
@@ -140,6 +142,7 @@ export class Api extends SimpleEventEmitter {
     addEventListener("binning_complete", this.onBinningComplete.bind(this));
     addEventListener("binning_error", this.onBinningError.bind(this));
     addEventListener("profile_changed", this.onProfileChanged.bind(this));
+    addEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
 
     if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
       return await this.handleMainRunningApp();
@@ -293,6 +296,31 @@ export class Api extends SimpleEventEmitter {
         duration: 3000,
       });
     }
+  }
+
+  /**
+   * Handle telemetry sample events from backend.
+   * Requirements: 2.1, 2.2, 2.3, 2.4
+   * 
+   * Feature: decktune-3.1-reliability-ux
+   * Adds new telemetry sample to state, maintaining 60-second window.
+   */
+  private onTelemetrySample(sample: {
+    timestamp: number;
+    temperature_c: number;
+    power_w: number;
+    load_percent: number;
+  }): void {
+    const MAX_SAMPLES = 60; // Keep 60 seconds of data at 1Hz
+    const now = Date.now() / 1000;
+    const cutoffTime = now - 60;
+    
+    // Filter old samples and add new one
+    const currentSamples = this.state.telemetrySamples || [];
+    const filteredSamples = currentSamples.filter(s => s.timestamp >= cutoffTime);
+    const newSamples = [...filteredSamples, sample].slice(-MAX_SAMPLES);
+    
+    this.setState({ telemetrySamples: newSamples });
   }
 
   /**
@@ -1200,6 +1228,44 @@ export class Api extends SimpleEventEmitter {
     return history;
   }
 
+  // ==================== Session History Methods ====================
+  // Requirements: 8.4, 8.5, 8.6
+
+  /**
+   * Get session history.
+   * Requirements: 8.4
+   * 
+   * @param limit - Maximum number of sessions to return (default 30)
+   * @returns Array of sessions, most recent first
+   */
+  async getSessionHistory(limit: number = 30): Promise<Session[]> {
+    const sessions = await call("get_session_history", limit) as Session[];
+    return sessions || [];
+  }
+
+  /**
+   * Get a specific session by ID.
+   * Requirements: 8.5
+   * 
+   * @param sessionId - UUID of the session to retrieve
+   * @returns Session if found, null otherwise
+   */
+  async getSession(sessionId: string): Promise<Session | null> {
+    return await call("get_session", sessionId) as Session | null;
+  }
+
+  /**
+   * Compare two sessions and return metric differences.
+   * Requirements: 8.6
+   * 
+   * @param id1 - ID of first session
+   * @param id2 - ID of second session
+   * @returns Comparison result with diff values
+   */
+  async compareSessions(id1: string, id2: string): Promise<SessionComparison | null> {
+    return await call("compare_sessions", id1, id2) as SessionComparison | null;
+  }
+
   // ==================== Server Events ====================
 
   /**
@@ -1241,6 +1307,7 @@ export class Api extends SimpleEventEmitter {
     removeEventListener("binning_complete", this.onBinningComplete.bind(this));
     removeEventListener("binning_error", this.onBinningError.bind(this));
     removeEventListener("profile_changed", this.onProfileChanged.bind(this));
+    removeEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
   }
 }
 

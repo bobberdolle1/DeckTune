@@ -16,6 +16,15 @@
 //! - Hysteresis: 1% - 20%
 //! - Undervolt values: Must be negative or zero (0 = disabled)
 //! - Core bounds: max_mv must be more negative than min_mv
+//!
+//! # Error Handling
+//!
+//! All parsing and validation functions return `Result<T, String>` or `Option<T>`,
+//! never panicking on invalid input. This ensures graceful error handling for:
+//! - Malformed input strings
+//! - Out-of-range numeric values
+//! - Special float values (NaN, infinity)
+//! - Invalid format patterns
 
 use clap::{Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
@@ -234,6 +243,17 @@ pub fn validate_hysteresis(s: &str) -> Result<f32, String> {
 
 /// Validate hysteresis from f32 value directly
 pub fn validate_hysteresis_value(val: f32) -> Result<f32, String> {
+    // Handle special float values
+    if val.is_nan() {
+        return Err("Hysteresis value is not a valid number (NaN)".to_string());
+    }
+    if val.is_infinite() {
+        return Err(format!(
+            "Hysteresis value {} is not a valid number (infinite)",
+            val
+        ));
+    }
+    
     if val < 1.0 {
         return Err(format!(
             "Hysteresis {}% is too small (minimum: 1%)",
@@ -286,6 +306,17 @@ pub fn validate_core_config_values(
     max_mv: i32,
     threshold: f32,
 ) -> Result<CoreConfig, String> {
+    // Handle special float values for threshold
+    if threshold.is_nan() {
+        return Err("Threshold value is not a valid number (NaN)".to_string());
+    }
+    if threshold.is_infinite() {
+        return Err(format!(
+            "Threshold value {} is not a valid number (infinite)",
+            threshold
+        ));
+    }
+    
     // Validate undervolt values (should be negative or zero)
     if min_mv > 0 {
         return Err(format!(

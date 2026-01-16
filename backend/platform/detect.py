@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 DMI_PRODUCT_NAME_PATH = "/sys/devices/virtual/dmi/id/product_name"
 
+# Module-level cache instance (initialized lazily)
+_platform_cache: Optional["PlatformCache"] = None
+
 
 @dataclass
 class PlatformInfo:
@@ -80,13 +83,8 @@ def _map_product_name_to_platform(product_name: Optional[str]) -> PlatformInfo:
     )
 
 
-def detect_platform(dmi_path: str = DMI_PRODUCT_NAME_PATH) -> PlatformInfo:
-    """Detect Steam Deck model from DMI info.
-    
-    Reads /sys/devices/virtual/dmi/id/product_name
-    - "Jupiter" -> LCD, limit -30
-    - "Galileo" -> OLED, limit -35
-    - Unknown -> Conservative limit -25
+def _detect_platform_fresh(dmi_path: str = DMI_PRODUCT_NAME_PATH) -> PlatformInfo:
+    """Perform fresh platform detection from DMI.
     
     Args:
         dmi_path: Path to DMI product_name file (for testing)
@@ -96,3 +94,96 @@ def detect_platform(dmi_path: str = DMI_PRODUCT_NAME_PATH) -> PlatformInfo:
     """
     product_name = _read_dmi_product_name(dmi_path)
     return _map_product_name_to_platform(product_name)
+
+
+def detect_platform(
+    dmi_path: str = DMI_PRODUCT_NAME_PATH,
+    cache_dir: Optional[Path] = None,
+    use_cache: bool = True
+) -> PlatformInfo:
+    """Detect Steam Deck model from DMI info with caching.
+    
+    Checks cache first for faster startup. If cache is valid (< 30 days old),
+    returns cached result. Otherwise performs fresh detection and updates cache.
+    
+    Reads /sys/devices/virtual/dmi/id/product_name
+    - "Jupiter" -> LCD, limit -30
+    - "Galileo" -> OLED, limit -35
+    - Unknown -> Conservative limit -25
+    
+    Args:
+        dmi_path: Path to DMI product_name file (for testing)
+        cache_dir: Directory for cache file (for testing)
+        use_cache: Whether to use caching (default True)
+        
+    Returns:
+        PlatformInfo with detected platform details
+        
+    Feature: decktune-3.1-reliability-ux
+    Validates: Requirements 3.1, 3.2
+    """
+    global _platform_cache
+    
+    if use_cache:
+        # Import here to avoid circular imports
+        from .cache import PlatformCache
+        
+        # Initialize or reuse cache
+        if _platform_cache is None or cache_dir is not None:
+            _platform_cache = PlatformCache(cache_dir=cache_dir)
+        
+        # Try to load from cache
+        cached_platform = _platform_cache.load()
+        if cached_platform is not None:
+            logger.info(f"Using cached platform: {cached_platform.model} ({cached_platform.variant})")
+            return cached_platform
+    
+    # Perform fresh detection
+    platform = _detect_platform_fresh(dmi_path)
+    
+    # Save to cache if detection was successful and caching is enabled
+    if use_cache and platform.detected and _platform_cache is not None:
+        _platform_cache.save(platform)
+    
+    return platform
+
+
+def redetect_platform(
+    dmi_path: str = DMI_PRODUCT_NAME_PATH,
+    cache_dir: Optional[Path] = None
+) -> PlatformInfo:
+    """Force fresh platform detection, clearing any cached data.
+    
+    Clears the cache and performs fresh DMI detection.
+    
+    Args:
+        dmi_path: Path to DMI product_name file (for testing)
+        cache_dir: Directory for cache file (for testing)
+        
+    Returns:
+        PlatformInfo with freshly detected platform details
+        
+    Feature: decktune-3.1-reliability-ux
+    Validates: Requirements 3.4
+    """
+    global _platform_cache
+    
+    # Import here to avoid circular imports
+    from .cache import PlatformCache
+    
+    # Initialize or reuse cache
+    if _platform_cache is None or cache_dir is not None:
+        _platform_cache = PlatformCache(cache_dir=cache_dir)
+    
+    # Clear existing cache
+    _platform_cache.clear()
+    logger.info("Platform cache cleared, performing fresh detection")
+    
+    # Perform fresh detection
+    platform = _detect_platform_fresh(dmi_path)
+    
+    # Save to cache if detection was successful
+    if platform.detected:
+        _platform_cache.save(platform)
+    
+    return platform

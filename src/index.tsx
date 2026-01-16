@@ -3,6 +3,8 @@
  * 
  * This file registers the plugin with Decky Loader and provides
  * the main UI component that appears in the Quick Access Menu.
+ * 
+ * Requirements: 5.1, 5.6 - First-run detection and wizard trigger
  */
 
 import {
@@ -13,20 +15,107 @@ import {
   staticClasses,
 } from "@decky/ui";
 import { addEventListener, removeEventListener } from "@decky/api";
-import { useState, useEffect, FC } from "react";
-import { FaCog, FaMagic } from "react-icons/fa";
+import React, { useState, useEffect, FC } from "react";
+import { FaCog, FaMagic, FaWrench } from "react-icons/fa";
 
 import { DeckTuneProvider, useDeckTune, initialState } from "./context";
 import { WizardMode } from "./components/WizardMode";
 import { ExpertMode } from "./components/ExpertMode";
+import { SetupWizard } from "./components/SetupWizard";
 import { getApiInstance } from "./api";
 
 /**
- * Main content component with mode switching.
+ * Main content component with mode switching and first-run detection.
+ * 
+ * Requirements:
+ * - 5.1: Display welcome wizard on first run
+ * - 5.6: Allow re-running wizard from settings
  */
 const DeckTuneContent: FC = () => {
   const [mode, setMode] = useState<"wizard" | "expert">("wizard");
-  const { state } = useDeckTune();
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
+  const { state, api } = useDeckTune();
+
+  // Check first-run status on mount
+  // Requirements: 5.1
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      try {
+        const firstRunComplete = await api.getSetting('first_run_complete');
+        const isNew = firstRunComplete !== true;
+        setIsFirstRun(isNew);
+        if (isNew) {
+          setShowSetupWizard(true);
+        }
+      } catch (e) {
+        // If setting doesn't exist, treat as first run
+        setIsFirstRun(true);
+        setShowSetupWizard(true);
+      }
+    };
+    
+    checkFirstRun();
+  }, [api]);
+
+  /**
+   * Handle setup wizard completion.
+   * Requirements: 5.5
+   */
+  const handleSetupComplete = (goal: string) => {
+    setShowSetupWizard(false);
+    setIsFirstRun(false);
+  };
+
+  /**
+   * Handle setup wizard cancellation.
+   * Requirements: 5.7
+   */
+  const handleSetupCancel = () => {
+    setShowSetupWizard(false);
+  };
+
+  /**
+   * Handle setup wizard skip.
+   * Requirements: 5.7
+   */
+  const handleSetupSkip = () => {
+    setShowSetupWizard(false);
+    setIsFirstRun(false);
+  };
+
+  /**
+   * Re-run setup wizard.
+   * Requirements: 5.6
+   */
+  const handleRunSetupWizard = () => {
+    setShowSetupWizard(true);
+  };
+
+  // Show setup wizard for first-run or when manually triggered
+  // Requirements: 5.1, 5.6
+  if (showSetupWizard) {
+    return (
+      <SetupWizard
+        onComplete={handleSetupComplete}
+        onCancel={handleSetupCancel}
+        onSkip={handleSetupSkip}
+      />
+    );
+  }
+
+  // Loading state while checking first-run
+  if (isFirstRun === null) {
+    return (
+      <PanelSection title="DeckTune">
+        <PanelSectionRow>
+          <div style={{ textAlign: "center", padding: "16px", color: "#8b929a" }}>
+            Loading...
+          </div>
+        </PanelSectionRow>
+      </PanelSection>
+    );
+  }
 
   return (
     <>
@@ -96,6 +185,26 @@ const DeckTuneContent: FC = () => {
               {state.status}
             </span>
           </div>
+        </PanelSectionRow>
+
+        {/* Run Setup Wizard button - Requirements: 5.6 */}
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={handleRunSetupWizard}
+          >
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "6px",
+              color: "#8b929a",
+              fontSize: "11px"
+            }}>
+              <FaWrench />
+              <span>Run Setup Wizard</span>
+            </div>
+          </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
 

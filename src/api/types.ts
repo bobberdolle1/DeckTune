@@ -179,6 +179,10 @@ export interface State {
   isBenchmarkRunning: boolean;
   lastBenchmarkResult: BenchmarkResult | null;
   
+  // Telemetry state (new in v3.1)
+  // Requirements: 2.1, 2.2, 2.3, 2.4
+  telemetrySamples: TelemetrySample[];
+  
   // Binary availability (for SteamOS compatibility warnings)
   missingBinaries: string[];
 }
@@ -321,4 +325,71 @@ export interface FanStatus {
   mode: string;
   rpm?: number;
   safety_override: boolean;
+}
+
+/**
+ * Telemetry sample for real-time monitoring.
+ * Requirements: 2.1, 2.2
+ */
+export interface TelemetrySample {
+  timestamp: number;       // Unix timestamp
+  temperature_c: number;   // CPU temperature in Celsius
+  power_w: number;         // Power consumption in Watts
+  load_percent: number;    // CPU load percentage (0-100)
+}
+
+
+/**
+ * Session metrics calculated after session completion.
+ * Requirements: 8.3
+ */
+export interface SessionMetrics {
+  duration_sec: number;              // Total session duration in seconds
+  avg_temperature_c: number;         // Average CPU temperature
+  min_temperature_c: number;         // Minimum CPU temperature
+  max_temperature_c: number;         // Maximum CPU temperature
+  avg_power_w: number;               // Average power consumption
+  estimated_battery_saved_wh: number; // Estimated battery savings
+  undervolt_values: number[];        // Undervolt values used during session
+}
+
+/**
+ * Telemetry sample data stored in session.
+ * Requirements: 8.5
+ */
+export interface SessionTelemetrySample {
+  timestamp: number;       // Unix timestamp
+  temperature_c: number;   // CPU temperature
+  power_w: number;         // Power consumption
+}
+
+/**
+ * Gaming session record with metrics.
+ * Requirements: 8.1, 8.3, 8.4, 8.5
+ */
+export interface Session {
+  id: string;                        // UUID
+  start_time: string;                // ISO 8601 format
+  end_time: string | null;           // ISO 8601 format, null if active
+  game_name: string | null;          // Game name
+  app_id: number | null;             // Steam app ID
+  metrics: SessionMetrics | null;    // Calculated metrics (null if active)
+  samples: SessionTelemetrySample[]; // Raw telemetry data for graphs
+}
+
+/**
+ * Session comparison result with metric differences.
+ * Requirements: 8.6
+ */
+export interface SessionComparison {
+  session1: Session;
+  session2: Session;
+  diff: {
+    duration_sec: number;
+    avg_temperature_c: number;
+    min_temperature_c: number;
+    max_temperature_c: number;
+    avg_power_w: number;
+    estimated_battery_saved_wh: number;
+  };
 }

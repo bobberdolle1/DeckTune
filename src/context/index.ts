@@ -15,5 +15,6 @@ export {
   useBinaries,
   useBinning,
   useProfiles,
+  useTelemetry,
   initialState,
 } from "./DeckTuneContext";

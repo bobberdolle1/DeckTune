@@ -1,20 +1,183 @@
-# DeckTune 3.0 User Guide
+# DeckTune 3.1 User Guide
 
-This guide covers the major automation features introduced in DeckTune 3.0: Context-Aware Profiles, Progressive Recovery, BlackBox Recorder, Acoustic Fan Profiles, PWM Smoothing, Iron Seeker, Silicon Binning, Per-Game Profiles, and Benchmarking.
+This guide covers all major features in DeckTune, including the new reliability and UX improvements in v3.1: Crash Recovery Metrics, Real-Time Telemetry, Platform Caching, Session History, Setup Wizard, and Streaming Status Updates.
 
 ## Table of Contents
 
-1. [Context-Aware Profiles](#context-aware-profiles)
-2. [Progressive Recovery](#progressive-recovery)
-3. [BlackBox Recorder](#blackbox-recorder)
-4. [Acoustic Fan Profiles](#acoustic-fan-profiles)
-5. [PWM Smoothing](#pwm-smoothing)
-6. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
-7. [Automated Silicon Binning](#automated-silicon-binning)
-8. [Per-Game Profiles](#per-game-profiles)
-9. [Benchmarking](#benchmarking)
-10. [Best Practices](#best-practices)
-11. [Troubleshooting](#troubleshooting)
+1. [What's New in v3.1](#whats-new-in-v31)
+2. [Setup Wizard](#setup-wizard)
+3. [Real-Time Telemetry](#real-time-telemetry)
+4. [Session History](#session-history)
+5. [Crash Recovery Metrics](#crash-recovery-metrics)
+6. [Context-Aware Profiles](#context-aware-profiles)
+7. [Progressive Recovery](#progressive-recovery)
+8. [BlackBox Recorder](#blackbox-recorder)
+9. [Acoustic Fan Profiles](#acoustic-fan-profiles)
+10. [PWM Smoothing](#pwm-smoothing)
+11. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
+12. [Automated Silicon Binning](#automated-silicon-binning)
+13. [Per-Game Profiles](#per-game-profiles)
+14. [Benchmarking](#benchmarking)
+15. [Best Practices](#best-practices)
+16. [Troubleshooting](#troubleshooting)
+
+---
+
+## What's New in v3.1
+
+DeckTune 3.1 focuses on reliability improvements and UX enhancements:
+
+- **Setup Wizard** — Guided first-run experience for new users
+- **Real-Time Telemetry** — Live temperature and power graphs
+- **Session History** — Track gaming sessions with performance metrics
+- **Crash Recovery Metrics** — See how many times crash recovery saved your system
+- **Faster Startup** — Platform detection caching eliminates delays
+- **Streaming Updates** — Real-time status via server-sent events (no more polling)
+
+---
+
+## Setup Wizard
+
+New users are greeted with a guided setup wizard that explains undervolting and helps choose the right settings.
+
+### First-Run Experience
+
+When you open DeckTune for the first time:
+
+1. **Welcome Screen** — Introduction to DeckTune
+2. **What is Undervolting?** — Simple explanation of benefits and risks
+3. **Choose Your Goal** — Select from preset goals
+4. **Confirmation** — Review and apply settings
+
+### Goal Selection
+
+| Goal | Battery Improvement | Temp Reduction | Best For |
+|------|---------------------|----------------|----------|
+| **Quiet/Cool** | +10-15% | -8-12°C | Silent operation, light tasks |
+| **Balanced** | +15-20% | -5-8°C | General use, most games |
+| **Max Battery** | +20-30% | -3-5°C | Long gaming sessions |
+| **Max Performance** | +5-10% | -2-4°C | Competitive gaming |
+
+### Skip or Cancel
+
+You can skip or cancel the wizard at any step:
+- **Skip** — Marks first-run as complete, uses default settings
+- **Cancel** — Returns to main screen without changes
+
+### Re-Running the Wizard
+
+To run the wizard again:
+1. Open **Expert Mode** → **Settings**
+2. Click **"Run Setup Wizard"**
+
+---
+
+## Real-Time Telemetry
+
+Monitor your system's temperature and power consumption with live graphs.
+
+### Temperature Graph
+
+- **Data**: CPU temperature in °C
+- **Range**: Last 60 seconds
+- **Update Rate**: 1 Hz (every second)
+- **Hover**: Shows exact value and timestamp
+
+### Power Graph
+
+- **Data**: Power consumption in Watts
+- **Range**: Last 60 seconds
+- **Update Rate**: 1 Hz (every second)
+- **Hover**: Shows exact value and timestamp
+
+### Viewing Telemetry
+
+1. Open **Expert Mode** → **Monitoring Tab**
+2. Graphs update automatically when gymdeck3 is running
+3. Hover over any point for details
+
+### Data Storage
+
+- **Buffer Size**: 300 samples (5 minutes)
+- **Behavior**: Circular buffer (oldest samples discarded)
+- **Persistence**: In-memory only (not saved to disk)
+
+---
+
+## Session History
+
+Track your gaming sessions with detailed performance metrics.
+
+### What Gets Tracked
+
+Each session records:
+- **Start/End Time** — When gymdeck3 started and stopped
+- **Duration** — Total session length
+- **Temperature** — Average, minimum, and maximum
+- **Power** — Average consumption
+- **Battery Savings** — Estimated Wh saved
+- **Undervolt Values** — Settings used during session
+
+### Viewing Session History
+
+1. Open **Expert Mode** → **Sessions Tab**
+2. See list of last 30 sessions
+3. Click any session for detailed view
+
+### Session Details
+
+The detail view shows:
+- **Temperature Graph** — Temperature over session duration
+- **Power Graph** — Power consumption over time
+- **Metrics Summary** — All calculated metrics
+- **Undervolt Values** — Per-core values used
+
+### Comparing Sessions
+
+Compare any two sessions side-by-side:
+
+1. Open **Sessions Tab**
+2. Click **"Compare"** button
+3. Select two sessions
+4. View metric differences:
+   - Duration difference
+   - Temperature difference (avg, min, max)
+   - Power difference
+   - Battery savings difference
+
+### Session Archival
+
+- **Active Storage**: Last 100 sessions
+- **Archive**: Older sessions moved to separate file
+- **Diagnostics**: Session summary included in export
+
+---
+
+## Crash Recovery Metrics
+
+See how many times DeckTune's crash recovery system has protected your system.
+
+### Viewing Crash Metrics
+
+1. Open **Expert Mode** → **Diagnostics Tab**
+2. See **Crash Recovery** section:
+   - **Total Count** — Number of crash recoveries
+   - **Last Crash** — Date of most recent crash
+   - **History** — Detailed crash records
+
+### Crash Record Details
+
+Each crash record contains:
+- **Timestamp** — When the crash occurred
+- **Crashed Values** — Undervolt values that caused the crash
+- **Restored Values** — LKG values that were restored
+- **Recovery Reason** — Why recovery was triggered (boot_recovery, watchdog_timeout, etc.)
+
+### History Management
+
+- **Limit**: 50 entries maximum
+- **Behavior**: FIFO (oldest entries removed when full)
+- **Export**: Included in diagnostics archive
 
 ---
 
