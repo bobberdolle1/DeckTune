@@ -10,6 +10,12 @@ Validates: Integration, Requirements 10.1, 10.3, 10.4, 10.7, 11.3, 13.1-13.5
 import asyncio
 import json
 import os
+import sys
+
+# Add plugin directory to Python path for module imports
+PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
+if PLUGIN_DIR not in sys.path:
+    sys.path.insert(0, PLUGIN_DIR)
 
 import decky  # type: ignore
 from settings import SettingsManager  # type: ignore
@@ -29,8 +35,6 @@ from backend.dynamic.config import DynamicConfig, CoreConfig
 from backend.dynamic.migration import migrate_dynamic_settings, is_old_format
 from backend.dynamic.profile_manager import ProfileManager
 from backend.platform.appwatcher import AppWatcher
-from backend.gpu.unlocker import GpuUnlocker
-from backend.gpu.curve import GpuCurveController
 
 # Environment paths
 SETTINGS_DIR = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
@@ -100,10 +104,6 @@ class Plugin:
         self.dynamic_controller = None  # New gymdeck3 controller
         self.profile_manager = None  # Per-game profile manager
         self.app_watcher = None  # Steam app watcher
-        
-        # GPU components
-        self.gpu_unlocker = None
-        self.gpu_curve = None
 
     async def init(self):
         """Initialize plugin and all modules."""
@@ -215,12 +215,7 @@ class Plugin:
         await self.app_watcher.start()
         decky.logger.info("AppWatcher started for automatic profile switching")
         
-        # 12. Initialize GPU controllers
-        self.gpu_unlocker = GpuUnlocker()
-        self.gpu_curve = GpuCurveController()
-        decky.logger.info("GPU controllers initialized")
-        
-        # 13. Check for boot recovery (Requirement: Integration)
+        # 12. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -725,187 +720,6 @@ class Plugin:
         
         # Delegate to standard apply
         return await self.apply_undervolt(clamped_cores, timeout)
-
-    # ==================== GPU Undervolt (Experimental) ====================
-    
-    async def check_gpu_unlock_status(self):
-        """Check if GPU OverDrive is unlocked.
-        
-        Returns:
-            Dictionary with:
-            - unlocked: bool (currently active in kernel)
-            - configured: bool (set in GRUB, needs reboot)
-            - supported: bool (voltage curve available)
-        """
-        decky.logger.info("Checking GPU unlock status...")
-        
-        unlocked = await self.gpu_unlocker.is_unlocked()
-        configured = await self.gpu_unlocker.is_configured()
-        supported = await self.gpu_curve.is_supported()
-        
-        return {
-            "unlocked": unlocked,
-            "configured": configured,
-            "supported": supported,
-            "needs_reboot": configured and not unlocked
-        }
-    
-    async def unlock_gpu_overdrive(self):
-        """Unlock GPU OverDrive by modifying GRUB config.
-        
-        WARNING: This modifies system boot configuration!
-        Requires reboot to take effect.
-        
-        Returns:
-            Dictionary with success status and message
-        """
-        decky.logger.warning("⚠️  GPU OverDrive unlock requested")
-        
-        # Check if already unlocked
-        if await self.gpu_unlocker.is_unlocked():
-            return {
-                "success": True,
-                "message": "GPU OverDrive is already unlocked",
-                "needs_reboot": False
-            }
-        
-        # Apply unlock
-        success, error = await self.gpu_unlocker.apply_unlock()
-        
-        if success:
-            return {
-                "success": True,
-                "message": "GPU OverDrive unlock applied. REBOOT REQUIRED!",
-                "needs_reboot": True
-            }
-        else:
-            return {
-                "success": False,
-                "error": error,
-                "needs_reboot": False
-            }
-    
-    async def lock_gpu_overdrive(self):
-        """Remove GPU OverDrive unlock (restore defaults).
-        
-        Returns:
-            Dictionary with success status and message
-        """
-        decky.logger.info("Removing GPU OverDrive unlock...")
-        
-        success, error = await self.gpu_unlocker.remove_unlock()
-        
-        if success:
-            return {
-                "success": True,
-                "message": "GPU OverDrive lock restored. REBOOT REQUIRED!",
-                "needs_reboot": True
-            }
-        else:
-            return {
-                "success": False,
-                "error": error,
-                "needs_reboot": False
-            }
-    
-    async def get_gpu_curve(self):
-        """Get current GPU voltage curve.
-        
-        Returns:
-            Dictionary with curve points, range, and raw data
-        """
-        decky.logger.info("Reading GPU voltage curve...")
-        
-        curve = await self.gpu_curve.get_curve()
-        
-        if curve is None:
-            return {
-                "success": False,
-                "error": "Failed to read voltage curve"
-            }
-        
-        # Convert CurvePoint objects to dicts for JSON serialization
-        points_dict = []
-        if curve.get("points"):
-            for point in curve["points"]:
-                points_dict.append({
-                    "index": point.index,
-                    "frequency_mhz": point.frequency_mhz,
-                    "voltage_mv": point.voltage_mv
-                })
-        
-        range_dict = None
-        if curve.get("range"):
-            r = curve["range"]
-            range_dict = {
-                "sclk_min_mhz": r.sclk_min_mhz,
-                "sclk_max_mhz": r.sclk_max_mhz,
-                "vddc_min_mv": r.vddc_min_mv,
-                "vddc_max_mv": r.vddc_max_mv
-            }
-        
-        return {
-            "success": True,
-            "supported": curve.get("supported", False),
-            "points": points_dict,
-            "range": range_dict,
-            "raw": curve.get("raw", "")
-        }
-    
-    async def apply_gpu_voltage_offset(self, offset_mv):
-        """Apply voltage offset to GPU.
-        
-        Args:
-            offset_mv: Voltage offset in millivolts (negative for undervolt)
-            
-        Returns:
-            Dictionary with success status
-        """
-        decky.logger.warning(f"⚠️  Applying GPU voltage offset: {offset_mv}mV")
-        
-        # Check if supported
-        if not await self.gpu_curve.is_supported():
-            return {
-                "success": False,
-                "error": "GPU voltage control not supported. Try unlocking GPU OverDrive first."
-            }
-        
-        # Apply offset
-        success, error = await self.gpu_curve.set_voltage_offset(offset_mv)
-        
-        if success:
-            decky.logger.info(f"✅ GPU voltage offset applied: {offset_mv}mV")
-            return {
-                "success": True,
-                "message": f"GPU voltage offset applied: {offset_mv}mV"
-            }
-        else:
-            decky.logger.error(f"Failed to apply GPU voltage offset: {error}")
-            return {
-                "success": False,
-                "error": error
-            }
-    
-    async def reset_gpu_curve(self):
-        """Reset GPU voltage curve to defaults.
-        
-        Returns:
-            Dictionary with success status
-        """
-        decky.logger.info("Resetting GPU voltage curve...")
-        
-        success, error = await self.gpu_curve.reset()
-        
-        if success:
-            return {
-                "success": True,
-                "message": "GPU voltage curve reset to defaults"
-            }
-        else:
-            return {
-                "success": False,
-                "error": error
-            }
 
     # ==================== Fan Control ====================
     # Requirements: Fan Control Integration (Phase 4)
