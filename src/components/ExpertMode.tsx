@@ -821,6 +821,11 @@ const ManualTab: FC = () => {
         </PanelSectionRow>
       )}
 
+      {/* Focus stop - prevents cycling back to top */}
+      <PanelSectionRow>
+        <Focusable style={{ height: "1px", opacity: 0, pointerEvents: "none" }} />
+      </PanelSectionRow>
+
       <style>
         {`
           .spin {

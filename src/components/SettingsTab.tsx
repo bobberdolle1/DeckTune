@@ -506,6 +506,9 @@ export const SettingsTab: FC = () => {
           </div>
         </div>
       </Focusable>
+
+        {/* Focus stop - prevents cycling back to top */}
+        <Focusable style={{ height: "1px", opacity: 0, pointerEvents: "none" }} />
       </Focusable>
 
       <style>{`

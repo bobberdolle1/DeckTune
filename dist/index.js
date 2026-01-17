@@ -3617,6 +3617,8 @@
                             } },
                             window.SP_REACT.createElement(FaTimes, { size: 11 }),
                             window.SP_REACT.createElement("span", null, "Reset")))))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: { height: "1px", opacity: 0, pointerEvents: "none" } })),
             window.SP_REACT.createElement("style", null, `
           .spin {
             animation: spin 1s linear infinite;
@@ -4483,7 +4485,8 @@
                                         t.languageSection,
                                         ":"),
                                     " ",
-                                    window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutLanguage))))))),
+                                    window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutLanguage)))))),
+                window.SP_REACT.createElement(DFL.Focusable, { style: { height: "1px", opacity: 0, pointerEvents: "none" } })),
             window.SP_REACT.createElement("style", null, `
         @keyframes fadeIn {
           from { opacity: 0; }
