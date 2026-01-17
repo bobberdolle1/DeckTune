@@ -374,20 +374,21 @@ const DynamicSettingsInline: FC = () => {
                     <Focusable
                       key={s}
                       style={{ flex: 1 }}
-                      focusClassName="gpfocus"
                       onActivate={() => setStrategy(s)}
                       onClick={() => setStrategy(s)}
                     >
                       <div style={{
-                        padding: "6px 4px",
+                        padding: "8px 4px",
                         backgroundColor: strategy === s ? "#1a9fff" : "#3d4450",
-                        borderRadius: "4px",
+                        borderRadius: "6px",
                         cursor: "pointer",
-                        fontSize: "8px",
+                        fontSize: "9px",
                         fontWeight: "bold",
                         textAlign: "center",
                         transition: "all 0.2s ease",
-                        textTransform: "capitalize"
+                        textTransform: "capitalize",
+                        border: "none",
+                        outline: "none"
                       }}>
                         {strategy === s ? "✓" : ""} {s}
                       </div>
@@ -426,7 +427,6 @@ const DynamicSettingsInline: FC = () => {
 
               {/* Save Button */}
               <Focusable
-                focusClassName="gpfocus"
                 onActivate={handleSave}
                 onClick={handleSave}
               >
@@ -435,15 +435,17 @@ const DynamicSettingsInline: FC = () => {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  padding: "8px",
+                  padding: "10px",
                   background: "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
                   borderRadius: "6px",
                   cursor: "pointer",
-                  fontSize: "10px",
+                  fontSize: "11px",
                   fontWeight: "bold",
-                  opacity: isSaving ? 0.5 : 1
+                  opacity: isSaving ? 0.5 : 1,
+                  border: "none",
+                  outline: "none"
                 }}>
-                  {isSaving ? <FaSpinner className="spin" size={10} /> : <FaCheck size={10} />}
+                  {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
                   <span>Save Settings</span>
                 </div>
               </Focusable>
@@ -572,19 +574,20 @@ const ManualTab: FC = () => {
         <Focusable style={{ display: "flex", gap: "4px", marginBottom: "8px" }} flow-children="horizontal">
           <Focusable
             style={{ flex: 1 }}
-            focusClassName="gpfocus"
             onActivate={() => handleControlModeChange("single")}
             onClick={() => handleControlModeChange("single")}
           >
             <div style={{
-              padding: "6px",
+              padding: "8px 6px",
               backgroundColor: controlMode === "single" ? "#1a9fff" : "#3d4450",
-              borderRadius: "4px",
+              borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "9px",
+              fontSize: "10px",
               fontWeight: "bold",
               textAlign: "center",
-              transition: "all 0.2s ease"
+              transition: "all 0.2s ease",
+              border: "none",
+              outline: "none"
             }}>
               {controlMode === "single" ? "✓ Single" : "Single"}
             </div>
@@ -592,19 +595,20 @@ const ManualTab: FC = () => {
 
           <Focusable
             style={{ flex: 1 }}
-            focusClassName="gpfocus"
             onActivate={() => handleControlModeChange("percore")}
             onClick={() => handleControlModeChange("percore")}
           >
             <div style={{
-              padding: "6px",
+              padding: "8px 6px",
               backgroundColor: controlMode === "percore" ? "#1a9fff" : "#3d4450",
-              borderRadius: "4px",
+              borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "9px",
+              fontSize: "10px",
               fontWeight: "bold",
               textAlign: "center",
-              transition: "all 0.2s ease"
+              transition: "all 0.2s ease",
+              border: "none",
+              outline: "none"
             }}>
               {controlMode === "percore" ? "✓ Per-Core" : "Per-Core"}
             </div>
@@ -612,19 +616,21 @@ const ManualTab: FC = () => {
 
           <Focusable
             style={{ flex: 1 }}
-            focusClassName="gpfocus"
             onActivate={() => handleControlModeChange("dynamic")}
             onClick={() => handleControlModeChange("dynamic")}
           >
             <div style={{
-              padding: "6px",
+              padding: "8px 6px",
               backgroundColor: controlMode === "dynamic" ? "#4caf50" : "#3d4450",
-              borderRadius: "4px",
+              color: controlMode === "dynamic" ? "#fff" : "#e0e0e0",
+              borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "9px",
+              fontSize: "10px",
               fontWeight: "bold",
               textAlign: "center",
-              transition: "all 0.2s ease"
+              transition: "all 0.2s ease",
+              border: "none",
+              outline: "none"
             }}>
               {controlMode === "dynamic" ? "✓ Dynamic" : "Dynamic"}
             </div>
@@ -702,7 +708,6 @@ const ManualTab: FC = () => {
           <Focusable style={{ display: "flex", gap: "6px", marginTop: "8px" }} flow-children="horizontal">
             <Focusable
               style={{ flex: 1 }}
-              focusClassName="gpfocus"
               onActivate={handleApply}
               onClick={handleApply}
             >
@@ -711,22 +716,23 @@ const ManualTab: FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "4px",
-                padding: "8px",
+                padding: "10px 8px",
                 backgroundColor: "#1a9fff",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "10px",
+                fontSize: "11px",
                 fontWeight: "bold",
-                opacity: isApplying ? 0.5 : 1
+                opacity: isApplying ? 0.5 : 1,
+                border: "none",
+                outline: "none"
               }}>
-                {isApplying ? <FaSpinner className="spin" size={10} /> : <FaCheck size={10} />}
+                {isApplying ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
                 <span>Apply</span>
               </div>
             </Focusable>
 
             <Focusable
               style={{ flex: 1 }}
-              focusClassName="gpfocus"
               onActivate={handleDisable}
               onClick={handleDisable}
             >
@@ -735,21 +741,22 @@ const ManualTab: FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "4px",
-                padding: "8px",
+                padding: "10px 8px",
                 backgroundColor: "#3d4450",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "10px",
-                fontWeight: "bold"
+                fontSize: "11px",
+                fontWeight: "bold",
+                border: "none",
+                outline: "none"
               }}>
-                <FaBan size={10} />
+                <FaBan size={11} />
                 <span>Disable</span>
               </div>
             </Focusable>
 
             <Focusable
               style={{ flex: 1 }}
-              focusClassName="gpfocus"
               onActivate={handleReset}
               onClick={handleReset}
             >
@@ -758,15 +765,17 @@ const ManualTab: FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "4px",
-                padding: "8px",
+                padding: "10px 8px",
                 backgroundColor: "#5c4813",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "10px",
+                fontSize: "11px",
                 fontWeight: "bold",
-                color: "#ff9800"
+                color: "#ff9800",
+                border: "none",
+                outline: "none"
               }}>
-                <FaTimes size={10} />
+                <FaTimes size={11} />
                 <span>Reset</span>
               </div>
             </Focusable>
@@ -776,10 +785,6 @@ const ManualTab: FC = () => {
 
       <style>
         {`
-          .gpfocus {
-            box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
-            transform: scale(1.02);
-          }
           .spin {
             animation: spin 1s linear infinite;
           }
