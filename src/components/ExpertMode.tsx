@@ -1203,12 +1203,15 @@ const TestsTab: FC = () => {
         <DropdownItem
           label="Select Test"
           menuLabel="Select Test"
-          rgOptions={TEST_OPTIONS.map((t) => ({
-            data: t.value,
+          rgOptions={TEST_OPTIONS.map((t, idx) => ({
+            data: idx,
             label: t.label,
           }))}
-          selectedOption={selectedTest}
-          onChange={(option: any) => setSelectedTest(option.data)}
+          selectedOption={TEST_OPTIONS.findIndex(t => t.value === selectedTest)}
+          onChange={(option: any) => {
+            const test = TEST_OPTIONS[option.data];
+            if (test) setSelectedTest(test.value);
+          }}
           disabled={hasMissing}
         />
       </PanelSectionRow>
@@ -1273,7 +1276,7 @@ const TestsTab: FC = () => {
       ) : (
         history.slice(0, 10).map((entry, index) => (
           <PanelSectionRow key={index}>
-            <div
+            <Focusable
               style={{
                 padding: "10px",
                 backgroundColor: "#23262e",
@@ -1281,6 +1284,7 @@ const TestsTab: FC = () => {
                 marginBottom: "6px",
                 borderLeft: `3px solid ${entry.passed ? "#4caf50" : "#f44336"}`,
               }}
+              focusClassName="gpfocus"
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1303,7 +1307,7 @@ const TestsTab: FC = () => {
               <div style={{ fontSize: "10px", color: "#8b929a", marginTop: "2px" }}>
                 Cores: [{entry.cores_tested.join(", ")}]
               </div>
-            </div>
+            </Focusable>
           </PanelSectionRow>
         ))
       )}
@@ -1316,6 +1320,10 @@ const TestsTab: FC = () => {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          .gpfocus {
+            border: 2px solid #1a9fff !important;
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
           }
         `}
       </style>

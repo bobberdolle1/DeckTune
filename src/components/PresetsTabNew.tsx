@@ -1,61 +1,40 @@
 /**
- * Updated Presets tab component with Game Profile management.
- * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
+ * Redesigned Presets tab - compact and gamepad-friendly.
  * 
- * Features:
- * - Game profile list with edit/delete
- * - Quick-create button when game is running
- * - Import/export profile buttons
- * - Legacy preset list with edit/delete/export
- * - Import preset button
+ * Two sections:
+ * 1. Game Profiles - auto-switching profiles per game
+ * 2. Global Presets - manual presets you can apply anytime
  */
 
 import { useState, useEffect, FC } from "react";
 import {
   ButtonItem,
   PanelSectionRow,
-  SliderField,
-  DropdownItem,
   Focusable,
-  TextField,
-  ToggleField,
+  showModal,
+  ConfirmModal,
 } from "@decky/ui";
+import { call } from "@decky/api";
 import {
-  FaDownload,
-  FaUpload,
+  FaGamepad,
+  FaGlobe,
+  FaPlus,
+  FaCheck,
   FaTrash,
-  FaEdit,
   FaSpinner,
-  FaRocket,
 } from "react-icons/fa";
 import { useDeckTune, useProfiles } from "../context";
 import { Preset, GameProfile } from "../api/types";
 
 export const PresetsTabNew: FC = () => {
   const { state, api } = useDeckTune();
-  const { profiles, activeProfile, runningAppId, runningAppName, createProfileForCurrentGame, deleteProfile, exportProfiles, importProfiles } = useProfiles();
-  const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
-  const [editingProfile, setEditingProfile] = useState<GameProfile | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isImportingProfiles, setIsImportingProfiles] = useState(false);
-  const [importJson, setImportJson] = useState("");
-  const [importProfileJson, setImportProfileJson] = useState("");
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importProfileError, setImportProfileError] = useState<string | null>(null);
-  const [mergeStrategy, setMergeStrategy] = useState<"skip" | "overwrite" | "rename">("skip");
-  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newProfileData, setNewProfileData] = useState<{
-    app_id: number;
-    name: string;
-    cores: number[];
-    dynamic_enabled: boolean;
-  }>({
-    app_id: 0,
-    name: "",
-    cores: [...state.cores],
-    dynamic_enabled: false,
-  });
+  const profilesHook = useProfiles();
+  
+  // Extra safety: ensure profiles is always an array
+  const profiles = Array.isArray(profilesHook.profiles) ? profilesHook.profiles : [];
+  const { activeProfile, runningAppId, runningAppName } = profilesHook;
+  
+  const [activeSection, setActiveSection] = useState<"profiles" | "presets">("profiles");
 
   // Load profiles on mount
   useEffect(() => {
@@ -69,413 +48,177 @@ export const PresetsTabNew: FC = () => {
     loadProfiles();
   }, [api]);
 
-  /**
-   * Handle quick-create profile for current game.
-   * Requirements: 5.1, 5.3, 5.4
-   */
-  const handleQuickCreate = async () => {
-    setIsCreatingProfile(true);
-    try {
-      const result = await createProfileForCurrentGame();
-      if (result.success) {
-        alert(`Profile created for ${runningAppName}`);
-      } else {
-        alert(`Failed to create profile: ${result.error}`);
-      }
-    } catch (e) {
-      alert(`Error creating profile: ${String(e)}`);
-    } finally {
-      setIsCreatingProfile(false);
-    }
-  };
-
-  /**
-   * Handle profile deletion.
-   * Requirements: 3.4
-   */
-  const handleDeleteProfile = async (appId: number) => {
-    if (confirm("Are you sure you want to delete this profile?")) {
-      try {
-        const result = await deleteProfile(appId);
-        if (!result.success) {
-          alert(`Failed to delete profile: ${result.error}`);
-        }
-      } catch (e) {
-        alert(`Error deleting profile: ${String(e)}`);
-      }
-    }
-  };
-
-  /**
-   * Handle profile export (all profiles).
-   * Requirements: 9.1
-   */
-  const handleExportProfiles = async () => {
-    try {
-      const result = await exportProfiles();
-      if (result.success && result.json) {
-        console.log("Export profiles:", result.json);
-        alert(`Profiles exported successfully!\n\nPath: ${result.path || "clipboard"}`);
-      } else {
-        alert(`Failed to export profiles: ${result.error}`);
-      }
-    } catch (e) {
-      alert(`Error exporting profiles: ${String(e)}`);
-    }
-  };
-
-  /**
-   * Handle profile import.
-   * Requirements: 9.2, 9.3, 9.4
-   */
-  const handleImportProfiles = async () => {
-    setImportProfileError(null);
-    try {
-      const result = await importProfiles(importProfileJson, mergeStrategy);
-      if (result.success) {
-        setIsImportingProfiles(false);
-        setImportProfileJson("");
-        alert(`Successfully imported ${result.imported_count} profile(s)${result.conflicts.length > 0 ? `\nConflicts: ${result.conflicts.length}` : ""}`);
-      } else {
-        setImportProfileError(result.error || "Import failed");
-      }
-    } catch (e) {
-      setImportProfileError("Invalid JSON format");
-    }
-  };
-
-  /**
-   * Handle preset deletion.
-   */
-  const handleDelete = async (appId: number) => {
-    await api.deletePreset(appId);
-  };
-
-  /**
-   * Handle preset export (single preset).
-   */
-  const handleExportSingle = async (preset: Preset) => {
-    const json = JSON.stringify([preset], null, 2);
-    console.log("Export preset:", json);
-    alert(`Preset exported:\n${json}`);
-  };
-
-  /**
-   * Handle export all presets.
-   */
-  const handleExportAll = async () => {
-    const json = await api.exportPresets();
-    console.log("Export all presets:", json);
-    alert(`All presets exported:\n${json}`);
-  };
-
-  /**
-   * Handle import presets.
-   */
-  const handleImport = async () => {
-    setImportError(null);
-    try {
-      const result = await api.importPresets(importJson);
-      if (result.success) {
-        setIsImporting(false);
-        setImportJson("");
-        alert(`Successfully imported ${result.imported_count} preset(s)`);
-      } else {
-        setImportError(result.error || "Import failed");
-      }
-    } catch (e) {
-      setImportError("Invalid JSON format");
-    }
-  };
-
-  /**
-   * Handle preset edit save.
-   */
-  const handleSaveEdit = async () => {
-    if (editingPreset) {
-      await api.updatePreset(editingPreset);
-      setEditingPreset(null);
-    }
-  };
-
-  /**
-   * Handle profile edit save.
-   * Requirements: 3.3
-   */
-  const handleSaveProfileEdit = async () => {
-    if (editingProfile) {
-      try {
-        const result = await api.updateProfile(editingProfile.app_id, {
-          name: editingProfile.name,
-          cores: editingProfile.cores,
-          dynamic_enabled: editingProfile.dynamic_enabled,
-        });
-        if (result.success) {
-          setEditingProfile(null);
-        } else {
-          alert(`Failed to update profile: ${result.error}`);
-        }
-      } catch (e) {
-        alert(`Error updating profile: ${String(e)}`);
-      }
-    }
-  };
-
-  /**
-   * Handle create profile dialog.
-   * Requirements: 3.1, 5.1
-   */
-  const handleCreateProfile = async () => {
-    if (!newProfileData.name || newProfileData.app_id === 0) {
-      alert("Please enter a game name and AppID");
-      return;
-    }
-
-    try {
-      const result = await api.createProfile({
-        app_id: newProfileData.app_id,
-        name: newProfileData.name,
-        cores: newProfileData.cores,
-        dynamic_enabled: newProfileData.dynamic_enabled,
-        dynamic_config: newProfileData.dynamic_enabled ? state.dynamicSettings : null,
-      });
-
-      if (result.success) {
-        setShowCreateDialog(false);
-        setNewProfileData({
-          app_id: 0,
-          name: "",
-          cores: [...state.cores],
-          dynamic_enabled: false,
-        });
-        alert(`Profile created for ${newProfileData.name}`);
-      } else {
-        alert(`Failed to create profile: ${result.error}`);
-      }
-    } catch (e) {
-      alert(`Error creating profile: ${String(e)}`);
-    }
-  };
-
-  /**
-   * Format core values for display.
-   */
-  const formatCoreValues = (values: number[]): string => {
-    return values.map((v, i) => `C${i}:${v}`).join(" ");
-  };
-
-  // Check if a game is currently running
-  const isGameRunning = runningAppId !== null && runningAppName !== null;
-
   return (
     <>
-      {/* ==================== GAME PROFILES SECTION ==================== */}
-      <PanelSectionRow>
-        <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "12px", marginTop: "8px" }}>
-          Game Profiles
-        </div>
-      </PanelSectionRow>
-
-      {/* Quick-create button - Requirements: 5.1, 5.3, 5.4 */}
-      {isGameRunning && (
-        <PanelSectionRow>
-          <ButtonItem
-            layout="below"
-            onClick={handleQuickCreate}
-            disabled={isCreatingProfile}
-            style={{
-              backgroundColor: "#1a9fff",
-              marginBottom: "12px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              {isCreatingProfile ? (
-                <>
-                  <FaSpinner className="spin" />
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <FaRocket />
-                  <span>Save as Profile for {runningAppName}</span>
-                </>
-              )}
-            </div>
-          </ButtonItem>
-        </PanelSectionRow>
-      )}
-
-      {/* Profile management buttons */}
+      {/* Section switcher */}
       <PanelSectionRow>
         <Focusable
           style={{
             display: "flex",
-            gap: "8px",
-            marginBottom: "16px",
+            gap: "4px",
+            marginBottom: "12px",
+            backgroundColor: "#23262e",
+            borderRadius: "4px",
+            padding: "2px",
           }}
+          flow-children="horizontal"
         >
-          <ButtonItem layout="below" onClick={() => setShowCreateDialog(true)} style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <FaEdit />
-              <span>Create Profile</span>
+          <Focusable
+            className={`section-button ${activeSection === "profiles" ? "active" : ""}`}
+            focusClassName="gpfocus"
+            onActivate={() => setActiveSection("profiles")}
+            onClick={() => setActiveSection("profiles")}
+            style={{ flex: 1 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
+              <FaGamepad size={10} />
+              <span>Game Profiles</span>
             </div>
-          </ButtonItem>
-
-          <ButtonItem layout="below" onClick={handleExportProfiles} style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <FaDownload />
-              <span>Export All</span>
+          </Focusable>
+          
+          <Focusable
+            className={`section-button ${activeSection === "presets" ? "active" : ""}`}
+            focusClassName="gpfocus"
+            onActivate={() => setActiveSection("presets")}
+            onClick={() => setActiveSection("presets")}
+            style={{ flex: 1 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
+              <FaGlobe size={10} />
+              <span>Global Presets</span>
             </div>
-          </ButtonItem>
-
-          <ButtonItem layout="below" onClick={() => setIsImportingProfiles(true)} style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <FaUpload />
-              <span>Import</span>
-            </div>
-          </ButtonItem>
+          </Focusable>
         </Focusable>
       </PanelSectionRow>
 
-      {/* Create profile dialog - Requirements: 3.1, 5.1 */}
-      {showCreateDialog && (
+      {/* Content */}
+      {activeSection === "profiles" ? (
+        <GameProfilesSection profiles={profiles} activeProfile={activeProfile} runningAppId={runningAppId} runningAppName={runningAppName} api={api} />
+      ) : (
+        <GlobalPresetsSection presets={state.presets} api={api} />
+      )}
+
+      <style>
+        {`
+          .section-button {
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: transparent;
+            color: #8b929a;
+          }
+          .section-button.active {
+            background-color: #1a9fff;
+            color: #fff;
+          }
+          .section-button.gpfocus {
+            border: 2px solid #1a9fff;
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+          }
+          .section-button:hover {
+            background-color: rgba(26, 159, 255, 0.2);
+          }
+          
+          .preset-action-btn {
+            border-radius: 4px;
+            transition: all 0.2s ease;
+          }
+          .preset-action-btn.gpfocus {
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+          }
+          .preset-apply.gpfocus > div {
+            background-color: #1585d8 !important;
+          }
+          .preset-delete.gpfocus > div {
+            background-color: #3a3d45 !important;
+          }
+          
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </>
+  );
+};
+
+/**
+ * Game Profiles Section
+ */
+interface GameProfilesSectionProps {
+  profiles: GameProfile[];
+  activeProfile: GameProfile | null;
+  runningAppId: number | null;
+  runningAppName: string | null;
+  api: any;
+}
+
+const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activeProfile, runningAppId, runningAppName, api }) => {
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleQuickCreate = async () => {
+    if (!runningAppId || !runningAppName) return;
+    
+    setIsCreating(true);
+    try {
+      const result = await api.createProfileForCurrentGame();
+      if (!result.success) {
+        alert(`Failed: ${result.error}`);
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDelete = async (appId: number, name: string) => {
+    showModal(
+      <ConfirmModal
+        strTitle="Delete Profile"
+        strDescription={`Delete profile for ${name}?`}
+        strOKButtonText="Delete"
+        strCancelButtonText="Cancel"
+        onOK={async () => {
+          await api.deleteProfile(appId);
+        }}
+      />
+    );
+  };
+
+  const formatCores = (cores: number[]): string => {
+    const allSame = cores.every(v => v === cores[0]);
+    return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
+  };
+
+  return (
+    <>
+      {/* Quick create button */}
+      {runningAppId && runningAppName && (
         <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
+          <ButtonItem
+            layout="below"
+            onClick={handleQuickCreate}
+            disabled={isCreating}
+            style={{ backgroundColor: "#1a9fff", marginBottom: "8px", minHeight: "32px" }}
           >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Create New Profile
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
+              {isCreating ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
+              <span>Save for {runningAppName}</span>
             </div>
-            <TextField
-              label="Game Name"
-              value={newProfileData.name}
-              onChange={(e: any) => setNewProfileData({ ...newProfileData, name: e.target.value })}
-              style={{ marginBottom: "8px" }}
-            />
-            <TextField
-              label="Steam AppID"
-              value={String(newProfileData.app_id)}
-              onChange={(e: any) => setNewProfileData({ ...newProfileData, app_id: parseInt(e.target.value) || 0 })}
-              style={{ marginBottom: "8px" }}
-            />
-            <div style={{ fontSize: "12px", color: "#8b929a", marginBottom: "8px" }}>
-              Cores: {formatCoreValues(newProfileData.cores)}
-            </div>
-            <ToggleField
-              label="Enable Dynamic Mode"
-              checked={newProfileData.dynamic_enabled}
-              onChange={(checked: boolean) => setNewProfileData({ ...newProfileData, dynamic_enabled: checked })}
-            />
-            <Focusable style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-              <ButtonItem layout="below" onClick={handleCreateProfile}>
-                <span>Create</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => setShowCreateDialog(false)}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
+          </ButtonItem>
         </PanelSectionRow>
       )}
 
-      {/* Import profiles dialog - Requirements: 9.2, 9.3, 9.4 */}
-      {isImportingProfiles && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Import Profiles
-            </div>
-            <TextField
-              label="JSON Data"
-              value={importProfileJson}
-              onChange={(e: any) => setImportProfileJson(e.target.value)}
-              style={{ marginBottom: "8px" }}
-            />
-            <DropdownItem
-              label="Merge Strategy"
-              menuLabel="Merge Strategy"
-              rgOptions={[
-                { data: "skip", label: "Skip conflicts (keep existing)" },
-                { data: "overwrite", label: "Overwrite conflicts" },
-                { data: "rename", label: "Rename conflicts" },
-              ]}
-              selectedOption={mergeStrategy}
-              onChange={(option: any) => setMergeStrategy(option.data)}
-            />
-            {importProfileError && (
-              <div style={{ color: "#f44336", fontSize: "12px", marginBottom: "8px", marginTop: "8px" }}>
-                {importProfileError}
-              </div>
-            )}
-            <Focusable style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-              <ButtonItem layout="below" onClick={handleImportProfiles}>
-                <span>Import</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => { setIsImportingProfiles(false); setImportProfileJson(""); setImportProfileError(null); }}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Edit profile dialog - Requirements: 3.3 */}
-      {editingProfile && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Edit Profile: {editingProfile.name}
-            </div>
-            <TextField
-              label="Game Name"
-              value={editingProfile.name}
-              onChange={(e: any) => setEditingProfile({ ...editingProfile, name: e.target.value })}
-              style={{ marginBottom: "8px" }}
-            />
-            <div style={{ fontSize: "12px", color: "#8b929a", marginBottom: "8px" }}>
-              Cores: {formatCoreValues(editingProfile.cores)}
-            </div>
-            <ToggleField
-              label="Enable Dynamic Mode"
-              checked={editingProfile.dynamic_enabled}
-              onChange={(checked: boolean) => setEditingProfile({ ...editingProfile, dynamic_enabled: checked })}
-            />
-            <Focusable style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-              <ButtonItem layout="below" onClick={handleSaveProfileEdit}>
-                <span>Save</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => setEditingProfile(null)}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Profile list - Requirements: 3.2 */}
+      {/* Profile list */}
       {profiles.length === 0 ? (
         <PanelSectionRow>
-          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "12px" }}>
-            No game profiles yet. {isGameRunning ? "Click the button above to create one!" : "Launch a game and create a profile."}
+          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" }}>
+            No game profiles yet.
+            {runningAppId && <div style={{ marginTop: "4px" }}>Click above to create one!</div>}
           </div>
         </PanelSectionRow>
       ) : (
@@ -483,279 +226,282 @@ export const PresetsTabNew: FC = () => {
           const isActive = activeProfile?.app_id === profile.app_id || runningAppId === profile.app_id;
           return (
             <PanelSectionRow key={profile.app_id}>
-              <div
-                style={{
-                  padding: "12px",
-                  backgroundColor: isActive ? "#1a3a5c" : "#23262e",
-                  borderRadius: "8px",
-                  marginBottom: "8px",
+              <div style={{ marginBottom: "6px" }}>
+                {/* Profile info */}
+                <div style={{ 
+                  padding: "6px 8px", 
+                  backgroundColor: isActive ? "#1a3a5c" : "#23262e", 
+                  borderRadius: "6px 6px 0 0",
                   border: isActive ? "2px solid #1a9fff" : "none",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <div style={{ fontWeight: "bold", fontSize: "14px" }}>{profile.name}</div>
-                      {isActive && (
-                        <div
-                          style={{
-                            fontSize: "10px",
-                            padding: "2px 6px",
-                            backgroundColor: "#1a9fff",
-                            borderRadius: "4px",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ACTIVE
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#8b929a", marginTop: "2px" }}>
-                      AppID: {profile.app_id}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#8b929a", marginTop: "4px" }}>
-                      {formatCoreValues(profile.cores)}
-                    </div>
-                    {profile.dynamic_enabled && (
-                      <div style={{ fontSize: "10px", color: "#4caf50", marginTop: "2px" }}>
-                        ⚡ Dynamic Mode Enabled
-                      </div>
+                  borderBottom: "1px solid #3d4450"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {profile.name}
+                    </span>
+                    {isActive && (
+                      <span style={{ fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" }}>
+                        ACTIVE
+                      </span>
                     )}
                   </div>
-                  <Focusable style={{ display: "flex", gap: "8px" }}>
-                    <button
-                      onClick={() => setEditingProfile(profile)}
-                      style={{
-                        padding: "8px",
-                        backgroundColor: "transparent",
-                        border: "none",
-                        color: "#1a9fff",
-                        cursor: "pointer",
-                      }}
-                      title="Edit profile"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProfile(profile.app_id)}
-                      style={{
-                        padding: "8px",
-                        backgroundColor: "transparent",
-                        border: "none",
-                        color: "#f44336",
-                        cursor: "pointer",
-                      }}
-                      title="Delete profile"
-                    >
-                      <FaTrash />
-                    </button>
-                  </Focusable>
+                  <div style={{ fontSize: "9px", color: "#8b929a", marginTop: "2px" }}>
+                    {formatCores(profile.cores)}
+                    {profile.dynamic_enabled && <span style={{ marginLeft: "6px", color: "#4caf50" }}>⚡ Dynamic</span>}
+                  </div>
                 </div>
+                
+                {/* Action button */}
+                <Focusable
+                  style={{
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "0 0 6px 6px",
+                    padding: "6px",
+                  }}
+                >
+                  <Focusable
+                    className="preset-action-btn preset-delete"
+                    focusClassName="gpfocus"
+                    onActivate={() => handleDelete(profile.app_id, profile.name)}
+                    onClick={() => handleDelete(profile.app_id, profile.name)}
+                  >
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: "4px", 
+                      padding: "6px 8px",
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      borderRadius: "4px",
+                      backgroundColor: "#2a2d35",
+                      color: "#f44336",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}>
+                      <FaTrash size={8} />
+                      <span>Delete Profile</span>
+                    </div>
+                  </Focusable>
+                </Focusable>
               </div>
             </PanelSectionRow>
           );
         })
       )}
 
-      {/* Divider */}
-      <PanelSectionRow>
-        <div style={{ borderTop: "1px solid #3d4450", margin: "16px 0" }} />
-      </PanelSectionRow>
+      <style>
+        {`
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </>
+  );
+};
 
-      {/* ==================== LEGACY PRESETS SECTION ==================== */}
-      <PanelSectionRow>
-        <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "12px" }}>
-          Legacy Presets
-        </div>
-      </PanelSectionRow>
+/**
+ * Global Presets Section
+ */
+interface GlobalPresetsSectionProps {
+  presets: Preset[];
+  api: any;
+}
 
-      {/* Header with export all and import buttons */}
+const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) => {
+  const [isApplying, setIsApplying] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleApply = async (preset: Preset) => {
+    setIsApplying(preset.app_id);
+    try {
+      await api.applyUndervolt(preset.value);
+    } finally {
+      setIsApplying(null);
+    }
+  };
+
+  const handleDelete = async (appId: number, label: string) => {
+    showModal(
+      <ConfirmModal
+        strTitle="Delete Preset"
+        strDescription={`Delete preset "${label}"?`}
+        strOKButtonText="Delete"
+        strCancelButtonText="Cancel"
+        onOK={async () => {
+          await api.deletePreset(appId);
+        }}
+      />
+    );
+  };
+
+  const handleQuickSave = async () => {
+    setIsSaving(true);
+    try {
+      const timestamp = new Date().toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+      const label = `Preset ${timestamp}`;
+      
+      // Get current cores from API state
+      const cores = api.state.cores || [0, 0, 0, 0];
+      
+      // Create preset object
+      const preset = {
+        app_id: Date.now(), // Use timestamp as unique ID
+        label: label,
+        value: cores,
+        timeout: 0,
+        use_timeout: false,
+        tested: false,
+      };
+      
+      console.log("Saving preset:", preset);
+      
+      // Call backend to save preset
+      const result = await call("save_preset", preset);
+      
+      console.log("Save result:", result);
+      
+      if (result.success) {
+        // Reload presets directly
+        const updatedPresets = await call("get_presets");
+        console.log("Updated presets:", updatedPresets);
+        
+        // Use setState to properly trigger React re-render
+        api.setState({ presets: updatedPresets });
+      }
+    } catch (e) {
+      console.error("Failed to save preset:", e);
+      alert(`Failed to save: ${e}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const formatCores = (cores: number[]): string => {
+    const allSame = cores.every(v => v === cores[0]);
+    return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
+  };
+
+  return (
+    <>
+      {/* Quick save button */}
       <PanelSectionRow>
-        <Focusable
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "16px",
-          }}
+        <ButtonItem
+          layout="below"
+          onClick={handleQuickSave}
+          disabled={isSaving}
+          style={{ backgroundColor: "#1a9fff", marginBottom: "8px", minHeight: "32px" }}
         >
-          <ButtonItem layout="below" onClick={handleExportAll}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaDownload />
-              <span>Export All</span>
-            </div>
-          </ButtonItem>
-
-          <ButtonItem layout="below" onClick={() => setIsImporting(true)}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaUpload />
-              <span>Import</span>
-            </div>
-          </ButtonItem>
-        </Focusable>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
+            {isSaving ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
+            <span>Save Current Values</span>
+          </div>
+        </ButtonItem>
       </PanelSectionRow>
-
-      {/* Import dialog */}
-      {isImporting && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Import Presets
-            </div>
-            <TextField
-              label="JSON Data"
-              value={importJson}
-              onChange={(e: any) => setImportJson(e.target.value)}
-              style={{ marginBottom: "8px" }}
-            />
-            {importError && (
-              <div style={{ color: "#f44336", fontSize: "12px", marginBottom: "8px" }}>
-                {importError}
-              </div>
-            )}
-            <Focusable style={{ display: "flex", gap: "8px" }}>
-              <ButtonItem layout="below" onClick={handleImport}>
-                <span>Import</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => { setIsImporting(false); setImportJson(""); setImportError(null); }}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Edit dialog */}
-      {editingPreset && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-              Edit Preset: {editingPreset.label}
-            </div>
-            <TextField
-              label="Label"
-              value={editingPreset.label}
-              onChange={(e: any) => setEditingPreset({ ...editingPreset, label: e.target.value })}
-              style={{ marginBottom: "8px" }}
-            />
-            <ToggleField
-              label="Use Timeout"
-              checked={editingPreset.use_timeout}
-              onChange={(checked: boolean) => setEditingPreset({ ...editingPreset, use_timeout: checked })}
-            />
-            {editingPreset.use_timeout && (
-              <SliderField
-                label="Timeout (seconds)"
-                value={editingPreset.timeout}
-                min={0}
-                max={60}
-                step={5}
-                showValue={true}
-                onChange={(value: number) => setEditingPreset({ ...editingPreset, timeout: value })}
-              />
-            )}
-            <Focusable style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-              <ButtonItem layout="below" onClick={handleSaveEdit}>
-                <span>Save</span>
-              </ButtonItem>
-              <ButtonItem layout="below" onClick={() => setEditingPreset(null)}>
-                <span>Cancel</span>
-              </ButtonItem>
-            </Focusable>
-          </div>
-        </PanelSectionRow>
-      )}
 
       {/* Preset list */}
-      {state.presets.length === 0 ? (
+      {presets.length === 0 ? (
         <PanelSectionRow>
-          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "12px" }}>
-            No legacy presets saved.
+          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" }}>
+            No global presets saved.
+            <div style={{ marginTop: "4px" }}>Click above to save your current values!</div>
           </div>
         </PanelSectionRow>
       ) : (
-        state.presets.map((preset) => (
-          <PanelSectionRow key={preset.app_id}>
-            <div
-              style={{
-                padding: "12px",
-                backgroundColor: "#23262e",
-                borderRadius: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: "bold", fontSize: "14px" }}>{preset.label}</div>
-                  <div style={{ fontSize: "12px", color: "#8b929a" }}>
-                    {formatCoreValues(preset.value)}
+        presets.map((preset) => {
+          const isApplyingThis = isApplying === preset.app_id;
+          return (
+            <PanelSectionRow key={preset.app_id}>
+              <div style={{ marginBottom: "6px" }}>
+                {/* Preset info */}
+                <div style={{ padding: "6px 8px", backgroundColor: "#23262e", borderRadius: "6px 6px 0 0", borderBottom: "1px solid #3d4450" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {preset.label}
                   </div>
-                  {preset.use_timeout && (
-                    <div style={{ fontSize: "10px", color: "#ff9800" }}>
-                      Timeout: {preset.timeout}s
-                    </div>
-                  )}
-                  {preset.tested && (
-                    <div style={{ fontSize: "10px", color: "#4caf50" }}>
-                      ✓ Tested
-                    </div>
-                  )}
+                  <div style={{ fontSize: "9px", color: "#8b929a", marginTop: "2px" }}>
+                    {formatCores(preset.value)}
+                    {preset.tested && <span style={{ marginLeft: "6px", color: "#4caf50" }}>✓ Tested</span>}
+                  </div>
                 </div>
-                <Focusable style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    onClick={() => setEditingPreset(preset)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#1a9fff",
-                      cursor: "pointer",
-                    }}
+                
+                {/* Action buttons */}
+                <Focusable
+                  style={{
+                    display: "flex",
+                    gap: "4px",
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "0 0 6px 6px",
+                    padding: "6px",
+                  }}
+                  flow-children="horizontal"
+                >
+                  <Focusable
+                    style={{ flex: 1 }}
+                    className="preset-action-btn preset-apply"
+                    focusClassName="gpfocus"
+                    onActivate={() => handleApply(preset)}
+                    onClick={() => handleApply(preset)}
                   >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleExportSingle(preset)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#8b929a",
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: "4px", 
+                      padding: "6px 8px",
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      borderRadius: "4px",
+                      backgroundColor: "#1a9fff",
+                      color: "#fff",
                       cursor: "pointer",
-                    }}
+                      transition: "all 0.2s ease"
+                    }}>
+                      {isApplyingThis ? <FaSpinner className="spin" size={9} /> : <FaCheck size={9} />}
+                      <span>Apply</span>
+                    </div>
+                  </Focusable>
+                  
+                  <Focusable
+                    style={{ flex: 1 }}
+                    className="preset-action-btn preset-delete"
+                    focusClassName="gpfocus"
+                    onActivate={() => handleDelete(preset.app_id, preset.label)}
+                    onClick={() => handleDelete(preset.app_id, preset.label)}
                   >
-                    <FaDownload />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(preset.app_id)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: "4px", 
+                      padding: "6px 8px",
+                      fontSize: "9px",
+                      fontWeight: "600",
+                      borderRadius: "4px",
+                      backgroundColor: "#2a2d35",
                       color: "#f44336",
                       cursor: "pointer",
-                    }}
-                  >
-                    <FaTrash />
-                  </button>
+                      transition: "all 0.2s ease"
+                    }}>
+                      <FaTrash size={8} />
+                      <span>Delete</span>
+                    </div>
+                  </Focusable>
                 </Focusable>
               </div>
-            </div>
-          </PanelSectionRow>
-        ))
+            </PanelSectionRow>
+          );
+        })
       )}
 
       <style>

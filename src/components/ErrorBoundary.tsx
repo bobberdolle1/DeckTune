@@ -55,6 +55,17 @@ export class DeckTuneErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     });
   };
 
+  handleGoBack = (): void => {
+    // Reset error and try to navigate back
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    });
+    // Force parent to re-render by triggering a state change
+    window.history.back();
+  };
+
   render(): ReactNode {
     if (this.state.hasError) {
       // Custom fallback if provided

@@ -21,10 +21,28 @@ import { getApiInstance } from "../api";
  * Main content component with mode switching and first-run detection.
  */
 const DeckTuneContent: FC = () => {
-  const [mode, setMode] = useState<"wizard" | "expert">("wizard");
+  // Load saved mode from localStorage, default to wizard
+  const [mode, setMode] = useState<"wizard" | "expert">(() => {
+    try {
+      const saved = localStorage.getItem('decktune_ui_mode');
+      return (saved === "expert" || saved === "wizard") ? saved : "wizard";
+    } catch {
+      return "wizard";
+    }
+  });
+  
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
   const { state, api } = useDeckTune();
+
+  // Save mode to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('decktune_ui_mode', mode);
+    } catch (e) {
+      console.error("Failed to save UI mode:", e);
+    }
+  }, [mode]);
 
   useEffect(() => {
     const checkFirstRun = async () => {
@@ -87,92 +105,89 @@ const DeckTuneContent: FC = () => {
   return (
     <>
       <PanelSection>
-        <PanelSectionRow>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "8px",
-              marginBottom: "8px",
-            }}
-          >
-            <ButtonItem
-              layout="below"
-              onClick={() => setMode("wizard")}
-            >
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                gap: "6px",
-                color: mode === "wizard" ? "#1a9fff" : "#8b929a"
-              }}>
-                <FaMagic />
-                <span>Wizard</span>
-              </div>
-            </ButtonItem>
-            <ButtonItem
-              layout="below"
-              onClick={() => setMode("expert")}
-            >
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                gap: "6px",
-                color: mode === "expert" ? "#1a9fff" : "#8b929a"
-              }}>
-                <FaCog />
-                <span>Expert</span>
-              </div>
-            </ButtonItem>
-          </div>
-        </PanelSectionRow>
-
-        <PanelSectionRow>
-          <div
-            style={{
-              textAlign: "center",
-              fontSize: "12px",
-              color: "#8b929a",
-              padding: "4px 8px",
-              backgroundColor: "#23262e",
-              borderRadius: "4px",
-            }}
-          >
-            Status: <span style={{ 
-              color: state.status === "enabled" || state.status === "DYNAMIC RUNNING" 
-                ? "#4caf50" 
-                : state.status === "error" 
-                  ? "#f44336" 
-                  : "#8b929a" 
-            }}>
-              {state.status}
-            </span>
-          </div>
-        </PanelSectionRow>
-
+        {/* Mode switcher - vertical layout for better gamepad navigation */}
         <PanelSectionRow>
           <ButtonItem
             layout="below"
-            onClick={handleRunSetupWizard}
+            onClick={() => setMode("wizard")}
+            style={{ 
+              minHeight: "32px", 
+              padding: "4px 8px",
+              backgroundColor: mode === "wizard" ? "#1a9fff" : "transparent",
+              marginBottom: "4px"
+            }}
           >
             <div style={{ 
               display: "flex", 
               alignItems: "center", 
-              justifyContent: "center", 
-              gap: "6px",
-              color: "#8b929a",
-              fontSize: "11px"
+              justifyContent: "space-between",
+              fontSize: "11px",
+              color: mode === "wizard" ? "#fff" : "#8b929a"
             }}>
-              <FaWrench />
-              <span>Run Setup Wizard</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FaMagic size={10} />
+                <span>Wizard Mode</span>
+              </div>
+              {mode === "wizard" && (
+                <div style={{
+                  fontSize: "9px",
+                  color: state.status === "enabled" || state.status === "DYNAMIC RUNNING" 
+                    ? "#4caf50" 
+                    : state.status === "error" 
+                      ? "#f44336" 
+                      : "#8b929a",
+                  padding: "2px 4px",
+                  backgroundColor: "rgba(0,0,0,0.3)",
+                  borderRadius: "2px",
+                }}>
+                  {state.status === "DYNAMIC RUNNING" ? "DYN" : state.status === "enabled" ? "ON" : state.status === "error" ? "ERR" : "OFF"}
+                </div>
+              )}
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={() => setMode("expert")}
+            style={{ 
+              minHeight: "32px", 
+              padding: "4px 8px",
+              backgroundColor: mode === "expert" ? "#1a9fff" : "transparent"
+            }}
+          >
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "space-between",
+              fontSize: "11px",
+              color: mode === "expert" ? "#fff" : "#8b929a"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FaCog size={10} />
+                <span>Expert Mode</span>
+              </div>
+              {mode === "expert" && (
+                <div style={{
+                  fontSize: "9px",
+                  color: state.status === "enabled" || state.status === "DYNAMIC RUNNING" 
+                    ? "#4caf50" 
+                    : state.status === "error" 
+                      ? "#f44336" 
+                      : "#8b929a",
+                  padding: "2px 4px",
+                  backgroundColor: "rgba(0,0,0,0.3)",
+                  borderRadius: "2px",
+                }}>
+                  {state.status === "DYNAMIC RUNNING" ? "DYN" : state.status === "enabled" ? "ON" : state.status === "error" ? "ERR" : "OFF"}
+                </div>
+              )}
             </div>
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
 
-      {mode === "wizard" ? <WizardMode /> : <ExpertMode />}
+      {mode === "wizard" ? <WizardMode onRunSetup={handleRunSetupWizard} /> : <ExpertMode onRunSetup={handleRunSetupWizard} />}
     </>
   );
 };

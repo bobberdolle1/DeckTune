@@ -61,11 +61,17 @@ class CachedPlatform:
         
         Returns:
             PlatformInfo with detected=True (since it was cached from a detection)
+            
+        Note:
+            safe_limit is always fetched from caps.py to ensure it uses current limits,
+            not the cached value which may be outdated after a plugin update.
         """
+        from .caps import get_safe_limit
+        
         return PlatformInfo(
             model=self.model,
             variant=self.variant,
-            safe_limit=self.safe_limit,
+            safe_limit=get_safe_limit(self.variant),  # Always use current limit from caps.py
             detected=True
         )
     

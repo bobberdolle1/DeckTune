@@ -34,6 +34,8 @@ cp "$PROJECT_DIR/dist/index.js.map" "$RELEASE_DIR/DeckTune/dist/" 2>/dev/null ||
 cp "$PROJECT_DIR/main.py" "$RELEASE_DIR/DeckTune/"
 cp "$PROJECT_DIR/plugin.json" "$RELEASE_DIR/DeckTune/"
 cp "$PROJECT_DIR/LICENSE" "$RELEASE_DIR/DeckTune/"
+cp "$PROJECT_DIR/install.sh" "$RELEASE_DIR/DeckTune/"
+chmod +x "$RELEASE_DIR/DeckTune/install.sh"
 
 # Copy backend (excluding __pycache__)
 rsync -a --exclude='__pycache__' --exclude='*.pyc' "$PROJECT_DIR/backend/" "$RELEASE_DIR/DeckTune/backend/"
@@ -41,16 +43,24 @@ rsync -a --exclude='__pycache__' --exclude='*.pyc' "$PROJECT_DIR/backend/" "$REL
 # Copy bin
 cp -r "$PROJECT_DIR/bin/"* "$RELEASE_DIR/DeckTune/bin/"
 
+# Set executable permissions for binaries
+echo ""
+echo "4. Setting executable permissions for binaries..."
+chmod +x "$RELEASE_DIR/DeckTune/bin/stress-ng" 2>/dev/null || true
+chmod +x "$RELEASE_DIR/DeckTune/bin/memtester" 2>/dev/null || true
+chmod +x "$RELEASE_DIR/DeckTune/bin/gymdeck3" 2>/dev/null || true
+chmod +x "$RELEASE_DIR/DeckTune/bin/ryzenadj" 2>/dev/null || true
+
 # Remove macOS metadata files
 echo ""
-echo "4. Cleaning macOS metadata..."
+echo "5. Cleaning macOS metadata..."
 find "$RELEASE_DIR/DeckTune" -name "._*" -delete 2>/dev/null || true
 find "$RELEASE_DIR/DeckTune" -name ".DS_Store" -delete 2>/dev/null || true
 find "$RELEASE_DIR/DeckTune" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Create zip without macOS metadata
 echo ""
-echo "5. Creating zip archive..."
+echo "6. Creating zip archive..."
 cd "$RELEASE_DIR"
 COPYFILE_DISABLE=1 zip -r DeckTune.zip DeckTune -x "*.DS_Store" -x "*._*" -x "*__pycache__*"
 
@@ -68,4 +78,5 @@ echo "  scp $RELEASE_DIR/DeckTune.zip deck@<IP>:~/Downloads/"
 echo "  # On Steam Deck:"
 echo "  sudo rm -rf ~/homebrew/plugins/DeckTune"
 echo "  sudo unzip -o ~/Downloads/DeckTune.zip -d ~/homebrew/plugins/"
+echo "  sudo ~/homebrew/plugins/DeckTune/install.sh"
 echo "  sudo systemctl restart plugin_loader"

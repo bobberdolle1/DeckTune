@@ -1,7 +1,7 @@
 {
   "name": "DeckTune",
-  "author": "DeckTune Team",
-  "version": "3.1.12",
+  "author": "bobberdolle1",
+  "version": "3.1.13",
   "api_version": 1,
   "flags": ["root"],
   "publish": {

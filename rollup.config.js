@@ -42,11 +42,10 @@ export default defineConfig({
       "@decky/ui": "DFL",
       "@decky/manifest": JSON.stringify(manifest),
     },
-    dir: 'dist',
-    format: 'esm',
+    file: 'dist/index.js',
+    format: 'iife',
     sourcemap: true,
     sourcemapPathTransform: (relativeSourcePath) => relativeSourcePath.replace(/^\.\.\//, `decky://decky/plugin/${encodeURIComponent(manifest.name)}/`),
-    exports: 'default'
   },
   onwarn: () => undefined,
 });

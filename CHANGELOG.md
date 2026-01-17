@@ -2,6 +2,116 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.13] - 2026-01-17
+
+### Fixed
+- **Critical**: Fixed "unexpected token export" and "plugin export is not a function" errors
+  - Changed Rollup output format to simple IIFE (Immediately Invoked Function Expression)
+  - Plugin now loads correctly in Decky Loader without JavaScript errors
+- **Critical**: Fixed ryzenadj binary path resolution
+  - Changed from relative path to absolute path using PLUGIN_DIR
+  - Resolves "ryzenadj binary not found" error on plugin initialization
+- **Critical**: Fixed missing Fan Control API methods
+  - Added `getFanConfig()`, `setFanConfig()`, `getFanStatus()` to API client
+  - Fan tab now works without "api.getFanConfig is not a function" error
+- **Critical**: Fixed profiles.map error in Presets tab
+  - Added null safety check for profiles array: `(profiles || []).map()`
+  - Fixed condition check: `(!profiles || profiles.length === 0)` for proper undefined handling
+  - Prevents "profiles.map is not a function" crash
+  - ErrorBoundary now allows recovery without being stuck
+- **Build system**: Added PowerShell build script (`scripts/build-release.ps1`) for Windows
+
+### Changed
+- **Increased safe limits** for better performance (Requirement 5.1)
+  - LCD (Jupiter): -30mV → -50mV safe limit, -40mV → -70mV absolute limit
+  - OLED (Galileo): -35mV → -60mV safe limit, -50mV → -80mV absolute limit
+  - Previous limits were too conservative, Steam Deck can handle more
+  - Clear platform cache to apply: `rm -f ~/.local/share/decky/settings/decktune_platform_cache.json`
+
+### UI Optimization
+- **Vertical mode switcher** for better gamepad navigation
+  - Wizard/Expert buttons now stacked vertically instead of horizontal
+  - Status indicator integrated into active mode button
+  - Better focus navigation with gamepad
+- **Expert Mode improvements**
+  - Tab navigation: Converted from HTML buttons to Focusable components for gamepad support
+  - Tabs now navigable with D-pad left/right and activatable with A button
+  - Added visual focus indicator: blue border (2px) and glow effect when tab is focused
+  - Active tab: blue background (#1a9fff)
+  - Focused tab: blue border with shadow for clear visibility
+  - Reduced tab sizes: 12px icons, 8px labels, 4px padding
+  - Panic button: Compact size (30px height, 11px font, 10px icons)
+- **Expert Mode Manual tab improvements**
+  - Toggle labels: "Expert Undervolter" (was "Expert Mode"), "All Cores Same" (was "Simple Mode")
+  - Vertical layout for toggles instead of horizontal to prevent text wrapping
+  - Compact Expert Mode warning dialog (400px max width, 10px fonts)
+  - Dialog now uses vertical button layout with proper gamepad navigation
+  - Fixed bug: Added `pendingExpertToggle` state to properly manage toggle during confirmation
+  - Toggle now shows ON only when: `expertModeActive || pendingExpertToggle`
+  - Toggle disabled during pending confirmation to prevent double-clicks
+  - Fixed bug: Wrapped dialog buttons in Focusable container with `flow-children="vertical"`
+  - Added `noFocusRing={false}` to outer Focusable for proper focus management
+  - Dialog buttons now fully navigable with D-pad up/down and activatable with A button
+  - Changed "Overclocker" to "Undervolter" throughout
+  - Fixed: Removed leftover `setShowExpertWarning` references, now uses `showModal` with `ConfirmModal`
+  - Dialog now properly captures gamepad focus using native Decky UI components
+- **UI State Persistence**
+  - Mode selection (Wizard/Expert) now persists across QAM close/reopen using localStorage
+  - Expert Mode active tab now persists across QAM close/reopen using localStorage
+  - No more reset to initial screen when reopening QAM
+- **Presets Tab Complete Redesign**
+  - Split into two sections: Game Profiles (auto-switching) and Global Presets (manual)
+  - Ultra-compact card design: 8-11px fonts, minimal padding
+  - Game Profiles: Quick-create button, active indicator, dynamic mode badge
+  - Global Presets: Apply button, save current values, tested indicator
+  - All actions use ConfirmModal for safety
+  - Full gamepad navigation with visual focus indicators
+  - Removed bloated import/export UI - kept only essential functions
+- **Expert Mode Manual tab cleanup**
+  - Action buttons (Apply/Test/Disable) now vertical layout for better fit
+  - Removed "Tune for this game" button (available in Wizard mode)
+  - Removed "Run Benchmark" button and history (available in Tests tab)
+  - Cleaner, more focused interface
+- **Aggressive size reduction** for Decky menu (310px width)
+  - Reduced all font sizes: 8-11px (was 12-16px)
+  - Minimized padding/margins: 2-4px (was 8-16px)
+  - Smaller icons: 9-10px (was 12-16px)
+  - Compact button heights: 28-32px (was 36-48px)
+- **Tab navigation** with Focusable for gamepad support
+  - All tabs now navigable with gamepad D-pad
+  - Proper focus states and onActivate handlers
+- **Panic button**: Reduced size while maintaining visibility (30px height, 11px font)
+- **Step indicators**: Smaller circles (22px) and tighter spacing (8px gaps)
+- **Binning/Benchmark cards**: Compact padding (4-6px), smaller fonts (9-11px)
+- **Goal selection buttons**: Reduced height and spacing for better fit
+- **Binning settings**: Ultra-compact inline expandable panel
+  - Settings now expand/collapse directly in the interface
+  - No more oversized ConfirmModal that doesn't fit in Decky menu
+  - Custom compact labels (8px font) instead of SliderField labels to save space
+  - Vertical button layout: Save button above Reset button
+  - Minimal padding (4px panel, 2px gaps) and smaller fonts (9px buttons, 8px labels)
+  - Added "Reset to Defaults" button to restore default values (60s, 5mV, -10mV)
+  - Fixed slider overflow with constrained container width
+  - Fully navigable with gamepad
+
+### Platform Detection
+- **Cache cleared**: Platform detection cache reset to pick up new safe limits
+  - LCD (Jupiter): -50mV safe limit (was -30mV)
+  - OLED (Galileo): -60mV safe limit (was -35mV)
+  - Requires plugin restart to see updated limits
+
+### Installation Note
+After installing the plugin, run this command on Steam Deck to make binaries executable:
+```bash
+sudo chmod +x ~/homebrew/plugins/DeckTune/bin/*
+```
+
+### Notes
+- All features from v3.1.12 are included (extended limits -50mV LCD / -60mV OLED, binning progress, QAM optimization)
+- Windows zip doesn't preserve executable permissions - manual chmod required after installation
+- Binary permissions issue resolved: stress-ng, memtester, ryzenadj, gymdeck3 now executable
+- Manual tab now focused on core functionality only - tests and benchmarks moved to dedicated tabs
+
 ## [3.1.12] - 2026-01-17
 
 ### Fixed

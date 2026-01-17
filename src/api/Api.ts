@@ -1279,6 +1279,47 @@ export class Api extends SimpleEventEmitter {
     return await call("compare_sessions", id1, id2) as SessionComparison | null;
   }
 
+  // ==================== Fan Control Methods ====================
+
+  /**
+   * Get current fan control configuration.
+   * 
+   * @returns Fan configuration with enabled status and curve points
+   */
+  async getFanConfig(): Promise<{
+    success: boolean;
+    config?: any;
+    error?: string;
+  }> {
+    return await call("get_fan_config") as any;
+  }
+
+  /**
+   * Set fan control configuration.
+   * 
+   * @param config - Fan configuration to apply
+   * @returns Success status
+   */
+  async setFanConfig(config: any): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return await call("set_fan_config", config) as any;
+  }
+
+  /**
+   * Get current fan status (RPM, temperature).
+   * 
+   * @returns Current fan status
+   */
+  async getFanStatus(): Promise<{
+    success: boolean;
+    status?: any;
+    error?: string;
+  }> {
+    return await call("get_fan_status") as any;
+  }
+
   // ==================== Server Events ====================
 
   /**

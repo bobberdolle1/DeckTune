@@ -130,8 +130,9 @@ class Plugin:
         self.event_emitter = EventEmitter(decky.emit)
         
         # 3. Initialize core modules
+        ryzenadj_binary_path = os.path.join(PLUGIN_DIR, RYZENADJ_CLI_PATH) if PLUGIN_DIR else RYZENADJ_CLI_PATH
         self.ryzenadj = RyzenadjWrapper(
-            RYZENADJ_CLI_PATH, 
+            ryzenadj_binary_path, 
             PLUGIN_DIR, 
             event_emitter=self.event_emitter
         )
