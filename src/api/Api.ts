@@ -735,6 +735,26 @@ export class Api extends SimpleEventEmitter {
   }
 
   /**
+   * Install missing stress test binaries using pacman.
+   * Executes: sudo pacman -S --noconfirm stress-ng memtester
+   * 
+   * @returns Object with installation result
+   */
+  async installBinaries(): Promise<{
+    success: boolean;
+    message?: string;
+    installed?: string[];
+    error?: string;
+  }> {
+    return (await call("install_binaries")) as {
+      success: boolean;
+      message?: string;
+      installed?: string[];
+      error?: string;
+    };
+  }
+
+  /**
    * Run a specific stress test.
    * @param testName - Name of test (cpu_quick, cpu_long, ram_quick, ram_thorough, combo)
    */

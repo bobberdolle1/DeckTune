@@ -353,6 +353,17 @@ class Plugin:
         """Check availability of stress test binaries (stress-ng, memtester)."""
         return await self.rpc.check_binaries()
     
+    async def install_binaries(self):
+        """Install missing stress test binaries using pacman.
+        
+        Executes: sudo pacman -S --noconfirm stress-ng memtester
+        Requires root privileges (plugin has root flag).
+        
+        Returns:
+            Dictionary with installation result
+        """
+        return await self.rpc.install_binaries()
+    
     async def run_test(self, test_name):
         """Run a specific stress test."""
         return await self.rpc.run_test(test_name)

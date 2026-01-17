@@ -20,9 +20,107 @@ import {
   Focusable,
   SliderField,
 } from "@decky/ui";
-import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle, FaExclamationCircle, FaMicrochip, FaCog, FaVial } from "react-icons/fa";
+import { FaLeaf, FaBalanceScale, FaBatteryFull, FaRocket, FaCheck, FaTimes, FaSpinner, FaExclamationTriangle, FaExclamationCircle, FaMicrochip, FaCog, FaVial, FaDownload } from "react-icons/fa";
 import { useAutotune, usePlatformInfo, useDeckTune, useBinaries, useBinning } from "../context";
 import { AutotuneProgress, AutotuneResult, Preset, BinningConfig } from "../api/types";
+
+/**
+ * Install Binaries Button component.
+ * Allows one-click installation of stress-ng and memtester.
+ */
+interface InstallBinariesButtonProps {
+  onInstalled: () => void;
+}
+
+const InstallBinariesButton: FC<InstallBinariesButtonProps> = ({ onInstalled }) => {
+  const { api } = useDeckTune();
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  const handleInstall = async () => {
+    setIsInstalling(true);
+    setResult(null);
+    
+    try {
+      const installResult = await api.installBinaries();
+      setResult(installResult);
+      
+      if (installResult.success) {
+        // Wait a bit then refresh binary status
+        setTimeout(() => {
+          onInstalled();
+        }, 1000);
+      }
+    } catch (e) {
+      setResult({ success: false, error: String(e) });
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  return (
+    <div>
+      <Focusable
+        onActivate={handleInstall}
+        onClick={handleInstall}
+      >
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "6px",
+          padding: "8px",
+          background: isInstalling 
+            ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
+            : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+          borderRadius: "6px",
+          cursor: "pointer",
+          fontSize: "10px",
+          fontWeight: "bold",
+          marginTop: "6px",
+          opacity: isInstalling ? 0.7 : 1
+        }}>
+          {isInstalling ? <FaSpinner className="spin" /> : <FaDownload />}
+          <span>{isInstalling ? "Установка... / Installing..." : "Установить / Install"}</span>
+        </div>
+      </Focusable>
+
+      {/* Result message */}
+      {result && (
+        <div style={{
+          marginTop: "6px",
+          padding: "6px",
+          backgroundColor: result.success ? "#1b5e20" : "#b71c1c",
+          borderRadius: "4px",
+          fontSize: "9px",
+          color: "#fff"
+        }}>
+          {result.success ? (
+            <>
+              <FaCheck style={{ marginRight: "4px" }} />
+              {result.message || "Установлено! / Installed!"}
+            </>
+          ) : (
+            <>
+              <FaTimes style={{ marginRight: "4px" }} />
+              {result.error || "Ошибка установки / Installation failed"}
+            </>
+          )}
+        </div>
+      )}
+
+      <style>{`
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 /**
  * Wizard goal options for Step 1.
@@ -313,26 +411,31 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
             style={{
               display: "flex",
               alignItems: "flex-start",
-              gap: "10px",
-              padding: "12px",
-              backgroundColor: "#5c4813",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              border: "1px solid #ff9800",
+              gap: "8px",
+              padding: "10px",
+              backgroundColor: "#1a3a5c",
+              borderRadius: "6px",
+              marginBottom: "10px",
+              border: "1px solid #1a9fff",
               animation: "fadeInUp 0.4s ease-out",
             }}
           >
-            <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
-            <div>
-              <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
-                Missing System Packages
+            <FaExclamationCircle style={{ color: "#1a9fff", fontSize: "16px", flexShrink: 0, marginTop: "1px" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: "bold", color: "#64b5f6", marginBottom: "4px", fontSize: "11px" }}>
+                ℹ️ Опциональные пакеты / Optional Packages
               </div>
-              <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
-                Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
+              <div style={{ fontSize: "10px", color: "#bbdefb", marginBottom: "6px" }}>
+                Не установлены: <strong>{missingBinaries.join(", ")}</strong>
               </div>
-              <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
-                Install with: <code style={{ backgroundColor: "#3d4450", padding: "2px 4px", borderRadius: "2px" }}>sudo pacman -S stress-ng memtester</code>
+              <div style={{ fontSize: "9px", color: "#90caf9", marginBottom: "6px" }}>
+                ✅ Автотюнинг работает без них<br/>
+                ✅ Бенчмарки работают без них<br/>
+                ⚠️ Стресс-тесты требуют установки (опционально)
               </div>
+              
+              {/* Install Button */}
+              <InstallBinariesButton onInstalled={checkBinaries} />
             </div>
           </div>
         </PanelSectionRow>

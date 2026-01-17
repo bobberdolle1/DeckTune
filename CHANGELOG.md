@@ -2,6 +2,63 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.15] - 2026-01-18
+
+### Added
+- **Dynamic Mode Complete Overhaul** 🚀
+  - Real-time LoadGraph visualization when active
+  - Compact status card with 🟢 АКТИВЕН / ⚫ ВЫКЛ indicator
+  - Start/Stop buttons for easy control
+  - Collapsible settings panel (Settings button)
+  - Improved configuration: strategy, simple mode, interval, hysteresis
+  - "How it works" info box with current settings
+  - Smooth animations and gradients
+- **One-Click Package Installation** 📦
+  - Install button for stress-ng and memtester
+  - Automatic installation via `sudo pacman -S`
+  - Progress indicator and result feedback
+  - Auto-refresh after successful installation
+  - Available in both Wizard and Expert modes
+- **Improved Missing Packages Warning** ℹ️
+  - Changed from warning (orange) to info (blue)
+  - Clear explanation: "Optional Packages"
+  - Shows what works without them (autotune, benchmarks)
+  - Install button instead of manual command
+  - Bilingual interface (Russian/English)
+
+### Changed
+- **Manual Tab Redesign**
+  - Platform info in compact card
+  - Control mode selection with icons and bilingual labels
+  - Current values display for all cores
+  - Buttons with gradients and dual-language text
+  - Dynamic mode fully integrated into mode selection
+- **Missing Packages Messaging**
+  - From "Missing System Packages" to "Optional Packages"
+  - Emphasis on what works (✅) vs what requires packages (⚠️)
+  - Less alarming, more informative
+
+### Improved
+- **Dynamic Mode UX**
+  - Settings no longer "overflow" - contained in card
+  - Better visual hierarchy with collapsible sections
+  - Clearer status indication
+  - Easier to understand and configure
+- **Documentation**
+  - Added `.kiro/steering/dynamic-mode-improvements.md`
+  - Added `.kiro/steering/optional-packages.md`
+  - Updated `.kiro/steering/tech.md` with package info
+
+### Technical
+- **Backend API**
+  - `install_binaries()` - install stress-ng and memtester
+  - Uses plugin's root privileges
+  - Returns installation status and errors
+- **Frontend API**
+  - `installBinaries()` - call backend installation
+  - InstallBinariesButton component (WizardMode)
+  - InstallBinariesButtonExpert component (ExpertMode)
+
 ## [3.1.14] - 2026-01-17
 
 ### Added

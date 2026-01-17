@@ -940,6 +940,57 @@ class DeckTuneRPC:
             "all_available": len(missing) == 0
         }
     
+    async def install_binaries(self) -> Dict[str, Any]:
+        """Install missing stress test binaries using pacman.
+        
+        Executes: sudo pacman -S --noconfirm stress-ng memtester
+        
+        Returns:
+            Dictionary with installation result
+        """
+        import subprocess
+        
+        try:
+            # Check what's missing first
+            if self.test_runner is None:
+                return {"success": False, "error": "Test runner not configured"}
+            
+            missing = self.test_runner.get_missing_binaries()
+            if not missing:
+                return {"success": True, "message": "All binaries already installed", "installed": []}
+            
+            # Install missing packages
+            cmd = ["sudo", "pacman", "-S", "--noconfirm"] + missing
+            decky.logger.info(f"Installing binaries: {' '.join(cmd)}")
+            
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                decky.logger.info(f"Successfully installed: {', '.join(missing)}")
+                return {
+                    "success": True,
+                    "message": f"Successfully installed: {', '.join(missing)}",
+                    "installed": missing
+                }
+            else:
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                decky.logger.error(f"Failed to install binaries: {error_msg}")
+                return {
+                    "success": False,
+                    "error": f"Installation failed: {error_msg}",
+                    "returncode": process.returncode
+                }
+                
+        except Exception as e:
+            decky.logger.error(f"Exception during binary installation: {e}")
+            return {"success": False, "error": str(e)}
+    
     async def run_test(self, test_name: str) -> Dict[str, Any]:
         """Run a specific stress test.
         

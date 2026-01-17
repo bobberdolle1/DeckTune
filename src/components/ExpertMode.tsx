@@ -48,12 +48,112 @@ import {
   FaRocket,
   FaFan,
   FaCog,
+  FaSave,
+  FaUndo,
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
 import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
 import { LoadGraph } from "./LoadGraph";
 import { PresetsTabNew } from "./PresetsTabNew";
 import { FanTab } from "./FanTab";
+
+/**
+ * Install Binaries Button component for ExpertMode.
+ * Allows one-click installation of stress-ng and memtester.
+ */
+interface InstallBinariesButtonExpertProps {
+  onInstalled: () => void;
+}
+
+const InstallBinariesButtonExpert: FC<InstallBinariesButtonExpertProps> = ({ onInstalled }) => {
+  const { api } = useDeckTune();
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  const handleInstall = async () => {
+    setIsInstalling(true);
+    setResult(null);
+    
+    try {
+      const installResult = await api.installBinaries();
+      setResult(installResult);
+      
+      if (installResult.success) {
+        // Wait a bit then refresh binary status
+        setTimeout(() => {
+          onInstalled();
+        }, 1000);
+      }
+    } catch (e) {
+      setResult({ success: false, error: String(e) });
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  return (
+    <div>
+      <Focusable
+        onActivate={handleInstall}
+        onClick={handleInstall}
+      >
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "6px",
+          padding: "8px",
+          background: isInstalling 
+            ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
+            : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+          borderRadius: "6px",
+          cursor: "pointer",
+          fontSize: "10px",
+          fontWeight: "bold",
+          marginTop: "6px",
+          opacity: isInstalling ? 0.7 : 1
+        }}>
+          {isInstalling ? <FaSpinner className="spin" /> : <FaDownload />}
+          <span>{isInstalling ? "Установка... / Installing..." : "Установить / Install"}</span>
+        </div>
+      </Focusable>
+
+      {/* Result message */}
+      {result && (
+        <div style={{
+          marginTop: "6px",
+          padding: "6px",
+          backgroundColor: result.success ? "#1b5e20" : "#b71c1c",
+          borderRadius: "4px",
+          fontSize: "9px",
+          color: "#fff"
+        }}>
+          {result.success ? (
+            <>
+              <FaCheck style={{ marginRight: "4px" }} />
+              {result.message || "Установлено! / Installed!"}
+            </>
+          ) : (
+            <>
+              <FaTimes style={{ marginRight: "4px" }} />
+              {result.error || "Ошибка установки / Installation failed"}
+            </>
+          )}
+        </div>
+      )}
+
+      <style>{`
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 /**
  * Compact styles for QAM (310px width).
@@ -153,10 +253,6 @@ const PanicDisableButton: FC = () => {
         layout="below"
         onClick={handlePanicDisable}
         disabled={isPanicking}
-        style={{
-          backgroundColor: "#b71c1c",
-          borderRadius: "8px",
-        }}
       >
         <div
           style={{
@@ -166,6 +262,9 @@ const PanicDisableButton: FC = () => {
             gap: "8px",
             color: "#fff",
             fontWeight: "bold",
+            backgroundColor: "#b71c1c",
+            borderRadius: "8px",
+            padding: "12px"
           }}
         >
           {isPanicking ? (
@@ -195,7 +294,7 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
   const [activeTab, setActiveTab] = useState<ExpertTab>(initialTab);
 
   return (
-    <PanelSection title="Expert Mode" style={{ display: "flex", flexDirection: "column" }}>
+    <PanelSection title="Expert Mode">
       {/* Panic Disable Button - Always visible at top (Requirement 4.5) */}
       <PanicDisableButton />
 
@@ -270,7 +369,7 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
               color: isActive ? "#fff" : "#8b929a",
             }}
           >
-            <Icon size={11} />
+            <Icon />
             <span style={{ fontSize: "8px", fontWeight: isActive ? "600" : "400" }}>
               {tab.label}
             </span>
@@ -283,21 +382,27 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
- * Inline Dynamic Settings component - expanded version with more settings.
- * Shows comprehensive dynamic mode configuration.
+ * Inline Dynamic Settings component - improved with graph and better controls.
+ * Shows comprehensive dynamic mode configuration with real-time monitoring.
  */
 const DynamicSettingsInline: FC = () => {
   const { state, api } = useDeckTune();
   const [strategy, setStrategy] = useState<string>("balanced");
   const [simpleMode, setSimpleMode] = useState<boolean>(false);
   const [simpleValue, setSimpleValue] = useState<number>(-25);
-  const [updateInterval, setUpdateInterval] = useState<number>(1000);
-  const [loadThreshold, setLoadThreshold] = useState<number>(50);
+  const [sampleInterval, setSampleInterval] = useState<number>(100);
+  const [hysteresis, setHysteresis] = useState<number>(5);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Get expert mode from settings
   const expertMode = state.settings.expertMode || false;
   const minLimit = expertMode ? -100 : -35;
+  
+  // Check if dynamic mode is running
+  const isDynamicRunning = state.status === "DYNAMIC RUNNING" || state.gymdeckRunning;
 
   // Load config on mount
   useEffect(() => {
@@ -308,8 +413,8 @@ const DynamicSettingsInline: FC = () => {
           setStrategy(config.strategy || "balanced");
           setSimpleMode(config.simple_mode || false);
           setSimpleValue(config.simple_value || -25);
-          setUpdateInterval(config.update_interval || 1000);
-          setLoadThreshold(config.load_threshold || 50);
+          setSampleInterval(config.sample_interval_ms || 100);
+          setHysteresis(config.hysteresis_percent || 5);
         }
       } catch (e) {
         console.error("Failed to load dynamic config:", e);
@@ -325,8 +430,8 @@ const DynamicSettingsInline: FC = () => {
         strategy,
         simple_mode: simpleMode,
         simple_value: simpleValue,
-        update_interval: updateInterval,
-        load_threshold: loadThreshold,
+        sample_interval_ms: sampleInterval,
+        hysteresis_percent: hysteresis,
         expert_mode: expertMode,
       };
       await api.saveDynamicConfig(config);
@@ -337,180 +442,353 @@ const DynamicSettingsInline: FC = () => {
     }
   };
 
+  const handleStart = async () => {
+    setIsStarting(true);
+    try {
+      await api.enableGymdeck();
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setIsStopping(true);
+    try {
+      await api.disableGymdeck();
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
   return (
-    <PanelSectionRow>
-      <div style={{
-        padding: "12px",
-        background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
-        borderRadius: "8px",
-        border: "1px solid rgba(26, 159, 255, 0.3)",
-        animation: "slideDown 0.3s ease-out"
-      }}>
-        {/* Header */}
+    <div style={{ marginBottom: "12px" }}>
+      {/* Dynamic Mode Status Card */}
+      <PanelSectionRow>
         <div style={{
-          fontSize: "11px",
-          fontWeight: "bold",
-          color: "#1a9fff",
-          marginBottom: "12px",
-          paddingBottom: "8px",
-          borderBottom: "1px solid rgba(26, 159, 255, 0.2)"
+          padding: "12px",
+          background: isDynamicRunning 
+            ? "linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)"
+            : "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+          borderRadius: "8px",
+          border: isDynamicRunning 
+            ? "1px solid rgba(76, 175, 80, 0.5)"
+            : "1px solid rgba(26, 159, 255, 0.3)",
+          marginBottom: "8px"
         }}>
-          ⚙️ Dynamic Mode Configuration
-        </div>
-
-        {/* Strategy Selection */}
-        <div style={{ marginBottom: "12px" }}>
-          <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
-            Strategy
-          </div>
-          <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
-            {[
-              { id: "conservative", label: "Conservative", desc: "Safe" },
-              { id: "balanced", label: "Balanced", desc: "Default" },
-              { id: "aggressive", label: "Aggressive", desc: "Max" }
-            ].map((s) => (
-              <Focusable
-                key={s.id}
-                style={{ flex: 1 }}
-                onActivate={() => setStrategy(s.id)}
-                onClick={() => setStrategy(s.id)}
-              >
-                <div style={{
-                  padding: "8px 4px",
-                  backgroundColor: strategy === s.id ? "#1a9fff" : "#3d4450",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "9px",
-                  fontWeight: "bold",
-                  textAlign: "center",
-                  transition: "all 0.2s ease",
-                  border: "none",
-                  outline: "none"
-                }}>
-                  <div>{strategy === s.id ? "✓ " : ""}{s.label}</div>
-                  <div style={{ fontSize: "7px", opacity: 0.7, marginTop: "2px" }}>{s.desc}</div>
-                </div>
-              </Focusable>
-            ))}
-          </Focusable>
-        </div>
-
-        {/* Simple Mode Toggle */}
-        <div style={{ marginBottom: "12px" }}>
-          <ToggleField
-            label="Simple Mode"
-            description="Use one value for all cores"
-            checked={simpleMode}
-            onChange={setSimpleMode}
-            bottomSeparator="none"
-          />
-        </div>
-
-        {/* Simple Value Slider (only if Simple Mode enabled) */}
-        {simpleMode && (
-          <div style={{ marginBottom: "12px" }}>
-            <SliderField
-              label="Undervolt Value"
-              value={simpleValue}
-              min={minLimit}
-              max={0}
-              step={1}
-              showValue={true}
-              onChange={(value: number) => setSimpleValue(value)}
-              valueSuffix=" mV"
-              bottomSeparator="none"
-            />
-          </div>
-        )}
-
-        {/* Update Interval Slider */}
-        <div style={{ marginBottom: "12px" }}>
-          <SliderField
-            label="Update Interval"
-            value={updateInterval}
-            min={500}
-            max={5000}
-            step={100}
-            showValue={true}
-            onChange={(value: number) => setUpdateInterval(value)}
-            valueSuffix=" ms"
-            bottomSeparator="none"
-          />
-          <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
-            How often to check CPU load and adjust voltage
-          </div>
-        </div>
-
-        {/* Load Threshold Slider */}
-        <div style={{ marginBottom: "12px" }}>
-          <SliderField
-            label="Load Threshold"
-            value={loadThreshold}
-            min={10}
-            max={90}
-            step={5}
-            showValue={true}
-            onChange={(value: number) => setLoadThreshold(value)}
-            valueSuffix="%"
-            bottomSeparator="none"
-          />
-          <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
-            CPU load % to trigger voltage adjustment
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <Focusable
-          onActivate={handleSave}
-          onClick={handleSave}
-        >
+          {/* Status Header */}
           <div style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-            padding: "10px",
-            background: isSaving 
-              ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
-              : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "11px",
-            fontWeight: "bold",
-            border: "none",
-            outline: "none",
-            transition: "all 0.2s ease"
+            justifyContent: "space-between",
+            marginBottom: "8px"
           }}>
-            {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
-            <span>{isSaving ? "Saving..." : "Save Configuration"}</span>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <FaRocket style={{ 
+                color: isDynamicRunning ? "#81c784" : "#1a9fff",
+                fontSize: "14px"
+              }} />
+              <span style={{
+                fontSize: "12px",
+                fontWeight: "bold",
+                color: isDynamicRunning ? "#a5d6a7" : "#1a9fff"
+              }}>
+                Динамический режим / Dynamic Mode
+              </span>
+            </div>
+            <div style={{
+              padding: "4px 8px",
+              backgroundColor: isDynamicRunning ? "#4caf50" : "#3d4450",
+              borderRadius: "4px",
+              fontSize: "9px",
+              fontWeight: "bold",
+              color: "#fff"
+            }}>
+              {isDynamicRunning ? "🟢 АКТИВЕН" : "⚫ ВЫКЛ"}
+            </div>
           </div>
-        </Focusable>
 
-        {/* Info Box */}
-        <div style={{
-          marginTop: "10px",
-          padding: "8px",
-          backgroundColor: "rgba(26, 159, 255, 0.1)",
-          borderRadius: "6px",
-          fontSize: "8px",
-          color: "#8b929a",
-          lineHeight: "1.5",
-          border: "1px solid rgba(26, 159, 255, 0.2)"
-        }}>
-          <div style={{ fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" }}>ℹ️ How it works:</div>
-          • Monitors CPU load every {updateInterval}ms<br/>
-          • Adjusts voltage based on {strategy} strategy<br/>
-          • Triggers when load {'>'} {loadThreshold}%<br/>
-          • Restart Dynamic mode to apply changes
+          {/* Description */}
+          <div style={{
+            fontSize: "9px",
+            color: isDynamicRunning ? "#c8e6c9" : "#8b929a",
+            marginBottom: "12px",
+            lineHeight: "1.4"
+          }}>
+            {isDynamicRunning 
+              ? "Автоматическая подстройка напряжения на основе нагрузки CPU в реальном времени"
+              : "Включите для автоматической адаптации андервольта под нагрузку процессора"
+            }
+          </div>
+
+          {/* Control Buttons */}
+          <Focusable style={{ display: "flex", gap: "6px" }} flow-children="horizontal">
+            {!isDynamicRunning ? (
+              <Focusable
+                style={{ flex: 1 }}
+                onActivate={handleStart}
+                onClick={handleStart}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px",
+                  background: "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  opacity: isStarting ? 0.6 : 1
+                }}>
+                  {isStarting ? <FaSpinner className="spin" size={11} /> : <FaPlay size={11} />}
+                  <span>Запустить / Start</span>
+                </div>
+              </Focusable>
+            ) : (
+              <Focusable
+                style={{ flex: 1 }}
+                onActivate={handleStop}
+                onClick={handleStop}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px",
+                  backgroundColor: "#f44336",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  opacity: isStopping ? 0.6 : 1
+                }}>
+                  {isStopping ? <FaSpinner className="spin" size={11} /> : <FaBan size={11} />}
+                  <span>Остановить / Stop</span>
+                </div>
+              </Focusable>
+            )}
+
+            <Focusable
+              style={{ flex: 1 }}
+              onActivate={() => setShowSettings(!showSettings)}
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                padding: "10px",
+                backgroundColor: showSettings ? "#1a9fff" : "#3d4450",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: "bold"
+              }}>
+                <FaCog size={11} />
+                <span>Настройки / Settings</span>
+              </div>
+            </Focusable>
+          </Focusable>
         </div>
-      </div>
-    </PanelSectionRow>
+      </PanelSectionRow>
+
+      {/* Real-time Graph (only when running) */}
+      {isDynamicRunning && (
+        <PanelSectionRow>
+          <LoadGraph
+            load={[0, 0, 0, 0]} // TODO: Get real load data from backend
+            values={state.cores}
+            isActive={true}
+            activeProfile={undefined} // TODO: Get active profile name
+          />
+        </PanelSectionRow>
+      )}
+
+      {/* Configuration Panel (collapsible) */}
+      {showSettings && (
+        <PanelSectionRow>
+          <div style={{
+            padding: "12px",
+            background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+            borderRadius: "8px",
+            border: "1px solid rgba(26, 159, 255, 0.3)",
+            animation: "slideDown 0.3s ease-out"
+          }}>
+            {/* Strategy Selection */}
+            <div style={{ marginBottom: "12px" }}>
+              <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
+                Стратегия / Strategy
+              </div>
+              <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
+                {[
+                  { id: "conservative", label: "Conservative", desc: "Безопасно" },
+                  { id: "balanced", label: "Balanced", desc: "По умолч." },
+                  { id: "aggressive", label: "Aggressive", desc: "Макс." }
+                ].map((s) => (
+                  <Focusable
+                    key={s.id}
+                    style={{ flex: 1 }}
+                    onActivate={() => setStrategy(s.id)}
+                    onClick={() => setStrategy(s.id)}
+                  >
+                    <div style={{
+                      padding: "8px 4px",
+                      backgroundColor: strategy === s.id ? "#1a9fff" : "#3d4450",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      transition: "all 0.2s ease"
+                    }}>
+                      <div>{strategy === s.id ? "✓ " : ""}{s.label}</div>
+                      <div style={{ fontSize: "7px", opacity: 0.7, marginTop: "2px" }}>{s.desc}</div>
+                    </div>
+                  </Focusable>
+                ))}
+              </Focusable>
+            </div>
+
+            {/* Simple Mode Toggle */}
+            <div style={{ marginBottom: "12px" }}>
+              <ToggleField
+                label="Простой режим / Simple Mode"
+                description="Одно значение для всех ядер"
+                checked={simpleMode}
+                onChange={setSimpleMode}
+                bottomSeparator="none"
+              />
+            </div>
+
+            {/* Simple Value Slider (only if Simple Mode enabled) */}
+            {simpleMode && (
+              <div style={{ marginBottom: "12px" }}>
+                <SliderField
+                  label="Значение андервольта / Undervolt Value"
+                  value={simpleValue}
+                  min={minLimit}
+                  max={0}
+                  step={1}
+                  showValue={true}
+                  onChange={(value: number) => setSimpleValue(value)}
+                  valueSuffix=" mV"
+                  bottomSeparator="none"
+                />
+                <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
+                  Применяется ко всем ядрам при низкой нагрузке
+                </div>
+              </div>
+            )}
+
+            {/* Sample Interval */}
+            <div style={{ marginBottom: "12px" }}>
+              <SliderField
+                label="Интервал опроса / Sample Interval"
+                value={sampleInterval}
+                min={50}
+                max={500}
+                step={10}
+                showValue={true}
+                onChange={(value: number) => setSampleInterval(value)}
+                valueSuffix=" ms"
+                bottomSeparator="none"
+              />
+              <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
+                Как часто проверять нагрузку CPU
+              </div>
+            </div>
+
+            {/* Hysteresis */}
+            <div style={{ marginBottom: "12px" }}>
+              <SliderField
+                label="Гистерезис / Hysteresis"
+                value={hysteresis}
+                min={1}
+                max={20}
+                step={1}
+                showValue={true}
+                onChange={(value: number) => setHysteresis(value)}
+                valueSuffix=" %"
+                bottomSeparator="none"
+              />
+              <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
+                Предотвращает частые переключения значений
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <Focusable
+              onActivate={handleSave}
+              onClick={handleSave}
+            >
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                padding: "10px",
+                background: isSaving 
+                  ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
+                  : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: "bold",
+                transition: "all 0.2s ease"
+              }}>
+                {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
+                <span>{isSaving ? "Сохранение..." : "Сохранить / Save"}</span>
+              </div>
+            </Focusable>
+
+            {/* Info Box */}
+            <div style={{
+              marginTop: "10px",
+              padding: "8px",
+              backgroundColor: "rgba(26, 159, 255, 0.1)",
+              borderRadius: "6px",
+              fontSize: "8px",
+              color: "#8b929a",
+              lineHeight: "1.5",
+              border: "1px solid rgba(26, 159, 255, 0.2)"
+            }}>
+              <div style={{ fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" }}>ℹ️ Как работает:</div>
+              • Мониторинг нагрузки CPU каждые {sampleInterval}ms<br/>
+              • Адаптация напряжения по стратегии {strategy}<br/>
+              • Гистерезис {hysteresis}% для стабильности<br/>
+              • Перезапустите режим для применения изменений
+            </div>
+          </div>
+        </PanelSectionRow>
+      )}
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 
 
 /**
  * Manual tab component with simple/per-core/dynamic modes.
+ * Improved layout with better dynamic mode integration.
  */
 const ManualTab: FC = () => {
   const { state, api } = useDeckTune();
@@ -525,6 +803,9 @@ const ManualTab: FC = () => {
   const safeLimit = platformInfo?.safe_limit ?? -30;
   const currentMinLimit = expertMode ? -100 : safeLimit;
 
+  // Check if dynamic mode is running
+  const isDynamicRunning = state.status === "DYNAMIC RUNNING" || state.gymdeckRunning;
+
   // Sync with state.cores
   useEffect(() => {
     setCoreValues([...state.cores]);
@@ -532,20 +813,19 @@ const ManualTab: FC = () => {
     setSimpleValue(avg);
   }, [state.cores]);
 
+  // Auto-detect control mode based on state
+  useEffect(() => {
+    if (isDynamicRunning && controlMode !== "dynamic") {
+      setControlMode("dynamic");
+    }
+  }, [isDynamicRunning]);
+
   /**
    * Handle control mode change.
    */
   const handleControlModeChange = (mode: "single" | "percore" | "dynamic") => {
-    if (mode === "dynamic") {
-      // Start gymdeck3
-      api.enableGymdeck();
-    } else {
-      // Stop gymdeck3 if running
-      if (state.gymdeckRunning) {
-        api.disableGymdeck();
-      }
-    }
     setControlMode(mode);
+    // Don't auto-start/stop dynamic mode here - let user control it via buttons
   };
 
   /**
@@ -582,7 +862,6 @@ const ManualTab: FC = () => {
    */
   const handleDisable = async () => {
     await api.disableUndervolt();
-    // Don't reset UI values - user can re-enable with same values
   };
 
   /**
@@ -598,25 +877,41 @@ const ManualTab: FC = () => {
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>
-          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "6px" }}>
-            {platformInfo.variant} ({platformInfo.model}) • Limit: {expertMode ? "-100mV (Expert)" : `${platformInfo.safe_limit}mV`}
+          <div style={{ 
+            fontSize: "10px", 
+            color: "#8b929a", 
+            marginBottom: "8px",
+            padding: "6px 8px",
+            backgroundColor: "#23262e",
+            borderRadius: "4px"
+          }}>
+            <div style={{ marginBottom: "2px" }}>
+              <strong style={{ color: "#1a9fff" }}>{platformInfo.variant}</strong> ({platformInfo.model})
+            </div>
+            <div>
+              Лимит / Limit: <strong style={{ color: expertMode ? "#ff9800" : "#4caf50" }}>
+                {expertMode ? "-100mV (Expert)" : `${platformInfo.safe_limit}mV`}
+              </strong>
+            </div>
           </div>
         </PanelSectionRow>
       )}
 
       {/* Control Mode Selection */}
       <PanelSectionRow>
-        <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "6px" }}>Control Mode</div>
+        <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
+          Режим управления / Control Mode
+        </div>
       </PanelSectionRow>
       <PanelSectionRow>
-        <Focusable style={{ display: "flex", gap: "4px", marginBottom: "8px" }} flow-children="horizontal">
+        <Focusable style={{ display: "flex", gap: "4px", marginBottom: "12px" }} flow-children="horizontal">
           <Focusable
             style={{ flex: 1 }}
             onActivate={() => handleControlModeChange("single")}
             onClick={() => handleControlModeChange("single")}
           >
             <div style={{
-              padding: "8px 6px",
+              padding: "10px 6px",
               backgroundColor: controlMode === "single" ? "#1a9fff" : "#3d4450",
               borderRadius: "6px",
               cursor: "pointer",
@@ -624,10 +919,11 @@ const ManualTab: FC = () => {
               fontWeight: "bold",
               textAlign: "center",
               transition: "all 0.2s ease",
-              border: "none",
-              outline: "none"
+              border: controlMode === "single" ? "2px solid #1a9fff" : "2px solid transparent"
             }}>
-              {controlMode === "single" ? "✓ Single" : "Single"}
+              <div>{controlMode === "single" ? "✓" : ""}</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>Единый</div>
+              <div style={{ fontSize: "8px", opacity: 0.7 }}>Single</div>
             </div>
           </Focusable>
 
@@ -637,7 +933,7 @@ const ManualTab: FC = () => {
             onClick={() => handleControlModeChange("percore")}
           >
             <div style={{
-              padding: "8px 6px",
+              padding: "10px 6px",
               backgroundColor: controlMode === "percore" ? "#1a9fff" : "#3d4450",
               borderRadius: "6px",
               cursor: "pointer",
@@ -645,10 +941,11 @@ const ManualTab: FC = () => {
               fontWeight: "bold",
               textAlign: "center",
               transition: "all 0.2s ease",
-              border: "none",
-              outline: "none"
+              border: controlMode === "percore" ? "2px solid #1a9fff" : "2px solid transparent"
             }}>
-              {controlMode === "percore" ? "✓ Per-Core" : "Per-Core"}
+              <div>{controlMode === "percore" ? "✓" : ""}</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>По-ядерный</div>
+              <div style={{ fontSize: "8px", opacity: 0.7 }}>Per-Core</div>
             </div>
           </Focusable>
 
@@ -658,7 +955,7 @@ const ManualTab: FC = () => {
             onClick={() => handleControlModeChange("dynamic")}
           >
             <div style={{
-              padding: "8px 6px",
+              padding: "10px 6px",
               backgroundColor: controlMode === "dynamic" ? "#4caf50" : "#3d4450",
               color: controlMode === "dynamic" ? "#fff" : "#e0e0e0",
               borderRadius: "6px",
@@ -667,48 +964,63 @@ const ManualTab: FC = () => {
               fontWeight: "bold",
               textAlign: "center",
               transition: "all 0.2s ease",
-              border: "none",
-              outline: "none"
+              border: controlMode === "dynamic" ? "2px solid #4caf50" : "2px solid transparent"
             }}>
-              {controlMode === "dynamic" ? "✓ Dynamic" : "Dynamic"}
+              <div>{controlMode === "dynamic" ? "✓" : ""}</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>Динамический</div>
+              <div style={{ fontSize: "8px", opacity: 0.7 }}>Dynamic</div>
             </div>
           </Focusable>
         </Focusable>
       </PanelSectionRow>
 
-      {/* Dynamic Mode Status */}
-      {controlMode === "dynamic" && state.gymdeckRunning && (
-        <PanelSectionRow>
-          <div style={{
-            padding: "8px",
-            backgroundColor: "#1b5e20",
-            borderRadius: "4px",
-            border: "1px solid #4caf50",
-            marginBottom: "8px"
-          }}>
-            <div style={{ fontSize: "9px", color: "#81c784", fontWeight: "bold", marginBottom: "4px" }}>
-              🚀 Dynamic Mode Active
-            </div>
-            <div style={{ fontSize: "8px", color: "#a5d6a7" }}>
-              Real-time load-based adjustment via gymdeck3
-            </div>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Dynamic Mode Settings (always visible when Dynamic is selected) */}
+      {/* Dynamic Mode Panel (when selected) */}
       {controlMode === "dynamic" && (
         <DynamicSettingsInline />
       )}
 
-      {/* Sliders (only for Single and Per-Core modes) */}
+      {/* Manual Controls (Single and Per-Core modes) */}
       {controlMode !== "dynamic" && (
         <>
+          {/* Current Values Display */}
+          <PanelSectionRow>
+            <div style={{
+              padding: "8px",
+              backgroundColor: "#23262e",
+              borderRadius: "6px",
+              marginBottom: "8px"
+            }}>
+              <div style={{ fontSize: "9px", color: "#8b929a", marginBottom: "4px" }}>
+                Текущие значения / Current Values
+              </div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "4px"
+              }}>
+                {state.cores.map((value, index) => (
+                  <div key={index} style={{
+                    padding: "4px",
+                    backgroundColor: "#1a1d23",
+                    borderRadius: "4px",
+                    textAlign: "center",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    color: value < 0 ? "#4caf50" : "#8b929a"
+                  }}>
+                    C{index}: {value}mV
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PanelSectionRow>
+
+          {/* Sliders */}
           {controlMode === "single" ? (
             /* Single Mode: One slider for all cores */
             <PanelSectionRow>
               <SliderField
-                label="All Cores"
+                label="Все ядра / All Cores"
                 value={simpleValue}
                 min={currentMinLimit}
                 max={0}
@@ -724,7 +1036,7 @@ const ManualTab: FC = () => {
             [0, 1, 2, 3].map((core) => (
               <PanelSectionRow key={core}>
                 <SliderField
-                  label={`Core ${core}`}
+                  label={`Ядро / Core ${core}`}
                   value={coreValues[core]}
                   min={currentMinLimit}
                   max={0}
@@ -737,94 +1049,84 @@ const ManualTab: FC = () => {
               </PanelSectionRow>
             ))
           )}
+
+          {/* Action buttons */}
+          <PanelSectionRow>
+            <Focusable style={{ display: "flex", gap: "6px", marginTop: "12px" }} flow-children="horizontal">
+              <Focusable
+                style={{ flex: 1 }}
+                onActivate={handleApply}
+                onClick={handleApply}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  padding: "10px 8px",
+                  background: "linear-gradient(135deg, #1a9fff 0%, #1976d2 100%)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  opacity: isApplying ? 0.6 : 1,
+                  transition: "all 0.2s ease"
+                }}>
+                  {isApplying ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
+                  <span>Применить<br/>Apply</span>
+                </div>
+              </Focusable>
+
+              <Focusable
+                style={{ flex: 1 }}
+                onActivate={handleDisable}
+                onClick={handleDisable}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  padding: "10px 8px",
+                  backgroundColor: "#3d4450",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  transition: "all 0.2s ease"
+                }}>
+                  <FaBan size={11} />
+                  <span>Выкл<br/>Disable</span>
+                </div>
+              </Focusable>
+
+              <Focusable
+                style={{ flex: 1 }}
+                onActivate={handleReset}
+                onClick={handleReset}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  padding: "10px 8px",
+                  backgroundColor: "#5c4813",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  color: "#ff9800",
+                  transition: "all 0.2s ease"
+                }}>
+                  <FaTimes size={11} />
+                  <span>Сброс<br/>Reset</span>
+                </div>
+              </Focusable>
+            </Focusable>
+          </PanelSectionRow>
         </>
       )}
-
-      {/* Action buttons (only for Single and Per-Core modes) */}
-      {controlMode !== "dynamic" && (
-        <PanelSectionRow>
-          <Focusable style={{ display: "flex", gap: "6px", marginTop: "8px" }} flow-children="horizontal">
-            <Focusable
-              style={{ flex: 1 }}
-              onActivate={handleApply}
-              onClick={handleApply}
-            >
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-                padding: "10px 8px",
-                backgroundColor: "#1a9fff",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "bold",
-                opacity: isApplying ? 0.5 : 1,
-                border: "none",
-                outline: "none"
-              }}>
-                {isApplying ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
-                <span>Apply</span>
-              </div>
-            </Focusable>
-
-            <Focusable
-              style={{ flex: 1 }}
-              onActivate={handleDisable}
-              onClick={handleDisable}
-            >
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-                padding: "10px 8px",
-                backgroundColor: "#3d4450",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "bold",
-                border: "none",
-                outline: "none"
-              }}>
-                <FaBan size={11} />
-                <span>Disable</span>
-              </div>
-            </Focusable>
-
-            <Focusable
-              style={{ flex: 1 }}
-              onActivate={handleReset}
-              onClick={handleReset}
-            >
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-                padding: "10px 8px",
-                backgroundColor: "#5c4813",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "bold",
-                color: "#ff9800",
-                border: "none",
-                outline: "none"
-              }}>
-                <FaTimes size={11} />
-                <span>Reset</span>
-              </div>
-            </Focusable>
-          </Focusable>
-        </PanelSectionRow>
-      )}
-
-      {/* Focus stop - prevents cycling back to top */}
-      <PanelSectionRow>
-        <Focusable style={{ height: "1px", opacity: 0, pointerEvents: "none" }} />
-      </PanelSectionRow>
 
       <style>
         {`
@@ -927,25 +1229,29 @@ const TestsTab: FC = () => {
             style={{
               display: "flex",
               alignItems: "flex-start",
-              gap: "10px",
-              padding: "12px",
-              backgroundColor: "#5c4813",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              border: "1px solid #ff9800",
+              gap: "8px",
+              padding: "10px",
+              backgroundColor: "#1a3a5c",
+              borderRadius: "6px",
+              marginBottom: "10px",
+              border: "1px solid #1a9fff",
             }}
           >
-            <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
-            <div>
-              <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
-                Missing Components
+            <FaExclamationCircle style={{ color: "#1a9fff", fontSize: "16px", flexShrink: 0, marginTop: "1px" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: "bold", color: "#64b5f6", marginBottom: "4px", fontSize: "11px" }}>
+                ℹ️ Опциональные пакеты / Optional Packages
               </div>
-              <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
-                Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
+              <div style={{ fontSize: "10px", color: "#bbdefb", marginBottom: "4px" }}>
+                Не установлены: <strong>{missingBinaries.join(", ")}</strong>
               </div>
-              <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
-                Stress tests are unavailable until binaries are installed.
+              <div style={{ fontSize: "9px", color: "#90caf9", marginBottom: "6px" }}>
+                Эти пакеты нужны только для стресс-тестов.<br/>
+                Остальные функции плагина работают без них.
               </div>
+              
+              {/* Install Button */}
+              <InstallBinariesButtonExpert onInstalled={checkBinaries} />
             </div>
           </div>
         </PanelSectionRow>
@@ -1253,9 +1559,8 @@ const DiagnosticsTab: FC = () => {
           layout="below"
           onClick={handleExportDiagnostics}
           disabled={isExporting}
-          style={{ marginTop: "16px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "16px" }}>
             {isExporting ? (
               <>
                 <FaSpinner className="spin" />
