@@ -3222,19 +3222,19 @@
      */
     const ExpertMode = ({ initialTab = "manual" }) => {
         const [activeTab, setActiveTab] = SP_REACT.useState(initialTab);
-        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Expert Mode" },
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Expert Mode", style: { display: "flex", flexDirection: "column" } },
             window.SP_REACT.createElement(PanicDisableButton, null),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none", flex: 1, minHeight: 0 } },
                 window.SP_REACT.createElement(ManualTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none" } },
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none", flex: 1, minHeight: 0 } },
                 window.SP_REACT.createElement(PresetsTabNew, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none" } },
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none", flex: 1, minHeight: 0 } },
                 window.SP_REACT.createElement(TestsTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none", flex: 1, minHeight: 0 } },
                 window.SP_REACT.createElement(FanTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none", flex: 1, minHeight: 0 } },
                 window.SP_REACT.createElement(DiagnosticsTab, null))));
     };
     const TabNavigation = ({ activeTab, onTabChange }) => {
@@ -4261,228 +4261,229 @@
                                 } },
                                 window.SP_REACT.createElement(FaTimes, { size: 11 }),
                                 window.SP_REACT.createElement("span", null, t.cancel))))))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" }, onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
-                window.SP_REACT.createElement("div", { style: {
-                        background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
-                        borderRadius: "10px",
-                        padding: "14px",
-                        border: "1px solid rgba(26, 159, 255, 0.2)",
-                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-                        animation: "fadeInUp 0.4s ease-out"
-                    } },
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "12px" }, "flow-children": "vertical" },
+                window.SP_REACT.createElement(DFL.Focusable, { onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                     window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "12px"
+                            background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
+                            borderRadius: "10px",
+                            padding: "14px",
+                            border: "1px solid rgba(26, 159, 255, 0.2)",
+                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                            animation: "fadeInUp 0.4s ease-out"
                         } },
                         window.SP_REACT.createElement("div", { style: {
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
-                                background: "linear-gradient(135deg, #1a9fff 0%, #0d7fd8 100%)",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 2px 8px rgba(26, 159, 255, 0.4)"
+                                gap: "10px",
+                                marginBottom: "12px"
                             } },
-                            window.SP_REACT.createElement(FaLanguage, { size: 16, style: { color: "#fff" } })),
-                        window.SP_REACT.createElement("div", null,
-                            window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.languageSection),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, "Interface Language / \u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430"))),
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "10px 12px",
-                            backgroundColor: "rgba(26, 159, 255, 0.1)",
-                            borderRadius: "6px",
-                            marginBottom: "8px",
-                            border: "1px solid rgba(26, 159, 255, 0.2)"
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginBottom: "4px" } }, language === "ru" ? "Текущий язык:" : "Current Language:"),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "12px", fontWeight: "bold", color: "#fff" } }, language === "en" ? "🇬🇧 English" : "🇷🇺 Русский")),
-                    window.SP_REACT.createElement(DFL.DropdownItem, { label: language === "ru" ? "Изменить язык" : "Change Language", menuLabel: t.selectLanguage, rgOptions: [
-                            { data: "en", label: `🇬🇧 ${t.english}` },
-                            { data: "ru", label: `🇷🇺 ${t.russian}` }
-                        ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data), bottomSeparator: "none" }),
-                    window.SP_REACT.createElement("div", { style: {
-                            marginTop: "8px",
-                            padding: "6px 10px",
-                            backgroundColor: "rgba(76, 175, 80, 0.15)",
-                            borderRadius: "6px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            fontSize: "9px",
-                            color: "#81c784"
-                        } },
-                        window.SP_REACT.createElement(FaCheckCircle, { size: 9 }),
-                        window.SP_REACT.createElement("span", null, language === "ru"
-                            ? "Язык сохранён автоматически"
-                            : "Language saved automatically")))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" }, onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
-                window.SP_REACT.createElement("div", { style: {
-                        background: expertModeEnabled
-                            ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
-                            : "linear-gradient(135deg, #2a2d35 0%, #23262e 100%)",
-                        borderRadius: "10px",
-                        padding: "14px",
-                        marginBottom: "12px",
-                        border: expertModeEnabled
-                            ? "1px solid rgba(255, 107, 107, 0.4)"
-                            : "1px solid rgba(61, 68, 80, 0.4)",
-                        boxShadow: expertModeEnabled
-                            ? "0 4px 16px rgba(255, 107, 107, 0.3)"
-                            : "0 4px 12px rgba(0, 0, 0, 0.3)",
-                        animation: "fadeInUp 0.5s ease-out",
-                        transition: "all 0.3s ease"
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "12px"
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
-                                background: expertModeEnabled
-                                    ? "linear-gradient(135deg, #ff6b6b 0%, #f44336 100%)"
-                                    : "linear-gradient(135deg, #5c4813 0%, #7c6013 100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: expertModeEnabled
-                                    ? "0 2px 8px rgba(255, 107, 107, 0.4)"
-                                    : "0 2px 8px rgba(92, 72, 19, 0.4)",
-                                animation: expertModeEnabled ? "pulse 2s ease-in-out infinite" : "none"
-                            } },
-                            window.SP_REACT.createElement(FaFlask, { size: 14, style: { color: "#fff" } })),
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.expertModeSection),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, expertModeEnabled
-                                ? (language === "ru" ? "⚠️ Активен (-100мВ)" : "⚠️ Active (-100mV)")
-                                : (language === "ru" ? "Безопасный режим" : "Safe mode")))),
-                    window.SP_REACT.createElement(DFL.Focusable, { onActivate: () => handleExpertModeToggle(!expertModeEnabled), onClick: () => handleExpertModeToggle(!expertModeEnabled) },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                padding: "10px 12px",
-                                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease"
-                            } },
-                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", color: "#fff", marginBottom: "2px" } }, t.enableExpertMode),
-                                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, t.expertModeDescription)),
                             window.SP_REACT.createElement("div", { style: {
-                                    width: "44px",
-                                    height: "24px",
-                                    borderRadius: "12px",
-                                    backgroundColor: expertModeEnabled ? "#4caf50" : "#3d4450",
-                                    position: "relative",
-                                    transition: "all 0.3s ease",
-                                    marginLeft: "12px"
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "8px",
+                                    background: "linear-gradient(135deg, #1a9fff 0%, #0d7fd8 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: "0 2px 8px rgba(26, 159, 255, 0.4)"
                                 } },
-                                window.SP_REACT.createElement("div", { style: {
-                                        width: "20px",
-                                        height: "20px",
-                                        borderRadius: "10px",
-                                        backgroundColor: "#fff",
-                                        position: "absolute",
-                                        top: "2px",
-                                        left: expertModeEnabled ? "22px" : "2px",
-                                        transition: "all 0.3s ease",
-                                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.3)"
-                                    } })))),
-                    expertModeEnabled && (window.SP_REACT.createElement("div", { style: {
-                            marginTop: "10px",
-                            padding: "10px",
-                            backgroundColor: "rgba(255, 152, 0, 0.15)",
-                            borderRadius: "6px",
-                            border: "1px solid rgba(255, 152, 0, 0.3)",
-                            animation: "slideDown 0.3s ease-out"
-                        } },
+                                window.SP_REACT.createElement(FaLanguage, { size: 16, style: { color: "#fff" } })),
+                            window.SP_REACT.createElement("div", null,
+                                window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.languageSection),
+                                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, "Interface Language / \u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430"))),
                         window.SP_REACT.createElement("div", { style: {
-                                fontSize: "10px",
-                                color: "#ffb74d",
+                                padding: "10px 12px",
+                                backgroundColor: "rgba(26, 159, 255, 0.1)",
+                                borderRadius: "6px",
+                                marginBottom: "8px",
+                                border: "1px solid rgba(26, 159, 255, 0.2)"
+                            } },
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginBottom: "4px" } }, language === "ru" ? "Текущий язык:" : "Current Language:"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "12px", fontWeight: "bold", color: "#fff" } }, language === "en" ? "🇬🇧 English" : "🇷🇺 Русский")),
+                        window.SP_REACT.createElement(DFL.DropdownItem, { label: language === "ru" ? "Изменить язык" : "Change Language", menuLabel: t.selectLanguage, rgOptions: [
+                                { data: "en", label: `🇬🇧 ${t.english}` },
+                                { data: "ru", label: `🇷🇺 ${t.russian}` }
+                            ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data), bottomSeparator: "none" }),
+                        window.SP_REACT.createElement("div", { style: {
+                                marginTop: "8px",
+                                padding: "6px 10px",
+                                backgroundColor: "rgba(76, 175, 80, 0.15)",
+                                borderRadius: "6px",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "6px",
-                                marginBottom: "6px",
-                                fontWeight: "bold"
+                                fontSize: "9px",
+                                color: "#81c784"
                             } },
-                            window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
-                            window.SP_REACT.createElement("span", null, t.expertModeActiveGlobally)),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", lineHeight: "1.5" } },
-                            "\u2022 ",
-                            t.expertModeRange,
-                            window.SP_REACT.createElement("br", null),
-                            "\u2022 ",
-                            language === "ru" ? "Применяется к: Единый, По-ядерный, Динамический" : "Applies to: Single, Per-Core, Dynamic",
-                            window.SP_REACT.createElement("br", null),
-                            "\u2022 ",
-                            language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!"))))),
-            window.SP_REACT.createElement(DFL.Focusable, { onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
-                window.SP_REACT.createElement("div", { style: {
-                        background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
-                        borderRadius: "10px",
-                        padding: "14px",
-                        border: "1px solid rgba(139, 146, 154, 0.2)",
-                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
-                        animation: "fadeInUp 0.6s ease-out"
-                    } },
+                            window.SP_REACT.createElement(FaCheckCircle, { size: 9 }),
+                            window.SP_REACT.createElement("span", null, language === "ru"
+                                ? "Язык сохранён автоматически"
+                                : "Language saved automatically")))),
+                window.SP_REACT.createElement(DFL.Focusable, { onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                     window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "12px"
+                            background: expertModeEnabled
+                                ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
+                                : "linear-gradient(135deg, #2a2d35 0%, #23262e 100%)",
+                            borderRadius: "10px",
+                            padding: "14px",
+                            marginBottom: "12px",
+                            border: expertModeEnabled
+                                ? "1px solid rgba(255, 107, 107, 0.4)"
+                                : "1px solid rgba(61, 68, 80, 0.4)",
+                            boxShadow: expertModeEnabled
+                                ? "0 4px 16px rgba(255, 107, 107, 0.3)"
+                                : "0 4px 12px rgba(0, 0, 0, 0.3)",
+                            animation: "fadeInUp 0.5s ease-out",
+                            transition: "all 0.3s ease"
                         } },
                         window.SP_REACT.createElement("div", { style: {
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
-                                background: "linear-gradient(135deg, #4caf50 0%, #388e3c 100%)",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 2px 8px rgba(76, 175, 80, 0.4)"
+                                gap: "10px",
+                                marginBottom: "12px"
                             } },
-                            window.SP_REACT.createElement(FaInfoCircle, { size: 14, style: { color: "#fff" } })),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.aboutSettingsSection)),
+                            window.SP_REACT.createElement("div", { style: {
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "8px",
+                                    background: expertModeEnabled
+                                        ? "linear-gradient(135deg, #ff6b6b 0%, #f44336 100%)"
+                                        : "linear-gradient(135deg, #5c4813 0%, #7c6013 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: expertModeEnabled
+                                        ? "0 2px 8px rgba(255, 107, 107, 0.4)"
+                                        : "0 2px 8px rgba(92, 72, 19, 0.4)",
+                                    animation: expertModeEnabled ? "pulse 2s ease-in-out infinite" : "none"
+                                } },
+                                window.SP_REACT.createElement(FaFlask, { size: 14, style: { color: "#fff" } })),
+                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                                window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.expertModeSection),
+                                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, expertModeEnabled
+                                    ? (language === "ru" ? "⚠️ Активен (-100мВ)" : "⚠️ Active (-100mV)")
+                                    : (language === "ru" ? "Безопасный режим" : "Safe mode")))),
+                        window.SP_REACT.createElement(DFL.Focusable, { onActivate: () => handleExpertModeToggle(!expertModeEnabled), onClick: () => handleExpertModeToggle(!expertModeEnabled) },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "10px 12px",
+                                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease"
+                                } },
+                                window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", color: "#fff", marginBottom: "2px" } }, t.enableExpertMode),
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, t.expertModeDescription)),
+                                window.SP_REACT.createElement("div", { style: {
+                                        width: "44px",
+                                        height: "24px",
+                                        borderRadius: "12px",
+                                        backgroundColor: expertModeEnabled ? "#4caf50" : "#3d4450",
+                                        position: "relative",
+                                        transition: "all 0.3s ease",
+                                        marginLeft: "12px"
+                                    } },
+                                    window.SP_REACT.createElement("div", { style: {
+                                            width: "20px",
+                                            height: "20px",
+                                            borderRadius: "10px",
+                                            backgroundColor: "#fff",
+                                            position: "absolute",
+                                            top: "2px",
+                                            left: expertModeEnabled ? "22px" : "2px",
+                                            transition: "all 0.3s ease",
+                                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.3)"
+                                        } })))),
+                        expertModeEnabled && (window.SP_REACT.createElement("div", { style: {
+                                marginTop: "10px",
+                                padding: "10px",
+                                backgroundColor: "rgba(255, 152, 0, 0.15)",
+                                borderRadius: "6px",
+                                border: "1px solid rgba(255, 152, 0, 0.3)",
+                                animation: "slideDown 0.3s ease-out"
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#ffb74d",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    marginBottom: "6px",
+                                    fontWeight: "bold"
+                                } },
+                                window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, t.expertModeActiveGlobally)),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", lineHeight: "1.5" } },
+                                "\u2022 ",
+                                t.expertModeRange,
+                                window.SP_REACT.createElement("br", null),
+                                "\u2022 ",
+                                language === "ru" ? "Применяется к: Единый, По-ядерный, Динамический" : "Applies to: Single, Per-Core, Dynamic",
+                                window.SP_REACT.createElement("br", null),
+                                "\u2022 ",
+                                language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!"))))),
+                window.SP_REACT.createElement(DFL.Focusable, { onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                     window.SP_REACT.createElement("div", { style: {
-                            fontSize: "10px",
-                            color: "#a0a0a0",
-                            lineHeight: "1.6",
-                            padding: "10px",
-                            backgroundColor: "rgba(255, 255, 255, 0.03)",
-                            borderRadius: "6px"
+                            background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+                            borderRadius: "10px",
+                            padding: "14px",
+                            border: "1px solid rgba(139, 146, 154, 0.2)",
+                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                            animation: "fadeInUp 0.6s ease-out"
                         } },
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "8px", display: "flex", gap: "6px" } },
-                            window.SP_REACT.createElement("span", { style: { color: "#1a9fff", minWidth: "4px" } }, "\u2022"),
-                            window.SP_REACT.createElement("div", null,
-                                window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
-                                    t.expertModeSection,
-                                    ":"),
-                                " ",
-                                window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutExpertMode))),
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "8px", display: "flex", gap: "6px" } },
-                            window.SP_REACT.createElement("span", { style: { color: "#4caf50", minWidth: "4px" } }, "\u2022"),
-                            window.SP_REACT.createElement("div", null,
-                                window.SP_REACT.createElement("strong", { style: { color: "#4caf50" } },
-                                    language === "ru" ? "Режимы управления" : "Control Modes",
-                                    ":"),
-                                " ",
-                                window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutControlMode))),
-                        window.SP_REACT.createElement("div", { style: { display: "flex", gap: "6px" } },
-                            window.SP_REACT.createElement("span", { style: { color: "#ff9800", minWidth: "4px" } }, "\u2022"),
-                            window.SP_REACT.createElement("div", null,
-                                window.SP_REACT.createElement("strong", { style: { color: "#ff9800" } },
-                                    t.languageSection,
-                                    ":"),
-                                " ",
-                                window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutLanguage)))))),
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                marginBottom: "12px"
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "8px",
+                                    background: "linear-gradient(135deg, #4caf50 0%, #388e3c 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: "0 2px 8px rgba(76, 175, 80, 0.4)"
+                                } },
+                                window.SP_REACT.createElement(FaInfoCircle, { size: 14, style: { color: "#fff" } })),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.aboutSettingsSection)),
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "10px",
+                                color: "#a0a0a0",
+                                lineHeight: "1.6",
+                                padding: "10px",
+                                backgroundColor: "rgba(255, 255, 255, 0.03)",
+                                borderRadius: "6px"
+                            } },
+                            window.SP_REACT.createElement("div", { style: { marginBottom: "8px", display: "flex", gap: "6px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#1a9fff", minWidth: "4px" } }, "\u2022"),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
+                                        t.expertModeSection,
+                                        ":"),
+                                    " ",
+                                    window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutExpertMode))),
+                            window.SP_REACT.createElement("div", { style: { marginBottom: "8px", display: "flex", gap: "6px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#4caf50", minWidth: "4px" } }, "\u2022"),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("strong", { style: { color: "#4caf50" } },
+                                        language === "ru" ? "Режимы управления" : "Control Modes",
+                                        ":"),
+                                    " ",
+                                    window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutControlMode))),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "6px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#ff9800", minWidth: "4px" } }, "\u2022"),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("strong", { style: { color: "#ff9800" } },
+                                        t.languageSection,
+                                        ":"),
+                                    " ",
+                                    window.SP_REACT.createElement("span", { style: { color: "#c0c0c0" } }, t.aboutLanguage))))))),
             window.SP_REACT.createElement("style", null, `
         @keyframes fadeIn {
           from { opacity: 0; }

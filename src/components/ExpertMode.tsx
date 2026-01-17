@@ -195,7 +195,7 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
   const [activeTab, setActiveTab] = useState<ExpertTab>(initialTab);
 
   return (
-    <PanelSection title="Expert Mode">
+    <PanelSection title="Expert Mode" style={{ display: "flex", flexDirection: "column" }}>
       {/* Panic Disable Button - Always visible at top (Requirement 4.5) */}
       <PanicDisableButton />
 
@@ -205,19 +205,19 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
       </PanelSectionRow>
 
       {/* Tab Content */}
-      <div style={{ display: activeTab === "manual" ? "block" : "none" }}>
+      <div style={{ display: activeTab === "manual" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <ManualTab />
       </div>
-      <div style={{ display: activeTab === "presets" ? "block" : "none" }}>
+      <div style={{ display: activeTab === "presets" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <PresetsTabNew />
       </div>
-      <div style={{ display: activeTab === "tests" ? "block" : "none" }}>
+      <div style={{ display: activeTab === "tests" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <TestsTab />
       </div>
-      <div style={{ display: activeTab === "fan" ? "block" : "none" }}>
+      <div style={{ display: activeTab === "fan" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <FanTab />
       </div>
-      <div style={{ display: activeTab === "diagnostics" ? "block" : "none" }}>
+      <div style={{ display: activeTab === "diagnostics" ? "block" : "none", flex: 1, minHeight: 0 }}>
         <DiagnosticsTab />
       </div>
     </PanelSection>

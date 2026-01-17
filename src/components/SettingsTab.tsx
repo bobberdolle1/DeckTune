@@ -213,11 +213,11 @@ export const SettingsTab: FC = () => {
         </div>
       )}
 
-      {/* Language Card */}
-      <Focusable 
-        style={{ marginBottom: "12px" }}
-        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-      >
+      <Focusable style={{ display: "flex", flexDirection: "column", gap: "12px" }} flow-children="vertical">
+        {/* Language Card */}
+        <Focusable 
+          onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+        >
         <div style={{
           background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
           borderRadius: "10px",
@@ -304,11 +304,10 @@ export const SettingsTab: FC = () => {
         </div>
       </Focusable>
 
-      {/* Expert Mode Card */}
-      <Focusable 
-        style={{ marginBottom: "12px" }}
-        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-      >
+        {/* Expert Mode Card */}
+        <Focusable 
+          onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+        >
         <div style={{
           background: expertModeEnabled 
             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -438,10 +437,10 @@ export const SettingsTab: FC = () => {
         </div>
       </Focusable>
 
-      {/* Info Card */}
-      <Focusable
-        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-      >
+        {/* Info Card */}
+        <Focusable
+          onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+        >
         <div style={{
           background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
           borderRadius: "10px",
@@ -506,6 +505,7 @@ export const SettingsTab: FC = () => {
             </div>
           </div>
         </div>
+      </Focusable>
       </Focusable>
 
       <style>{`
