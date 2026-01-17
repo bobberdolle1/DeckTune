@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, FC } from "react";
-import { ToggleField, DropdownItem, Focusable } from "@decky/ui";
+import { DropdownItem, Focusable } from "@decky/ui";
 import { 
   FaExclamationTriangle, 
   FaCheck, 
@@ -213,8 +213,9 @@ export const SettingsTab: FC = () => {
         </div>
       )}
 
-      {/* Language Card */}
-      <div style={{ marginBottom: "12px" }}>
+      {/* Main Content - wrapped in Focusable for gamepad scrolling */}
+      <Focusable style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {/* Language Card */}
         <div style={{
           background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
           borderRadius: "10px",
@@ -299,10 +300,8 @@ export const SettingsTab: FC = () => {
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Expert Mode Card */}
-      <div style={{ marginBottom: "12px" }}>
+        {/* Expert Mode Card */}
         <div style={{
           background: expertModeEnabled 
             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -430,10 +429,8 @@ export const SettingsTab: FC = () => {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Info Card */}
-      <div>
+        {/* Info Card */}
         <div style={{
           background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
           borderRadius: "10px",
@@ -498,7 +495,7 @@ export const SettingsTab: FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </Focusable>
 
       <style>{`
         @keyframes fadeIn {
