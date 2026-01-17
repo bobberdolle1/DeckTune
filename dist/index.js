@@ -4261,7 +4261,7 @@
                                 } },
                                 window.SP_REACT.createElement(FaTimes, { size: 11 }),
                                 window.SP_REACT.createElement("span", null, t.cancel))))))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
+            window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
                         borderRadius: "10px",
@@ -4290,7 +4290,7 @@
                         window.SP_REACT.createElement("div", null,
                             window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.languageSection),
                             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, "Interface Language / \u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430"))),
-                    window.SP_REACT.createElement(DFL.DropdownItem, { label: language === "en" ? `🇬🇧 ${t.english}` : `🇷🇺 ${t.russian}`, menuLabel: t.selectLanguage, rgOptions: [
+                    window.SP_REACT.createElement(DFL.DropdownItem, { label: "", menuLabel: t.selectLanguage, rgOptions: [
                             { data: "en", label: `🇬🇧 ${t.english}` },
                             { data: "ru", label: `🇷🇺 ${t.russian}` }
                         ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data), bottomSeparator: "none" }),
@@ -4309,7 +4309,7 @@
                         window.SP_REACT.createElement("span", null, language === "ru"
                             ? "Язык сохранён автоматически"
                             : "Language saved automatically")))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
+            window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
                 window.SP_REACT.createElement("div", { style: {
                         background: expertModeEnabled
                             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -4382,7 +4382,7 @@
                             window.SP_REACT.createElement("br", null),
                             "\u2022 ",
                             language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!"))))),
-            window.SP_REACT.createElement(DFL.Focusable, null,
+            window.SP_REACT.createElement("div", null,
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
                         borderRadius: "10px",

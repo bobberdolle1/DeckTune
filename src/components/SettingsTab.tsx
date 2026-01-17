@@ -214,7 +214,7 @@ export const SettingsTab: FC = () => {
       )}
 
       {/* Language Card */}
-      <Focusable style={{ marginBottom: "12px" }}>
+      <div style={{ marginBottom: "12px" }}>
         <div style={{
           background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
           borderRadius: "10px",
@@ -252,7 +252,7 @@ export const SettingsTab: FC = () => {
           </div>
           
           <DropdownItem 
-            label={language === "en" ? `🇬🇧 ${t.english}` : `🇷🇺 ${t.russian}`}
+            label=""
             menuLabel={t.selectLanguage}
             rgOptions={[
               { data: "en", label: `🇬🇧 ${t.english}` }, 
@@ -283,10 +283,10 @@ export const SettingsTab: FC = () => {
             </span>
           </div>
         </div>
-      </Focusable>
+      </div>
 
       {/* Expert Mode Card */}
-      <Focusable style={{ marginBottom: "12px" }}>
+      <div style={{ marginBottom: "12px" }}>
         <div style={{
           background: expertModeEnabled 
             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -375,10 +375,10 @@ export const SettingsTab: FC = () => {
             </div>
           )}
         </div>
-      </Focusable>
+      </div>
 
       {/* Info Card */}
-      <Focusable>
+      <div>
         <div style={{
           background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
           borderRadius: "10px",
@@ -443,7 +443,7 @@ export const SettingsTab: FC = () => {
             </div>
           </div>
         </div>
-      </Focusable>
+      </div>
 
       <style>{`
         @keyframes fadeIn {
