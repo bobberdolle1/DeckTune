@@ -3226,16 +3226,21 @@
             window.SP_REACT.createElement(PanicDisableButton, null),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
-                window.SP_REACT.createElement(ManualTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none" } },
-                window.SP_REACT.createElement(PresetsTabNew, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none" } },
-                window.SP_REACT.createElement(TestsTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
-                window.SP_REACT.createElement(FanTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
-                window.SP_REACT.createElement(DiagnosticsTab, null))));
+            window.SP_REACT.createElement("div", { style: {
+                    height: "calc(100vh - 280px)",
+                    overflow: "auto",
+                    overflowX: "hidden"
+                } },
+                window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
+                    window.SP_REACT.createElement(ManualTab, null)),
+                window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none" } },
+                    window.SP_REACT.createElement(PresetsTabNew, null)),
+                window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none" } },
+                    window.SP_REACT.createElement(TestsTab, null)),
+                window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
+                    window.SP_REACT.createElement(FanTab, null)),
+                window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
+                    window.SP_REACT.createElement(DiagnosticsTab, null)))));
     };
     const TabNavigation = ({ activeTab, onTabChange }) => {
         return (window.SP_REACT.createElement(DFL.Focusable, { style: {
