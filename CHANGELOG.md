@@ -2,7 +2,7 @@
 
 All notable changes to DeckTune will be documented in this file.
 
-## [3.1.9] - 2026-01-17
+## [3.1.12] - 2026-01-17
 
 ### Fixed
 - **Undervolt functionality** — improved diagnostics and error handling
