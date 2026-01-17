@@ -115,6 +115,8 @@
       return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z"}}]})(props);
     }function FaBalanceScale (props) {
       return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M256 336h-.02c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0C-2.06 328.75.02 320.33.02 336H0c0 44.18 57.31 80 128 80s128-35.82 128-80zM128 176l72 144H56l72-144zm511.98 160c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0-87.12 174.26-85.04 165.84-85.04 181.51H384c0 44.18 57.31 80 128 80s128-35.82 128-80h-.02zM440 320l72-144 72 144H440zm88 128H352V153.25c23.51-10.29 41.16-31.48 46.39-57.25H528c8.84 0 16-7.16 16-16V48c0-8.84-7.16-16-16-16H383.64C369.04 12.68 346.09 0 320 0s-49.04 12.68-63.64 32H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h129.61c5.23 25.76 22.87 46.96 46.39 57.25V448H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z"}}]})(props);
+    }function FaBan (props) {
+      return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.108 117.892c65.448 65.448 70 165.481 20.677 235.637L150.47 105.216c70.204-49.356 170.226-44.735 235.638 20.676zM125.892 386.108c-65.448-65.448-70-165.481-20.677-235.637L361.53 406.784c-70.203 49.356-170.226 44.736-235.638-20.676z"}}]})(props);
     }function FaBatteryFull (props) {
       return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M544 160v64h32v64h-32v64H64V160h480m16-64H48c-26.51 0-48 21.49-48 48v224c0 26.51 21.49 48 48 48h512c26.51 0 48-21.49 48-48v-16h8c13.255 0 24-10.745 24-24V184c0-13.255-10.745-24-24-24h-8v-16c0-26.51-21.49-48-48-48zm-48 96H96v128h416V192z"}}]})(props);
     }function FaBolt (props) {
@@ -3091,42 +3093,104 @@
         })));
     };
     /**
-     * Manual tab component - vertical mode switcher.
-     * Simplified interface with Simple/Expert mode selection.
+     * Manual tab component with simple/per-core modes.
      */
     const ManualTab = () => {
         const { state, api } = useDeckTune();
         const { info: platformInfo } = usePlatformInfo();
-        const [mode, setMode] = SP_REACT.useState("simple");
+        const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
+        const [simpleMode, setSimpleMode] = SP_REACT.useState(true);
+        const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
+        const [isApplying, setIsApplying] = SP_REACT.useState(false);
+        const [expertMode, setExpertMode] = SP_REACT.useState(false);
         const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
-        const [pendingExpertToggle, setPendingExpertToggle] = SP_REACT.useState(false);
+        const safeLimit = platformInfo?.safe_limit ?? -30;
+        const currentMinLimit = expertMode ? -100 : safeLimit;
+        // Sync with state.cores
+        SP_REACT.useEffect(() => {
+            setCoreValues([...state.cores]);
+            const avg = Math.round(state.cores.reduce((sum, val) => sum + val, 0) / 4);
+            setSimpleValue(avg);
+        }, [state.cores]);
         /**
-         * Handle mode selection.
+         * Handle expert mode toggle.
          */
-        const handleModeSelect = (selectedMode) => {
-            if (selectedMode === "expert") {
-                // Show warning before switching to expert
-                setPendingExpertToggle(true);
+        const handleExpertModeToggle = () => {
+            if (!expertMode) {
                 setShowExpertWarning(true);
             }
             else {
-                setMode(selectedMode);
+                setExpertMode(false);
             }
         };
         /**
          * Confirm expert mode activation.
          */
         const handleExpertModeConfirm = () => {
-            setMode("expert");
+            setExpertMode(true);
             setShowExpertWarning(false);
-            setPendingExpertToggle(false);
         };
         /**
          * Cancel expert mode activation.
          */
         const handleExpertModeCancel = () => {
             setShowExpertWarning(false);
-            setPendingExpertToggle(false);
+        };
+        /**
+         * Handle simple mode toggle.
+         */
+        const handleSimpleModeToggle = () => {
+            if (!simpleMode) {
+                // Switching to simple: use average
+                const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+                setSimpleValue(avg);
+            }
+            else {
+                // Switching to per-core: copy simple value to all cores
+                setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
+            }
+            setSimpleMode(!simpleMode);
+        };
+        /**
+         * Handle simple slider change.
+         */
+        const handleSimpleValueChange = (value) => {
+            setSimpleValue(value);
+            setCoreValues([value, value, value, value]);
+        };
+        /**
+         * Handle slider value change for a specific core.
+         */
+        const handleCoreChange = (core, value) => {
+            const newValues = [...coreValues];
+            newValues[core] = value;
+            setCoreValues(newValues);
+        };
+        /**
+         * Apply current values.
+         */
+        const handleApply = async () => {
+            setIsApplying(true);
+            try {
+                await api.applyUndervolt(coreValues);
+            }
+            finally {
+                setIsApplying(false);
+            }
+        };
+        /**
+         * Disable undervolt (reset to 0 on backend, but keep UI values).
+         */
+        const handleDisable = async () => {
+            await api.disableUndervolt();
+            // Don't reset UI values - user can re-enable with same values
+        };
+        /**
+         * Reset UI values to 0.
+         */
+        const handleReset = () => {
+            setCoreValues([0, 0, 0, 0]);
+            setSimpleValue(0);
         };
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
             showExpertWarning && (window.SP_REACT.createElement("div", { style: {
@@ -3192,7 +3256,7 @@
                                 window.SP_REACT.createElement(FaTimes, { size: 10 }),
                                 window.SP_REACT.createElement("span", null, "Cancel"))))))),
             platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px", padding: "2px 0" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px" } },
                     platformInfo.variant,
                     " (",
                     platformInfo.model,
@@ -3200,65 +3264,108 @@
                     platformInfo.safe_limit,
                     "mV"))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "11px", marginBottom: "6px", fontWeight: "bold" } }, "Select Tuning Mode:")),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", onActivate: () => handleModeSelect("simple"), onClick: () => handleModeSelect("simple") },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "10px",
-                            backgroundColor: mode === "simple" ? "#1a9fff" : "#23262e",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            border: mode === "simple" ? "2px solid #1a9fff" : "2px solid transparent",
-                            transition: "all 0.2s ease"
-                        } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
-                            window.SP_REACT.createElement(FaSlidersH, { size: 12, style: { color: mode === "simple" ? "#fff" : "#1a9fff" } }),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "12px", fontWeight: "bold", color: mode === "simple" ? "#fff" : "#e0e0e0" } }, "Simple Mode")),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: mode === "simple" ? "#e0e0e0" : "#8b929a" } }, "Safe limits \u2022 Easy controls \u2022 Recommended")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", onActivate: () => handleModeSelect("expert"), onClick: () => handleModeSelect("expert") },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "10px",
-                            backgroundColor: mode === "expert" ? "#b71c1c" : "#23262e",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            border: mode === "expert" ? "2px solid #ff6b6b" : "2px solid transparent",
-                            transition: "all 0.2s ease"
-                        } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
-                            window.SP_REACT.createElement(FaExclamationTriangle, { size: 12, style: { color: mode === "expert" ? "#fff" : "#ff6b6b" } }),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "12px", fontWeight: "bold", color: mode === "expert" ? "#fff" : "#e0e0e0" } }, "Expert Undervolter Mode")),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: mode === "expert" ? "#ffb74d" : "#8b929a" } }, "No limits \u2022 Advanced \u2022 Use at your own risk")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "8px" }, "flow-children": "horizontal" },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleSimpleModeToggle, onClick: handleSimpleModeToggle },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "6px",
+                                backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "9px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                transition: "all 0.2s ease"
+                            } }, simpleMode ? "✓ Simple Mode" : "Per-Core Mode")),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeToggle, onClick: handleExpertModeToggle },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "6px",
+                                backgroundColor: expertMode ? "#b71c1c" : "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "9px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                transition: "all 0.2s ease",
+                                color: expertMode ? "#fff" : "#8b929a"
+                            } }, expertMode ? "⚠ Expert Mode" : "Expert Mode")))),
+            expertMode && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
-                        padding: "8px",
-                        backgroundColor: mode === "expert" ? "#5c1313" : "#1a3a5c",
-                        borderRadius: "6px",
-                        marginTop: "8px",
-                        border: mode === "expert" ? "1px solid #ff6b6b" : "1px solid #1a9fff"
-                    } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", lineHeight: "1.4" } }, mode === "simple" ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement("strong", null, "Simple Mode:"),
-                        " Safe undervolt range with platform-specific limits. Perfect for most users.")) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement("strong", { style: { color: "#ff6b6b" } }, "Expert Mode:"),
-                        " Extended range up to -100mV.",
-                        window.SP_REACT.createElement("span", { style: { color: "#ff9800" } }, " May cause instability!")))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        marginTop: "12px",
                         padding: "6px",
-                        backgroundColor: "#23262e",
+                        backgroundColor: "#5c1313",
                         borderRadius: "4px",
-                        fontSize: "10px",
-                        textAlign: "center",
-                        color: "#8b929a"
+                        border: "1px solid #ff6b6b",
+                        marginBottom: "8px"
                     } },
-                    "Active Mode: ",
-                    window.SP_REACT.createElement("span", { style: { color: mode === "expert" ? "#ff6b6b" : "#1a9fff", fontWeight: "bold" } }, mode === "simple" ? "Simple" : "Expert Undervolter"))),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", display: "flex", alignItems: "center", gap: "4px" } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { size: 9 }),
+                        window.SP_REACT.createElement("span", null, "Expert mode active \u2022 Range: -100mV"))))),
+            simpleMode ? (
+            /* Simple Mode: Single slider for all cores */
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
+            /* Per-core sliders */
+            [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
+                window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px", marginTop: "8px" }, "flow-children": "horizontal" },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleApply, onClick: handleApply },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                backgroundColor: "#1a9fff",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                opacity: isApplying ? 0.5 : 1
+                            } },
+                            isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaCheck, { size: 10 }),
+                            window.SP_REACT.createElement("span", null, "Apply"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleDisable, onClick: handleDisable },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                backgroundColor: "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "10px",
+                                fontWeight: "bold"
+                            } },
+                            window.SP_REACT.createElement(FaBan, { size: 10 }),
+                            window.SP_REACT.createElement("span", null, "Disable"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleReset, onClick: handleReset },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                backgroundColor: "#5c4813",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                color: "#ff9800"
+                            } },
+                            window.SP_REACT.createElement(FaTimes, { size: 10 }),
+                            window.SP_REACT.createElement("span", null, "Reset"))))),
             window.SP_REACT.createElement("style", null, `
           .gpfocus {
             box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
             transform: scale(1.02);
+          }
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
           }
         `)));
     };
@@ -3571,12 +3678,69 @@
     };
     // Global styles for ExpertMode
     const expertModeStyles = `
+  .expert-tab {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  
+  .expert-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #1a9fff, transparent);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+  }
+  
+  .expert-tab.active::after {
+    width: 80%;
+  }
+  
   .expert-tab.gpfocus {
     border: 2px solid #1a9fff;
-    box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+    box-shadow: 0 0 15px rgba(26, 159, 255, 0.6);
+    transform: scale(1.05);
   }
+  
   .expert-tab:hover {
     background-color: rgba(26, 159, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .expert-tab.active {
+    box-shadow: 0 4px 12px rgba(26, 159, 255, 0.4);
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes buttonPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(26, 159, 255, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(26, 159, 255, 0);
+    }
+  }
+  
+  .animated-button {
+    animation: slideIn 0.3s ease-out;
+    transition: all 0.2s ease;
+  }
+  
+  .animated-button:active {
+    transform: scale(0.95);
   }
 `;
     // Inject styles
@@ -4335,66 +4499,171 @@
         if (isFirstRun === null) {
             return (window.SP_REACT.createElement(DFL.PanelSection, { title: "DeckTune" },
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
+                    window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } },
+                        window.SP_REACT.createElement("div", { className: "loading-spinner" }),
+                        "Loading..."))));
         }
+        const getStatusColor = () => {
+            if (state.status === "enabled" || state.status === "DYNAMIC RUNNING")
+                return "#4caf50";
+            if (state.status === "error")
+                return "#f44336";
+            return "#8b929a";
+        };
+        const getStatusText = () => {
+            if (state.status === "DYNAMIC RUNNING")
+                return "DYN";
+            if (state.status === "enabled")
+                return "ON";
+            if (state.status === "error")
+                return "ERR";
+            return "OFF";
+        };
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            window.SP_REACT.createElement("style", null, `
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+          
+          @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(26, 159, 255, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(26, 159, 255, 0.6); }
+          }
+          
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          .mode-button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          
+          .mode-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+          }
+          
+          .mode-button:hover::before {
+            left: 100%;
+          }
+          
+          .mode-button.active {
+            background: linear-gradient(135deg, #1a9fff 0%, #0d7fd8 100%);
+            animation: glow 2s ease-in-out infinite;
+          }
+          
+          .status-badge {
+            animation: pulse 2s ease-in-out infinite;
+          }
+          
+          .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(139, 146, 154, 0.3);
+            border-top-color: #1a9fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 8px;
+          }
+          
+          .fade-in {
+            animation: fadeInUp 0.5s ease-out;
+          }
+        `),
             window.SP_REACT.createElement(DFL.PanelSection, null,
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard"), style: {
-                            minHeight: "32px",
-                            padding: "4px 8px",
-                            backgroundColor: mode === "wizard" ? "#1a9fff" : "transparent",
-                            marginBottom: "4px"
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                fontSize: "11px",
-                                color: mode === "wizard" ? "#fff" : "#8b929a"
+                    window.SP_REACT.createElement("div", { className: "fade-in" },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard"), className: `mode-button ${mode === "wizard" ? "active" : ""}`, style: {
+                                minHeight: "40px",
+                                padding: "8px 12px",
+                                backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                                marginBottom: "6px",
+                                borderRadius: "8px",
+                                border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
                             } },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                                window.SP_REACT.createElement(FaMagic, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, "Wizard Mode")),
-                            mode === "wizard" && (window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "9px",
-                                    color: state.status === "enabled" || state.status === "DYNAMIC RUNNING"
-                                        ? "#4caf50"
-                                        : state.status === "error"
-                                            ? "#f44336"
-                                            : "#8b929a",
-                                    padding: "2px 4px",
-                                    backgroundColor: "rgba(0,0,0,0.3)",
-                                    borderRadius: "2px",
-                                } }, state.status === "DYNAMIC RUNNING" ? "DYN" : state.status === "enabled" ? "ON" : state.status === "error" ? "ERR" : "OFF"))))),
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    fontSize: "12px",
+                                    fontWeight: mode === "wizard" ? "bold" : "normal",
+                                    color: mode === "wizard" ? "#fff" : "#8b929a"
+                                } },
+                                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                                    window.SP_REACT.createElement(FaMagic, { size: 14, style: {
+                                            filter: mode === "wizard" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none"
+                                        } }),
+                                    window.SP_REACT.createElement("span", null, "Wizard Mode")),
+                                mode === "wizard" && (window.SP_REACT.createElement("div", { className: "status-badge", style: {
+                                        fontSize: "9px",
+                                        color: "#fff",
+                                        padding: "3px 6px",
+                                        backgroundColor: getStatusColor(),
+                                        borderRadius: "4px",
+                                        fontWeight: "bold",
+                                        boxShadow: `0 0 10px ${getStatusColor()}`,
+                                    } }, getStatusText())))))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert"), style: {
-                            minHeight: "32px",
-                            padding: "4px 8px",
-                            backgroundColor: mode === "expert" ? "#1a9fff" : "transparent"
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                fontSize: "11px",
-                                color: mode === "expert" ? "#fff" : "#8b929a"
+                    window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.1s" } },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert"), className: `mode-button ${mode === "expert" ? "active" : ""}`, style: {
+                                minHeight: "40px",
+                                padding: "8px 12px",
+                                backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                                borderRadius: "8px",
+                                border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
                             } },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                                window.SP_REACT.createElement(FaCog, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, "Expert Mode")),
-                            mode === "expert" && (window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "9px",
-                                    color: state.status === "enabled" || state.status === "DYNAMIC RUNNING"
-                                        ? "#4caf50"
-                                        : state.status === "error"
-                                            ? "#f44336"
-                                            : "#8b929a",
-                                    padding: "2px 4px",
-                                    backgroundColor: "rgba(0,0,0,0.3)",
-                                    borderRadius: "2px",
-                                } }, state.status === "DYNAMIC RUNNING" ? "DYN" : state.status === "enabled" ? "ON" : state.status === "error" ? "ERR" : "OFF")))))),
-            mode === "wizard" ? window.SP_REACT.createElement(WizardMode, { onRunSetup: handleRunSetupWizard }) : window.SP_REACT.createElement(ExpertMode, { onRunSetup: handleRunSetupWizard })));
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    fontSize: "12px",
+                                    fontWeight: mode === "expert" ? "bold" : "normal",
+                                    color: mode === "expert" ? "#fff" : "#8b929a"
+                                } },
+                                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                                    window.SP_REACT.createElement(FaCog, { size: 14, style: {
+                                            filter: mode === "expert" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none",
+                                            animation: mode === "expert" ? "spin 3s linear infinite" : "none"
+                                        } }),
+                                    window.SP_REACT.createElement("span", null, "Expert Mode")),
+                                mode === "expert" && (window.SP_REACT.createElement("div", { className: "status-badge", style: {
+                                        fontSize: "9px",
+                                        color: "#fff",
+                                        padding: "3px 6px",
+                                        backgroundColor: getStatusColor(),
+                                        borderRadius: "4px",
+                                        fontWeight: "bold",
+                                        boxShadow: `0 0 10px ${getStatusColor()}`,
+                                    } }, getStatusText()))))))),
+            window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.2s" } }, mode === "wizard" ? window.SP_REACT.createElement(WizardMode, { onRunSetup: handleRunSetupWizard }) : window.SP_REACT.createElement(ExpertMode, { onRunSetup: handleRunSetupWizard }))));
     };
     /**
      * Main app component with initialization.

@@ -270,26 +270,36 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
- * Manual tab component - vertical mode switcher.
- * Simplified interface with Simple/Expert mode selection.
+ * Manual tab component with simple/per-core modes.
  */
 const ManualTab: FC = () => {
   const { state, api } = useDeckTune();
   const { info: platformInfo } = usePlatformInfo();
-  const [mode, setMode] = useState<"simple" | "expert">("simple");
+  const [coreValues, setCoreValues] = useState<number[]>([...state.cores]);
+  const [simpleMode, setSimpleMode] = useState<boolean>(true);
+  const [simpleValue, setSimpleValue] = useState<number>(-25);
+  const [isApplying, setIsApplying] = useState(false);
+  const [expertMode, setExpertMode] = useState<boolean>(false);
   const [showExpertWarning, setShowExpertWarning] = useState<boolean>(false);
-  const [pendingExpertToggle, setPendingExpertToggle] = useState<boolean>(false);
+
+  const safeLimit = platformInfo?.safe_limit ?? -30;
+  const currentMinLimit = expertMode ? -100 : safeLimit;
+
+  // Sync with state.cores
+  useEffect(() => {
+    setCoreValues([...state.cores]);
+    const avg = Math.round(state.cores.reduce((sum, val) => sum + val, 0) / 4);
+    setSimpleValue(avg);
+  }, [state.cores]);
 
   /**
-   * Handle mode selection.
+   * Handle expert mode toggle.
    */
-  const handleModeSelect = (selectedMode: "simple" | "expert") => {
-    if (selectedMode === "expert") {
-      // Show warning before switching to expert
-      setPendingExpertToggle(true);
+  const handleExpertModeToggle = () => {
+    if (!expertMode) {
       setShowExpertWarning(true);
     } else {
-      setMode(selectedMode);
+      setExpertMode(false);
     }
   };
 
@@ -297,9 +307,8 @@ const ManualTab: FC = () => {
    * Confirm expert mode activation.
    */
   const handleExpertModeConfirm = () => {
-    setMode("expert");
+    setExpertMode(true);
     setShowExpertWarning(false);
-    setPendingExpertToggle(false);
   };
 
   /**
@@ -307,7 +316,66 @@ const ManualTab: FC = () => {
    */
   const handleExpertModeCancel = () => {
     setShowExpertWarning(false);
-    setPendingExpertToggle(false);
+  };
+
+  /**
+   * Handle simple mode toggle.
+   */
+  const handleSimpleModeToggle = () => {
+    if (!simpleMode) {
+      // Switching to simple: use average
+      const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+      setSimpleValue(avg);
+    } else {
+      // Switching to per-core: copy simple value to all cores
+      setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
+    }
+    setSimpleMode(!simpleMode);
+  };
+
+  /**
+   * Handle simple slider change.
+   */
+  const handleSimpleValueChange = (value: number) => {
+    setSimpleValue(value);
+    setCoreValues([value, value, value, value]);
+  };
+
+  /**
+   * Handle slider value change for a specific core.
+   */
+  const handleCoreChange = (core: number, value: number) => {
+    const newValues = [...coreValues];
+    newValues[core] = value;
+    setCoreValues(newValues);
+  };
+
+  /**
+   * Apply current values.
+   */
+  const handleApply = async () => {
+    setIsApplying(true);
+    try {
+      await api.applyUndervolt(coreValues);
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  /**
+   * Disable undervolt (reset to 0 on backend, but keep UI values).
+   */
+  const handleDisable = async () => {
+    await api.disableUndervolt();
+    // Don't reset UI values - user can re-enable with same values
+  };
+
+  /**
+   * Reset UI values to 0.
+   */
+  const handleReset = () => {
+    setCoreValues([0, 0, 0, 0]);
+    setSimpleValue(0);
   };
 
   return (
@@ -411,115 +479,187 @@ const ManualTab: FC = () => {
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>
-          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "6px", padding: "2px 0" }}>
+          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "6px" }}>
             {platformInfo.variant} ({platformInfo.model}) • Limit: {platformInfo.safe_limit}mV
           </div>
         </PanelSectionRow>
       )}
 
-      {/* Mode Switcher - Vertical like WizardMode */}
+      {/* Mode toggles */}
       <PanelSectionRow>
-        <div style={{ fontSize: "11px", marginBottom: "6px", fontWeight: "bold" }}>
-          Select Tuning Mode:
-        </div>
-      </PanelSectionRow>
+        <Focusable style={{ display: "flex", gap: "8px", marginBottom: "8px" }} flow-children="horizontal">
+          {/* Simple Mode Toggle */}
+          <Focusable
+            style={{ flex: 1 }}
+            focusClassName="gpfocus"
+            onActivate={handleSimpleModeToggle}
+            onClick={handleSimpleModeToggle}
+          >
+            <div style={{
+              padding: "6px",
+              backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "9px",
+              fontWeight: "bold",
+              textAlign: "center",
+              transition: "all 0.2s ease"
+            }}>
+              {simpleMode ? "✓ Simple Mode" : "Per-Core Mode"}
+            </div>
+          </Focusable>
 
-      {/* Simple Mode Button */}
-      <PanelSectionRow>
-        <Focusable
-          focusClassName="gpfocus"
-          onActivate={() => handleModeSelect("simple")}
-          onClick={() => handleModeSelect("simple")}
-        >
-          <div style={{
-            padding: "10px",
-            backgroundColor: mode === "simple" ? "#1a9fff" : "#23262e",
-            borderRadius: "6px",
-            cursor: "pointer",
-            border: mode === "simple" ? "2px solid #1a9fff" : "2px solid transparent",
-            transition: "all 0.2s ease"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-              <FaSlidersH size={12} style={{ color: mode === "simple" ? "#fff" : "#1a9fff" }} />
-              <span style={{ fontSize: "12px", fontWeight: "bold", color: mode === "simple" ? "#fff" : "#e0e0e0" }}>
-                Simple Mode
-              </span>
+          {/* Expert Mode Toggle */}
+          <Focusable
+            style={{ flex: 1 }}
+            focusClassName="gpfocus"
+            onActivate={handleExpertModeToggle}
+            onClick={handleExpertModeToggle}
+          >
+            <div style={{
+              padding: "6px",
+              backgroundColor: expertMode ? "#b71c1c" : "#3d4450",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "9px",
+              fontWeight: "bold",
+              textAlign: "center",
+              transition: "all 0.2s ease",
+              color: expertMode ? "#fff" : "#8b929a"
+            }}>
+              {expertMode ? "⚠ Expert Mode" : "Expert Mode"}
             </div>
-            <div style={{ fontSize: "9px", color: mode === "simple" ? "#e0e0e0" : "#8b929a" }}>
-              Safe limits • Easy controls • Recommended
-            </div>
-          </div>
+          </Focusable>
         </Focusable>
       </PanelSectionRow>
 
-      {/* Expert Mode Button */}
-      <PanelSectionRow>
-        <Focusable
-          focusClassName="gpfocus"
-          onActivate={() => handleModeSelect("expert")}
-          onClick={() => handleModeSelect("expert")}
-        >
+      {/* Expert Mode Active Warning */}
+      {expertMode && (
+        <PanelSectionRow>
           <div style={{
-            padding: "10px",
-            backgroundColor: mode === "expert" ? "#b71c1c" : "#23262e",
-            borderRadius: "6px",
-            cursor: "pointer",
-            border: mode === "expert" ? "2px solid #ff6b6b" : "2px solid transparent",
-            transition: "all 0.2s ease"
+            padding: "6px",
+            backgroundColor: "#5c1313",
+            borderRadius: "4px",
+            border: "1px solid #ff6b6b",
+            marginBottom: "8px"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-              <FaExclamationTriangle size={12} style={{ color: mode === "expert" ? "#fff" : "#ff6b6b" }} />
-              <span style={{ fontSize: "12px", fontWeight: "bold", color: mode === "expert" ? "#fff" : "#e0e0e0" }}>
-                Expert Undervolter Mode
-              </span>
-            </div>
-            <div style={{ fontSize: "9px", color: mode === "expert" ? "#ffb74d" : "#8b929a" }}>
-              No limits • Advanced • Use at your own risk
+            <div style={{ fontSize: "9px", color: "#ff9800", display: "flex", alignItems: "center", gap: "4px" }}>
+              <FaExclamationTriangle size={9} />
+              <span>Expert mode active • Range: -100mV</span>
             </div>
           </div>
+        </PanelSectionRow>
+      )}
+
+      {/* Sliders */}
+      {simpleMode ? (
+        /* Simple Mode: Single slider for all cores */
+        <PanelSectionRow>
+          <SliderField
+            label="All Cores"
+            value={simpleValue}
+            min={currentMinLimit}
+            max={0}
+            step={1}
+            showValue={true}
+            onChange={handleSimpleValueChange}
+            valueSuffix=" mV"
+            bottomSeparator="none"
+          />
+        </PanelSectionRow>
+      ) : (
+        /* Per-core sliders */
+        [0, 1, 2, 3].map((core) => (
+          <PanelSectionRow key={core}>
+            <SliderField
+              label={`Core ${core}`}
+              value={coreValues[core]}
+              min={currentMinLimit}
+              max={0}
+              step={1}
+              showValue={true}
+              onChange={(value: number) => handleCoreChange(core, value)}
+              valueSuffix=" mV"
+              bottomSeparator="none"
+            />
+          </PanelSectionRow>
+        ))
+      )}
+
+      {/* Action buttons */}
+      <PanelSectionRow>
+        <Focusable style={{ display: "flex", gap: "6px", marginTop: "8px" }} flow-children="horizontal">
+          <Focusable
+            style={{ flex: 1 }}
+            focusClassName="gpfocus"
+            onActivate={handleApply}
+            onClick={handleApply}
+          >
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              padding: "8px",
+              backgroundColor: "#1a9fff",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "10px",
+              fontWeight: "bold",
+              opacity: isApplying ? 0.5 : 1
+            }}>
+              {isApplying ? <FaSpinner className="spin" size={10} /> : <FaCheck size={10} />}
+              <span>Apply</span>
+            </div>
+          </Focusable>
+
+          <Focusable
+            style={{ flex: 1 }}
+            focusClassName="gpfocus"
+            onActivate={handleDisable}
+            onClick={handleDisable}
+          >
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              padding: "8px",
+              backgroundColor: "#3d4450",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "10px",
+              fontWeight: "bold"
+            }}>
+              <FaBan size={10} />
+              <span>Disable</span>
+            </div>
+          </Focusable>
+
+          <Focusable
+            style={{ flex: 1 }}
+            focusClassName="gpfocus"
+            onActivate={handleReset}
+            onClick={handleReset}
+          >
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              padding: "8px",
+              backgroundColor: "#5c4813",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "10px",
+              fontWeight: "bold",
+              color: "#ff9800"
+            }}>
+              <FaTimes size={10} />
+              <span>Reset</span>
+            </div>
+          </Focusable>
         </Focusable>
-      </PanelSectionRow>
-
-      {/* Mode description */}
-      <PanelSectionRow>
-        <div style={{
-          padding: "8px",
-          backgroundColor: mode === "expert" ? "#5c1313" : "#1a3a5c",
-          borderRadius: "6px",
-          marginTop: "8px",
-          border: mode === "expert" ? "1px solid #ff6b6b" : "1px solid #1a9fff"
-        }}>
-          <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
-            {mode === "simple" ? (
-              <>
-                <strong>Simple Mode:</strong> Safe undervolt range with platform-specific limits. 
-                Perfect for most users.
-              </>
-            ) : (
-              <>
-                <strong style={{ color: "#ff6b6b" }}>Expert Mode:</strong> Extended range up to -100mV. 
-                <span style={{ color: "#ff9800" }}> May cause instability!</span>
-              </>
-            )}
-          </div>
-        </div>
-      </PanelSectionRow>
-
-      {/* Current status */}
-      <PanelSectionRow>
-        <div style={{
-          marginTop: "12px",
-          padding: "6px",
-          backgroundColor: "#23262e",
-          borderRadius: "4px",
-          fontSize: "10px",
-          textAlign: "center",
-          color: "#8b929a"
-        }}>
-          Active Mode: <span style={{ color: mode === "expert" ? "#ff6b6b" : "#1a9fff", fontWeight: "bold" }}>
-            {mode === "simple" ? "Simple" : "Expert Undervolter"}
-          </span>
-        </div>
       </PanelSectionRow>
 
       <style>
@@ -527,6 +667,13 @@ const ManualTab: FC = () => {
           .gpfocus {
             box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
             transform: scale(1.02);
+          }
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
           }
         `}
       </style>
@@ -1055,12 +1202,69 @@ const formatUptime = (seconds: number): string => {
 
 // Global styles for ExpertMode
 const expertModeStyles = `
+  .expert-tab {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  
+  .expert-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #1a9fff, transparent);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+  }
+  
+  .expert-tab.active::after {
+    width: 80%;
+  }
+  
   .expert-tab.gpfocus {
     border: 2px solid #1a9fff;
-    box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+    box-shadow: 0 0 15px rgba(26, 159, 255, 0.6);
+    transform: scale(1.05);
   }
+  
   .expert-tab:hover {
     background-color: rgba(26, 159, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .expert-tab.active {
+    box-shadow: 0 4px 12px rgba(26, 159, 255, 0.4);
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes buttonPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(26, 159, 255, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(26, 159, 255, 0);
+    }
+  }
+  
+  .animated-button {
+    animation: slideIn 0.3s ease-out;
+    transition: all 0.2s ease;
+  }
+  
+  .animated-button:active {
+    transform: scale(0.95);
   }
 `;
 
