@@ -4290,7 +4290,16 @@
                         window.SP_REACT.createElement("div", null,
                             window.SP_REACT.createElement("div", { style: { fontSize: "13px", fontWeight: "bold", color: "#fff" } }, t.languageSection),
                             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, "Interface Language / \u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430"))),
-                    window.SP_REACT.createElement(DFL.DropdownItem, { label: "", menuLabel: t.selectLanguage, rgOptions: [
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "10px 12px",
+                            backgroundColor: "rgba(26, 159, 255, 0.1)",
+                            borderRadius: "6px",
+                            marginBottom: "8px",
+                            border: "1px solid rgba(26, 159, 255, 0.2)"
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginBottom: "4px" } }, language === "ru" ? "Текущий язык:" : "Current Language:"),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "12px", fontWeight: "bold", color: "#fff" } }, language === "en" ? "🇬🇧 English" : "🇷🇺 Русский")),
+                    window.SP_REACT.createElement(DFL.DropdownItem, { label: language === "ru" ? "Изменить язык" : "Change Language", menuLabel: t.selectLanguage, rgOptions: [
                             { data: "en", label: `🇬🇧 ${t.english}` },
                             { data: "ru", label: `🇷🇺 ${t.russian}` }
                         ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data), bottomSeparator: "none" }),
@@ -4353,7 +4362,40 @@
                             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, expertModeEnabled
                                 ? (language === "ru" ? "⚠️ Активен (-100мВ)" : "⚠️ Active (-100mV)")
                                 : (language === "ru" ? "Безопасный режим" : "Safe mode")))),
-                    window.SP_REACT.createElement(DFL.ToggleField, { label: t.enableExpertMode, description: t.expertModeDescription, checked: expertModeEnabled, onChange: handleExpertModeToggle, bottomSeparator: "none" }),
+                    window.SP_REACT.createElement(DFL.Focusable, { onActivate: () => handleExpertModeToggle(!expertModeEnabled), onClick: () => handleExpertModeToggle(!expertModeEnabled) },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                padding: "10px 12px",
+                                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                            } },
+                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", color: "#fff", marginBottom: "2px" } }, t.enableExpertMode),
+                                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, t.expertModeDescription)),
+                            window.SP_REACT.createElement("div", { style: {
+                                    width: "44px",
+                                    height: "24px",
+                                    borderRadius: "12px",
+                                    backgroundColor: expertModeEnabled ? "#4caf50" : "#3d4450",
+                                    position: "relative",
+                                    transition: "all 0.3s ease",
+                                    marginLeft: "12px"
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        width: "20px",
+                                        height: "20px",
+                                        borderRadius: "10px",
+                                        backgroundColor: "#fff",
+                                        position: "absolute",
+                                        top: "2px",
+                                        left: expertModeEnabled ? "22px" : "2px",
+                                        transition: "all 0.3s ease",
+                                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.3)"
+                                    } })))),
                     expertModeEnabled && (window.SP_REACT.createElement("div", { style: {
                             marginTop: "10px",
                             padding: "10px",

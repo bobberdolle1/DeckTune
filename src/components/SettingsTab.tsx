@@ -251,8 +251,24 @@ export const SettingsTab: FC = () => {
             </div>
           </div>
           
+          {/* Current Language Display */}
+          <div style={{
+            padding: "10px 12px",
+            backgroundColor: "rgba(26, 159, 255, 0.1)",
+            borderRadius: "6px",
+            marginBottom: "8px",
+            border: "1px solid rgba(26, 159, 255, 0.2)"
+          }}>
+            <div style={{ fontSize: "9px", color: "#8b929a", marginBottom: "4px" }}>
+              {language === "ru" ? "Текущий язык:" : "Current Language:"}
+            </div>
+            <div style={{ fontSize: "12px", fontWeight: "bold", color: "#fff" }}>
+              {language === "en" ? "🇬🇧 English" : "🇷🇺 Русский"}
+            </div>
+          </div>
+          
           <DropdownItem 
-            label=""
+            label={language === "ru" ? "Изменить язык" : "Change Language"}
             menuLabel={t.selectLanguage}
             rgOptions={[
               { data: "en", label: `🇬🇧 ${t.english}` }, 
@@ -338,13 +354,52 @@ export const SettingsTab: FC = () => {
             </div>
           </div>
           
-          <ToggleField 
-            label={t.enableExpertMode}
-            description={t.expertModeDescription}
-            checked={expertModeEnabled} 
-            onChange={handleExpertModeToggle}
-            bottomSeparator="none"
-          />
+          {/* Custom Toggle for Expert Mode */}
+          <Focusable
+            onActivate={() => handleExpertModeToggle(!expertModeEnabled)}
+            onClick={() => handleExpertModeToggle(!expertModeEnabled)}
+          >
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "10px 12px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderRadius: "6px",
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "11px", fontWeight: "bold", color: "#fff", marginBottom: "2px" }}>
+                  {t.enableExpertMode}
+                </div>
+                <div style={{ fontSize: "9px", color: "#8b929a" }}>
+                  {t.expertModeDescription}
+                </div>
+              </div>
+              <div style={{
+                width: "44px",
+                height: "24px",
+                borderRadius: "12px",
+                backgroundColor: expertModeEnabled ? "#4caf50" : "#3d4450",
+                position: "relative",
+                transition: "all 0.3s ease",
+                marginLeft: "12px"
+              }}>
+                <div style={{
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "10px",
+                  backgroundColor: "#fff",
+                  position: "absolute",
+                  top: "2px",
+                  left: expertModeEnabled ? "22px" : "2px",
+                  transition: "all 0.3s ease",
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.3)"
+                }} />
+              </div>
+            </div>
+          </Focusable>
           
           {expertModeEnabled && (
             <div style={{ 
