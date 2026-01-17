@@ -5025,8 +5025,33 @@
                                         borderRadius: "4px",
                                         fontWeight: "bold",
                                         boxShadow: `0 0 10px ${getStatusColor()}`,
-                                    } }, getStatusText()))))))),
-            window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.2s" } }, mode === "wizard" ? window.SP_REACT.createElement(WizardMode, { onRunSetup: handleRunSetupWizard }) : window.SP_REACT.createElement(ExpertMode, { onRunSetup: handleRunSetupWizard }))));
+                                    } }, getStatusText())))))),
+                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                    window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.2s" } },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("settings"), className: `mode-button ${mode === "settings" ? "active" : ""}`, style: {
+                                minHeight: "40px",
+                                padding: "8px 12px",
+                                backgroundColor: mode === "settings" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                                borderRadius: "8px",
+                                border: mode === "settings" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: mode === "settings" ? "bold" : "normal",
+                                    color: mode === "settings" ? "#fff" : "#8b929a"
+                                } },
+                                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                                    window.SP_REACT.createElement(FaCog, { size: 14, style: {
+                                            filter: mode === "settings" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none"
+                                        } }),
+                                    window.SP_REACT.createElement("span", null, "Settings"))))))),
+            window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.3s" } },
+                mode === "wizard" && window.SP_REACT.createElement(WizardMode, { onRunSetup: handleRunSetupWizard }),
+                mode === "expert" && window.SP_REACT.createElement(ExpertMode, { onRunSetup: handleRunSetupWizard }),
+                mode === "settings" && window.SP_REACT.createElement(SettingsTab, null))));
     };
     /**
      * Main app component with initialization.
