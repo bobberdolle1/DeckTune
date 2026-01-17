@@ -22,7 +22,12 @@ Write-Host "Deploying to Steam Deck..." -ForegroundColor Yellow
 scp $ZIP_FILE deck@192.168.0.163:~/Downloads/
 
 # Install and restart
-ssh -t deck@192.168.0.163 "echo 7373 | sudo -S rm -rf ~/homebrew/plugins/DeckTune && echo 7373 | sudo -S unzip -q -o ~/Downloads/DeckTune.zip -d ~/homebrew/plugins/ && echo 7373 | sudo -S ~/homebrew/plugins/DeckTune/install.sh && echo 7373 | sudo -S systemctl restart plugin_loader && sleep 2 && echo 'Deployment complete!'"
+ssh -t deck@192.168.0.163 "echo 7373 | sudo -S rm -rf ~/homebrew/plugins/DeckTune && echo 7373 | sudo -S unzip -q -o ~/Downloads/DeckTune.zip -d ~/homebrew/plugins/ && echo 7373 | sudo -S ~/homebrew/plugins/DeckTune/install.sh && echo 7373 | sudo -S systemctl restart plugin_loader"
+
+# Wait and restart again to ensure UI refresh
+Write-Host "Waiting for plugin_loader to restart..." -ForegroundColor Yellow
+Start-Sleep -Seconds 3
+ssh deck@192.168.0.163 "echo 7373 | sudo -S systemctl restart plugin_loader"
 
 Write-Host ""
 Write-Host "=== Deployed successfully ===" -ForegroundColor Green
