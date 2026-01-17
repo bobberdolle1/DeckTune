@@ -95,9 +95,10 @@ export const SettingsTab: FC = () => {
 
   return (
     <div style={{
-      height: "100%",
+      maxHeight: "calc(100vh - 120px)",
       overflow: "auto",
-      overflowX: "hidden"
+      overflowX: "hidden",
+      paddingRight: "4px"
     }}>
       {/* Expert Mode Warning Dialog */}
       {showExpertWarning && (

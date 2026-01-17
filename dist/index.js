@@ -3227,9 +3227,10 @@
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
             window.SP_REACT.createElement("div", { style: {
-                    height: "calc(100vh - 280px)",
+                    maxHeight: "calc(100vh - 280px)",
                     overflow: "auto",
-                    overflowX: "hidden"
+                    overflowX: "hidden",
+                    paddingRight: "4px"
                 } },
                 window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
                     window.SP_REACT.createElement(ManualTab, null)),
@@ -4175,9 +4176,10 @@
             setShowExpertWarning(false);
         };
         return (window.SP_REACT.createElement("div", { style: {
-                height: "100%",
+                maxHeight: "calc(100vh - 120px)",
                 overflow: "auto",
-                overflowX: "hidden"
+                overflowX: "hidden",
+                paddingRight: "4px"
             } },
             showExpertWarning && (window.SP_REACT.createElement("div", { style: {
                     position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
