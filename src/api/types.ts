@@ -109,6 +109,8 @@ export interface Settings {
   runAtStartup: boolean;
   isRunAutomatically: boolean;
   timeoutApply: number;
+  language?: "en" | "ru";
+  expertMode?: boolean;
 }
 
 /**

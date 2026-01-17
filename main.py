@@ -58,7 +58,9 @@ DEFAULT_SETTINGS = {
         "isGlobal": False,
         "runAtStartup": False,
         "isRunAutomatically": True,
-        "timeoutApply": 15
+        "timeoutApply": 15,
+        "language": "en",
+        "expertMode": False
     },
     "dynamicSettings": {
         "cores": [

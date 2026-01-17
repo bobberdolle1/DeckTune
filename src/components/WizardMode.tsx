@@ -319,18 +319,19 @@ export const WizardMode: FC<WizardModeProps> = ({ onComplete, onCancel }) => {
               borderRadius: "8px",
               marginBottom: "12px",
               border: "1px solid #ff9800",
+              animation: "fadeInUp 0.4s ease-out",
             }}
           >
             <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
             <div>
               <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
-                Missing Components
+                Missing System Packages
               </div>
               <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
                 Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
               </div>
               <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
-                Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder.
+                Install with: <code style={{ backgroundColor: "#3d4450", padding: "2px 4px", borderRadius: "2px" }}>sudo pacman -S stress-ng memtester</code>
               </div>
             </div>
           </div>
@@ -463,7 +464,7 @@ const StepIndicator: FC<StepIndicatorProps> = ({ currentStep }) => {
 };
 
 /**
- * Compact Binning Configuration Panel - inline expandable settings.
+ * Compact Binning Configuration Panel - inline expandable settings with modern animations.
  * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 interface BinningConfigPanelProps {
@@ -477,6 +478,7 @@ const BinningConfigPanel: FC<BinningConfigPanelProps> = ({ config, onSave, isExp
   const [testDuration, setTestDuration] = useState(config?.test_duration || 60);
   const [stepSize, setStepSize] = useState(config?.step_size || 5);
   const [startValue, setStartValue] = useState(config?.start_value || -10);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Default values
   const DEFAULT_TEST_DURATION = 60;
@@ -493,11 +495,16 @@ const BinningConfigPanel: FC<BinningConfigPanelProps> = ({ config, onSave, isExp
   }, [config]);
 
   const handleSave = async () => {
-    await onSave({
-      test_duration: testDuration,
-      step_size: stepSize,
-      start_value: startValue,
-    });
+    setIsSaving(true);
+    try {
+      await onSave({
+        test_duration: testDuration,
+        step_size: stepSize,
+        start_value: startValue,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -511,102 +518,221 @@ const BinningConfigPanel: FC<BinningConfigPanelProps> = ({ config, onSave, isExp
   return (
     <div
       style={{
-        padding: "4px",
-        backgroundColor: "#1a1d24",
-        borderRadius: "4px",
-        marginTop: "4px",
+        padding: "8px",
+        background: "linear-gradient(135deg, #1a1d24 0%, #23262e 100%)",
+        borderRadius: "8px",
+        marginTop: "6px",
         border: "1px solid #3d4450",
         maxWidth: "100%",
         overflow: "hidden",
+        animation: "slideDown 0.3s ease-out, glow 2s ease-in-out infinite",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
       }}
     >
-      <div style={{ fontSize: "9px", fontWeight: "bold", marginBottom: "4px", color: "#8b929a" }}>
-        Advanced Settings
+      <div style={{ 
+        fontSize: "10px", 
+        fontWeight: "bold", 
+        marginBottom: "8px", 
+        color: "#1a9fff",
+        display: "flex",
+        alignItems: "center",
+        gap: "6px"
+      }}>
+        <FaCog className="spin-slow" size={10} />
+        <span>Advanced Settings</span>
       </div>
 
-      {/* Sliders container - ultra compact */}
-      <div style={{ maxWidth: "100%", paddingRight: "2px" }}>
+      {/* Sliders container - compact with max width */}
+      <div style={{ maxWidth: "280px", margin: "0 auto" }}>
         {/* Test Duration */}
-        <div style={{ marginBottom: "2px" }}>
-          <div style={{ fontSize: "8px", color: "#8b929a", marginBottom: "1px" }}>
-            Test Duration: {testDuration}s
+        <div style={{ 
+          marginBottom: "6px",
+          padding: "4px 6px",
+          backgroundColor: "rgba(26, 159, 255, 0.05)",
+          borderRadius: "4px",
+          border: "1px solid rgba(26, 159, 255, 0.1)"
+        }}>
+          <div style={{ 
+            fontSize: "8px", 
+            color: "#8b929a", 
+            marginBottom: "2px",
+            display: "flex",
+            justifyContent: "space-between"
+          }}>
+            <span>Test Duration</span>
+            <span style={{ color: "#1a9fff", fontWeight: "bold" }}>{testDuration}s</span>
           </div>
-          <SliderField
-            label=""
-            description=""
-            value={testDuration}
-            min={30}
-            max={300}
-            step={10}
-            onChange={(value: number) => setTestDuration(value)}
-            showValue={false}
-            bottomSeparator="none"
-          />
+          <div style={{ transform: "scale(0.9)", transformOrigin: "left center" }}>
+            <SliderField
+              label=""
+              value={testDuration}
+              min={30}
+              max={300}
+              step={10}
+              onChange={(value: number) => setTestDuration(value)}
+              showValue={false}
+              bottomSeparator="none"
+            />
+          </div>
         </div>
 
         {/* Step Size */}
-        <div style={{ marginBottom: "2px" }}>
-          <div style={{ fontSize: "8px", color: "#8b929a", marginBottom: "1px" }}>
-            Step Size: {stepSize}mV
+        <div style={{ 
+          marginBottom: "6px",
+          padding: "4px 6px",
+          backgroundColor: "rgba(76, 175, 80, 0.05)",
+          borderRadius: "4px",
+          border: "1px solid rgba(76, 175, 80, 0.1)"
+        }}>
+          <div style={{ 
+            fontSize: "8px", 
+            color: "#8b929a", 
+            marginBottom: "2px",
+            display: "flex",
+            justifyContent: "space-between"
+          }}>
+            <span>Step Size</span>
+            <span style={{ color: "#4caf50", fontWeight: "bold" }}>{stepSize}mV</span>
           </div>
-          <SliderField
-            label=""
-            description=""
-            value={stepSize}
-            min={1}
-            max={10}
-            step={1}
-            onChange={(value: number) => setStepSize(value)}
-            showValue={false}
-            bottomSeparator="none"
-          />
+          <div style={{ transform: "scale(0.9)", transformOrigin: "left center" }}>
+            <SliderField
+              label=""
+              value={stepSize}
+              min={1}
+              max={10}
+              step={1}
+              onChange={(value: number) => setStepSize(value)}
+              showValue={false}
+              bottomSeparator="none"
+            />
+          </div>
         </div>
 
         {/* Starting Value */}
-        <div style={{ marginBottom: "2px" }}>
-          <div style={{ fontSize: "8px", color: "#8b929a", marginBottom: "1px" }}>
-            Start Value: {startValue}mV
+        <div style={{ 
+          marginBottom: "6px",
+          padding: "4px 6px",
+          backgroundColor: "rgba(255, 152, 0, 0.05)",
+          borderRadius: "4px",
+          border: "1px solid rgba(255, 152, 0, 0.1)"
+        }}>
+          <div style={{ 
+            fontSize: "8px", 
+            color: "#8b929a", 
+            marginBottom: "2px",
+            display: "flex",
+            justifyContent: "space-between"
+          }}>
+            <span>Start Value</span>
+            <span style={{ color: "#ff9800", fontWeight: "bold" }}>{startValue}mV</span>
           </div>
-          <SliderField
-            label=""
-            description=""
-            value={startValue}
-            min={-20}
-            max={0}
-            step={1}
-            onChange={(value: number) => setStartValue(value)}
-            showValue={false}
-            bottomSeparator="none"
-          />
+          <div style={{ transform: "scale(0.9)", transformOrigin: "left center" }}>
+            <SliderField
+              label=""
+              value={startValue}
+              min={-20}
+              max={0}
+              step={1}
+              onChange={(value: number) => setStartValue(value)}
+              showValue={false}
+              bottomSeparator="none"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Action buttons - vertical layout */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" }}>
+      {/* Action buttons - horizontal layout with modern styling */}
+      <Focusable style={{ display: "flex", gap: "4px", marginTop: "8px" }} flow-children="horizontal">
         {/* Save button */}
-        <ButtonItem
-          layout="below"
+        <Focusable
+          style={{ flex: 1 }}
+          focusClassName="gpfocus-clean"
+          onActivate={handleSave}
           onClick={handleSave}
-          style={{ minHeight: "24px", padding: "2px 4px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "3px", color: "#4caf50", fontSize: "9px" }}>
-            <FaCheck style={{ fontSize: "8px" }} />
-            <span>Save</span>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            gap: "4px",
+            padding: "8px",
+            background: isSaving ? "#2e7d32" : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "10px",
+            fontWeight: "bold",
+            color: "#fff",
+            border: "2px solid transparent",
+            transition: "all 0.2s ease",
+            boxShadow: "0 2px 8px rgba(76, 175, 80, 0.3)"
+          }}>
+            {isSaving ? <FaSpinner className="spin" size={9} /> : <FaCheck size={9} />}
+            <span>{isSaving ? "Saving..." : "Save"}</span>
           </div>
-        </ButtonItem>
+        </Focusable>
 
         {/* Reset to Defaults button */}
-        <ButtonItem
-          layout="below"
+        <Focusable
+          style={{ flex: 1 }}
+          focusClassName="gpfocus-clean"
+          onActivate={handleReset}
           onClick={handleReset}
-          style={{ minHeight: "24px", padding: "2px 4px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "3px", color: "#ff9800", fontSize: "9px" }}>
-            <FaTimes style={{ fontSize: "8px" }} />
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            gap: "4px",
+            padding: "8px",
+            background: "linear-gradient(135deg, #ff9800 0%, #ffa726 100%)",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "10px",
+            fontWeight: "bold",
+            color: "#fff",
+            border: "2px solid transparent",
+            transition: "all 0.2s ease",
+            boxShadow: "0 2px 8px rgba(255, 152, 0, 0.3)"
+          }}>
+            <FaTimes size={9} />
             <span>Reset</span>
           </div>
-        </ButtonItem>
-      </div>
+        </Focusable>
+      </Focusable>
+
+      <style>
+        {`
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes glow {
+            0%, 100% {
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+              box-shadow: 0 4px 20px rgba(26, 159, 255, 0.2);
+            }
+          }
+          .spin-slow {
+            animation: spin 3s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .gpfocus-clean {
+            border: 2px solid #1a9fff !important;
+            box-shadow: 0 0 12px rgba(26, 159, 255, 0.6) !important;
+          }
+        `}
+      </style>
     </div>
   );
 };

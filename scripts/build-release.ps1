@@ -89,8 +89,4 @@ Get-Item $ZIP_FILE | Format-List Name, Length, LastWriteTime
 Write-Host ""
 Write-Host "To deploy to Steam Deck:" -ForegroundColor Cyan
 Write-Host "  scp $ZIP_FILE deck@192.168.0.163:~/Downloads/"
-Write-Host "  # On Steam Deck:"
-Write-Host "  sudo rm -rf ~/homebrew/plugins/DeckTune"
-Write-Host "  sudo unzip -o ~/Downloads/DeckTune.zip -d ~/homebrew/plugins/"
-Write-Host "  sudo ~/homebrew/plugins/DeckTune/install.sh"
-Write-Host "  sudo systemctl restart plugin_loader"
+Write-Host "  ssh -t deck@192.168.0.163 'echo 7373 | sudo -S rm -rf ~/homebrew/plugins/DeckTune && echo 7373 | sudo -S unzip -q -o ~/Downloads/DeckTune.zip -d ~/homebrew/plugins/ && echo 7373 | sudo -S ~/homebrew/plugins/DeckTune/install.sh && echo 7373 | sudo -S systemctl restart plugin_loader'"

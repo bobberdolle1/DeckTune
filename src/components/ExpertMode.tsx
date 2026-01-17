@@ -47,12 +47,14 @@ import {
   FaExclamationCircle,
   FaRocket,
   FaFan,
+  FaCog,
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
 import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
 import { LoadGraph } from "./LoadGraph";
 import { PresetsTabNew } from "./PresetsTabNew";
 import { FanTab } from "./FanTab";
+import { SettingsTab } from "./SettingsTab";
 
 /**
  * Compact styles for QAM (310px width).
@@ -102,7 +104,7 @@ const QAM_STYLES = {
  * Tab type for Expert Mode navigation.
  * Requirements: 7.1
  */
-export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics";
+export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics" | "settings";
 
 interface TabConfig {
   id: ExpertTab;
@@ -116,6 +118,7 @@ const TABS: TabConfig[] = [
   { id: "tests", label: "Tests", icon: FaVial },
   { id: "fan", label: "Fan", icon: FaFan },
   { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
+  { id: "settings", label: "Settings", icon: FaCog },
 ];
 
 /**
@@ -147,7 +150,7 @@ const PanicDisableButton: FC = () => {
   };
 
   return (
-    <PanelSectionRow>
+    <PanelSectionRow>ce
       <ButtonItem
         layout="below"
         onClick={handlePanicDisable}
@@ -187,6 +190,8 @@ const PanicDisableButton: FC = () => {
 /**
  * ExpertMode component - detailed controls for power users.
  * Requirements: 4.5, 7.1
+ * 
+ * Tabs: ManualTab, PresetsTabNew, TestsTab, FanTab, DiagnosticsTab, SettingsTab
  */
 export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
   const [activeTab, setActiveTab] = useState<ExpertTab>(initialTab);
@@ -202,11 +207,24 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
       </PanelSectionRow>
 
       {/* Tab Content */}
-      {activeTab === "manual" && <ManualTab />}
-      {activeTab === "presets" && <PresetsTabNew />}
-      {activeTab === "tests" && <TestsTab />}
-      {activeTab === "fan" && <FanTab />}
-      {activeTab === "diagnostics" && <DiagnosticsTab />}
+      <div style={{ display: activeTab === "manual" ? "block" : "none" }}>
+        <ManualTab />
+      </div>
+      <div style={{ display: activeTab === "presets" ? "block" : "none" }}>
+        <PresetsTabNew />
+      </div>
+      <div style={{ display: activeTab === "tests" ? "block" : "none" }}>
+        <TestsTab />
+      </div>
+      <div style={{ display: activeTab === "fan" ? "block" : "none" }}>
+        <FanTab />
+      </div>
+      <div style={{ display: activeTab === "diagnostics" ? "block" : "none" }}>
+        <DiagnosticsTab />
+      </div>
+      <div style={{ display: activeTab === "settings" ? "block" : "none" }}>
+        <SettingsTab />
+      </div>
     </PanelSection>
   );
 };
