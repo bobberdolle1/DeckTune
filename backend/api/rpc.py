@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
+import decky  # type: ignore
+
 if TYPE_CHECKING:
     from ..core.ryzenadj import RyzenadjWrapper
     from ..core.safety import SafetyManager
@@ -948,8 +950,6 @@ class DeckTuneRPC:
         Returns:
             Dictionary with installation result
         """
-        import subprocess
-        
         try:
             # Check what's missing first
             if self.test_runner is None:
