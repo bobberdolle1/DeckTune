@@ -94,7 +94,11 @@ export const SettingsTab: FC = () => {
   };
 
   return (
-    <>
+    <div style={{
+      height: "100%",
+      overflow: "auto",
+      overflowX: "hidden"
+    }}>
       {/* Expert Mode Warning Dialog */}
       {showExpertWarning && (
         <div style={{
@@ -562,6 +566,6 @@ export const SettingsTab: FC = () => {
           transition: all 0.2s ease;
         }
       `}</style>
-    </>
+    </div>
   );
 };
