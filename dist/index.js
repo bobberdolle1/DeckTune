@@ -3388,7 +3388,7 @@
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
             activeTab === "manual" && window.SP_REACT.createElement(ManualTab, null),
-            activeTab === "presets" && window.SP_REACT.createElement(PresetsTab, null),
+            activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
             activeTab === "tests" && window.SP_REACT.createElement(TestsTab, null),
             activeTab === "fan" && window.SP_REACT.createElement(FanTab, null),
             activeTab === "diagnostics" && window.SP_REACT.createElement(DiagnosticsTab, null)));
@@ -3943,11 +3943,6 @@
           }
         `)));
     };
-    /**
-     * Presets tab component - now uses PresetsTabNew with profile management.
-     * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
-     */
-    const PresetsTab = PresetsTabNew;
     /**
      * Available test options.
      */

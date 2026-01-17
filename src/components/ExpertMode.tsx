@@ -203,7 +203,7 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
 
       {/* Tab Content */}
       {activeTab === "manual" && <ManualTab />}
-      {activeTab === "presets" && <PresetsTab />}
+      {activeTab === "presets" && <PresetsTabNew />}
       {activeTab === "tests" && <TestsTab />}
       {activeTab === "fan" && <FanTab />}
       {activeTab === "diagnostics" && <DiagnosticsTab />}
