@@ -283,6 +283,193 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
+ * Inline Dynamic Settings component - compact version for ManualTab.
+ * Shows essential dynamic mode settings without leaving the Manual tab.
+ */
+const DynamicSettingsInline: FC = () => {
+  const { state, api } = useDeckTune();
+  const [showSettings, setShowSettings] = useState(false);
+  const [strategy, setStrategy] = useState<string>("balanced");
+  const [simpleMode, setSimpleMode] = useState<boolean>(false);
+  const [simpleValue, setSimpleValue] = useState<number>(-25);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Get expert mode from settings
+  const expertMode = state.settings.expertMode || false;
+  const minLimit = expertMode ? -100 : -35;
+
+  // Load config on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await api.getDynamicConfig();
+        if (config) {
+          setStrategy(config.strategy || "balanced");
+          setSimpleMode(config.simple_mode || false);
+          setSimpleValue(config.simple_value || -25);
+        }
+      } catch (e) {
+        console.error("Failed to load dynamic config:", e);
+      }
+    };
+    loadConfig();
+  }, [api]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const config = {
+        strategy,
+        simple_mode: simpleMode,
+        simple_value: simpleValue,
+        expert_mode: expertMode,
+      };
+      await api.saveDynamicConfig(config);
+    } catch (e) {
+      console.error("Failed to save dynamic config:", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Settings Toggle Button */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            fontSize: "10px"
+          }}>
+            <FaCog size={10} />
+            <span>{showSettings ? "Hide Settings" : "Dynamic Settings"}</span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {/* Expandable Settings Panel */}
+      {showSettings && (
+        <>
+          <PanelSectionRow>
+            <div style={{
+              padding: "10px",
+              background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+              borderRadius: "8px",
+              border: "1px solid rgba(26, 159, 255, 0.2)",
+              animation: "slideDown 0.3s ease-out"
+            }}>
+              {/* Strategy */}
+              <div style={{ marginBottom: "10px" }}>
+                <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#1a9fff" }}>
+                  Strategy
+                </div>
+                <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
+                  {["conservative", "balanced", "aggressive"].map((s) => (
+                    <Focusable
+                      key={s}
+                      style={{ flex: 1 }}
+                      focusClassName="gpfocus"
+                      onActivate={() => setStrategy(s)}
+                      onClick={() => setStrategy(s)}
+                    >
+                      <div style={{
+                        padding: "6px 4px",
+                        backgroundColor: strategy === s ? "#1a9fff" : "#3d4450",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        transition: "all 0.2s ease",
+                        textTransform: "capitalize"
+                      }}>
+                        {strategy === s ? "✓" : ""} {s}
+                      </div>
+                    </Focusable>
+                  ))}
+                </Focusable>
+              </div>
+
+              {/* Simple Mode Toggle */}
+              <div style={{ marginBottom: "10px" }}>
+                <ToggleField
+                  label="Simple Mode"
+                  description="One value for all cores"
+                  checked={simpleMode}
+                  onChange={setSimpleMode}
+                  bottomSeparator="none"
+                />
+              </div>
+
+              {/* Simple Value Slider */}
+              {simpleMode && (
+                <div style={{ marginBottom: "10px" }}>
+                  <SliderField
+                    label="Value"
+                    value={simpleValue}
+                    min={minLimit}
+                    max={0}
+                    step={1}
+                    showValue={true}
+                    onChange={(value: number) => setSimpleValue(value)}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
+                </div>
+              )}
+
+              {/* Save Button */}
+              <Focusable
+                focusClassName="gpfocus"
+                onActivate={handleSave}
+                onClick={handleSave}
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "8px",
+                  background: "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  opacity: isSaving ? 0.5 : 1
+                }}>
+                  {isSaving ? <FaSpinner className="spin" size={10} /> : <FaCheck size={10} />}
+                  <span>Save Settings</span>
+                </div>
+              </Focusable>
+
+              {/* Info */}
+              <div style={{
+                marginTop: "8px",
+                padding: "6px",
+                backgroundColor: "rgba(26, 159, 255, 0.1)",
+                borderRadius: "4px",
+                fontSize: "8px",
+                color: "#8b929a",
+                lineHeight: "1.4"
+              }}>
+                ℹ️ Settings apply on next Dynamic mode start. Restart if already running.
+              </div>
+            </div>
+          </PanelSectionRow>
+        </>
+      )}
+    </>
+  );
+};
+
+
+/**
  * Manual tab component with simple/per-core/dynamic modes.
  */
 const ManualTab: FC = () => {
@@ -463,6 +650,11 @@ const ManualTab: FC = () => {
             </div>
           </div>
         </PanelSectionRow>
+      )}
+
+      {/* Dynamic Mode Settings (inline when Dynamic is selected) */}
+      {controlMode === "dynamic" && (
+        <DynamicSettingsInline />
       )}
 
       {/* Sliders (only for Single and Per-Core modes) */}

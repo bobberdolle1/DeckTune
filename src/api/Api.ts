@@ -1320,6 +1320,55 @@ export class Api extends SimpleEventEmitter {
     return await call("get_fan_status") as any;
   }
 
+  // ==================== Dynamic Mode Configuration ====================
+
+  /**
+   * Get dynamic mode configuration.
+   * 
+   * @returns Current dynamic configuration
+   */
+  async getDynamicConfig(): Promise<any> {
+    return await call("get_dynamic_config") as any;
+  }
+
+  /**
+   * Save dynamic mode configuration.
+   * 
+   * @param config - Dynamic configuration to save
+   * @returns Success status
+   */
+  async saveDynamicConfig(config: any): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return await call("save_dynamic_config", config) as any;
+  }
+
+  /**
+   * Enable gymdeck3 dynamic mode.
+   * 
+   * @returns Success status
+   */
+  async enableGymdeck(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const dynamicSettings = this.state.dynamicSettings;
+    return await call("start_gymdeck", dynamicSettings) as any;
+  }
+
+  /**
+   * Disable gymdeck3 dynamic mode.
+   * 
+   * @returns Success status
+   */
+  async disableGymdeck(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return await call("stop_gymdeck") as any;
+  }
+
   // ==================== Server Events ====================
 
   /**

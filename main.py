@@ -579,6 +579,60 @@ class Plugin:
             "status": "DYNAMIC RUNNING" if is_running else current_status,
             "settings": settings.getSetting("dynamicSettings") or {}
         }
+    
+    async def get_dynamic_config(self):
+        """Get current dynamic mode configuration.
+        
+        Returns configuration in new format (DynamicConfig).
+        Automatically migrates old format if needed.
+        
+        Returns:
+            Dictionary with dynamic configuration
+        """
+        dynamic_settings = settings.getSetting("dynamicSettings") or {}
+        
+        # Check if settings are in old format and migrate if needed
+        if is_old_format(dynamic_settings):
+            decky.logger.info("Migrating old dynamic settings format to new format")
+            config = migrate_dynamic_settings(dynamic_settings)
+        else:
+            # Already in new format or create from dict
+            config = DynamicConfig.from_dict(dynamic_settings) if isinstance(dynamic_settings, dict) else dynamic_settings
+        
+        # Apply expert mode setting from global settings
+        expert_mode = settings.getSetting("expert_mode") or False
+        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        config.expert_mode = expert_mode and expert_confirmed
+        
+        return config.to_dict()
+    
+    async def save_dynamic_config(self, config_dict):
+        """Save dynamic mode configuration.
+        
+        Args:
+            config_dict: Dictionary with dynamic configuration
+            
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            # Validate configuration
+            config = DynamicConfig.from_dict(config_dict)
+            errors = config.validate()
+            
+            if errors:
+                decky.logger.error(f"Invalid dynamic config: {errors}")
+                return {"success": False, "error": f"Invalid configuration: {errors}"}
+            
+            # Save to settings
+            settings.setSetting("dynamicSettings", config_dict)
+            decky.logger.info("Dynamic configuration saved successfully")
+            
+            return {"success": True}
+            
+        except Exception as e:
+            decky.logger.error(f"Failed to save dynamic config: {e}")
+            return {"success": False, "error": str(e)}
 
     # ==================== Expert Mode ====================
     # Requirements: 13.1-13.5
