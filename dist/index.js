@@ -3226,22 +3226,16 @@
             window.SP_REACT.createElement(PanicDisableButton, null),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
-            window.SP_REACT.createElement("div", { style: {
-                    maxHeight: "calc(100vh - 280px)",
-                    overflow: "auto",
-                    overflowX: "hidden",
-                    paddingRight: "4px"
-                } },
-                window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
-                    window.SP_REACT.createElement(ManualTab, null)),
-                window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none" } },
-                    window.SP_REACT.createElement(PresetsTabNew, null)),
-                window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none" } },
-                    window.SP_REACT.createElement(TestsTab, null)),
-                window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
-                    window.SP_REACT.createElement(FanTab, null)),
-                window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
-                    window.SP_REACT.createElement(DiagnosticsTab, null)))));
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "manual" ? "block" : "none" } },
+                window.SP_REACT.createElement(ManualTab, null)),
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "presets" ? "block" : "none" } },
+                window.SP_REACT.createElement(PresetsTabNew, null)),
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "tests" ? "block" : "none" } },
+                window.SP_REACT.createElement(TestsTab, null)),
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
+                window.SP_REACT.createElement(FanTab, null)),
+            window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
+                window.SP_REACT.createElement(DiagnosticsTab, null))));
     };
     const TabNavigation = ({ activeTab, onTabChange }) => {
         return (window.SP_REACT.createElement(DFL.Focusable, { style: {
@@ -4175,12 +4169,7 @@
         const handleExpertModeCancel = () => {
             setShowExpertWarning(false);
         };
-        return (window.SP_REACT.createElement("div", { style: {
-                maxHeight: "calc(100vh - 120px)",
-                overflow: "auto",
-                overflowX: "hidden",
-                paddingRight: "4px"
-            } },
+        return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
             showExpertWarning && (window.SP_REACT.createElement("div", { style: {
                     position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
                     backgroundColor: "rgba(0, 0, 0, 0.95)", zIndex: 9999,
@@ -4272,7 +4261,7 @@
                                 } },
                                 window.SP_REACT.createElement(FaTimes, { size: 11 }),
                                 window.SP_REACT.createElement("span", null, t.cancel))))))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" }, onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
                         borderRadius: "10px",
@@ -4329,7 +4318,7 @@
                         window.SP_REACT.createElement("span", null, language === "ru"
                             ? "Язык сохранён автоматически"
                             : "Language saved automatically")))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" }, onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                 window.SP_REACT.createElement("div", { style: {
                         background: expertModeEnabled
                             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -4435,7 +4424,7 @@
                             window.SP_REACT.createElement("br", null),
                             "\u2022 ",
                             language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!"))))),
-            window.SP_REACT.createElement(DFL.Focusable, null,
+            window.SP_REACT.createElement(DFL.Focusable, { onFocus: (e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }) },
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
                         borderRadius: "10px",

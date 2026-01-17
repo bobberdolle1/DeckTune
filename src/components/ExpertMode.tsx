@@ -204,28 +204,21 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
         <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       </PanelSectionRow>
 
-      {/* Tab Content - wrapped in scrollable container */}
-      <div style={{ 
-        maxHeight: "calc(100vh - 280px)", 
-        overflow: "auto",
-        overflowX: "hidden",
-        paddingRight: "4px"
-      }}>
-        <div style={{ display: activeTab === "manual" ? "block" : "none" }}>
-          <ManualTab />
-        </div>
-        <div style={{ display: activeTab === "presets" ? "block" : "none" }}>
-          <PresetsTabNew />
-        </div>
-        <div style={{ display: activeTab === "tests" ? "block" : "none" }}>
-          <TestsTab />
-        </div>
-        <div style={{ display: activeTab === "fan" ? "block" : "none" }}>
-          <FanTab />
-        </div>
-        <div style={{ display: activeTab === "diagnostics" ? "block" : "none" }}>
-          <DiagnosticsTab />
-        </div>
+      {/* Tab Content */}
+      <div style={{ display: activeTab === "manual" ? "block" : "none" }}>
+        <ManualTab />
+      </div>
+      <div style={{ display: activeTab === "presets" ? "block" : "none" }}>
+        <PresetsTabNew />
+      </div>
+      <div style={{ display: activeTab === "tests" ? "block" : "none" }}>
+        <TestsTab />
+      </div>
+      <div style={{ display: activeTab === "fan" ? "block" : "none" }}>
+        <FanTab />
+      </div>
+      <div style={{ display: activeTab === "diagnostics" ? "block" : "none" }}>
+        <DiagnosticsTab />
       </div>
     </PanelSection>
   );

@@ -94,12 +94,7 @@ export const SettingsTab: FC = () => {
   };
 
   return (
-    <div style={{
-      maxHeight: "calc(100vh - 120px)",
-      overflow: "auto",
-      overflowX: "hidden",
-      paddingRight: "4px"
-    }}>
+    <>
       {/* Expert Mode Warning Dialog */}
       {showExpertWarning && (
         <div style={{
@@ -219,7 +214,10 @@ export const SettingsTab: FC = () => {
       )}
 
       {/* Language Card */}
-      <Focusable style={{ marginBottom: "12px" }}>
+      <Focusable 
+        style={{ marginBottom: "12px" }}
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
           borderRadius: "10px",
@@ -307,7 +305,10 @@ export const SettingsTab: FC = () => {
       </Focusable>
 
       {/* Expert Mode Card */}
-      <Focusable style={{ marginBottom: "12px" }}>
+      <Focusable 
+        style={{ marginBottom: "12px" }}
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: expertModeEnabled 
             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -438,7 +439,9 @@ export const SettingsTab: FC = () => {
       </Focusable>
 
       {/* Info Card */}
-      <Focusable>
+      <Focusable
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
           borderRadius: "10px",
@@ -567,6 +570,6 @@ export const SettingsTab: FC = () => {
           transition: all 0.2s ease;
         }
       `}</style>
-    </div>
+    </>
   );
 };
