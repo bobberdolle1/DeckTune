@@ -3112,233 +3112,6 @@
     };
 
     /**
-     * Translations for DeckTune UI
-     */
-    const translations = {
-        en: {
-            // Settings Tab
-            settingsTitle: "Settings",
-            languageSection: "Language",
-            interfaceLanguage: "Interface Language",
-            selectLanguage: "Select Language",
-            localizationComingSoon: "Localization coming soon! Currently English only.",
-            expertModeSection: "Expert Undervolter Mode",
-            enableExpertMode: "Enable Expert Mode",
-            expertModeDescription: "Unlock extended range (-100mV) for all control modes",
-            expertModeActiveGlobally: "Expert Mode Active Globally",
-            expertModeWarningTitle: "Enable Expert Mode",
-            expertModeWarningText: "⚠️ WARNING: Expert mode removes safety limits globally.",
-            expertModeWarningAffects: "Affects: Manual, Per-Core, and Dynamic modes (-100mV range).",
-            expertModeWarningRisk: "Use at your own risk!",
-            iUnderstand: "I Understand",
-            cancel: "Cancel",
-            aboutSettingsSection: "About Settings",
-            aboutExpertMode: "Expert Mode: Removes safety limits (-100mV). Applies globally to all control modes (Single, Per-Core, Dynamic).",
-            aboutControlMode: "Control Mode Selection: Choose your preferred voltage control method in the Manual tab.",
-            aboutLanguage: "Language: Interface localization.",
-            // Manual Tab
-            manualTab: "Manual",
-            simpleMode: "Simple Mode",
-            perCoreMode: "Per-Core Mode",
-            expertMode: "Expert Mode",
-            expertModeActive: "Expert mode active",
-            expertModeRange: "Range: -100mV",
-            allCores: "All Cores",
-            core: "Core",
-            apply: "Apply",
-            disable: "Disable",
-            reset: "Reset",
-            // Common
-            english: "English",
-            russian: "Русский",
-        },
-        ru: {
-            // Settings Tab
-            settingsTitle: "Настройки",
-            languageSection: "Язык",
-            interfaceLanguage: "Язык интерфейса",
-            selectLanguage: "Выбрать язык",
-            localizationComingSoon: "Локализация скоро! Пока доступен только английский.",
-            expertModeSection: "Экспертный режим андервольта",
-            enableExpertMode: "Включить экспертный режим",
-            expertModeDescription: "Разблокировать расширенный диапазон (-100мВ) для всех режимов",
-            expertModeActiveGlobally: "Экспертный режим активен глобально",
-            expertModeWarningTitle: "Включить экспертный режим",
-            expertModeWarningText: "⚠️ ВНИМАНИЕ: Экспертный режим снимает ограничения безопасности глобально.",
-            expertModeWarningAffects: "Влияет на: Ручной, По-ядерный и Динамический режимы (диапазон -100мВ).",
-            expertModeWarningRisk: "Используйте на свой риск!",
-            iUnderstand: "Я понимаю",
-            cancel: "Отмена",
-            aboutSettingsSection: "О настройках",
-            aboutExpertMode: "Экспертный режим: Снимает ограничения безопасности (-100мВ). Применяется глобально ко всем режимам управления (Единый, По-ядерный, Динамический).",
-            aboutControlMode: "Выбор режима управления: Выберите предпочитаемый метод управления напряжением во вкладке Ручной.",
-            aboutLanguage: "Язык: Локализация интерфейса.",
-            // Manual Tab
-            manualTab: "Ручной",
-            simpleMode: "Простой режим",
-            perCoreMode: "По-ядерный режим",
-            expertMode: "Экспертный режим",
-            expertModeActive: "Экспертный режим активен",
-            expertModeRange: "Диапазон: -100мВ",
-            allCores: "Все ядра",
-            core: "Ядро",
-            apply: "Применить",
-            disable: "Отключить",
-            reset: "Сброс",
-            // Common
-            english: "English",
-            russian: "Русский",
-        },
-    };
-    function getTranslation(lang) {
-        return translations[lang] || translations.en;
-    }
-
-    /**
-     * Settings tab for Expert Mode - global plugin settings.
-     */
-
-    const SettingsTab = () => {
-        const { state, api } = useDeckTune();
-        const [language, setLanguage] = SP_REACT.useState(state.settings.language || "en");
-        const [expertModeEnabled, setExpertModeEnabled] = SP_REACT.useState(state.settings.expertMode || false);
-        const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
-        const t = getTranslation(language);
-        // Sync with state
-        SP_REACT.useEffect(() => {
-            setLanguage(state.settings.language || "en");
-            setExpertModeEnabled(state.settings.expertMode || false);
-        }, [state.settings]);
-        const handleLanguageChange = async (newLang) => {
-            setLanguage(newLang);
-            await api.saveSettings({
-                ...state.settings,
-                language: newLang,
-            });
-        };
-        const handleExpertModeToggle = (value) => {
-            if (value && !expertModeEnabled) {
-                setShowExpertWarning(true);
-            }
-            else {
-                setExpertModeEnabled(value);
-                api.saveSettings({
-                    ...state.settings,
-                    expertMode: value,
-                });
-            }
-        };
-        const handleExpertModeConfirm = () => {
-            setExpertModeEnabled(true);
-            setShowExpertWarning(false);
-            api.saveSettings({
-                ...state.settings,
-                expertMode: true,
-            });
-        };
-        const handleExpertModeCancel = () => {
-            setShowExpertWarning(false);
-        };
-        return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            showExpertWarning && (window.SP_REACT.createElement("div", { style: {
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.9)", zIndex: 9999,
-                    display: "flex", alignItems: "center", justifyContent: "center", padding: "20px"
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        backgroundColor: "#1a1d23", borderRadius: "8px", padding: "16px",
-                        maxWidth: "400px", border: "2px solid #ff6b6b"
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" } }),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" } }, t.expertModeWarningTitle)),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" } },
-                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } }, t.expertModeWarningText),
-                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
-                            window.SP_REACT.createElement("strong", null, t.expertModeWarningAffects)),
-                        window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, t.expertModeWarningRisk)),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeConfirm, onClick: handleExpertModeConfirm },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
-                                    padding: "8px", backgroundColor: "#b71c1c", borderRadius: "4px", cursor: "pointer",
-                                    fontSize: "10px", fontWeight: "bold" } },
-                                window.SP_REACT.createElement(FaCheck, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, t.iUnderstand))),
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeCancel, onClick: handleExpertModeCancel },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
-                                    padding: "8px", backgroundColor: "#3d4450", borderRadius: "4px", cursor: "pointer",
-                                    fontSize: "10px", fontWeight: "bold" } },
-                                window.SP_REACT.createElement(FaTimes, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, t.cancel))))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
-                    t.languageSection,
-                    " / Language")),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.DropdownItem, { label: t.interfaceLanguage, menuLabel: t.selectLanguage, rgOptions: [
-                        { data: "en", label: t.english },
-                        { data: "ru", label: t.russian }
-                    ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data) })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.expertModeSection)),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: t.enableExpertMode, description: t.expertModeDescription, checked: expertModeEnabled, onChange: handleExpertModeToggle, bottomSeparator: "none" })),
-            expertModeEnabled && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "8px",
-                        background: "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)",
-                        borderRadius: "6px",
-                        border: "1px solid #ff6b6b",
-                        marginBottom: "12px",
-                        animation: "pulse 2s ease-in-out infinite"
-                    } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#ffb74d", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, t.expertModeActiveGlobally)),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800" } },
-                        "\u2022 ",
-                        t.expertModeRange,
-                        window.SP_REACT.createElement("br", null),
-                        "\u2022 ",
-                        language === "ru" ? "Применяется к: Единый, По-ядерный, Динамический" : "Applies to: Single, Per-Core, Dynamic",
-                        window.SP_REACT.createElement("br", null),
-                        "\u2022 ",
-                        language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.aboutSettingsSection)),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { padding: "12px", backgroundColor: "#23262e", borderRadius: "8px", fontSize: "10px", color: "#8b929a", lineHeight: "1.6" } },
-                    window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
-                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
-                            t.expertModeSection,
-                            ":"),
-                        " ",
-                        t.aboutExpertMode),
-                    window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
-                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
-                            language === "ru" ? "Выбор режима управления" : "Control Mode Selection",
-                            ":"),
-                        " ",
-                        t.aboutControlMode),
-                    window.SP_REACT.createElement("p", null,
-                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
-                            t.languageSection,
-                            ":"),
-                        " ",
-                        t.aboutLanguage))),
-            window.SP_REACT.createElement("style", null, `
-        @keyframes pulse { 
-          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); } 
-          50% { box-shadow: 0 0 0 8px rgba(255, 107, 107, 0); } 
-        }
-        .gpfocus {
-          box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
-          transform: scale(1.02);
-        }
-      `)));
-    };
-
-    /**
      * ExpertMode component for DeckTune.
      *
      * Feature: decktune, Frontend UI Components - Expert Mode
@@ -3361,7 +3134,6 @@
         { id: "tests", label: "Tests", icon: FaVial },
         { id: "fan", label: "Fan", icon: FaFan },
         { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
-        { id: "settings", label: "Settings", icon: FaCog },
     ];
     /**
      * Panic Disable Button component - always visible emergency reset.
@@ -3384,7 +3156,6 @@
             }
         };
         return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            "ce",
             window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handlePanicDisable, disabled: isPanicking, style: {
                     backgroundColor: "#b71c1c",
                     borderRadius: "8px",
@@ -3423,9 +3194,7 @@
             window.SP_REACT.createElement("div", { style: { display: activeTab === "fan" ? "block" : "none" } },
                 window.SP_REACT.createElement(FanTab, null)),
             window.SP_REACT.createElement("div", { style: { display: activeTab === "diagnostics" ? "block" : "none" } },
-                window.SP_REACT.createElement(DiagnosticsTab, null)),
-            window.SP_REACT.createElement("div", { style: { display: activeTab === "settings" ? "block" : "none" } },
-                window.SP_REACT.createElement(SettingsTab, null))));
+                window.SP_REACT.createElement(DiagnosticsTab, null))));
     };
     const TabNavigation = ({ activeTab, onTabChange }) => {
         return (window.SP_REACT.createElement(DFL.Focusable, { style: {
@@ -3456,17 +3225,17 @@
         })));
     };
     /**
-     * Manual tab component with simple/per-core modes.
+     * Manual tab component with simple/per-core/dynamic modes.
      */
     const ManualTab = () => {
         const { state, api } = useDeckTune();
         const { info: platformInfo } = usePlatformInfo();
         const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
-        const [simpleMode, setSimpleMode] = SP_REACT.useState(true);
+        const [controlMode, setControlMode] = SP_REACT.useState("single");
         const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
         const [isApplying, setIsApplying] = SP_REACT.useState(false);
-        const [expertMode, setExpertMode] = SP_REACT.useState(false);
-        const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+        // Get expert mode from settings
+        const expertMode = state.settings.expertMode || false;
         const safeLimit = platformInfo?.safe_limit ?? -30;
         const currentMinLimit = expertMode ? -100 : safeLimit;
         // Sync with state.cores
@@ -3476,43 +3245,20 @@
             setSimpleValue(avg);
         }, [state.cores]);
         /**
-         * Handle expert mode toggle.
+         * Handle control mode change.
          */
-        const handleExpertModeToggle = () => {
-            if (!expertMode) {
-                setShowExpertWarning(true);
+        const handleControlModeChange = (mode) => {
+            if (mode === "dynamic") {
+                // Start gymdeck3
+                api.enableGymdeck();
             }
             else {
-                setExpertMode(false);
+                // Stop gymdeck3 if running
+                if (state.gymdeckRunning) {
+                    api.disableGymdeck();
+                }
             }
-        };
-        /**
-         * Confirm expert mode activation.
-         */
-        const handleExpertModeConfirm = () => {
-            setExpertMode(true);
-            setShowExpertWarning(false);
-        };
-        /**
-         * Cancel expert mode activation.
-         */
-        const handleExpertModeCancel = () => {
-            setShowExpertWarning(false);
-        };
-        /**
-         * Handle simple mode toggle.
-         */
-        const handleSimpleModeToggle = () => {
-            if (!simpleMode) {
-                // Switching to simple: use average
-                const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-                setSimpleValue(avg);
-            }
-            else {
-                // Switching to per-core: copy simple value to all cores
-                setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
-            }
-            setSimpleMode(!simpleMode);
+            setControlMode(mode);
         };
         /**
          * Handle simple slider change.
@@ -3556,120 +3302,68 @@
             setSimpleValue(0);
         };
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            showExpertWarning && (window.SP_REACT.createElement("div", { style: {
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.9)",
-                    zIndex: 9999,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "20px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        backgroundColor: "#1a1d23",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        maxWidth: "400px",
-                        border: "2px solid #ff6b6b",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" } }),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" } }, "Expert Undervolter Mode")),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" } },
-                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
-                            window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
-                            " Expert mode removes safety limits."),
-                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
-                            window.SP_REACT.createElement("strong", null, "Risks:"),
-                            " System instability, crashes, data loss, hardware damage."),
-                        window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, "Use at your own risk!")),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeConfirm, onClick: handleExpertModeConfirm },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    padding: "8px",
-                                    backgroundColor: "#b71c1c",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                    fontSize: "10px",
-                                    fontWeight: "bold"
-                                } },
-                                window.SP_REACT.createElement(FaCheck, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, "I Understand"))),
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeCancel, onClick: handleExpertModeCancel },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    padding: "8px",
-                                    backgroundColor: "#3d4450",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                    fontSize: "10px",
-                                    fontWeight: "bold"
-                                } },
-                                window.SP_REACT.createElement(FaTimes, { size: 10 }),
-                                window.SP_REACT.createElement("span", null, "Cancel"))))))),
             platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px" } },
                     platformInfo.variant,
                     " (",
                     platformInfo.model,
                     ") \u2022 Limit: ",
-                    platformInfo.safe_limit,
-                    "mV"))),
+                    expertMode ? "-100mV (Expert)" : `${platformInfo.safe_limit}mV`))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "8px" }, "flow-children": "horizontal" },
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleSimpleModeToggle, onClick: handleSimpleModeToggle },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, "Control Mode")),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px", marginBottom: "8px" }, "flow-children": "horizontal" },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: () => handleControlModeChange("single"), onClick: () => handleControlModeChange("single") },
                         window.SP_REACT.createElement("div", { style: {
                                 padding: "6px",
-                                backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
+                                backgroundColor: controlMode === "single" ? "#1a9fff" : "#3d4450",
                                 borderRadius: "4px",
                                 cursor: "pointer",
                                 fontSize: "9px",
                                 fontWeight: "bold",
                                 textAlign: "center",
                                 transition: "all 0.2s ease"
-                            } }, simpleMode ? "✓ Simple Mode" : "Per-Core Mode")),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeToggle, onClick: handleExpertModeToggle },
+                            } }, controlMode === "single" ? "✓ Single" : "Single")),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: () => handleControlModeChange("percore"), onClick: () => handleControlModeChange("percore") },
                         window.SP_REACT.createElement("div", { style: {
                                 padding: "6px",
-                                backgroundColor: expertMode ? "#b71c1c" : "#3d4450",
+                                backgroundColor: controlMode === "percore" ? "#1a9fff" : "#3d4450",
                                 borderRadius: "4px",
                                 cursor: "pointer",
                                 fontSize: "9px",
                                 fontWeight: "bold",
                                 textAlign: "center",
-                                transition: "all 0.2s ease",
-                                color: expertMode ? "#fff" : "#8b929a"
-                            } }, expertMode ? "⚠ Expert Mode" : "Expert Mode")))),
-            expertMode && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                                transition: "all 0.2s ease"
+                            } }, controlMode === "percore" ? "✓ Per-Core" : "Per-Core")),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: () => handleControlModeChange("dynamic"), onClick: () => handleControlModeChange("dynamic") },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "6px",
+                                backgroundColor: controlMode === "dynamic" ? "#4caf50" : "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "9px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                transition: "all 0.2s ease"
+                            } }, controlMode === "dynamic" ? "✓ Dynamic" : "Dynamic")))),
+            controlMode === "dynamic" && state.gymdeckRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
-                        padding: "6px",
-                        backgroundColor: "#5c1313",
+                        padding: "8px",
+                        backgroundColor: "#1b5e20",
                         borderRadius: "4px",
-                        border: "1px solid #ff6b6b",
+                        border: "1px solid #4caf50",
                         marginBottom: "8px"
                     } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, { size: 9 }),
-                        window.SP_REACT.createElement("span", null, "Expert mode active \u2022 Range: -100mV"))))),
-            simpleMode ? (
-            /* Simple Mode: Single slider for all cores */
+                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#81c784", fontWeight: "bold", marginBottom: "4px" } }, "\uD83D\uDE80 Dynamic Mode Active"),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#a5d6a7" } }, "Real-time load-based adjustment via gymdeck3")))),
+            controlMode !== "dynamic" && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null, controlMode === "single" ? (
+            /* Single Mode: One slider for all cores */
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
             /* Per-core sliders */
             [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
-                window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))))),
+            controlMode !== "dynamic" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px", marginTop: "8px" }, "flow-children": "horizontal" },
                     window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleApply, onClick: handleApply },
                         window.SP_REACT.createElement("div", { style: {
@@ -3717,7 +3411,7 @@
                                 color: "#ff9800"
                             } },
                             window.SP_REACT.createElement(FaTimes, { size: 10 }),
-                            window.SP_REACT.createElement("span", null, "Reset"))))),
+                            window.SP_REACT.createElement("span", null, "Reset")))))),
             window.SP_REACT.createElement("style", null, `
           .gpfocus {
             box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
@@ -4116,6 +3810,233 @@
             document.head.appendChild(style);
         }
     }
+
+    /**
+     * Translations for DeckTune UI
+     */
+    const translations = {
+        en: {
+            // Settings Tab
+            settingsTitle: "Settings",
+            languageSection: "Language",
+            interfaceLanguage: "Interface Language",
+            selectLanguage: "Select Language",
+            localizationComingSoon: "Localization coming soon! Currently English only.",
+            expertModeSection: "Expert Undervolter Mode",
+            enableExpertMode: "Enable Expert Mode",
+            expertModeDescription: "Unlock extended range (-100mV) for all control modes",
+            expertModeActiveGlobally: "Expert Mode Active Globally",
+            expertModeWarningTitle: "Enable Expert Mode",
+            expertModeWarningText: "⚠️ WARNING: Expert mode removes safety limits globally.",
+            expertModeWarningAffects: "Affects: Manual, Per-Core, and Dynamic modes (-100mV range).",
+            expertModeWarningRisk: "Use at your own risk!",
+            iUnderstand: "I Understand",
+            cancel: "Cancel",
+            aboutSettingsSection: "About Settings",
+            aboutExpertMode: "Expert Mode: Removes safety limits (-100mV). Applies globally to all control modes (Single, Per-Core, Dynamic).",
+            aboutControlMode: "Control Mode Selection: Choose your preferred voltage control method in the Manual tab.",
+            aboutLanguage: "Language: Interface localization.",
+            // Manual Tab
+            manualTab: "Manual",
+            simpleMode: "Simple Mode",
+            perCoreMode: "Per-Core Mode",
+            expertMode: "Expert Mode",
+            expertModeActive: "Expert mode active",
+            expertModeRange: "Range: -100mV",
+            allCores: "All Cores",
+            core: "Core",
+            apply: "Apply",
+            disable: "Disable",
+            reset: "Reset",
+            // Common
+            english: "English",
+            russian: "Русский",
+        },
+        ru: {
+            // Settings Tab
+            settingsTitle: "Настройки",
+            languageSection: "Язык",
+            interfaceLanguage: "Язык интерфейса",
+            selectLanguage: "Выбрать язык",
+            localizationComingSoon: "Локализация скоро! Пока доступен только английский.",
+            expertModeSection: "Экспертный режим андервольта",
+            enableExpertMode: "Включить экспертный режим",
+            expertModeDescription: "Разблокировать расширенный диапазон (-100мВ) для всех режимов",
+            expertModeActiveGlobally: "Экспертный режим активен глобально",
+            expertModeWarningTitle: "Включить экспертный режим",
+            expertModeWarningText: "⚠️ ВНИМАНИЕ: Экспертный режим снимает ограничения безопасности глобально.",
+            expertModeWarningAffects: "Влияет на: Ручной, По-ядерный и Динамический режимы (диапазон -100мВ).",
+            expertModeWarningRisk: "Используйте на свой риск!",
+            iUnderstand: "Я понимаю",
+            cancel: "Отмена",
+            aboutSettingsSection: "О настройках",
+            aboutExpertMode: "Экспертный режим: Снимает ограничения безопасности (-100мВ). Применяется глобально ко всем режимам управления (Единый, По-ядерный, Динамический).",
+            aboutControlMode: "Выбор режима управления: Выберите предпочитаемый метод управления напряжением во вкладке Ручной.",
+            aboutLanguage: "Язык: Локализация интерфейса.",
+            // Manual Tab
+            manualTab: "Ручной",
+            simpleMode: "Простой режим",
+            perCoreMode: "По-ядерный режим",
+            expertMode: "Экспертный режим",
+            expertModeActive: "Экспертный режим активен",
+            expertModeRange: "Диапазон: -100мВ",
+            allCores: "Все ядра",
+            core: "Ядро",
+            apply: "Применить",
+            disable: "Отключить",
+            reset: "Сброс",
+            // Common
+            english: "English",
+            russian: "Русский",
+        },
+    };
+    function getTranslation(lang) {
+        return translations[lang] || translations.en;
+    }
+
+    /**
+     * Settings tab for Expert Mode - global plugin settings.
+     */
+
+    const SettingsTab = () => {
+        const { state, api } = useDeckTune();
+        const [language, setLanguage] = SP_REACT.useState(state.settings.language || "en");
+        const [expertModeEnabled, setExpertModeEnabled] = SP_REACT.useState(state.settings.expertMode || false);
+        const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+        const t = getTranslation(language);
+        // Sync with state
+        SP_REACT.useEffect(() => {
+            setLanguage(state.settings.language || "en");
+            setExpertModeEnabled(state.settings.expertMode || false);
+        }, [state.settings]);
+        const handleLanguageChange = async (newLang) => {
+            setLanguage(newLang);
+            await api.saveSettings({
+                ...state.settings,
+                language: newLang,
+            });
+        };
+        const handleExpertModeToggle = (value) => {
+            if (value && !expertModeEnabled) {
+                setShowExpertWarning(true);
+            }
+            else {
+                setExpertModeEnabled(value);
+                api.saveSettings({
+                    ...state.settings,
+                    expertMode: value,
+                });
+            }
+        };
+        const handleExpertModeConfirm = () => {
+            setExpertModeEnabled(true);
+            setShowExpertWarning(false);
+            api.saveSettings({
+                ...state.settings,
+                expertMode: true,
+            });
+        };
+        const handleExpertModeCancel = () => {
+            setShowExpertWarning(false);
+        };
+        return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            showExpertWarning && (window.SP_REACT.createElement("div", { style: {
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)", zIndex: 9999,
+                    display: "flex", alignItems: "center", justifyContent: "center", padding: "20px"
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        backgroundColor: "#1a1d23", borderRadius: "8px", padding: "16px",
+                        maxWidth: "400px", border: "2px solid #ff6b6b"
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" } }),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" } }, t.expertModeWarningTitle)),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" } },
+                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } }, t.expertModeWarningText),
+                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
+                            window.SP_REACT.createElement("strong", null, t.expertModeWarningAffects)),
+                        window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, t.expertModeWarningRisk)),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeConfirm, onClick: handleExpertModeConfirm },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+                                    padding: "8px", backgroundColor: "#b71c1c", borderRadius: "4px", cursor: "pointer",
+                                    fontSize: "10px", fontWeight: "bold" } },
+                                window.SP_REACT.createElement(FaCheck, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, t.iUnderstand))),
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeCancel, onClick: handleExpertModeCancel },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+                                    padding: "8px", backgroundColor: "#3d4450", borderRadius: "4px", cursor: "pointer",
+                                    fontSize: "10px", fontWeight: "bold" } },
+                                window.SP_REACT.createElement(FaTimes, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, t.cancel))))))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
+                    t.languageSection,
+                    " / Language")),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.DropdownItem, { label: t.interfaceLanguage, menuLabel: t.selectLanguage, rgOptions: [
+                        { data: "en", label: t.english },
+                        { data: "ru", label: t.russian }
+                    ], selectedOption: language === "en" ? 0 : 1, onChange: (option) => handleLanguageChange(option.data) })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.expertModeSection)),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: t.enableExpertMode, description: t.expertModeDescription, checked: expertModeEnabled, onChange: handleExpertModeToggle, bottomSeparator: "none" })),
+            expertModeEnabled && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "8px",
+                        background: "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)",
+                        borderRadius: "6px",
+                        border: "1px solid #ff6b6b",
+                        marginBottom: "12px",
+                        animation: "pulse 2s ease-in-out infinite"
+                    } },
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#ffb74d", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
+                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, t.expertModeActiveGlobally)),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800" } },
+                        "\u2022 ",
+                        t.expertModeRange,
+                        window.SP_REACT.createElement("br", null),
+                        "\u2022 ",
+                        language === "ru" ? "Применяется к: Единый, По-ядерный, Динамический" : "Applies to: Single, Per-Core, Dynamic",
+                        window.SP_REACT.createElement("br", null),
+                        "\u2022 ",
+                        language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.aboutSettingsSection)),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { padding: "12px", backgroundColor: "#23262e", borderRadius: "8px", fontSize: "10px", color: "#8b929a", lineHeight: "1.6" } },
+                    window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
+                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
+                            t.expertModeSection,
+                            ":"),
+                        " ",
+                        t.aboutExpertMode),
+                    window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
+                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
+                            language === "ru" ? "Выбор режима управления" : "Control Mode Selection",
+                            ":"),
+                        " ",
+                        t.aboutControlMode),
+                    window.SP_REACT.createElement("p", null,
+                        window.SP_REACT.createElement("strong", { style: { color: "#1a9fff" } },
+                            t.languageSection,
+                            ":"),
+                        " ",
+                        t.aboutLanguage))),
+            window.SP_REACT.createElement("style", null, `
+        @keyframes pulse { 
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); } 
+          50% { box-shadow: 0 0 0 8px rgba(255, 107, 107, 0); } 
+        }
+        .gpfocus {
+          box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
+          transform: scale(1.02);
+        }
+      `)));
+    };
 
     /**
      * SetupWizard component for DeckTune first-run experience.
