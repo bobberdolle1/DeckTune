@@ -5,6 +5,13 @@ Tests the complete crash recovery workflow:
 2. Restart plugin and verify boot recovery
 3. Verify last_stable is restored
 
+Feature: decktune-critical-fixes, Property 5: Binning State Persistence
+Validates: Requirements 3.5, 3.6
+
+Property 5 (Critical Fixes): Персистентность состояния binning для crash recovery
+For any active binning session, state (current_value, last_stable, iteration) must be
+saved to file. On load with active=True, system must restore last_stable value.
+
 Requirements: 1.5, 2.3
 """
 

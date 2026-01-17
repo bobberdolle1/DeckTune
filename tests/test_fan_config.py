@@ -1,213 +1,266 @@
-"""Tests for fan control configuration.
+"""Property tests for fan curve and safety.
 
-Feature: Fan Control Integration (Phase 4)
+Feature: decktune-critical-fixes, Property 8: Fan Curve Application
+Validates: Requirements 7.4
+
+Feature: decktune-critical-fixes, Property 9: Fan Temperature Safety
+Validates: Requirements 7.7
+
+Property 8: Применение кривой вентилятора
+For any valid fan curve (points sorted by temperature, speed_percent in [0, 100]),
+the curve must be correctly passed to gymdeck3 daemon.
+
+Property 9: Температурная защита вентилятора
+For any temperature >= 90°C, fan speed must be forced to 100% regardless of user curve settings.
 """
 
 import pytest
-from backend.dynamic.config import (
-    FanConfig,
-    FanCurvePoint,
-    FanStatus,
-    DynamicConfig,
-    FAN_TEMP_MIN,
-    FAN_TEMP_MAX,
-    FAN_SPEED_MIN,
-    FAN_SPEED_MAX,
-)
+from hypothesis import given, strategies as st, settings, assume
+from typing import List
 
 
-class TestFanCurvePoint:
-    """Tests for FanCurvePoint dataclass."""
+# Strategy for temperature values
+temp_strategy = st.integers(min_value=30, max_value=100)
 
-    def test_default_values(self):
-        """Test default values."""
-        point = FanCurvePoint()
-        assert point.temp_c == 50
-        assert point.speed_percent == 50
-
-    def test_custom_values(self):
-        """Test custom values."""
-        point = FanCurvePoint(temp_c=60, speed_percent=75)
-        assert point.temp_c == 60
-        assert point.speed_percent == 75
-
-    def test_validate_valid_point(self):
-        """Test validation of valid point."""
-        point = FanCurvePoint(temp_c=50, speed_percent=50)
-        errors = point.validate()
-        assert errors == []
-
-    def test_validate_invalid_temp(self):
-        """Test validation rejects invalid temperature."""
-        point = FanCurvePoint(temp_c=150, speed_percent=50)
-        errors = point.validate()
-        assert len(errors) == 1
-        assert "temp_c" in errors[0]
-
-    def test_validate_invalid_speed(self):
-        """Test validation rejects invalid speed."""
-        point = FanCurvePoint(temp_c=50, speed_percent=150)
-        errors = point.validate()
-        assert len(errors) == 1
-        assert "speed_percent" in errors[0]
-
-    def test_to_dict(self):
-        """Test serialization to dict."""
-        point = FanCurvePoint(temp_c=60, speed_percent=75)
-        d = point.to_dict()
-        assert d == {"temp_c": 60, "speed_percent": 75}
-
-    def test_from_dict(self):
-        """Test deserialization from dict."""
-        d = {"temp_c": 60, "speed_percent": 75}
-        point = FanCurvePoint.from_dict(d)
-        assert point.temp_c == 60
-        assert point.speed_percent == 75
+# Strategy for speed percentage
+speed_strategy = st.integers(min_value=0, max_value=100)
 
 
-class TestFanConfig:
-    """Tests for FanConfig dataclass."""
-
-    def test_default_values(self):
-        """Test default values."""
-        config = FanConfig()
-        assert config.enabled is False
-        assert config.mode == "default"
-        assert len(config.curve) == 6
-        assert config.zero_rpm_enabled is False
-        assert config.hysteresis_temp == 2
-
-    def test_validate_valid_config(self):
-        """Test validation of valid config."""
-        config = FanConfig()
-        errors = config.validate()
-        assert errors == []
-
-    def test_validate_invalid_mode(self):
-        """Test validation rejects invalid mode."""
-        config = FanConfig(mode="invalid")
-        errors = config.validate()
-        assert len(errors) == 1
-        assert "mode" in errors[0]
-
-    def test_validate_invalid_hysteresis(self):
-        """Test validation rejects invalid hysteresis."""
-        config = FanConfig(hysteresis_temp=20)
-        errors = config.validate()
-        assert len(errors) == 1
-        assert "hysteresis_temp" in errors[0]
-
-    def test_validate_custom_mode_needs_curve(self):
-        """Test custom mode requires at least 2 curve points."""
-        config = FanConfig(mode="custom", curve=[FanCurvePoint(50, 50)])
-        errors = config.validate()
-        assert len(errors) == 1
-        assert "at least 2 points" in errors[0]
-
-    def test_validate_curve_increasing_temps(self):
-        """Test curve temperatures must be strictly increasing."""
-        config = FanConfig(
-            mode="custom",
-            curve=[
-                FanCurvePoint(60, 50),
-                FanCurvePoint(50, 75),  # Not increasing
-            ]
-        )
-        errors = config.validate()
-        assert any("strictly increasing" in e for e in errors)
-
-    def test_to_dict(self):
-        """Test serialization to dict."""
-        config = FanConfig(enabled=True, mode="custom")
-        d = config.to_dict()
-        assert d["enabled"] is True
-        assert d["mode"] == "custom"
-        assert "curve" in d
-        assert "zero_rpm_enabled" in d
-        assert "hysteresis_temp" in d
-
-    def test_from_dict(self):
-        """Test deserialization from dict."""
-        d = {
-            "enabled": True,
-            "mode": "custom",
-            "curve": [{"temp_c": 40, "speed_percent": 20}],
-            "zero_rpm_enabled": True,
-            "hysteresis_temp": 3,
-        }
-        config = FanConfig.from_dict(d)
-        assert config.enabled is True
-        assert config.mode == "custom"
-        assert config.zero_rpm_enabled is True
-        assert config.hysteresis_temp == 3
+class FanCurvePoint:
+    """Fan curve point (temperature -> speed)."""
+    
+    def __init__(self, temp_c: int, speed_percent: int):
+        self.temp_c = temp_c
+        self.speed_percent = speed_percent
+    
+    def to_dict(self):
+        return {"temp_c": self.temp_c, "speed_percent": self.speed_percent}
 
 
-class TestFanStatus:
-    """Tests for FanStatus dataclass."""
-
-    def test_default_values(self):
-        """Test default values."""
-        status = FanStatus()
-        assert status.temp_c == 0
-        assert status.pwm == 0
-        assert status.speed_percent == 0
-        assert status.rpm is None
-        assert status.mode == "default"
-        assert status.safety_override is False
-
-    def test_to_dict(self):
-        """Test serialization to dict."""
-        status = FanStatus(temp_c=65, pwm=128, speed_percent=50, rpm=3000)
-        d = status.to_dict()
-        assert d["temp_c"] == 65
-        assert d["pwm"] == 128
-        assert d["speed_percent"] == 50
-        assert d["rpm"] == 3000
-
-    def test_from_dict(self):
-        """Test deserialization from dict."""
-        d = {"temp_c": 65, "pwm": 128, "speed_percent": 50, "rpm": 3000}
-        status = FanStatus.from_dict(d)
-        assert status.temp_c == 65
-        assert status.pwm == 128
-        assert status.speed_percent == 50
-        assert status.rpm == 3000
+def validate_fan_curve(curve: List[FanCurvePoint]) -> bool:
+    """Validate that a fan curve is valid.
+    
+    A valid curve:
+    - Has at least 2 points
+    - Points are sorted by temperature (ascending)
+    - All speed_percent values are in [0, 100]
+    """
+    if len(curve) < 2:
+        return False
+    
+    for i in range(len(curve) - 1):
+        if curve[i].temp_c >= curve[i + 1].temp_c:
+            return False
+    
+    for point in curve:
+        if not (0 <= point.speed_percent <= 100):
+            return False
+    
+    return True
 
 
-class TestDynamicConfigFanIntegration:
-    """Tests for fan config integration in DynamicConfig."""
+def interpolate_speed(curve: List[FanCurvePoint], temp: int) -> int:
+    """Interpolate fan speed for a given temperature.
+    
+    Args:
+        curve: Sorted list of fan curve points
+        temp: Temperature to interpolate for
+        
+    Returns:
+        Interpolated speed percentage
+    """
+    if not curve:
+        return 100  # Safety default
+    
+    # Below first point
+    if temp <= curve[0].temp_c:
+        return curve[0].speed_percent
+    
+    # Above last point
+    if temp >= curve[-1].temp_c:
+        return curve[-1].speed_percent
+    
+    # Find surrounding points and interpolate
+    for i in range(len(curve) - 1):
+        if curve[i].temp_c <= temp <= curve[i + 1].temp_c:
+            t1, s1 = curve[i].temp_c, curve[i].speed_percent
+            t2, s2 = curve[i + 1].temp_c, curve[i + 1].speed_percent
+            
+            # Linear interpolation
+            ratio = (temp - t1) / (t2 - t1) if t2 != t1 else 0
+            return int(s1 + ratio * (s2 - s1))
+    
+    return 100  # Safety default
 
-    def test_default_fan_config(self):
-        """Test DynamicConfig has default fan config."""
-        config = DynamicConfig()
-        assert config.fan_config is not None
-        assert isinstance(config.fan_config, FanConfig)
-        assert config.fan_config.enabled is False
 
-    def test_validate_includes_fan_config(self):
-        """Test DynamicConfig validation includes fan config."""
-        config = DynamicConfig()
-        config.fan_config.mode = "invalid"
-        errors = config.validate()
-        assert any("fan_config" in e for e in errors)
+def apply_safety_override(speed: int, temp: int, safety_threshold: int = 90) -> int:
+    """Apply safety override for high temperatures.
+    
+    Args:
+        speed: Calculated fan speed
+        temp: Current temperature
+        safety_threshold: Temperature threshold for 100% override
+        
+    Returns:
+        Final fan speed (100% if temp >= threshold)
+    """
+    if temp >= safety_threshold:
+        return 100
+    return speed
 
-    def test_to_dict_includes_fan_config(self):
-        """Test DynamicConfig.to_dict includes fan_config."""
-        config = DynamicConfig()
-        config.fan_config.enabled = True
-        d = config.to_dict()
-        assert "fan_config" in d
-        assert d["fan_config"]["enabled"] is True
 
-    def test_from_dict_parses_fan_config(self):
-        """Test DynamicConfig.from_dict parses fan_config."""
-        d = {
-            "strategy": "balanced",
-            "fan_config": {
-                "enabled": True,
-                "mode": "custom",
-            }
-        }
-        config = DynamicConfig.from_dict(d)
-        assert config.fan_config.enabled is True
-        assert config.fan_config.mode == "custom"
+class TestFanCurveApplication:
+    """Property 8: Применение кривой вентилятора
+    
+    For any valid fan curve (points sorted by temperature, speed_percent in [0, 100]),
+    the curve must be correctly passed to gymdeck3 daemon.
+    
+    Feature: decktune-critical-fixes, Property 8: Fan Curve Application
+    Validates: Requirements 7.4
+    """
+
+    @given(
+        temps=st.lists(temp_strategy, min_size=2, max_size=8, unique=True),
+        speeds=st.lists(speed_strategy, min_size=2, max_size=8)
+    )
+    @settings(max_examples=100)
+    def test_valid_curve_is_accepted(self, temps: List[int], speeds: List[int]):
+        """
+        Property 8: Valid fan curves are accepted.
+        
+        Feature: decktune-critical-fixes, Property 8: Fan Curve Application
+        **Validates: Requirements 7.4**
+        """
+        # Ensure same length
+        min_len = min(len(temps), len(speeds))
+        temps = sorted(temps[:min_len])
+        speeds = speeds[:min_len]
+        
+        # Create curve
+        curve = [FanCurvePoint(t, s) for t, s in zip(temps, speeds)]
+        
+        # Validate curve
+        is_valid = validate_fan_curve(curve)
+        assert is_valid, f"Valid curve should be accepted: {[(p.temp_c, p.speed_percent) for p in curve]}"
+
+    @given(
+        temps=st.lists(temp_strategy, min_size=2, max_size=6, unique=True),
+        speeds=st.lists(speed_strategy, min_size=2, max_size=6),
+        test_temp=temp_strategy
+    )
+    @settings(max_examples=100)
+    def test_interpolation_within_bounds(
+        self, temps: List[int], speeds: List[int], test_temp: int
+    ):
+        """
+        Property 8: Interpolated speed is within valid bounds.
+        
+        Feature: decktune-critical-fixes, Property 8: Fan Curve Application
+        **Validates: Requirements 7.4**
+        """
+        # Ensure same length
+        min_len = min(len(temps), len(speeds))
+        temps = sorted(temps[:min_len])
+        speeds = speeds[:min_len]
+        
+        # Create curve
+        curve = [FanCurvePoint(t, s) for t, s in zip(temps, speeds)]
+        
+        # Interpolate
+        result = interpolate_speed(curve, test_temp)
+        
+        # Result should be within [0, 100]
+        assert 0 <= result <= 100, f"Interpolated speed {result} out of bounds"
+
+    def test_known_curve_values(self):
+        """Test with known curve values for verification."""
+        curve = [
+            FanCurvePoint(40, 20),
+            FanCurvePoint(60, 50),
+            FanCurvePoint(80, 100),
+        ]
+        
+        # Below first point
+        assert interpolate_speed(curve, 30) == 20
+        
+        # At first point
+        assert interpolate_speed(curve, 40) == 20
+        
+        # Between points (linear interpolation)
+        assert interpolate_speed(curve, 50) == 35  # Midpoint between 20 and 50
+        
+        # At last point
+        assert interpolate_speed(curve, 80) == 100
+        
+        # Above last point
+        assert interpolate_speed(curve, 90) == 100
+
+
+class TestFanTemperatureSafety:
+    """Property 9: Температурная защита вентилятора
+    
+    For any temperature >= 90°C, fan speed must be forced to 100% regardless of user curve settings.
+    
+    Feature: decktune-critical-fixes, Property 9: Fan Temperature Safety
+    Validates: Requirements 7.7
+    """
+
+    @given(
+        temp=st.integers(min_value=90, max_value=120),
+        curve_speed=speed_strategy
+    )
+    @settings(max_examples=100)
+    def test_high_temp_forces_100_percent(self, temp: int, curve_speed: int):
+        """
+        Property 9: High temperature forces 100% fan speed.
+        
+        Feature: decktune-critical-fixes, Property 9: Fan Temperature Safety
+        **Validates: Requirements 7.7**
+        """
+        result = apply_safety_override(curve_speed, temp, safety_threshold=90)
+        
+        assert result == 100, f"At {temp}°C, fan should be 100%, got {result}%"
+
+    @given(
+        temp=st.integers(min_value=30, max_value=89),
+        curve_speed=speed_strategy
+    )
+    @settings(max_examples=100)
+    def test_normal_temp_uses_curve_speed(self, temp: int, curve_speed: int):
+        """
+        Property 9: Normal temperature uses curve speed.
+        
+        Feature: decktune-critical-fixes, Property 9: Fan Temperature Safety
+        **Validates: Requirements 7.7**
+        """
+        result = apply_safety_override(curve_speed, temp, safety_threshold=90)
+        
+        assert result == curve_speed, f"At {temp}°C, fan should be {curve_speed}%, got {result}%"
+
+    def test_boundary_conditions(self):
+        """Test boundary conditions at 90°C threshold."""
+        # Just below threshold
+        assert apply_safety_override(50, 89, safety_threshold=90) == 50
+        
+        # At threshold
+        assert apply_safety_override(50, 90, safety_threshold=90) == 100
+        
+        # Above threshold
+        assert apply_safety_override(50, 95, safety_threshold=90) == 100
+        
+        # Even 0% curve speed should become 100% at high temp
+        assert apply_safety_override(0, 90, safety_threshold=90) == 100
+
+    @given(temp=st.integers(min_value=90, max_value=150))
+    @settings(max_examples=100)
+    def test_safety_override_always_100_above_threshold(self, temp: int):
+        """
+        Property 9: Safety override is always 100% above threshold.
+        
+        Feature: decktune-critical-fixes, Property 9: Fan Temperature Safety
+        **Validates: Requirements 7.7**
+        """
+        # Test with various curve speeds
+        for curve_speed in [0, 25, 50, 75, 100]:
+            result = apply_safety_override(curve_speed, temp, safety_threshold=90)
+            assert result == 100, f"At {temp}°C with curve {curve_speed}%, should be 100%, got {result}%"

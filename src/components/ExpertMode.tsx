@@ -4,6 +4,9 @@
  * Feature: decktune, Frontend UI Components - Expert Mode
  * Requirements: 4.5, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2
  * 
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 2.1, 2.2, 2.3, 2.5, 2.6
+ * 
  * Provides detailed manual controls and diagnostics for power users:
  * - Manual tab: Per-core sliders, Apply/Test/Disable buttons, live metrics
  * - Presets tab: Preset list with edit/delete/export, import
@@ -43,17 +46,63 @@ import {
   FaExclamationTriangle,
   FaExclamationCircle,
   FaRocket,
+  FaFan,
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
 import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
 import { LoadGraph } from "./LoadGraph";
 import { PresetsTabNew } from "./PresetsTabNew";
+import { FanTab } from "./FanTab";
+
+/**
+ * Compact styles for QAM (310px width).
+ * 
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 2.1
+ */
+const QAM_STYLES = {
+  container: {
+    maxWidth: "310px",
+    padding: "8px",
+  },
+  tabNav: {
+    display: "flex",
+    gap: "4px",
+    padding: "4px",
+  },
+  tabButton: {
+    flex: 1,
+    padding: "6px 4px",
+    fontSize: "10px",
+    minWidth: "0",
+  },
+  slider: {
+    marginBottom: "8px",
+  },
+  metricsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "6px",
+  },
+  button: {
+    padding: "8px 12px",
+    fontSize: "12px",
+  },
+  buttonContainer: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: "6px",
+  },
+  compactRow: {
+    marginBottom: "6px",
+  },
+};
 
 /**
  * Tab type for Expert Mode navigation.
  * Requirements: 7.1
  */
-export type ExpertTab = "manual" | "presets" | "tests" | "diagnostics";
+export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics";
 
 interface TabConfig {
   id: ExpertTab;
@@ -65,6 +114,7 @@ const TABS: TabConfig[] = [
   { id: "manual", label: "Manual", icon: FaSlidersH },
   { id: "presets", label: "Presets", icon: FaList },
   { id: "tests", label: "Tests", icon: FaVial },
+  { id: "fan", label: "Fan", icon: FaFan },
   { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
 ];
 
@@ -155,13 +205,17 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
       {activeTab === "manual" && <ManualTab />}
       {activeTab === "presets" && <PresetsTab />}
       {activeTab === "tests" && <TestsTab />}
+      {activeTab === "fan" && <FanTab />}
       {activeTab === "diagnostics" && <DiagnosticsTab />}
     </PanelSection>
   );
 };
 
 /**
- * Tab navigation component.
+ * Tab navigation component with compact display for QAM.
+ * 
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 2.3
  */
 interface TabNavigationProps {
   activeTab: ExpertTab;
@@ -174,10 +228,11 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
       style={{
         display: "flex",
         justifyContent: "space-around",
-        marginBottom: "16px",
+        marginBottom: "12px",
         backgroundColor: "#23262e",
-        borderRadius: "8px",
-        padding: "4px",
+        borderRadius: "6px",
+        padding: "3px",
+        gap: "2px",
       }}
     >
       {TABS.map((tab) => {
@@ -192,18 +247,22 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "4px",
-              padding: "8px 4px",
+              gap: "2px",
+              padding: "6px 2px",
               backgroundColor: isActive ? "#1a9fff" : "transparent",
               border: "none",
-              borderRadius: "6px",
+              borderRadius: "4px",
               color: isActive ? "#fff" : "#8b929a",
               cursor: "pointer",
               transition: "all 0.2s ease",
+              minWidth: "0",
             }}
           >
-            <Icon />
-            <span style={{ fontSize: "10px" }}>{tab.label}</span>
+            <Icon style={{ fontSize: "14px" }} />
+            {/* Hide label on very compact displays, show only icon */}
+            <span style={{ fontSize: "9px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+              {tab.label}
+            </span>
           </button>
         );
       })}

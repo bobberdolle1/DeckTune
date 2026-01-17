@@ -116,7 +116,9 @@ class TestErrorStatusPropagation:
         wrapper = RyzenadjWrapper("/path/to/ryzenadj", "/working/dir", event_emitter)
         
         async def run_test():
-            with patch('backend.core.ryzenadj.subprocess.run') as mock_run:
+            with patch('backend.core.ryzenadj.subprocess.run') as mock_run, \
+                 patch('backend.core.ryzenadj.os.path.exists', return_value=True), \
+                 patch('backend.core.ryzenadj.os.access', return_value=True):
                 mock_run.return_value = MagicMock(returncode=exit_code, stderr="")
                 
                 success, error = await wrapper.apply_values_async(cores)
@@ -140,7 +142,9 @@ class TestErrorStatusPropagation:
         wrapper = RyzenadjWrapper("/path/to/ryzenadj", "/working/dir", event_emitter)
         
         async def run_test():
-            with patch('backend.core.ryzenadj.subprocess.run') as mock_run:
+            with patch('backend.core.ryzenadj.subprocess.run') as mock_run, \
+                 patch('backend.core.ryzenadj.os.path.exists', return_value=True), \
+                 patch('backend.core.ryzenadj.os.access', return_value=True):
                 mock_run.return_value = MagicMock(returncode=0, stderr="")
                 
                 success, error = await wrapper.apply_values_async(cores)

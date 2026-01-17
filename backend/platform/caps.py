@@ -1,21 +1,29 @@
-"""Platform capabilities and limits."""
+"""Platform capabilities and limits.
+
+Feature: decktune-critical-fixes
+Validates: Requirements 5.1, 5.2, 5.6
+"""
 
 from typing import Dict, Any
 
+# Updated platform limits for extended undervolt support
+# LCD (Jupiter): safe_limit = -50mV, absolute_limit = -70mV
+# OLED (Galileo): safe_limit = -60mV, absolute_limit = -80mV
+# UNKNOWN: safe_limit = -30mV (conservative for unknown devices)
 PLATFORM_LIMITS: Dict[str, Dict[str, Any]] = {
     "LCD": {
-        "safe_limit": -30,
-        "absolute_limit": -40,
+        "safe_limit": -50,       # Updated from -30 (Requirement 5.1)
+        "absolute_limit": -70,   # Updated from -40 (Requirement 5.2)
         "default_step": 5
     },
     "OLED": {
-        "safe_limit": -35,
-        "absolute_limit": -50,
+        "safe_limit": -60,       # Updated from -35 (Requirement 5.1)
+        "absolute_limit": -80,   # Updated from -50 (Requirement 5.2)
         "default_step": 5
     },
     "UNKNOWN": {
-        "safe_limit": -25,
-        "absolute_limit": -30,
+        "safe_limit": -30,       # Conservative for unknown devices (Requirement 5.6)
+        "absolute_limit": -40,
         "default_step": 5
     }
 }

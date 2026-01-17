@@ -3,9 +3,17 @@
 Feature: decktune-3.0-automation, Binning Algorithm Properties
 Validates: Requirements 1.1, 2.4, 2.5, 2.6
 
+Feature: decktune-critical-fixes, Property 3: Binning Sequence
+Validates: Requirements 3.1, 3.2, 3.3
+
 Property 1: Binning iteration sequence
 For any binning session with start_value S and step_size T, the sequence of test values 
 should be [S, S-T, S-2T, ...] until failure or limit
+
+Property 3 (Critical Fixes): Корректность последовательности binning
+For any binning config (start_value, step_size), the sequence of tested values must be:
+start_value, start_value - step_size, start_value - 2*step_size, ... 
+until reaching safe_limit or first failure
 
 Property 9: Iteration limit enforcement
 For any binning session, the number of iterations must not exceed max_iterations
@@ -47,13 +55,30 @@ class MockRyzenadjWrapper:
     def __init__(self):
         self.applied_values: List[List[int]] = []
         self.should_fail = False
+        self.binary_path = "/mock/ryzenadj"
+        self._last_commands: List[str] = []
+    
+    async def diagnose(self):
+        """Mock diagnose method."""
+        return {
+            "binary_exists": True,
+            "binary_executable": True,
+            "sudo_available": True,
+            "test_command_result": "OK",
+            "error": None
+        }
     
     async def apply_values_async(self, cores: List[int]):
         """Mock apply_values_async."""
         self.applied_values.append(cores.copy())
+        self._last_commands.append(f"sudo /mock/ryzenadj --set-coper={cores}")
         if self.should_fail:
             return False, "Mock error"
         return True, None
+    
+    def get_last_commands(self) -> List[str]:
+        """Get last executed commands."""
+        return self._last_commands.copy()
 
 
 class MockTestRunner:
@@ -88,7 +113,10 @@ class MockEventEmitter:
     async def emit_status(self, status: str):
         pass
     
-    async def emit_binning_progress(self, current_value: int, iteration: int, last_stable: int, eta: int):
+    async def emit_binning_progress(self, current_value: int, iteration: int, last_stable: int, eta: int, max_iterations: int = 20):
+        pass
+    
+    async def emit_binning_error(self, error: str):
         pass
 
 

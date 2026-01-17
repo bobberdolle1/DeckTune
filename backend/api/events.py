@@ -151,7 +151,8 @@ class EventEmitter:
         current_value: int,
         iteration: int,
         last_stable: int,
-        eta: int
+        eta: int,
+        max_iterations: int = 20
     ) -> None:
         """Emit binning progress.
         
@@ -160,17 +161,26 @@ class EventEmitter:
             iteration: Current iteration number
             last_stable: Last stable value found
             eta: Estimated time remaining in seconds
+            max_iterations: Maximum number of iterations (for progress calculation)
+            
+        Feature: decktune-critical-fixes
+        Validates: Requirements 6.1, 6.2, 6.3, 6.4
             
         Requirements: 8.1, 8.2
         """
+        # Calculate percent complete
+        percent_complete = (iteration / max_iterations) * 100 if max_iterations > 0 else 0
+        
         progress_data = {
             "current_value": current_value,
             "iteration": iteration,
             "last_stable": last_stable,
-            "eta": eta
+            "eta": eta,
+            "max_iterations": max_iterations,
+            "percent_complete": percent_complete
         }
-        logger.debug(f"Binning progress: iteration={iteration}, current={current_value}, "
-                    f"last_stable={last_stable}, eta={eta}s")
+        logger.debug(f"Binning progress: iteration={iteration}/{max_iterations} ({percent_complete:.1f}%), "
+                    f"current={current_value}, last_stable={last_stable}, eta={eta}s")
         await self._emit_event("binning_progress", progress_data)
     
     async def emit_binning_complete(self, result: "BinningResult") -> None:

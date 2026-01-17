@@ -41,6 +41,24 @@ class MockRyzenadjWrapper:
         self.should_fail = should_fail
         self.last_values = None
     
+    async def diagnose(self):
+        """Mock diagnose method for testing."""
+        if self.should_fail:
+            return {
+                "available": False,
+                "binary_found": False,
+                "sudo_available": False,
+                "test_run_success": False,
+                "error": "Mock ryzenadj error"
+            }
+        return {
+            "available": True,
+            "binary_found": True,
+            "sudo_available": True,
+            "test_run_success": True,
+            "error": None
+        }
+    
     async def apply_values_async(self, values):
         if self.should_fail:
             return False, "Mock ryzenadj error"

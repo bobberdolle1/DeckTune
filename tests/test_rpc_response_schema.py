@@ -39,6 +39,16 @@ class MockRyzenadjWrapper:
     def __init__(self):
         self.last_values = None
     
+    async def diagnose(self):
+        """Mock diagnose method for testing."""
+        return {
+            "available": True,
+            "binary_found": True,
+            "sudo_available": True,
+            "test_run_success": True,
+            "error": None
+        }
+    
     async def apply_values_async(self, values):
         self.last_values = values
         return True, None

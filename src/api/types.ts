@@ -231,12 +231,17 @@ export interface BinningResult {
 
 /**
  * Binning progress event data.
+ * 
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 export interface BinningProgress {
   current_value: number;    // Value being tested
   iteration: number;        // Current iteration number
   last_stable: number;      // Last successful value
   eta: number;              // Estimated time remaining in seconds
+  max_iterations: number;   // Maximum number of iterations
+  percent_complete: number; // Progress percentage (0-100)
 }
 
 /**

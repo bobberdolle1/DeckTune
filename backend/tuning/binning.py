@@ -148,13 +148,14 @@ class BinningEngine:
         """Execute binning process.
         
         Runs the complete binning workflow:
-        1. Generate test sequence
-        2. For each value:
+        1. Check ryzenadj availability
+        2. Generate test sequence
+        3. For each value:
            - Persist state
            - Apply value
            - Run stress test
            - Update last_stable on success
-        3. Calculate and return result
+        4. Calculate and return result
         
         Args:
             config: BinningConfig with test parameters
@@ -162,10 +163,40 @@ class BinningEngine:
         Returns:
             BinningResult with discovered limits and statistics
             
+        Raises:
+            RuntimeError: If binning is already running or ryzenadj is unavailable
+            
+        Feature: decktune-critical-fixes
+        Validates: Requirements 3.1
+        
         Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 2.1, 2.4, 2.5, 2.6
         """
         if self._running:
             raise RuntimeError("Binning is already running")
+        
+        # Check ryzenadj availability before starting (Requirement 3.1)
+        logger.info("Checking ryzenadj availability before starting binning...")
+        diagnostics = await self.ryzenadj.diagnose()
+        
+        if not diagnostics.get("binary_exists"):
+            error_msg = f"ryzenadj binary not found at {self.ryzenadj.binary_path}"
+            logger.error(error_msg)
+            await self.event_emitter.emit_binning_error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        if not diagnostics.get("binary_executable"):
+            error_msg = f"ryzenadj binary is not executable: {self.ryzenadj.binary_path}"
+            logger.error(error_msg)
+            await self.event_emitter.emit_binning_error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        if diagnostics.get("error") and not diagnostics.get("test_command_result"):
+            error_msg = f"ryzenadj test failed: {diagnostics.get('error')}"
+            logger.error(error_msg)
+            await self.event_emitter.emit_binning_error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        logger.info("ryzenadj check passed, starting binning process")
         
         self._running = True
         self._cancelled = False
@@ -218,12 +249,13 @@ class BinningEngine:
                 remaining_iterations = config.max_iterations - iteration
                 eta = remaining_iterations * config.test_duration
                 
-                # Emit progress event
+                # Emit progress event with max_iterations for progress bar
                 await self.event_emitter.emit_binning_progress(
                     current_value=current_value,
                     iteration=iteration,
                     last_stable=last_stable,
-                    eta=eta
+                    eta=eta,
+                    max_iterations=config.max_iterations
                 )
                 
                 # Run the test iteration
@@ -291,10 +323,10 @@ class BinningEngine:
                 await self.ryzenadj.apply_values_async(self._previous_values)
     
     async def _run_iteration(self, value: int, config: BinningConfig) -> bool:
-        """Run single test iteration.
+        """Run single test iteration with detailed diagnostics.
         
         Applies the test value to all cores and runs a stress test for the
-        configured duration.
+        configured duration. Logs each step for debugging.
         
         Args:
             value: Undervolt value to test (in mV)
@@ -303,20 +335,44 @@ class BinningEngine:
         Returns:
             True if test passed, False otherwise
             
+        Feature: decktune-critical-fixes
+        Validates: Requirements 3.2, 3.3
+        
         Requirements: 1.3, 1.4
         """
-        # Apply value to all cores
+        logger.info(f"Starting iteration for value {value}mV")
+        
+        # Step 1: Apply value to all cores
         test_values = [value] * 4
+        logger.debug(f"Applying undervolt values: {test_values}")
+        
         success, error = await self.ryzenadj.apply_values_async(test_values)
         
         if not success:
-            logger.error(f"Failed to apply test value {value}: {error}")
+            logger.error(f"Failed to apply test value {value}mV: {error}")
+            logger.debug(f"Commands attempted: {self.ryzenadj.get_last_commands()}")
             return False
         
-        # Run stress test (combo test for CPU + memory)
-        # Note: We'll use the combo test which runs for the configured duration
-        # For now, we'll use the existing "combo" test which is 5 minutes
-        # In a real implementation, we'd want to make this configurable
-        test_result = await self.runner.run_test("combo")
+        logger.info(f"Successfully applied undervolt value {value}mV to all cores")
+        logger.debug(f"Commands executed: {self.ryzenadj.get_last_commands()}")
         
-        return test_result.passed
+        # Step 2: Verify the value was applied (optional sanity check)
+        # This helps catch cases where ryzenadj returns success but doesn't actually apply
+        logger.debug("Undervolt applied, proceeding to stress test")
+        
+        # Step 3: Run stress test (combo test for CPU + memory)
+        logger.info(f"Starting stress test for value {value}mV (duration: {config.test_duration}s)")
+        
+        try:
+            test_result = await self.runner.run_test("combo")
+            
+            if test_result.passed:
+                logger.info(f"Stress test PASSED for value {value}mV")
+            else:
+                logger.warning(f"Stress test FAILED for value {value}mV: {test_result.error or 'Unknown error'}")
+            
+            return test_result.passed
+            
+        except Exception as e:
+            logger.error(f"Stress test exception for value {value}mV: {type(e).__name__}: {str(e)}")
+            return False

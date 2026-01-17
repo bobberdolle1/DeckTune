@@ -214,19 +214,45 @@ class DeckTuneRPC:
         cores: List[int],
         timeout: int = 0
     ) -> Dict[str, Any]:
-        """Apply undervolt values with optional delay.
+        """Apply undervolt values with optional delay and detailed diagnostics.
         
         Args:
             cores: List of 4 undervolt values (positive values will be negated)
             timeout: Delay in seconds before applying (0 for immediate)
             
         Returns:
-            Dictionary with success status and any error message
+            Dictionary with success status, applied cores, and diagnostics on error
+            
+        Feature: decktune-critical-fixes
+        Validates: Requirements 1.2, 1.5
         """
         logger.info(f"Applying undervolt with values: {cores}, timeout: {timeout}")
         
         # Cancel any pending delay task
         self._cancel_delay_task()
+        
+        # Check ryzenadj availability before proceeding
+        diagnostics = await self.ryzenadj.diagnose()
+        
+        if not diagnostics.get("binary_exists"):
+            error_msg = "ryzenadj binary not found. Please ensure ryzenadj is installed in bin/"
+            logger.error(error_msg)
+            await self.event_emitter.emit_status("error")
+            return {
+                "success": False,
+                "error": error_msg,
+                "diagnostics": diagnostics
+            }
+        
+        if not diagnostics.get("binary_executable"):
+            error_msg = "ryzenadj binary is not executable. Please check file permissions."
+            logger.error(error_msg)
+            await self.event_emitter.emit_status("error")
+            return {
+                "success": False,
+                "error": error_msg,
+                "diagnostics": diagnostics
+            }
         
         if timeout > 0:
             await self.event_emitter.emit_status("scheduled")
@@ -241,18 +267,31 @@ class DeckTuneRPC:
         negated_cores = [-abs(v) if v > 0 else v for v in cores]
         clamped_cores = self.safety.clamp_values(negated_cores)
         
+        logger.debug(f"Applying clamped values: {clamped_cores} (original: {cores})")
+        
         success, error = await self.ryzenadj.apply_values_async(clamped_cores)
         
         if success:
             self.settings.setSetting("cores", clamped_cores)
             self.settings.setSetting("status", "enabled")
             await self.event_emitter.emit_status("enabled")
-            logger.info(f"Undervolt applied: {clamped_cores}")
-            return {"success": True, "cores": clamped_cores}
+            logger.info(f"Undervolt applied successfully: {clamped_cores}")
+            return {
+                "success": True,
+                "cores": clamped_cores,
+                "commands_executed": self.ryzenadj.get_last_commands()
+            }
         else:
             await self.event_emitter.emit_status("error")
             logger.error(f"Failed to apply undervolt: {error}")
-            return {"success": False, "error": error}
+            
+            # Return detailed diagnostics on failure
+            return {
+                "success": False,
+                "error": error,
+                "diagnostics": diagnostics,
+                "commands_executed": self.ryzenadj.get_last_commands()
+            }
     
     async def disable_undervolt(self) -> Dict[str, Any]:
         """Reset all cores to 0 (no undervolt).

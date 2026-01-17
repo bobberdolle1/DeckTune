@@ -3,9 +3,16 @@
 Feature: dynamic-mode-refactor, Property 13: Expert Mode Value Range
 Validates: Requirements 13.2
 
+Feature: decktune-critical-fixes, Property 6: Extended Expert Mode Range
+Validates: Requirements 5.3
+
 Property 13: Expert Mode Value Range
 For any undervolt value V, if expert_mode is true then V in range [0, -100] 
 SHALL be accepted; if expert_mode is false then V SHALL be clamped to platform limits.
+
+Property 6 (Critical Fixes): Расширенный диапазон в Expert Mode
+For any undervolt value in range [-100, 0], if Expert Mode is active and confirmed,
+the value must be accepted without clamping to platform safe_limit.
 """
 
 import pytest

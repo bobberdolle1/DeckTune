@@ -2,6 +2,60 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.9] - 2026-01-17
+
+### Fixed
+- **Undervolt functionality** — improved diagnostics and error handling
+  - Added `diagnose()` method to RyzenadjWrapper for comprehensive availability checks
+  - Enhanced `apply_values_async()` with detailed logging and validation
+  - Improved error handling in RPC `apply_undervolt` with diagnostics check before applying
+- **Extended undervolt limits** — increased safe limits for better performance
+  - LCD (Jupiter): safe_limit = -50mV (was -30mV), absolute_limit = -70mV
+  - OLED (Galileo): safe_limit = -60mV (was -35mV), absolute_limit = -80mV
+  - Unknown: safe_limit = -30mV (was -25mV), absolute_limit = -40mV
+- **Binning improvements** — enhanced reliability and diagnostics
+  - Added ryzenadj availability check in `BinningEngine.start()`
+  - Improved `_run_iteration` with detailed diagnostics and logging
+  - Better error messages when ryzenadj is unavailable
+- **Binning progress bar** — new visual progress indicator
+  - Added `max_iterations` and `percent_complete` to binning progress events
+  - New `BinningProgress` component with progress bar, ETA, and iteration tracking
+  - Integrated into WizardMode for better user feedback
+- **QAM UI optimization** — improved layout for Quick Access Menu
+  - Compact styles with max-width: 310px for QAM compatibility
+  - Icon-only tab navigation to save space
+  - Flex-wrap for buttons to prevent overflow
+  - 2x2 grid layout for core metrics
+- **Rendering error fixes** — improved error handling in UI
+  - New `ErrorBoundary` component wrapping DeckTuneApp
+  - Graceful error recovery with fallback UI
+  - Better error logging for debugging
+- **Fan control restoration** — re-enabled fan control tab
+  - New `FanTab` component with fan curve editor integration
+  - Added Fan tab to Expert Mode navigation
+  - Property tests for fan curve application and temperature safety
+
+### Testing
+- **9 new property-based tests** covering all critical fixes
+  - Property 1: Hex calculation correctness (extended to -100mV range)
+  - Property 2: Status invariant after undervolt application
+  - Property 3: Binning sequence correctness
+  - Property 4: Binning result invariant
+  - Property 5: Binning state persistence
+  - Property 6: Expert Mode extended range validation
+  - Property 7: Binning progress event completeness
+  - Property 8: Fan curve application
+  - Property 9: Fan temperature safety override
+- **All 504 tests passing** including new property tests
+- **Updated test mocks** to include new `diagnose()` method
+
+### Technical
+- Enhanced `RyzenadjWrapper` with comprehensive diagnostics
+- Updated platform limits in `caps.py` and `detect.py`
+- Improved event emission in `events.py` with progress tracking
+- New React components: `BinningProgress`, `ErrorBoundary`, `FanTab`
+- Updated TypeScript interfaces for binning progress data
+
 ## [3.1.8] - 2026-01-16
 
 ### Fixed

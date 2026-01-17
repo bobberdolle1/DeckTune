@@ -46,12 +46,15 @@ def _map_product_name_to_platform(product_name: Optional[str]) -> PlatformInfo:
         
     Returns:
         PlatformInfo based on product name mapping
+        
+    Feature: decktune-critical-fixes
+    Validates: Requirements 5.1, 5.2, 5.6
     """
     if product_name is None:
         return PlatformInfo(
             model="Unknown",
             variant="UNKNOWN",
-            safe_limit=-25,
+            safe_limit=-30,  # Conservative for unknown devices (Requirement 5.6)
             detected=False
         )
     
@@ -60,7 +63,7 @@ def _map_product_name_to_platform(product_name: Optional[str]) -> PlatformInfo:
         return PlatformInfo(
             model="Jupiter",
             variant="LCD",
-            safe_limit=-30,
+            safe_limit=-50,  # Updated from -30 (Requirement 5.1)
             detected=True
         )
     
@@ -69,7 +72,7 @@ def _map_product_name_to_platform(product_name: Optional[str]) -> PlatformInfo:
         return PlatformInfo(
             model="Galileo",
             variant="OLED",
-            safe_limit=-35,
+            safe_limit=-60,  # Updated from -35 (Requirement 5.1)
             detected=True
         )
     
@@ -78,7 +81,7 @@ def _map_product_name_to_platform(product_name: Optional[str]) -> PlatformInfo:
     return PlatformInfo(
         model="Unknown",
         variant="UNKNOWN",
-        safe_limit=-25,
+        safe_limit=-30,  # Conservative for unknown devices (Requirement 5.6)
         detected=False
     )
 
@@ -107,9 +110,9 @@ def detect_platform(
     returns cached result. Otherwise performs fresh detection and updates cache.
     
     Reads /sys/devices/virtual/dmi/id/product_name
-    - "Jupiter" -> LCD, limit -30
-    - "Galileo" -> OLED, limit -35
-    - Unknown -> Conservative limit -25
+    - "Jupiter" -> LCD, limit -50 (updated from -30)
+    - "Galileo" -> OLED, limit -60 (updated from -35)
+    - Unknown -> Conservative limit -30 (updated from -25)
     
     Args:
         dmi_path: Path to DMI product_name file (for testing)
@@ -121,6 +124,9 @@ def detect_platform(
         
     Feature: decktune-3.1-reliability-ux
     Validates: Requirements 3.1, 3.2
+    
+    Feature: decktune-critical-fixes
+    Validates: Requirements 5.1, 5.2, 5.6
     """
     global _platform_cache
     

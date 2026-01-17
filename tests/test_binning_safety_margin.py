@@ -3,8 +3,14 @@
 Feature: decktune-3.0-automation, Property 6: Safety margin recommendation
 Validates: Requirements 1.6, 1.7
 
+Feature: decktune-critical-fixes, Property 4: Binning Result Invariant
+Validates: Requirements 3.4
+
 Property 6: Safety margin recommendation
 For any completed binning session with max_stable M, the recommended value must equal M + 5
+
+Property 4 (Critical Fixes): Инвариант результата binning
+For any binning result, recommended value must equal max_stable + 5mV (safety margin)
 """
 
 import pytest
