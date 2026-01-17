@@ -79,3 +79,8 @@ diagnostics_*.tar.gz
 
 # Release artifacts
 release/
+
+# Deployment docs with passwords
+DEPLOY.md
+scripts/manual-deploy.ps1
+scripts/deploy.ps1
