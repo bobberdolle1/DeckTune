@@ -283,15 +283,16 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
- * Inline Dynamic Settings component - compact version for ManualTab.
- * Shows essential dynamic mode settings without leaving the Manual tab.
+ * Inline Dynamic Settings component - expanded version with more settings.
+ * Shows comprehensive dynamic mode configuration.
  */
 const DynamicSettingsInline: FC = () => {
   const { state, api } = useDeckTune();
-  const [showSettings, setShowSettings] = useState(false);
   const [strategy, setStrategy] = useState<string>("balanced");
   const [simpleMode, setSimpleMode] = useState<boolean>(false);
   const [simpleValue, setSimpleValue] = useState<number>(-25);
+  const [updateInterval, setUpdateInterval] = useState<number>(1000);
+  const [loadThreshold, setLoadThreshold] = useState<number>(50);
   const [isSaving, setIsSaving] = useState(false);
 
   // Get expert mode from settings
@@ -307,6 +308,8 @@ const DynamicSettingsInline: FC = () => {
           setStrategy(config.strategy || "balanced");
           setSimpleMode(config.simple_mode || false);
           setSimpleValue(config.simple_value || -25);
+          setUpdateInterval(config.update_interval || 1000);
+          setLoadThreshold(config.load_threshold || 50);
         }
       } catch (e) {
         console.error("Failed to load dynamic config:", e);
@@ -322,6 +325,8 @@ const DynamicSettingsInline: FC = () => {
         strategy,
         simple_mode: simpleMode,
         simple_value: simpleValue,
+        update_interval: updateInterval,
+        load_threshold: loadThreshold,
         expert_mode: expertMode,
       };
       await api.saveDynamicConfig(config);
@@ -333,140 +338,173 @@ const DynamicSettingsInline: FC = () => {
   };
 
   return (
-    <>
-      {/* Settings Toggle Button */}
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => setShowSettings(!showSettings)}
+    <PanelSectionRow>
+      <div style={{
+        padding: "12px",
+        background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+        borderRadius: "8px",
+        border: "1px solid rgba(26, 159, 255, 0.3)",
+        animation: "slideDown 0.3s ease-out"
+      }}>
+        {/* Header */}
+        <div style={{
+          fontSize: "11px",
+          fontWeight: "bold",
+          color: "#1a9fff",
+          marginBottom: "12px",
+          paddingBottom: "8px",
+          borderBottom: "1px solid rgba(26, 159, 255, 0.2)"
+        }}>
+          ⚙️ Dynamic Mode Configuration
+        </div>
+
+        {/* Strategy Selection */}
+        <div style={{ marginBottom: "12px" }}>
+          <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
+            Strategy
+          </div>
+          <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
+            {[
+              { id: "conservative", label: "Conservative", desc: "Safe" },
+              { id: "balanced", label: "Balanced", desc: "Default" },
+              { id: "aggressive", label: "Aggressive", desc: "Max" }
+            ].map((s) => (
+              <Focusable
+                key={s.id}
+                style={{ flex: 1 }}
+                onActivate={() => setStrategy(s.id)}
+                onClick={() => setStrategy(s.id)}
+              >
+                <div style={{
+                  padding: "8px 4px",
+                  backgroundColor: strategy === s.id ? "#1a9fff" : "#3d4450",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "9px",
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  transition: "all 0.2s ease",
+                  border: "none",
+                  outline: "none"
+                }}>
+                  <div>{strategy === s.id ? "✓ " : ""}{s.label}</div>
+                  <div style={{ fontSize: "7px", opacity: 0.7, marginTop: "2px" }}>{s.desc}</div>
+                </div>
+              </Focusable>
+            ))}
+          </Focusable>
+        </div>
+
+        {/* Simple Mode Toggle */}
+        <div style={{ marginBottom: "12px" }}>
+          <ToggleField
+            label="Simple Mode"
+            description="Use one value for all cores"
+            checked={simpleMode}
+            onChange={setSimpleMode}
+            bottomSeparator="none"
+          />
+        </div>
+
+        {/* Simple Value Slider (only if Simple Mode enabled) */}
+        {simpleMode && (
+          <div style={{ marginBottom: "12px" }}>
+            <SliderField
+              label="Undervolt Value"
+              value={simpleValue}
+              min={minLimit}
+              max={0}
+              step={1}
+              showValue={true}
+              onChange={(value: number) => setSimpleValue(value)}
+              valueSuffix=" mV"
+              bottomSeparator="none"
+            />
+          </div>
+        )}
+
+        {/* Update Interval Slider */}
+        <div style={{ marginBottom: "12px" }}>
+          <SliderField
+            label="Update Interval"
+            value={updateInterval}
+            min={500}
+            max={5000}
+            step={100}
+            showValue={true}
+            onChange={(value: number) => setUpdateInterval(value)}
+            valueSuffix=" ms"
+            bottomSeparator="none"
+          />
+          <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
+            How often to check CPU load and adjust voltage
+          </div>
+        </div>
+
+        {/* Load Threshold Slider */}
+        <div style={{ marginBottom: "12px" }}>
+          <SliderField
+            label="Load Threshold"
+            value={loadThreshold}
+            min={10}
+            max={90}
+            step={5}
+            showValue={true}
+            onChange={(value: number) => setLoadThreshold(value)}
+            valueSuffix="%"
+            bottomSeparator="none"
+          />
+          <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
+            CPU load % to trigger voltage adjustment
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <Focusable
+          onActivate={handleSave}
+          onClick={handleSave}
         >
           <div style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "6px",
-            fontSize: "10px"
+            padding: "10px",
+            background: isSaving 
+              ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
+              : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "11px",
+            fontWeight: "bold",
+            border: "none",
+            outline: "none",
+            transition: "all 0.2s ease"
           }}>
-            <FaCog size={10} />
-            <span>{showSettings ? "Hide Settings" : "Dynamic Settings"}</span>
+            {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
+            <span>{isSaving ? "Saving..." : "Save Configuration"}</span>
           </div>
-        </ButtonItem>
-      </PanelSectionRow>
+        </Focusable>
 
-      {/* Expandable Settings Panel */}
-      {showSettings && (
-        <>
-          <PanelSectionRow>
-            <div style={{
-              padding: "10px",
-              background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
-              borderRadius: "8px",
-              border: "1px solid rgba(26, 159, 255, 0.2)",
-              animation: "slideDown 0.3s ease-out"
-            }}>
-              {/* Strategy */}
-              <div style={{ marginBottom: "10px" }}>
-                <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#1a9fff" }}>
-                  Strategy
-                </div>
-                <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
-                  {["conservative", "balanced", "aggressive"].map((s) => (
-                    <Focusable
-                      key={s}
-                      style={{ flex: 1 }}
-                      onActivate={() => setStrategy(s)}
-                      onClick={() => setStrategy(s)}
-                    >
-                      <div style={{
-                        padding: "8px 4px",
-                        backgroundColor: strategy === s ? "#1a9fff" : "#3d4450",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "9px",
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        transition: "all 0.2s ease",
-                        textTransform: "capitalize",
-                        border: "none",
-                        outline: "none"
-                      }}>
-                        {strategy === s ? "✓" : ""} {s}
-                      </div>
-                    </Focusable>
-                  ))}
-                </Focusable>
-              </div>
-
-              {/* Simple Mode Toggle */}
-              <div style={{ marginBottom: "10px" }}>
-                <ToggleField
-                  label="Simple Mode"
-                  description="One value for all cores"
-                  checked={simpleMode}
-                  onChange={setSimpleMode}
-                  bottomSeparator="none"
-                />
-              </div>
-
-              {/* Simple Value Slider */}
-              {simpleMode && (
-                <div style={{ marginBottom: "10px" }}>
-                  <SliderField
-                    label="Value"
-                    value={simpleValue}
-                    min={minLimit}
-                    max={0}
-                    step={1}
-                    showValue={true}
-                    onChange={(value: number) => setSimpleValue(value)}
-                    valueSuffix=" mV"
-                    bottomSeparator="none"
-                  />
-                </div>
-              )}
-
-              {/* Save Button */}
-              <Focusable
-                onActivate={handleSave}
-                onClick={handleSave}
-              >
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  padding: "10px",
-                  background: "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "11px",
-                  fontWeight: "bold",
-                  opacity: isSaving ? 0.5 : 1,
-                  border: "none",
-                  outline: "none"
-                }}>
-                  {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
-                  <span>Save Settings</span>
-                </div>
-              </Focusable>
-
-              {/* Info */}
-              <div style={{
-                marginTop: "8px",
-                padding: "6px",
-                backgroundColor: "rgba(26, 159, 255, 0.1)",
-                borderRadius: "4px",
-                fontSize: "8px",
-                color: "#8b929a",
-                lineHeight: "1.4"
-              }}>
-                ℹ️ Settings apply on next Dynamic mode start. Restart if already running.
-              </div>
-            </div>
-          </PanelSectionRow>
-        </>
-      )}
-    </>
+        {/* Info Box */}
+        <div style={{
+          marginTop: "10px",
+          padding: "8px",
+          backgroundColor: "rgba(26, 159, 255, 0.1)",
+          borderRadius: "6px",
+          fontSize: "8px",
+          color: "#8b929a",
+          lineHeight: "1.5",
+          border: "1px solid rgba(26, 159, 255, 0.2)"
+        }}>
+          <div style={{ fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" }}>ℹ️ How it works:</div>
+          • Monitors CPU load every {updateInterval}ms<br/>
+          • Adjusts voltage based on {strategy} strategy<br/>
+          • Triggers when load {'>'} {loadThreshold}%<br/>
+          • Restart Dynamic mode to apply changes
+        </div>
+      </div>
+    </PanelSectionRow>
   );
 };
 
@@ -658,7 +696,7 @@ const ManualTab: FC = () => {
         </PanelSectionRow>
       )}
 
-      {/* Dynamic Mode Settings (inline when Dynamic is selected) */}
+      {/* Dynamic Mode Settings (always visible when Dynamic is selected) */}
       {controlMode === "dynamic" && (
         <DynamicSettingsInline />
       )}

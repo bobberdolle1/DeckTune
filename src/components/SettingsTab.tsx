@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, FC } from "react";
-import { PanelSectionRow, ToggleField, DropdownItem, Focusable } from "@decky/ui";
+import { ToggleField, DropdownItem, Focusable } from "@decky/ui";
 import { 
   FaExclamationTriangle, 
   FaCheck, 

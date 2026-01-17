@@ -3266,15 +3266,16 @@
         })));
     };
     /**
-     * Inline Dynamic Settings component - compact version for ManualTab.
-     * Shows essential dynamic mode settings without leaving the Manual tab.
+     * Inline Dynamic Settings component - expanded version with more settings.
+     * Shows comprehensive dynamic mode configuration.
      */
     const DynamicSettingsInline = () => {
         const { state, api } = useDeckTune();
-        const [showSettings, setShowSettings] = SP_REACT.useState(false);
         const [strategy, setStrategy] = SP_REACT.useState("balanced");
         const [simpleMode, setSimpleMode] = SP_REACT.useState(false);
         const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
+        const [updateInterval, setUpdateInterval] = SP_REACT.useState(1000);
+        const [loadThreshold, setLoadThreshold] = SP_REACT.useState(50);
         const [isSaving, setIsSaving] = SP_REACT.useState(false);
         // Get expert mode from settings
         const expertMode = state.settings.expertMode || false;
@@ -3288,6 +3289,8 @@
                         setStrategy(config.strategy || "balanced");
                         setSimpleMode(config.simple_mode || false);
                         setSimpleValue(config.simple_value || -25);
+                        setUpdateInterval(config.update_interval || 1000);
+                        setLoadThreshold(config.load_threshold || 50);
                     }
                 }
                 catch (e) {
@@ -3303,6 +3306,8 @@
                     strategy,
                     simple_mode: simpleMode,
                     simple_value: simpleValue,
+                    update_interval: updateInterval,
+                    load_threshold: loadThreshold,
                     expert_mode: expertMode,
                 };
                 await api.saveDynamicConfig(config);
@@ -3314,77 +3319,101 @@
                 setIsSaving(false);
             }
         };
-        return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowSettings(!showSettings) },
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(26, 159, 255, 0.3)",
+                    animation: "slideDown 0.3s ease-out"
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        color: "#1a9fff",
+                        marginBottom: "12px",
+                        paddingBottom: "8px",
+                        borderBottom: "1px solid rgba(26, 159, 255, 0.2)"
+                    } }, "\u2699\uFE0F Dynamic Mode Configuration"),
+                window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" } }, "Strategy"),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" }, "flow-children": "horizontal" }, [
+                        { id: "conservative", label: "Conservative", desc: "Safe" },
+                        { id: "balanced", label: "Balanced", desc: "Default" },
+                        { id: "aggressive", label: "Aggressive", desc: "Max" }
+                    ].map((s) => (window.SP_REACT.createElement(DFL.Focusable, { key: s.id, style: { flex: 1 }, onActivate: () => setStrategy(s.id), onClick: () => setStrategy(s.id) },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "8px 4px",
+                                backgroundColor: strategy === s.id ? "#1a9fff" : "#3d4450",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "9px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                transition: "all 0.2s ease",
+                                border: "none",
+                                outline: "none"
+                            } },
+                            window.SP_REACT.createElement("div", null,
+                                strategy === s.id ? "✓ " : "",
+                                s.label),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px", opacity: 0.7, marginTop: "2px" } }, s.desc))))))),
+                window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
+                    window.SP_REACT.createElement(DFL.ToggleField, { label: "Simple Mode", description: "Use one value for all cores", checked: simpleMode, onChange: setSimpleMode, bottomSeparator: "none" })),
+                simpleMode && (window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
+                    window.SP_REACT.createElement(DFL.SliderField, { label: "Undervolt Value", value: simpleValue, min: minLimit, max: 0, step: 1, showValue: true, onChange: (value) => setSimpleValue(value), valueSuffix: " mV", bottomSeparator: "none" }))),
+                window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
+                    window.SP_REACT.createElement(DFL.SliderField, { label: "Update Interval", value: updateInterval, min: 500, max: 5000, step: 100, showValue: true, onChange: (value) => setUpdateInterval(value), valueSuffix: " ms", bottomSeparator: "none" }),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, "How often to check CPU load and adjust voltage")),
+                window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
+                    window.SP_REACT.createElement(DFL.SliderField, { label: "Load Threshold", value: loadThreshold, min: 10, max: 90, step: 5, showValue: true, onChange: (value) => setLoadThreshold(value), valueSuffix: "%", bottomSeparator: "none" }),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, "CPU load % to trigger voltage adjustment")),
+                window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleSave, onClick: handleSave },
                     window.SP_REACT.createElement("div", { style: {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             gap: "6px",
-                            fontSize: "10px"
-                        } },
-                        window.SP_REACT.createElement(FaCog, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, showSettings ? "Hide Settings" : "Dynamic Settings")))),
-            showSettings && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement("div", { style: {
                             padding: "10px",
-                            background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(26, 159, 255, 0.2)",
-                            animation: "slideDown 0.3s ease-out"
+                            background: isSaving
+                                ? "linear-gradient(135deg, #2e7d32 0%, #388e3c 100%)"
+                                : "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            border: "none",
+                            outline: "none",
+                            transition: "all 0.2s ease"
                         } },
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "10px" } },
-                            window.SP_REACT.createElement("div", { style: { fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#1a9fff" } }, "Strategy"),
-                            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" }, "flow-children": "horizontal" }, ["conservative", "balanced", "aggressive"].map((s) => (window.SP_REACT.createElement(DFL.Focusable, { key: s, style: { flex: 1 }, onActivate: () => setStrategy(s), onClick: () => setStrategy(s) },
-                                window.SP_REACT.createElement("div", { style: {
-                                        padding: "8px 4px",
-                                        backgroundColor: strategy === s ? "#1a9fff" : "#3d4450",
-                                        borderRadius: "6px",
-                                        cursor: "pointer",
-                                        fontSize: "9px",
-                                        fontWeight: "bold",
-                                        textAlign: "center",
-                                        transition: "all 0.2s ease",
-                                        textTransform: "capitalize",
-                                        border: "none",
-                                        outline: "none"
-                                    } },
-                                    strategy === s ? "✓" : "",
-                                    " ",
-                                    s)))))),
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "10px" } },
-                            window.SP_REACT.createElement(DFL.ToggleField, { label: "Simple Mode", description: "One value for all cores", checked: simpleMode, onChange: setSimpleMode, bottomSeparator: "none" })),
-                        simpleMode && (window.SP_REACT.createElement("div", { style: { marginBottom: "10px" } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Value", value: simpleValue, min: minLimit, max: 0, step: 1, showValue: true, onChange: (value) => setSimpleValue(value), valueSuffix: " mV", bottomSeparator: "none" }))),
-                        window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleSave, onClick: handleSave },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "6px",
-                                    padding: "10px",
-                                    background: "linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontSize: "11px",
-                                    fontWeight: "bold",
-                                    opacity: isSaving ? 0.5 : 1,
-                                    border: "none",
-                                    outline: "none"
-                                } },
-                                isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaCheck, { size: 11 }),
-                                window.SP_REACT.createElement("span", null, "Save Settings"))),
-                        window.SP_REACT.createElement("div", { style: {
-                                marginTop: "8px",
-                                padding: "6px",
-                                backgroundColor: "rgba(26, 159, 255, 0.1)",
-                                borderRadius: "4px",
-                                fontSize: "8px",
-                                color: "#8b929a",
-                                lineHeight: "1.4"
-                            } }, "\u2139\uFE0F Settings apply on next Dynamic mode start. Restart if already running.")))))));
+                        isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaCheck, { size: 11 }),
+                        window.SP_REACT.createElement("span", null, isSaving ? "Saving..." : "Save Configuration"))),
+                window.SP_REACT.createElement("div", { style: {
+                        marginTop: "10px",
+                        padding: "8px",
+                        backgroundColor: "rgba(26, 159, 255, 0.1)",
+                        borderRadius: "6px",
+                        fontSize: "8px",
+                        color: "#8b929a",
+                        lineHeight: "1.5",
+                        border: "1px solid rgba(26, 159, 255, 0.2)"
+                    } },
+                    window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" } }, "\u2139\uFE0F How it works:"),
+                    "\u2022 Monitors CPU load every ",
+                    updateInterval,
+                    "ms",
+                    window.SP_REACT.createElement("br", null),
+                    "\u2022 Adjusts voltage based on ",
+                    strategy,
+                    " strategy",
+                    window.SP_REACT.createElement("br", null),
+                    "\u2022 Triggers when load ",
+                    '>',
+                    " ",
+                    loadThreshold,
+                    "%",
+                    window.SP_REACT.createElement("br", null),
+                    "\u2022 Restart Dynamic mode to apply changes"))));
     };
     /**
      * Manual tab component with simple/per-core/dynamic modes.
