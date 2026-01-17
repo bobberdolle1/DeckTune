@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, FC } from "react";
-import { DropdownItem, Focusable, PanelSectionRow, ScrollPanelGroup, ScrollPanel } from "@decky/ui";
+import { DropdownItem, Focusable } from "@decky/ui";
 import { 
   FaExclamationTriangle, 
   FaCheck, 
@@ -94,10 +94,9 @@ export const SettingsTab: FC = () => {
   };
 
   return (
-    <ScrollPanelGroup>
-      <ScrollPanel>
-        {/* Expert Mode Warning Dialog */}
-        {showExpertWarning && (
+    <>
+      {/* Expert Mode Warning Dialog */}
+      {showExpertWarning && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: "rgba(0, 0, 0, 0.95)", zIndex: 9999,
@@ -214,12 +213,11 @@ export const SettingsTab: FC = () => {
         </div>
       )}
 
-      <Focusable style={{ display: "flex", flexDirection: "column", gap: "12px" }} flow-children="vertical">
-        {/* Language Card */}
-        <PanelSectionRow>
-          <Focusable 
-            onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-          >
+      {/* Language Card */}
+      <Focusable 
+        style={{ marginBottom: "12px" }}
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
           borderRadius: "10px",
@@ -305,13 +303,12 @@ export const SettingsTab: FC = () => {
           </div>
         </div>
       </Focusable>
-      </PanelSectionRow>
 
-        {/* Expert Mode Card */}
-        <PanelSectionRow>
-          <Focusable 
-            onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-          >
+      {/* Expert Mode Card */}
+      <Focusable 
+        style={{ marginBottom: "12px" }}
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: expertModeEnabled 
             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -440,13 +437,11 @@ export const SettingsTab: FC = () => {
           )}
         </div>
       </Focusable>
-      </PanelSectionRow>
 
-        {/* Info Card */}
-        <PanelSectionRow>
-          <Focusable
-            onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-          >
+      {/* Info Card */}
+      <Focusable
+        onFocus={(e) => e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
         <div style={{
           background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
           borderRadius: "10px",
@@ -512,12 +507,69 @@ export const SettingsTab: FC = () => {
           </div>
         </div>
       </Focusable>
-      </PanelSectionRow>
 
-        {/* Focus stop - prevents cycling back to top */}
-        <Focusable style={{ height: "1px", opacity: 0, pointerEvents: "none" }} />
-      </Focusable>
-      </ScrollPanel>
-    </ScrollPanelGroup>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+          from { 
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes pulse { 
+          0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); 
+          } 
+          50% { 
+            box-shadow: 0 0 0 8px rgba(255, 107, 107, 0); 
+          } 
+        }
+        
+        .gpfocus {
+          box-shadow: 0 0 12px rgba(26, 159, 255, 0.8) !important;
+          transform: scale(1.03);
+          transition: all 0.2s ease;
+        }
+        
+        .gpfocus-danger {
+          box-shadow: 0 0 12px rgba(255, 107, 107, 0.8) !important;
+          transform: scale(1.03);
+          transition: all 0.2s ease;
+        }
+      `}</style>
+    </>
   );
 };
