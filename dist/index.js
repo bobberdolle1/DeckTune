@@ -4261,7 +4261,7 @@
                                 } },
                                 window.SP_REACT.createElement(FaTimes, { size: 11 }),
                                 window.SP_REACT.createElement("span", null, t.cancel))))))),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "12px" } },
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a3a5c 0%, #1a2a4c 100%)",
                         borderRadius: "10px",
@@ -4317,7 +4317,8 @@
                         window.SP_REACT.createElement(FaCheckCircle, { size: 9 }),
                         window.SP_REACT.createElement("span", null, language === "ru"
                             ? "Язык сохранён автоматически"
-                            : "Language saved automatically"))),
+                            : "Language saved automatically")))),
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
                 window.SP_REACT.createElement("div", { style: {
                         background: expertModeEnabled
                             ? "linear-gradient(135deg, #5c1313 0%, #7c1c1c 100%)"
@@ -4422,7 +4423,8 @@
                             language === "ru" ? "Применяется к: Единый, По-ядерный, Динамический" : "Applies to: Single, Per-Core, Dynamic",
                             window.SP_REACT.createElement("br", null),
                             "\u2022 ",
-                            language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!")))),
+                            language === "ru" ? "Используйте с особой осторожностью!" : "Use with extreme caution!"))))),
+            window.SP_REACT.createElement(DFL.Focusable, null,
                 window.SP_REACT.createElement("div", { style: {
                         background: "linear-gradient(135deg, #1a2a3a 0%, #1a1d23 100%)",
                         borderRadius: "10px",
