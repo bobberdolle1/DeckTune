@@ -115,8 +115,6 @@
       return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z"}}]})(props);
     }function FaBalanceScale (props) {
       return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M256 336h-.02c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0C-2.06 328.75.02 320.33.02 336H0c0 44.18 57.31 80 128 80s128-35.82 128-80zM128 176l72 144H56l72-144zm511.98 160c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0-87.12 174.26-85.04 165.84-85.04 181.51H384c0 44.18 57.31 80 128 80s128-35.82 128-80h-.02zM440 320l72-144 72 144H440zm88 128H352V153.25c23.51-10.29 41.16-31.48 46.39-57.25H528c8.84 0 16-7.16 16-16V48c0-8.84-7.16-16-16-16H383.64C369.04 12.68 346.09 0 320 0s-49.04 12.68-63.64 32H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h129.61c5.23 25.76 22.87 46.96 46.39 57.25V448H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z"}}]})(props);
-    }function FaBan (props) {
-      return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M256 8C119.034 8 8 119.033 8 256s111.034 248 248 248 248-111.034 248-248S392.967 8 256 8zm130.108 117.892c65.448 65.448 70 165.481 20.677 235.637L150.47 105.216c70.204-49.356 170.226-44.735 235.638 20.676zM125.892 386.108c-65.448-65.448-70-165.481-20.677-235.637L361.53 406.784c-70.203 49.356-170.226 44.736-235.638-20.676z"}}]})(props);
     }function FaBatteryFull (props) {
       return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M544 160v64h32v64h-32v64H64V160h480m16-64H48c-26.51 0-48 21.49-48 48v224c0 26.51 21.49 48 48 48h512c26.51 0 48-21.49 48-48v-16h8c13.255 0 24-10.745 24-24V184c0-13.255-10.745-24-24-24h-8v-16c0-26.51-21.49-48-48-48zm-48 96H96v128h416V192z"}}]})(props);
     }function FaBolt (props) {
@@ -2251,335 +2249,6 @@
     };
 
     /**
-     * LoadGraph component for displaying real-time CPU load and undervolt values.
-     *
-     * Feature: decktune-3.0-automation
-     * Requirements: 6.3, 6.4
-     *
-     * Displays per-core CPU load percentages and applied undervolt values.
-     * Shows historical data with dual Y-axes and profile change markers.
-     * Implements 60-second rolling window with 1-second resolution.
-     */
-
-    const MAX_HISTORY_POINTS = 60; // Keep 60 data points (1 minute at 1Hz)
-    const GRAPH_HEIGHT$1 = 120;
-    const GRAPH_WIDTH$1 = 300;
-    const MARGIN_LEFT = 35;
-    const MARGIN_RIGHT = 35;
-    /**
-     * Get color for a specific core (load lines).
-     */
-    const getCoreColor = (coreIndex) => {
-        const colors = ["#1a9fff", "#4caf50", "#ff9800", "#f44336"];
-        return colors[coreIndex] || "#8b929a";
-    };
-    /**
-     * Get color for undervolt value lines (orange tones).
-     */
-    const getValueColor = (coreIndex) => {
-        const colors = ["#ff9800", "#ffb74d", "#ffa726", "#ff8a65"];
-        return colors[coreIndex] || "#ff9800";
-    };
-    /**
-     * LoadGraph component - displays real-time CPU load and undervolt values.
-     * Requirements: 6.3, 6.4
-     */
-    const LoadGraph = ({ load, values, isActive, activeProfile }) => {
-        const [history, setHistory] = SP_REACT.useState([]);
-        const [previousProfile, setPreviousProfile] = SP_REACT.useState(activeProfile);
-        const canvasRef = SP_REACT.useRef(null);
-        const updateIntervalRef = SP_REACT.useRef(null);
-        // Update history at 1-second intervals (Requirements: 6.3)
-        SP_REACT.useEffect(() => {
-            if (!isActive || load.length !== 4 || values.length !== 4) {
-                // Clear history when not active
-                setHistory([]);
-                setPreviousProfile(undefined);
-                if (updateIntervalRef.current) {
-                    clearInterval(updateIntervalRef.current);
-                    updateIntervalRef.current = null;
-                }
-                return;
-            }
-            // Detect profile change
-            const profileChanged = activeProfile !== previousProfile && previousProfile !== undefined;
-            // Add new data point
-            const addDataPoint = () => {
-                setHistory((prev) => {
-                    const newPoint = {
-                        timestamp: Date.now(),
-                        load: [...load],
-                        values: [...values],
-                        profile: profileChanged ? activeProfile : undefined,
-                    };
-                    const newHistory = [...prev, newPoint];
-                    // Keep only the last MAX_HISTORY_POINTS (60-second rolling window)
-                    if (newHistory.length > MAX_HISTORY_POINTS) {
-                        return newHistory.slice(-MAX_HISTORY_POINTS);
-                    }
-                    return newHistory;
-                });
-                if (profileChanged) {
-                    setPreviousProfile(activeProfile);
-                }
-            };
-            // Add initial point immediately
-            addDataPoint();
-            // Set up 1-second interval
-            updateIntervalRef.current = setInterval(addDataPoint, 1000);
-            return () => {
-                if (updateIntervalRef.current) {
-                    clearInterval(updateIntervalRef.current);
-                }
-            };
-        }, [load, values, isActive, activeProfile, previousProfile]);
-        // Draw the graph on canvas with dual Y-axes (Requirements: 6.3, 6.4)
-        SP_REACT.useEffect(() => {
-            const canvas = canvasRef.current;
-            if (!canvas || history.length === 0) {
-                return;
-            }
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                return;
-            }
-            // Clear canvas
-            ctx.clearRect(0, 0, GRAPH_WIDTH$1, GRAPH_HEIGHT$1);
-            // Draw background grid
-            ctx.strokeStyle = "#3d4450";
-            ctx.lineWidth = 1;
-            // Horizontal grid lines (every 25%)
-            for (let i = 0; i <= 4; i++) {
-                const y = (i * GRAPH_HEIGHT$1) / 4;
-                ctx.beginPath();
-                ctx.moveTo(MARGIN_LEFT, y);
-                ctx.lineTo(GRAPH_WIDTH$1 - MARGIN_RIGHT, y);
-                ctx.stroke();
-            }
-            // Calculate graph area
-            const graphWidth = GRAPH_WIDTH$1 - MARGIN_LEFT - MARGIN_RIGHT;
-            const pointSpacing = graphWidth / (MAX_HISTORY_POINTS - 1);
-            // Draw profile change markers (Requirements: 6.3)
-            history.forEach((point, index) => {
-                if (point.profile) {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    // Draw vertical line
-                    ctx.strokeStyle = "#4caf50";
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 3]);
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, GRAPH_HEIGHT$1);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                    // Draw label
-                    ctx.fillStyle = "#4caf50";
-                    ctx.font = "9px sans-serif";
-                    ctx.save();
-                    ctx.translate(x + 2, GRAPH_HEIGHT$1 - 5);
-                    ctx.rotate(-Math.PI / 2);
-                    ctx.fillText(point.profile || "Profile", 0, 0);
-                    ctx.restore();
-                }
-            });
-            // Draw load lines for each core (blue tones, left Y-axis)
-            for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
-                ctx.strokeStyle = getCoreColor(coreIndex);
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                let firstPoint = true;
-                history.forEach((point, index) => {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    const loadValue = point.load[coreIndex] || 0;
-                    // Invert Y axis (0% at bottom, 100% at top)
-                    const y = GRAPH_HEIGHT$1 - (loadValue / 100) * GRAPH_HEIGHT$1;
-                    if (firstPoint) {
-                        ctx.moveTo(x, y);
-                        firstPoint = false;
-                    }
-                    else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-                ctx.stroke();
-            }
-            // Draw undervolt value lines (orange tones, right Y-axis)
-            // Requirements: 6.3, 6.4
-            const minValue = -50; // Minimum expected undervolt value
-            const maxValue = 0; // Maximum expected undervolt value
-            const valueRange = maxValue - minValue;
-            for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
-                ctx.strokeStyle = getValueColor(coreIndex);
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([3, 2]);
-                ctx.beginPath();
-                let firstPoint = true;
-                history.forEach((point, index) => {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    const value = point.values[coreIndex] || 0;
-                    // Map value to graph height (0mV at top, -50mV at bottom)
-                    const normalizedValue = (value - minValue) / valueRange;
-                    const y = GRAPH_HEIGHT$1 - normalizedValue * GRAPH_HEIGHT$1;
-                    if (firstPoint) {
-                        ctx.moveTo(x, y);
-                        firstPoint = false;
-                    }
-                    else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-            // If dynamic mode is inactive, draw static line (Requirements: 6.4)
-            if (!isActive && values.length === 4) {
-                const avgValue = values.reduce((sum, v) => sum + v, 0) / values.length;
-                const normalizedValue = (avgValue - minValue) / valueRange;
-                const y = GRAPH_HEIGHT$1 - normalizedValue * GRAPH_HEIGHT$1;
-                ctx.strokeStyle = "#ff9800";
-                ctx.lineWidth = 2;
-                ctx.setLineDash([]);
-                ctx.beginPath();
-                ctx.moveTo(MARGIN_LEFT, y);
-                ctx.lineTo(GRAPH_WIDTH$1 - MARGIN_RIGHT, y);
-                ctx.stroke();
-            }
-        }, [history, isActive, values]);
-        if (!isActive && values.length === 0) {
-            return null;
-        }
-        return (window.SP_REACT.createElement("div", { style: {
-                padding: "12px",
-                backgroundColor: "#23262e",
-                borderRadius: "8px",
-                marginBottom: "16px",
-            } },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "12px",
-                } },
-                window.SP_REACT.createElement(FaMicrochip, { style: { color: "#1a9fff" } }),
-                window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, isActive ? "CPU Load & Undervolt (Real-time)" : "Undervolt Values (Manual Mode)")),
-            window.SP_REACT.createElement("div", { style: {
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "8px",
-                    marginBottom: "12px",
-                } }, load.map((loadValue, index) => (window.SP_REACT.createElement("div", { key: index, style: {
-                    padding: "6px",
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "4px",
-                    textAlign: "center",
-                    borderLeft: `3px solid ${getCoreColor(index)}`,
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
-                    "Core ",
-                    index),
-                isActive && (window.SP_REACT.createElement("div", { style: {
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                        color: getCoreColor(index),
-                    } },
-                    loadValue.toFixed(1),
-                    "%")),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: isActive ? "11px" : "16px",
-                        fontWeight: isActive ? "normal" : "bold",
-                        color: getValueColor(index),
-                    } },
-                    values[index] || 0,
-                    "mV"))))),
-            window.SP_REACT.createElement("div", { style: {
-                    position: "relative",
-                    width: "100%",
-                    height: `${GRAPH_HEIGHT$1}px`,
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                } },
-                window.SP_REACT.createElement("canvas", { ref: canvasRef, width: GRAPH_WIDTH$1, height: GRAPH_HEIGHT$1, style: {
-                        width: "100%",
-                        height: "100%",
-                    } }),
-                window.SP_REACT.createElement("div", { style: {
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2px 4px",
-                        pointerEvents: "none",
-                    } }, [100, 75, 50, 25, 0].map((value) => (window.SP_REACT.createElement("div", { key: value, style: {
-                        fontSize: "9px",
-                        color: "#1a9fff",
-                        lineHeight: "1",
-                    } },
-                    value,
-                    "%")))),
-                window.SP_REACT.createElement("div", { style: {
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2px 4px",
-                        pointerEvents: "none",
-                    } }, [0, -12, -25, -37, -50].map((value) => (window.SP_REACT.createElement("div", { key: value, style: {
-                        fontSize: "9px",
-                        color: "#ff9800",
-                        lineHeight: "1",
-                        textAlign: "right",
-                    } }, value))))),
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "12px",
-                    marginTop: "8px",
-                    fontSize: "10px",
-                    flexWrap: "wrap",
-                } },
-                isActive && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "16px",
-                                height: "3px",
-                                backgroundColor: "#1a9fff",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Load (solid)")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "16px",
-                                height: "2px",
-                                background: "repeating-linear-gradient(to right, #ff9800 0, #ff9800 3px, transparent 3px, transparent 5px)",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Undervolt (dashed)")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "3px",
-                                height: "16px",
-                                background: "repeating-linear-gradient(to bottom, #4caf50 0, #4caf50 5px, transparent 5px, transparent 8px)",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Profile change")))),
-                !isActive && (window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            width: "16px",
-                            height: "3px",
-                            backgroundColor: "#ff9800",
-                            borderRadius: "2px",
-                        } }),
-                    window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Manual undervolt"))))));
-    };
-
-    /**
      * Redesigned Presets tab - compact and gamepad-friendly.
      *
      * Two sections:
@@ -3396,550 +3065,200 @@
     const TabNavigation = ({ activeTab, onTabChange }) => {
         return (window.SP_REACT.createElement(DFL.Focusable, { style: {
                 display: "flex",
-                justifyContent: "space-around",
-                marginBottom: "12px",
+                marginBottom: "8px",
                 backgroundColor: "#23262e",
-                borderRadius: "6px",
-                padding: "3px",
+                borderRadius: "4px",
+                padding: "2px",
                 gap: "2px",
-            } }, TABS.map((tab) => {
+            }, "flow-children": "horizontal" }, TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            return (window.SP_REACT.createElement("button", { key: tab.id, onClick: () => onTabChange(tab.id), style: {
+            return (window.SP_REACT.createElement(DFL.Focusable, { key: tab.id, className: `expert-tab ${isActive ? "active" : ""}`, focusClassName: "gpfocus", onActivate: () => onTabChange(tab.id), onClick: () => onTabChange(tab.id), style: {
                     flex: 1,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: "2px",
-                    padding: "6px 2px",
-                    backgroundColor: isActive ? "#1a9fff" : "transparent",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: isActive ? "#fff" : "#8b929a",
+                    gap: "1px",
+                    padding: "4px 2px",
+                    borderRadius: "3px",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
-                    minWidth: "0",
+                    backgroundColor: isActive ? "#1a9fff" : "transparent",
+                    color: isActive ? "#fff" : "#8b929a",
                 } },
-                window.SP_REACT.createElement(Icon, { style: { fontSize: "14px" } }),
-                window.SP_REACT.createElement("span", { style: { fontSize: "9px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, tab.label)));
+                window.SP_REACT.createElement(Icon, { size: 11 }),
+                window.SP_REACT.createElement("span", { style: { fontSize: "8px", fontWeight: isActive ? "600" : "400" } }, tab.label)));
         })));
     };
     /**
-     * Manual tab component.
-     * Requirements: 5.4, 7.2, 13.3-13.6, 14.1, 14.2
-     *
-     * Features:
-     * - Expert Overclocker Mode toggle with warning (Requirements 13.3-13.6)
-     * - Simple Mode toggle (Requirements 14.1, 14.2)
-     * - Per-core sliders with current values
-     * - Apply, Test, Disable buttons
-     * - Live temperature and frequency display
-     * - "Tune for this game" button (Requirement 5.4)
+     * Manual tab component - vertical mode switcher.
+     * Simplified interface with Simple/Expert mode selection.
      */
     const ManualTab = () => {
         const { state, api } = useDeckTune();
         const { info: platformInfo } = usePlatformInfo();
-        const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
-        const [isApplying, setIsApplying] = SP_REACT.useState(false);
-        const [isTesting, setIsTesting] = SP_REACT.useState(false);
-        const [isTuning, setIsTuning] = SP_REACT.useState(false);
-        const [simpleMode, setSimpleMode] = SP_REACT.useState(false);
-        const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
-        const [systemMetrics, setSystemMetrics] = SP_REACT.useState(null);
-        // Expert Mode state (Requirements 13.3-13.6)
-        const [expertMode, setExpertMode] = SP_REACT.useState(false);
-        const [expertModeActive, setExpertModeActive] = SP_REACT.useState(false);
+        const [mode, setMode] = SP_REACT.useState("simple");
         const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
-        const [isTogglingExpert, setIsTogglingExpert] = SP_REACT.useState(false);
-        // Fetch system metrics periodically
-        SP_REACT.useEffect(() => {
-            const fetchMetrics = async () => {
-                try {
-                    const info = await api.getSystemInfo();
-                    if (info.temps && info.freqs) {
-                        setSystemMetrics({ temps: info.temps, freqs: info.freqs });
-                    }
-                }
-                catch (e) {
-                    // Ignore errors
-                }
-            };
-            fetchMetrics();
-            const interval = setInterval(fetchMetrics, 2000);
-            return () => clearInterval(interval);
-        }, [api]);
-        // Load expert mode status on mount (Requirements 13.3-13.6)
-        SP_REACT.useEffect(() => {
-            const loadExpertMode = async () => {
-                try {
-                    const status = await api.getExpertModeStatus();
-                    setExpertMode(status.expert_mode);
-                    setExpertModeActive(status.active);
-                }
-                catch (e) {
-                    // Ignore errors, use default (false)
-                }
-            };
-            loadExpertMode();
-            // Listen for expert mode changes
-            const handleExpertModeChange = (data) => {
-                setExpertMode(data.enabled);
-                setExpertModeActive(data.enabled);
-            };
-            api.on("expert_mode_changed", handleExpertModeChange);
-            return () => {
-                api.removeListener("expert_mode_changed", handleExpertModeChange);
-            };
-        }, [api]);
-        // Initialize simpleValue from current cores (average) and load saved preference
-        SP_REACT.useEffect(() => {
-            if (coreValues.length === 4) {
-                const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-                setSimpleValue(avg);
-            }
-            // Load saved simple_mode preference
-            const loadSimpleMode = async () => {
-                try {
-                    const saved = await api.getSetting("simple_mode");
-                    if (saved !== null && saved !== undefined) {
-                        setSimpleMode(saved);
-                    }
-                }
-                catch (e) {
-                    // Ignore errors, use default (false)
-                }
-            };
-            loadSimpleMode();
-        }, []);
-        const safeLimit = platformInfo?.safe_limit ?? -30;
-        // Determine current limit based on expert mode (Requirements 13.2, 13.6)
-        const currentMinLimit = expertModeActive ? -100 : safeLimit;
+        const [pendingExpertToggle, setPendingExpertToggle] = SP_REACT.useState(false);
         /**
-         * Handle Expert Mode toggle.
-         * Requirements: 13.3, 13.4, 13.5
+         * Handle mode selection.
          */
-        const handleExpertModeToggle = async (enabled) => {
-            if (enabled) {
-                // Show warning dialog (Requirement 13.3)
+        const handleModeSelect = (selectedMode) => {
+            if (selectedMode === "expert") {
+                // Show warning before switching to expert
+                setPendingExpertToggle(true);
                 setShowExpertWarning(true);
             }
             else {
-                // Disable expert mode
-                setIsTogglingExpert(true);
-                try {
-                    const result = await api.disableExpertMode();
-                    if (result.success) {
-                        setExpertMode(false);
-                        setExpertModeActive(false);
-                    }
-                }
-                finally {
-                    setIsTogglingExpert(false);
-                }
+                setMode(selectedMode);
             }
         };
         /**
          * Confirm expert mode activation.
-         * Requirements: 13.4
          */
-        const handleExpertModeConfirm = async () => {
-            setIsTogglingExpert(true);
-            try {
-                const result = await api.enableExpertMode(true);
-                if (result.success) {
-                    setExpertMode(true);
-                    setExpertModeActive(true);
-                    setShowExpertWarning(false);
-                }
-                else {
-                    // Show error if confirmation failed
-                    alert(result.error || "Failed to enable expert mode");
-                }
-            }
-            finally {
-                setIsTogglingExpert(false);
-            }
+        const handleExpertModeConfirm = () => {
+            setMode("expert");
+            setShowExpertWarning(false);
+            setPendingExpertToggle(false);
         };
         /**
          * Cancel expert mode activation.
          */
         const handleExpertModeCancel = () => {
             setShowExpertWarning(false);
+            setPendingExpertToggle(false);
         };
-        /**
-         * Handle Simple Mode toggle.
-         * Requirements: 14.4, 14.5
-         */
-        const handleSimpleModeToggle = (enabled) => {
-            if (enabled) {
-                // Switching to Simple Mode: use average of current values (Requirement 14.4)
-                const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-                setSimpleValue(avg);
-            }
-            else {
-                // Switching to per-core mode: copy current simple value to all cores (Requirement 14.5)
-                setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
-            }
-            setSimpleMode(enabled);
-            // Save preference
-            api.saveSetting("simple_mode", enabled);
-        };
-        /**
-         * Handle simple slider value change.
-         * Requirements: 14.3
-         */
-        const handleSimpleValueChange = (value) => {
-            setSimpleValue(value);
-            // Apply same value to all cores (Requirement 14.3)
-            setCoreValues([value, value, value, value]);
-        };
-        /**
-         * Handle slider value change for a specific core.
-         */
-        const handleCoreChange = (core, value) => {
-            const newValues = [...coreValues];
-            newValues[core] = value;
-            setCoreValues(newValues);
-        };
-        /**
-         * Apply current values.
-         */
-        const handleApply = async () => {
-            setIsApplying(true);
-            try {
-                await api.applyUndervolt(coreValues);
-            }
-            finally {
-                setIsApplying(false);
-            }
-        };
-        /**
-         * Run quick test with current values.
-         */
-        const handleTest = async () => {
-            setIsTesting(true);
-            try {
-                await api.applyUndervolt(coreValues);
-                await api.runTest("cpu_quick");
-            }
-            finally {
-                setIsTesting(false);
-            }
-        };
-        /**
-         * Disable undervolt (reset to 0).
-         */
-        const handleDisable = async () => {
-            await api.disableUndervolt();
-            setCoreValues([0, 0, 0, 0]);
-        };
-        /**
-         * Tune for current game - run autotune and save as preset.
-         * Requirements: 5.4
-         */
-        const handleTuneForGame = async () => {
-            if (!state.runningAppId || !state.runningAppName) {
-                return;
-            }
-            setIsTuning(true);
-            try {
-                const result = await api.tuneForCurrentGame("quick");
-                if (result.success && result.preset) {
-                    setCoreValues(result.preset.value);
-                }
-            }
-            finally {
-                setIsTuning(false);
-            }
-        };
-        /**
-         * Run benchmark - 10 second stress test.
-         * Requirements: 7.1, 7.4
-         */
-        const handleRunBenchmark = async () => {
-            try {
-                await api.runBenchmark();
-            }
-            catch (e) {
-                console.error("Benchmark failed:", e);
-            }
-        };
-        /**
-         * Get color for value indicator.
-         */
-        const getValueColor = (value) => {
-            const ratio = Math.abs(value) / Math.abs(safeLimit);
-            if (ratio < 0.5)
-                return "#4caf50";
-            if (ratio < 0.8)
-                return "#ff9800";
-            return "#f44336";
-        };
-        // Check if a game is currently running
-        const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            showExpertWarning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            showExpertWarning && (window.SP_REACT.createElement("div", { style: {
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    zIndex: 9999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "20px",
+                } },
                 window.SP_REACT.createElement("div", { style: {
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: "rgba(0, 0, 0, 0.85)",
-                        zIndex: 9999,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "20px",
+                        backgroundColor: "#1a1d23",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        maxWidth: "400px",
+                        border: "2px solid #ff6b6b",
                     } },
-                    window.SP_REACT.createElement("div", { style: {
-                            backgroundColor: "#1a1d23",
-                            borderRadius: "12px",
-                            padding: "24px",
-                            maxWidth: "500px",
-                            border: "2px solid #ff6b6b",
-                            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
-                                marginBottom: "16px",
-                            } },
-                            window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "32px" } }),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "20px", fontWeight: "bold", color: "#ff6b6b" } }, "Expert Overclocker Mode")),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "14px", lineHeight: "1.6", marginBottom: "20px", color: "#e0e0e0" } },
-                            window.SP_REACT.createElement("p", { style: { marginBottom: "12px" } },
-                                window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
-                                " You are about to enable Expert Overclocker Mode, which removes all safety limits."),
-                            window.SP_REACT.createElement("p", { style: { marginBottom: "12px" } },
-                                "This mode allows undervolt values up to ",
-                                window.SP_REACT.createElement("strong", null, "-100mV"),
-                                ", far beyond the safe limits for your device."),
-                            window.SP_REACT.createElement("p", { style: { marginBottom: "12px", color: "#ff9800" } },
-                                window.SP_REACT.createElement("strong", null, "Risks include:")),
-                            window.SP_REACT.createElement("ul", { style: { marginLeft: "20px", marginBottom: "12px", color: "#ffb74d" } },
-                                window.SP_REACT.createElement("li", null, "System instability and crashes"),
-                                window.SP_REACT.createElement("li", null, "Data loss from unexpected shutdowns"),
-                                window.SP_REACT.createElement("li", null, "Potential hardware damage"),
-                                window.SP_REACT.createElement("li", null, "Voiding of warranty")),
-                            window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold" } }, "Use at your own risk. The developers are not responsible for any damage.")),
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "12px" } },
-                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExpertModeConfirm, disabled: isTogglingExpert, style: {
-                                    flex: 1,
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" } }),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" } }, "Expert Undervolter Mode")),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" } },
+                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
+                            window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
+                            " Expert mode removes safety limits."),
+                        window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
+                            window.SP_REACT.createElement("strong", null, "Risks:"),
+                            " System instability, crashes, data loss, hardware damage."),
+                        window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, "Use at your own risk!")),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeConfirm, onClick: handleExpertModeConfirm },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "4px",
+                                    padding: "8px",
                                     backgroundColor: "#b71c1c",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "10px",
+                                    fontWeight: "bold"
                                 } },
-                                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isTogglingExpert ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                                    window.SP_REACT.createElement("span", null, "Enabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                                    window.SP_REACT.createElement(FaCheck, null),
-                                    window.SP_REACT.createElement("span", null, "I Understand, Enable"))))),
-                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExpertModeCancel, disabled: isTogglingExpert, style: { flex: 1 } },
-                                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
-                                    window.SP_REACT.createElement(FaTimes, null),
-                                    window.SP_REACT.createElement("span", null, "Cancel")))))))),
+                                window.SP_REACT.createElement(FaCheck, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, "I Understand"))),
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, focusClassName: "gpfocus", onActivate: handleExpertModeCancel, onClick: handleExpertModeCancel },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "4px",
+                                    padding: "8px",
+                                    backgroundColor: "#3d4450",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "10px",
+                                    fontWeight: "bold"
+                                } },
+                                window.SP_REACT.createElement(FaTimes, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, "Cancel"))))))),
             platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginBottom: "8px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px", padding: "2px 0" } },
                     platformInfo.variant,
                     " (",
                     platformInfo.model,
-                    ") \u2022 Safe limit: ",
-                    safeLimit))),
-            state.dynamicStatus && state.dynamicStatus.running && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(LoadGraph, { load: state.dynamicStatus.load, isActive: state.dynamicStatus.running }))),
-            expertModeActive && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        padding: "12px",
-                        backgroundColor: "#5c1313",
-                        borderRadius: "8px",
-                        marginBottom: "12px",
-                        border: "2px solid #ff6b6b",
-                        animation: "pulse 2s ease-in-out infinite",
-                    } },
-                    window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px", flexShrink: 0 } }),
-                    window.SP_REACT.createElement("div", null,
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#ff6b6b", marginBottom: "2px" } }, "Expert Overclocker Mode Active"),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#ffb74d" } }, "Extended range enabled: 0 to -100mV \u2022 Use with extreme caution"))))),
-            systemMetrics && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { style: {
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: "8px",
-                        marginBottom: "16px",
-                    } }, [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement("div", { key: core, style: {
-                        padding: "8px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "6px",
-                        textAlign: "center",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
-                        "Core ",
-                        core),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginTop: "4px" } },
-                        window.SP_REACT.createElement(FaThermometerHalf, { style: { color: "#ff9800", fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", { style: { fontSize: "12px" } },
-                            systemMetrics.temps[core] ?? "--",
-                            "\u00B0C")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" } },
-                        window.SP_REACT.createElement(FaMicrochip, { style: { color: "#1a9fff", fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", { style: { fontSize: "12px" } }, systemMetrics.freqs[core] ? `${(systemMetrics.freqs[core] / 1000).toFixed(1)}GHz` : "--")))))))),
+                    ") \u2022 Limit: ",
+                    platformInfo.safe_limit,
+                    "mV"))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold" } }, "Undervolt Values"),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", gap: "12px", alignItems: "center" } },
-                        window.SP_REACT.createElement(DFL.ToggleField, { label: "Expert Mode", description: "Remove safety limits (-100mV)", checked: expertMode, onChange: handleExpertModeToggle, disabled: isTogglingExpert }),
-                        window.SP_REACT.createElement(DFL.ToggleField, { label: "Simple Mode", description: "Control all cores with one slider", checked: simpleMode, onChange: handleSimpleModeToggle })))),
-            simpleMode ? (
-            /* Simple Mode: Single slider for all cores - Requirements: 14.2, 14.3 */
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", marginBottom: "6px", fontWeight: "bold" } }, "Select Tuning Mode:")),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: "", description: window.SP_REACT.createElement("span", { style: { color: getValueColor(simpleValue) } },
-                        simpleValue === 0 ? "Disabled" : `${simpleValue} mV (applies to all 4 cores)`,
-                        expertModeActive && simpleValue < safeLimit && (window.SP_REACT.createElement("span", { style: { color: "#ff6b6b", marginLeft: "8px" } }, "\u26A0\uFE0F EXPERT"))) }))) : (
-            /* Per-core mode: Individual sliders */
-            [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
-                window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: "", description: window.SP_REACT.createElement("span", { style: { color: getValueColor(coreValues[core]) } },
-                        coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`,
-                        expertModeActive && coreValues[core] < safeLimit && (window.SP_REACT.createElement("span", { style: { color: "#ff6b6b", marginLeft: "8px" } }, "\u26A0\uFE0F EXPERT"))) }))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { style: {
-                        display: "flex",
-                        gap: "8px",
-                        marginTop: "16px",
-                    } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleApply, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
-                            isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : window.SP_REACT.createElement(FaCheck, null),
-                            window.SP_REACT.createElement("span", null, "Apply"))),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleTest, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
-                            isTesting ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : window.SP_REACT.createElement(FaVial, null),
-                            window.SP_REACT.createElement("span", null, "Test"))),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleDisable, disabled: isApplying || isTesting || isTuning, style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
-                            window.SP_REACT.createElement(FaBan, null),
-                            window.SP_REACT.createElement("span", null, "Disable"))))),
-            isGameRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleTuneForGame, disabled: isApplying || isTesting || isTuning, style: { marginTop: "8px" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#1a9fff" } }, isTuning ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                        window.SP_REACT.createElement("span", null,
-                            "Tuning for ",
-                            state.runningAppName,
-                            "..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaRocket, null),
-                        window.SP_REACT.createElement("span", null,
-                            "Tune for ",
-                            state.runningAppName))))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunBenchmark, disabled: isApplying || isTesting || isTuning || state.isBenchmarkRunning, style: { marginTop: "8px" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff9800" } }, state.isBenchmarkRunning ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                        window.SP_REACT.createElement("span", null, "Running Benchmark..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaVial, null),
-                        window.SP_REACT.createElement("span", null, "Run Benchmark")))))),
-            state.isBenchmarkRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "12px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        marginTop: "8px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#ff9800" } }),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, "Running benchmark...")),
-                    window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: "Benchmark Progress", description: "Testing performance with stress-ng", nProgress: 50, sOperationText: "~10 seconds" }),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginTop: "8px", textAlign: "center" } }, "All tuning controls are disabled during benchmark")))),
-            state.lastBenchmarkResult && !state.isBenchmarkRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "12px",
-                        backgroundColor: "#1b5e20",
-                        borderRadius: "8px",
-                        marginTop: "8px",
-                        borderLeft: "4px solid #4caf50",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, "Latest Benchmark"),
-                        window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50" } })),
-                    window.SP_REACT.createElement("div", { style: { marginBottom: "8px" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7" } }, "Score"),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "20px", fontWeight: "bold", color: "#4caf50" } },
-                            state.lastBenchmarkResult.score.toFixed(2),
-                            " bogo ops/s")),
-                    window.SP_REACT.createElement("div", { style: { marginBottom: "8px" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" } }, "Undervolt Values Used"),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#c8e6c9" } },
-                            "[",
-                            state.lastBenchmarkResult.cores_used.join(", "),
-                            "] mV")),
-                    state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
-                        const current = state.benchmarkHistory[0];
-                        const previous = state.benchmarkHistory[1];
-                        const scoreDiff = current.score - previous.score;
-                        const percentChange = ((scoreDiff / previous.score) * 100);
-                        const improvement = scoreDiff > 0;
-                        return (window.SP_REACT.createElement("div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #2e7d32" } },
-                            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" } }, "Comparison with Previous Run"),
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                                improvement ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#ff6b6b" } })),
-                                window.SP_REACT.createElement("span", { style: { fontSize: "13px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" } },
-                                    improvement ? "+" : "",
-                                    percentChange.toFixed(2),
-                                    "%"),
-                                window.SP_REACT.createElement("span", { style: { fontSize: "11px", color: "#a5d6a7" } },
-                                    "(",
-                                    improvement ? "+" : "",
-                                    scoreDiff.toFixed(2),
-                                    " bogo ops/s)"))));
-                    })(),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#81c784", marginTop: "8px" } }, new Date(state.lastBenchmarkResult.timestamp).toLocaleString())))),
-            state.benchmarkHistory && state.benchmarkHistory.length > 0 && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Benchmark History (Last 10)")),
-                state.benchmarkHistory.slice(0, 10).map((result, index) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: index },
+                window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", onActivate: () => handleModeSelect("simple"), onClick: () => handleModeSelect("simple") },
                     window.SP_REACT.createElement("div", { style: {
                             padding: "10px",
-                            backgroundColor: "#23262e",
+                            backgroundColor: mode === "simple" ? "#1a9fff" : "#23262e",
                             borderRadius: "6px",
-                            marginBottom: "6px",
-                            borderLeft: `3px solid #4caf50`,
+                            cursor: "pointer",
+                            border: mode === "simple" ? "2px solid #1a9fff" : "2px solid transparent",
+                            transition: "all 0.2s ease"
                         } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-                            window.SP_REACT.createElement("div", null,
-                                window.SP_REACT.createElement("div", { style: { fontWeight: "bold", fontSize: "13px", color: "#4caf50" } },
-                                    result.score.toFixed(2),
-                                    " bogo ops/s"),
-                                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginTop: "2px" } },
-                                    "Cores: [",
-                                    result.cores_used.join(", "),
-                                    "] mV")),
-                            window.SP_REACT.createElement("div", { style: { textAlign: "right" } },
-                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, new Date(result.timestamp).toLocaleDateString()),
-                                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, new Date(result.timestamp).toLocaleTimeString()))))))))),
+                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
+                            window.SP_REACT.createElement(FaSlidersH, { size: 12, style: { color: mode === "simple" ? "#fff" : "#1a9fff" } }),
+                            window.SP_REACT.createElement("span", { style: { fontSize: "12px", fontWeight: "bold", color: mode === "simple" ? "#fff" : "#e0e0e0" } }, "Simple Mode")),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: mode === "simple" ? "#e0e0e0" : "#8b929a" } }, "Safe limits \u2022 Easy controls \u2022 Recommended")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", onActivate: () => handleModeSelect("expert"), onClick: () => handleModeSelect("expert") },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "10px",
+                            backgroundColor: mode === "expert" ? "#b71c1c" : "#23262e",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: mode === "expert" ? "2px solid #ff6b6b" : "2px solid transparent",
+                            transition: "all 0.2s ease"
+                        } },
+                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" } },
+                            window.SP_REACT.createElement(FaExclamationTriangle, { size: 12, style: { color: mode === "expert" ? "#fff" : "#ff6b6b" } }),
+                            window.SP_REACT.createElement("span", { style: { fontSize: "12px", fontWeight: "bold", color: mode === "expert" ? "#fff" : "#e0e0e0" } }, "Expert Undervolter Mode")),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: mode === "expert" ? "#ffb74d" : "#8b929a" } }, "No limits \u2022 Advanced \u2022 Use at your own risk")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "8px",
+                        backgroundColor: mode === "expert" ? "#5c1313" : "#1a3a5c",
+                        borderRadius: "6px",
+                        marginTop: "8px",
+                        border: mode === "expert" ? "1px solid #ff6b6b" : "1px solid #1a9fff"
+                    } },
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", lineHeight: "1.4" } }, mode === "simple" ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                        window.SP_REACT.createElement("strong", null, "Simple Mode:"),
+                        " Safe undervolt range with platform-specific limits. Perfect for most users.")) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                        window.SP_REACT.createElement("strong", { style: { color: "#ff6b6b" } }, "Expert Mode:"),
+                        " Extended range up to -100mV.",
+                        window.SP_REACT.createElement("span", { style: { color: "#ff9800" } }, " May cause instability!")))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         marginTop: "12px",
-                        padding: "8px",
+                        padding: "6px",
                         backgroundColor: "#23262e",
-                        borderRadius: "6px",
-                        fontSize: "12px",
+                        borderRadius: "4px",
+                        fontSize: "10px",
                         textAlign: "center",
+                        color: "#8b929a"
                     } },
-                    "Status: ",
-                    window.SP_REACT.createElement("span", { style: { color: state.status === "enabled" ? "#4caf50" : "#8b929a" } }, state.status))),
+                    "Active Mode: ",
+                    window.SP_REACT.createElement("span", { style: { color: mode === "expert" ? "#ff6b6b" : "#1a9fff", fontWeight: "bold" } }, mode === "simple" ? "Simple" : "Expert Undervolter"))),
             window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+          .gpfocus {
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
+            transform: scale(1.02);
           }
         `)));
     };
@@ -4250,6 +3569,26 @@
             parts.push(`${mins}m`);
         return parts.length > 0 ? parts.join(" ") : "< 1m";
     };
+    // Global styles for ExpertMode
+    const expertModeStyles = `
+  .expert-tab.gpfocus {
+    border: 2px solid #1a9fff;
+    box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+  }
+  .expert-tab:hover {
+    background-color: rgba(26, 159, 255, 0.2);
+  }
+`;
+    // Inject styles
+    if (typeof document !== 'undefined') {
+        const styleId = 'expert-mode-styles';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = expertModeStyles;
+            document.head.appendChild(style);
+        }
+    }
 
     /**
      * SetupWizard component for DeckTune first-run experience.

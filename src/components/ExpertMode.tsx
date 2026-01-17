@@ -213,9 +213,7 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
 
 /**
  * Tab navigation component with compact display for QAM.
- * 
- * Feature: decktune-critical-fixes
- * Validates: Requirements 2.3
+ * Ultra-compact tabs that fit in 310px width.
  */
 interface TabNavigationProps {
   activeTab: ExpertTab;
@@ -227,43 +225,43 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
     <Focusable
       style={{
         display: "flex",
-        justifyContent: "space-around",
-        marginBottom: "12px",
+        marginBottom: "8px",
         backgroundColor: "#23262e",
-        borderRadius: "6px",
-        padding: "3px",
+        borderRadius: "4px",
+        padding: "2px",
         gap: "2px",
       }}
+      flow-children="horizontal"
     >
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
         return (
-          <button
+          <Focusable
             key={tab.id}
+            className={`expert-tab ${isActive ? "active" : ""}`}
+            focusClassName="gpfocus"
+            onActivate={() => onTabChange(tab.id)}
             onClick={() => onTabChange(tab.id)}
             style={{
               flex: 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "2px",
-              padding: "6px 2px",
-              backgroundColor: isActive ? "#1a9fff" : "transparent",
-              border: "none",
-              borderRadius: "4px",
-              color: isActive ? "#fff" : "#8b929a",
+              gap: "1px",
+              padding: "4px 2px",
+              borderRadius: "3px",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              minWidth: "0",
+              backgroundColor: isActive ? "#1a9fff" : "transparent",
+              color: isActive ? "#fff" : "#8b929a",
             }}
           >
-            <Icon style={{ fontSize: "14px" }} />
-            {/* Hide label on very compact displays, show only icon */}
-            <span style={{ fontSize: "9px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+            <Icon size={11} />
+            <span style={{ fontSize: "8px", fontWeight: isActive ? "600" : "400" }}>
               {tab.label}
             </span>
-          </button>
+          </Focusable>
         );
       })}
     </Focusable>
@@ -272,148 +270,36 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
- * Manual tab component.
- * Requirements: 5.4, 7.2, 13.3-13.6, 14.1, 14.2
- * 
- * Features:
- * - Expert Overclocker Mode toggle with warning (Requirements 13.3-13.6)
- * - Simple Mode toggle (Requirements 14.1, 14.2)
- * - Per-core sliders with current values
- * - Apply, Test, Disable buttons
- * - Live temperature and frequency display
- * - "Tune for this game" button (Requirement 5.4)
+ * Manual tab component - vertical mode switcher.
+ * Simplified interface with Simple/Expert mode selection.
  */
 const ManualTab: FC = () => {
   const { state, api } = useDeckTune();
   const { info: platformInfo } = usePlatformInfo();
-  const [coreValues, setCoreValues] = useState<number[]>([...state.cores]);
-  const [isApplying, setIsApplying] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isTuning, setIsTuning] = useState(false);
-  const [simpleMode, setSimpleMode] = useState<boolean>(false);
-  const [simpleValue, setSimpleValue] = useState<number>(-25);
-  const [systemMetrics, setSystemMetrics] = useState<{
-    temps: number[];
-    freqs: number[];
-  } | null>(null);
-  
-  // Expert Mode state (Requirements 13.3-13.6)
-  const [expertMode, setExpertMode] = useState<boolean>(false);
-  const [expertModeActive, setExpertModeActive] = useState<boolean>(false);
+  const [mode, setMode] = useState<"simple" | "expert">("simple");
   const [showExpertWarning, setShowExpertWarning] = useState<boolean>(false);
-  const [isTogglingExpert, setIsTogglingExpert] = useState(false);
-
-  // Fetch system metrics periodically
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const info = await api.getSystemInfo();
-        if (info.temps && info.freqs) {
-          setSystemMetrics({ temps: info.temps, freqs: info.freqs });
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-    };
-
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 2000);
-    return () => clearInterval(interval);
-  }, [api]);
-
-  // Load expert mode status on mount (Requirements 13.3-13.6)
-  useEffect(() => {
-    const loadExpertMode = async () => {
-      try {
-        const status = await api.getExpertModeStatus();
-        setExpertMode(status.expert_mode);
-        setExpertModeActive(status.active);
-      } catch (e) {
-        // Ignore errors, use default (false)
-      }
-    };
-    loadExpertMode();
-
-    // Listen for expert mode changes
-    const handleExpertModeChange = (data: { enabled: boolean }) => {
-      setExpertMode(data.enabled);
-      setExpertModeActive(data.enabled);
-    };
-    api.on("expert_mode_changed", handleExpertModeChange);
-
-    return () => {
-      api.removeListener("expert_mode_changed", handleExpertModeChange);
-    };
-  }, [api]);
-
-  // Initialize simpleValue from current cores (average) and load saved preference
-  useEffect(() => {
-    if (coreValues.length === 4) {
-      const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-      setSimpleValue(avg);
-    }
-    
-    // Load saved simple_mode preference
-    const loadSimpleMode = async () => {
-      try {
-        const saved = await api.getSetting("simple_mode");
-        if (saved !== null && saved !== undefined) {
-          setSimpleMode(saved);
-        }
-      } catch (e) {
-        // Ignore errors, use default (false)
-      }
-    };
-    loadSimpleMode();
-  }, []);
-
-  const safeLimit = platformInfo?.safe_limit ?? -30;
-  
-  // Determine current limit based on expert mode (Requirements 13.2, 13.6)
-  const currentMinLimit = expertModeActive ? -100 : safeLimit;
+  const [pendingExpertToggle, setPendingExpertToggle] = useState<boolean>(false);
 
   /**
-   * Handle Expert Mode toggle.
-   * Requirements: 13.3, 13.4, 13.5
+   * Handle mode selection.
    */
-  const handleExpertModeToggle = async (enabled: boolean) => {
-    if (enabled) {
-      // Show warning dialog (Requirement 13.3)
+  const handleModeSelect = (selectedMode: "simple" | "expert") => {
+    if (selectedMode === "expert") {
+      // Show warning before switching to expert
+      setPendingExpertToggle(true);
       setShowExpertWarning(true);
     } else {
-      // Disable expert mode
-      setIsTogglingExpert(true);
-      try {
-        const result = await api.disableExpertMode();
-        if (result.success) {
-          setExpertMode(false);
-          setExpertModeActive(false);
-        }
-      } finally {
-        setIsTogglingExpert(false);
-      }
+      setMode(selectedMode);
     }
   };
 
   /**
    * Confirm expert mode activation.
-   * Requirements: 13.4
    */
-  const handleExpertModeConfirm = async () => {
-    setIsTogglingExpert(true);
-    try {
-      const result = await api.enableExpertMode(true);
-      if (result.success) {
-        setExpertMode(true);
-        setExpertModeActive(true);
-        setShowExpertWarning(false);
-      } else {
-        // Show error if confirmation failed
-        alert(result.error || "Failed to enable expert mode");
-      }
-    } finally {
-      setIsTogglingExpert(false);
-    }
+  const handleExpertModeConfirm = () => {
+    setMode("expert");
+    setShowExpertWarning(false);
+    setPendingExpertToggle(false);
   };
 
   /**
@@ -421,660 +307,226 @@ const ManualTab: FC = () => {
    */
   const handleExpertModeCancel = () => {
     setShowExpertWarning(false);
+    setPendingExpertToggle(false);
   };
-
-  /**
-   * Handle Simple Mode toggle.
-   * Requirements: 14.4, 14.5
-   */
-  const handleSimpleModeToggle = (enabled: boolean) => {
-    if (enabled) {
-      // Switching to Simple Mode: use average of current values (Requirement 14.4)
-      const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-      setSimpleValue(avg);
-    } else {
-      // Switching to per-core mode: copy current simple value to all cores (Requirement 14.5)
-      setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
-    }
-    setSimpleMode(enabled);
-    // Save preference
-    api.saveSetting("simple_mode", enabled);
-  };
-
-  /**
-   * Handle simple slider value change.
-   * Requirements: 14.3
-   */
-  const handleSimpleValueChange = (value: number) => {
-    setSimpleValue(value);
-    // Apply same value to all cores (Requirement 14.3)
-    setCoreValues([value, value, value, value]);
-  };
-
-  /**
-   * Handle slider value change for a specific core.
-   */
-  const handleCoreChange = (core: number, value: number) => {
-    const newValues = [...coreValues];
-    newValues[core] = value;
-    setCoreValues(newValues);
-  };
-
-  /**
-   * Apply current values.
-   */
-  const handleApply = async () => {
-    setIsApplying(true);
-    try {
-      await api.applyUndervolt(coreValues);
-    } finally {
-      setIsApplying(false);
-    }
-  };
-
-  /**
-   * Run quick test with current values.
-   */
-  const handleTest = async () => {
-    setIsTesting(true);
-    try {
-      await api.applyUndervolt(coreValues);
-      await api.runTest("cpu_quick");
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  /**
-   * Disable undervolt (reset to 0).
-   */
-  const handleDisable = async () => {
-    await api.disableUndervolt();
-    setCoreValues([0, 0, 0, 0]);
-  };
-
-  /**
-   * Tune for current game - run autotune and save as preset.
-   * Requirements: 5.4
-   */
-  const handleTuneForGame = async () => {
-    if (!state.runningAppId || !state.runningAppName) {
-      return;
-    }
-    
-    setIsTuning(true);
-    try {
-      const result = await api.tuneForCurrentGame("quick");
-      if (result.success && result.preset) {
-        setCoreValues(result.preset.value);
-      }
-    } finally {
-      setIsTuning(false);
-    }
-  };
-
-  /**
-   * Run benchmark - 10 second stress test.
-   * Requirements: 7.1, 7.4
-   */
-  const handleRunBenchmark = async () => {
-    try {
-      await api.runBenchmark();
-    } catch (e) {
-      console.error("Benchmark failed:", e);
-    }
-  };
-
-  /**
-   * Get color for value indicator.
-   */
-  const getValueColor = (value: number): string => {
-    const ratio = Math.abs(value) / Math.abs(safeLimit);
-    if (ratio < 0.5) return "#4caf50";
-    if (ratio < 0.8) return "#ff9800";
-    return "#f44336";
-  };
-
-  // Check if a game is currently running
-  const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
 
   return (
     <>
-      {/* Expert Mode Warning Dialog - Requirements: 13.3, 13.4 */}
+      {/* Expert Mode Warning Dialog with gamepad support */}
       {showExpertWarning && (
-        <PanelSectionRow>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
           <div
             style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.85)",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
+              backgroundColor: "#1a1d23",
+              borderRadius: "8px",
+              padding: "16px",
+              maxWidth: "400px",
+              border: "2px solid #ff6b6b",
             }}
           >
-            <div
-              style={{
-                backgroundColor: "#1a1d23",
-                borderRadius: "12px",
-                padding: "24px",
-                maxWidth: "500px",
-                border: "2px solid #ff6b6b",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginBottom: "16px",
-                }}
-              >
-                <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "32px" }} />
-                <div style={{ fontSize: "20px", fontWeight: "bold", color: "#ff6b6b" }}>
-                  Expert Overclocker Mode
-                </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "20px" }} />
+              <div style={{ fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" }}>
+                Expert Undervolter Mode
               </div>
-
-              <div style={{ fontSize: "14px", lineHeight: "1.6", marginBottom: "20px", color: "#e0e0e0" }}>
-                <p style={{ marginBottom: "12px" }}>
-                  <strong>⚠️ WARNING:</strong> You are about to enable Expert Overclocker Mode, which removes all safety limits.
-                </p>
-                <p style={{ marginBottom: "12px" }}>
-                  This mode allows undervolt values up to <strong>-100mV</strong>, far beyond the safe limits for your device.
-                </p>
-                <p style={{ marginBottom: "12px", color: "#ff9800" }}>
-                  <strong>Risks include:</strong>
-                </p>
-                <ul style={{ marginLeft: "20px", marginBottom: "12px", color: "#ffb74d" }}>
-                  <li>System instability and crashes</li>
-                  <li>Data loss from unexpected shutdowns</li>
-                  <li>Potential hardware damage</li>
-                  <li>Voiding of warranty</li>
-                </ul>
-                <p style={{ color: "#f44336", fontWeight: "bold" }}>
-                  Use at your own risk. The developers are not responsible for any damage.
-                </p>
-              </div>
-
-              <Focusable style={{ display: "flex", gap: "12px" }}>
-                <ButtonItem
-                  layout="below"
-                  onClick={handleExpertModeConfirm}
-                  disabled={isTogglingExpert}
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#b71c1c",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    {isTogglingExpert ? (
-                      <>
-                        <FaSpinner className="spin" />
-                        <span>Enabling...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCheck />
-                        <span>I Understand, Enable</span>
-                      </>
-                    )}
-                  </div>
-                </ButtonItem>
-
-                <ButtonItem
-                  layout="below"
-                  onClick={handleExpertModeCancel}
-                  disabled={isTogglingExpert}
-                  style={{ flex: 1 }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    <FaTimes />
-                    <span>Cancel</span>
-                  </div>
-                </ButtonItem>
-              </Focusable>
             </div>
+
+            <div style={{ fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" }}>
+              <p style={{ marginBottom: "8px" }}>
+                <strong>⚠️ WARNING:</strong> Expert mode removes safety limits.
+              </p>
+              <p style={{ marginBottom: "8px", color: "#ff9800" }}>
+                <strong>Risks:</strong> System instability, crashes, data loss, hardware damage.
+              </p>
+              <p style={{ color: "#f44336", fontWeight: "bold", fontSize: "10px" }}>
+                Use at your own risk!
+              </p>
+            </div>
+
+            <Focusable style={{ display: "flex", gap: "8px" }} flow-children="horizontal">
+              <Focusable
+                style={{ flex: 1 }}
+                focusClassName="gpfocus"
+                onActivate={handleExpertModeConfirm}
+                onClick={handleExpertModeConfirm}
+              >
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  gap: "4px",
+                  padding: "8px",
+                  backgroundColor: "#b71c1c",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontWeight: "bold"
+                }}>
+                  <FaCheck size={10} />
+                  <span>I Understand</span>
+                </div>
+              </Focusable>
+
+              <Focusable
+                style={{ flex: 1 }}
+                focusClassName="gpfocus"
+                onActivate={handleExpertModeCancel}
+                onClick={handleExpertModeCancel}
+              >
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  gap: "4px",
+                  padding: "8px",
+                  backgroundColor: "#3d4450",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  fontWeight: "bold"
+                }}>
+                  <FaTimes size={10} />
+                  <span>Cancel</span>
+                </div>
+              </Focusable>
+            </Focusable>
           </div>
-        </PanelSectionRow>
+        </div>
       )}
 
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>
-          <div style={{ fontSize: "12px", color: "#8b929a", marginBottom: "8px" }}>
-            {platformInfo.variant} ({platformInfo.model}) • Safe limit: {safeLimit}
+          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "6px", padding: "2px 0" }}>
+            {platformInfo.variant} ({platformInfo.model}) • Limit: {platformInfo.safe_limit}mV
           </div>
         </PanelSectionRow>
       )}
 
-      {/* Real-time Load Graph - Requirements: 15.1 */}
-      {state.dynamicStatus && state.dynamicStatus.running && (
-        <PanelSectionRow>
-          <LoadGraph
-            load={state.dynamicStatus.load}
-            isActive={state.dynamicStatus.running}
-          />
-        </PanelSectionRow>
-      )}
+      {/* Mode Switcher - Vertical like WizardMode */}
+      <PanelSectionRow>
+        <div style={{ fontSize: "11px", marginBottom: "6px", fontWeight: "bold" }}>
+          Select Tuning Mode:
+        </div>
+      </PanelSectionRow>
 
-      {/* Expert Mode Active Indicator - Requirements: 13.6 */}
-      {expertModeActive && (
-        <PanelSectionRow>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "12px",
-              backgroundColor: "#5c1313",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              border: "2px solid #ff6b6b",
-              animation: "pulse 2s ease-in-out infinite",
-            }}
-          >
-            <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "20px", flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: "bold", color: "#ff6b6b", marginBottom: "2px" }}>
-                Expert Overclocker Mode Active
-              </div>
-              <div style={{ fontSize: "11px", color: "#ffb74d" }}>
-                Extended range enabled: 0 to -100mV • Use with extreme caution
-              </div>
+      {/* Simple Mode Button */}
+      <PanelSectionRow>
+        <Focusable
+          focusClassName="gpfocus"
+          onActivate={() => handleModeSelect("simple")}
+          onClick={() => handleModeSelect("simple")}
+        >
+          <div style={{
+            padding: "10px",
+            backgroundColor: mode === "simple" ? "#1a9fff" : "#23262e",
+            borderRadius: "6px",
+            cursor: "pointer",
+            border: mode === "simple" ? "2px solid #1a9fff" : "2px solid transparent",
+            transition: "all 0.2s ease"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+              <FaSlidersH size={12} style={{ color: mode === "simple" ? "#fff" : "#1a9fff" }} />
+              <span style={{ fontSize: "12px", fontWeight: "bold", color: mode === "simple" ? "#fff" : "#e0e0e0" }}>
+                Simple Mode
+              </span>
+            </div>
+            <div style={{ fontSize: "9px", color: mode === "simple" ? "#e0e0e0" : "#8b929a" }}>
+              Safe limits • Easy controls • Recommended
             </div>
           </div>
-        </PanelSectionRow>
-      )}
+        </Focusable>
+      </PanelSectionRow>
 
-      {/* Live metrics display */}
-      {systemMetrics && (
-        <PanelSectionRow>
-          <Focusable
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "8px",
-              marginBottom: "16px",
-            }}
-          >
-            {[0, 1, 2, 3].map((core) => (
-              <div
-                key={core}
-                style={{
-                  padding: "8px",
-                  backgroundColor: "#23262e",
-                  borderRadius: "6px",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ fontSize: "10px", color: "#8b929a" }}>Core {core}</div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginTop: "4px" }}>
-                  <FaThermometerHalf style={{ color: "#ff9800", fontSize: "10px" }} />
-                  <span style={{ fontSize: "12px" }}>
-                    {systemMetrics.temps[core] ?? "--"}°C
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-                  <FaMicrochip style={{ color: "#1a9fff", fontSize: "10px" }} />
-                  <span style={{ fontSize: "12px" }}>
-                    {systemMetrics.freqs[core] ? `${(systemMetrics.freqs[core] / 1000).toFixed(1)}GHz` : "--"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </Focusable>
-        </PanelSectionRow>
-      )}
-
-      {/* Per-core sliders */}
+      {/* Expert Mode Button */}
       <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-          <div style={{ fontSize: "14px", fontWeight: "bold" }}>
-            Undervolt Values
+        <Focusable
+          focusClassName="gpfocus"
+          onActivate={() => handleModeSelect("expert")}
+          onClick={() => handleModeSelect("expert")}
+        >
+          <div style={{
+            padding: "10px",
+            backgroundColor: mode === "expert" ? "#b71c1c" : "#23262e",
+            borderRadius: "6px",
+            cursor: "pointer",
+            border: mode === "expert" ? "2px solid #ff6b6b" : "2px solid transparent",
+            transition: "all 0.2s ease"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+              <FaExclamationTriangle size={12} style={{ color: mode === "expert" ? "#fff" : "#ff6b6b" }} />
+              <span style={{ fontSize: "12px", fontWeight: "bold", color: mode === "expert" ? "#fff" : "#e0e0e0" }}>
+                Expert Undervolter Mode
+              </span>
+            </div>
+            <div style={{ fontSize: "9px", color: mode === "expert" ? "#ffb74d" : "#8b929a" }}>
+              No limits • Advanced • Use at your own risk
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            {/* Expert Mode Toggle - Requirements: 13.3-13.6 */}
-            <ToggleField
-              label="Expert Mode"
-              description="Remove safety limits (-100mV)"
-              checked={expertMode}
-              onChange={handleExpertModeToggle}
-              disabled={isTogglingExpert}
-            />
-            {/* Simple Mode Toggle - Requirements: 14.1, 14.2 */}
-            <ToggleField
-              label="Simple Mode"
-              description="Control all cores with one slider"
-              checked={simpleMode}
-              onChange={handleSimpleModeToggle}
-            />
+        </Focusable>
+      </PanelSectionRow>
+
+      {/* Mode description */}
+      <PanelSectionRow>
+        <div style={{
+          padding: "8px",
+          backgroundColor: mode === "expert" ? "#5c1313" : "#1a3a5c",
+          borderRadius: "6px",
+          marginTop: "8px",
+          border: mode === "expert" ? "1px solid #ff6b6b" : "1px solid #1a9fff"
+        }}>
+          <div style={{ fontSize: "10px", lineHeight: "1.4" }}>
+            {mode === "simple" ? (
+              <>
+                <strong>Simple Mode:</strong> Safe undervolt range with platform-specific limits. 
+                Perfect for most users.
+              </>
+            ) : (
+              <>
+                <strong style={{ color: "#ff6b6b" }}>Expert Mode:</strong> Extended range up to -100mV. 
+                <span style={{ color: "#ff9800" }}> May cause instability!</span>
+              </>
+            )}
           </div>
         </div>
       </PanelSectionRow>
 
-      {simpleMode ? (
-        /* Simple Mode: Single slider for all cores - Requirements: 14.2, 14.3 */
-        <PanelSectionRow>
-          <SliderField
-            label="All Cores"
-            value={simpleValue}
-            min={currentMinLimit}
-            max={0}
-            step={1}
-            showValue={true}
-            onChange={handleSimpleValueChange}
-            valueSuffix=""
-            description={
-              <span style={{ color: getValueColor(simpleValue) }}>
-                {simpleValue === 0 ? "Disabled" : `${simpleValue} mV (applies to all 4 cores)`}
-                {expertModeActive && simpleValue < safeLimit && (
-                  <span style={{ color: "#ff6b6b", marginLeft: "8px" }}>⚠️ EXPERT</span>
-                )}
-              </span>
-            }
-          />
-        </PanelSectionRow>
-      ) : (
-        /* Per-core mode: Individual sliders */
-        [0, 1, 2, 3].map((core) => (
-          <PanelSectionRow key={core}>
-            <SliderField
-              label={`Core ${core}`}
-              value={coreValues[core]}
-              min={currentMinLimit}
-              max={0}
-              step={1}
-              showValue={true}
-              onChange={(value: number) => handleCoreChange(core, value)}
-              valueSuffix=""
-              description={
-                <span style={{ color: getValueColor(coreValues[core]) }}>
-                  {coreValues[core] === 0 ? "Disabled" : `${coreValues[core]} mV`}
-                  {expertModeActive && coreValues[core] < safeLimit && (
-                    <span style={{ color: "#ff6b6b", marginLeft: "8px" }}>⚠️ EXPERT</span>
-                  )}
-                </span>
-              }
-            />
-          </PanelSectionRow>
-        ))
-      )}
-
-      {/* Action buttons */}
-      <PanelSectionRow>
-        <Focusable
-          style={{
-            display: "flex",
-            gap: "8px",
-            marginTop: "16px",
-          }}
-        >
-          <ButtonItem
-            layout="below"
-            onClick={handleApply}
-            disabled={isApplying || isTesting || isTuning}
-            style={{ flex: 1 }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              {isApplying ? <FaSpinner className="spin" /> : <FaCheck />}
-              <span>Apply</span>
-            </div>
-          </ButtonItem>
-
-          <ButtonItem
-            layout="below"
-            onClick={handleTest}
-            disabled={isApplying || isTesting || isTuning}
-            style={{ flex: 1 }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              {isTesting ? <FaSpinner className="spin" /> : <FaVial />}
-              <span>Test</span>
-            </div>
-          </ButtonItem>
-
-          <ButtonItem
-            layout="below"
-            onClick={handleDisable}
-            disabled={isApplying || isTesting || isTuning}
-            style={{ flex: 1 }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" }}>
-              <FaBan />
-              <span>Disable</span>
-            </div>
-          </ButtonItem>
-        </Focusable>
-      </PanelSectionRow>
-
-      {/* Tune for this game button - Requirements: 5.4 */}
-      {isGameRunning && (
-        <PanelSectionRow>
-          <ButtonItem
-            layout="below"
-            onClick={handleTuneForGame}
-            disabled={isApplying || isTesting || isTuning}
-            style={{ marginTop: "8px" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#1a9fff" }}>
-              {isTuning ? (
-                <>
-                  <FaSpinner className="spin" />
-                  <span>Tuning for {state.runningAppName}...</span>
-                </>
-              ) : (
-                <>
-                  <FaRocket />
-                  <span>Tune for {state.runningAppName}</span>
-                </>
-              )}
-            </div>
-          </ButtonItem>
-        </PanelSectionRow>
-      )}
-
-      {/* Run Benchmark button - Requirements: 7.1, 7.4 */}
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleRunBenchmark}
-          disabled={isApplying || isTesting || isTuning || state.isBenchmarkRunning}
-          style={{ marginTop: "8px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff9800" }}>
-            {state.isBenchmarkRunning ? (
-              <>
-                <FaSpinner className="spin" />
-                <span>Running Benchmark...</span>
-              </>
-            ) : (
-              <>
-                <FaVial />
-                <span>Run Benchmark</span>
-              </>
-            )}
-          </div>
-        </ButtonItem>
-      </PanelSectionRow>
-
-      {/* Benchmark Progress - Requirements: 7.4 */}
-      {state.isBenchmarkRunning && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#23262e",
-              borderRadius: "8px",
-              marginTop: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <FaSpinner className="spin" style={{ color: "#ff9800" }} />
-              <span style={{ fontWeight: "bold" }}>Running benchmark...</span>
-            </div>
-            <ProgressBarWithInfo
-              label="Benchmark Progress"
-              description="Testing performance with stress-ng"
-              nProgress={50}
-              sOperationText="~10 seconds"
-            />
-            <div style={{ fontSize: "11px", color: "#8b929a", marginTop: "8px", textAlign: "center" }}>
-              All tuning controls are disabled during benchmark
-            </div>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Benchmark Result Display - Requirements: 7.3, 7.5 */}
-      {state.lastBenchmarkResult && !state.isBenchmarkRunning && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#1b5e20",
-              borderRadius: "8px",
-              marginTop: "8px",
-              borderLeft: "4px solid #4caf50",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <span style={{ fontWeight: "bold", fontSize: "14px" }}>Latest Benchmark</span>
-              <FaCheck style={{ color: "#4caf50" }} />
-            </div>
-            
-            {/* Score */}
-            <div style={{ marginBottom: "8px" }}>
-              <div style={{ fontSize: "11px", color: "#a5d6a7" }}>Score</div>
-              <div style={{ fontSize: "20px", fontWeight: "bold", color: "#4caf50" }}>
-                {state.lastBenchmarkResult.score.toFixed(2)} bogo ops/s
-              </div>
-            </div>
-
-            {/* Undervolt values used */}
-            <div style={{ marginBottom: "8px" }}>
-              <div style={{ fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" }}>Undervolt Values Used</div>
-              <div style={{ fontSize: "12px", color: "#c8e6c9" }}>
-                [{state.lastBenchmarkResult.cores_used.join(", ")}] mV
-              </div>
-            </div>
-
-            {/* Comparison with previous run */}
-            {state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
-              const current = state.benchmarkHistory[0];
-              const previous = state.benchmarkHistory[1];
-              const scoreDiff = current.score - previous.score;
-              const percentChange = ((scoreDiff / previous.score) * 100);
-              const improvement = scoreDiff > 0;
-              
-              return (
-                <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #2e7d32" }}>
-                  <div style={{ fontSize: "11px", color: "#a5d6a7", marginBottom: "4px" }}>
-                    Comparison with Previous Run
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {improvement ? (
-                      <FaCheck style={{ color: "#4caf50" }} />
-                    ) : (
-                      <FaTimes style={{ color: "#ff6b6b" }} />
-                    )}
-                    <span style={{ fontSize: "13px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" }}>
-                      {improvement ? "+" : ""}{percentChange.toFixed(2)}%
-                    </span>
-                    <span style={{ fontSize: "11px", color: "#a5d6a7" }}>
-                      ({improvement ? "+" : ""}{scoreDiff.toFixed(2)} bogo ops/s)
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Timestamp */}
-            <div style={{ fontSize: "10px", color: "#81c784", marginTop: "8px" }}>
-              {new Date(state.lastBenchmarkResult.timestamp).toLocaleString()}
-            </div>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Benchmark History - Requirements: 7.5 */}
-      {state.benchmarkHistory && state.benchmarkHistory.length > 0 && (
-        <>
-          <PanelSectionRow>
-            <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
-              Benchmark History (Last 10)
-            </div>
-          </PanelSectionRow>
-
-          {state.benchmarkHistory.slice(0, 10).map((result, index) => (
-            <PanelSectionRow key={index}>
-              <div
-                style={{
-                  padding: "10px",
-                  backgroundColor: "#23262e",
-                  borderRadius: "6px",
-                  marginBottom: "6px",
-                  borderLeft: `3px solid #4caf50`,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontWeight: "bold", fontSize: "13px", color: "#4caf50" }}>
-                      {result.score.toFixed(2)} bogo ops/s
-                    </div>
-                    <div style={{ fontSize: "10px", color: "#8b929a", marginTop: "2px" }}>
-                      Cores: [{result.cores_used.join(", ")}] mV
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "11px", color: "#8b929a" }}>
-                      {new Date(result.timestamp).toLocaleDateString()}
-                    </div>
-                    <div style={{ fontSize: "10px", color: "#8b929a" }}>
-                      {new Date(result.timestamp).toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </PanelSectionRow>
-          ))}
-        </>
-      )}
-
       {/* Current status */}
       <PanelSectionRow>
-        <div
-          style={{
-            marginTop: "12px",
-            padding: "8px",
-            backgroundColor: "#23262e",
-            borderRadius: "6px",
-            fontSize: "12px",
-            textAlign: "center",
-          }}
-        >
-          Status: <span style={{ color: state.status === "enabled" ? "#4caf50" : "#8b929a" }}>{state.status}</span>
+        <div style={{
+          marginTop: "12px",
+          padding: "6px",
+          backgroundColor: "#23262e",
+          borderRadius: "4px",
+          fontSize: "10px",
+          textAlign: "center",
+          color: "#8b929a"
+        }}>
+          Active Mode: <span style={{ color: mode === "expert" ? "#ff6b6b" : "#1a9fff", fontWeight: "bold" }}>
+            {mode === "simple" ? "Simple" : "Expert Undervolter"}
+          </span>
         </div>
       </PanelSectionRow>
 
       <style>
         {`
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+          .gpfocus {
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
+            transform: scale(1.02);
           }
         `}
       </style>
@@ -1600,5 +1052,27 @@ const formatUptime = (seconds: number): string => {
   
   return parts.length > 0 ? parts.join(" ") : "< 1m";
 };
+
+// Global styles for ExpertMode
+const expertModeStyles = `
+  .expert-tab.gpfocus {
+    border: 2px solid #1a9fff;
+    box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+  }
+  .expert-tab:hover {
+    background-color: rgba(26, 159, 255, 0.2);
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleId = 'expert-mode-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = expertModeStyles;
+    document.head.appendChild(style);
+  }
+}
 
 export default ExpertMode;
