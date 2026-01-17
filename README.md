@@ -15,12 +15,14 @@
 - **Automated Silicon Binning** — discover your chip's maximum stable undervolt automatically
 - **Per-Game Profiles** — automatic profile switching based on running game
 - **Low-Level Fan Control** — custom fan curves with visual editor and safety overrides
+- **Dynamic Mode** — real-time CPU load-based adjustment with configurable strategies (gymdeck3)
 - **Safety System** — watchdog, automatic rollback on freeze, LKG (Last Known Good)
 - **Built-in Stress Tests** — CPU, RAM, Combo for stability verification
 - **Benchmarking** — quick performance testing with before/after comparison
 - **Presets** — global and per-game settings with auto-apply
 - **Diagnostics** — one-click export of logs and system info
-- **Dynamic Mode** — automatic adjustment based on load (gymdeck3)
+- **Modern UI** — card-based design with smooth animations, gamepad-friendly
+- **Multi-language** — English and Russian with persistent language selection
 
 ### Installation
 
@@ -66,11 +68,20 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 Dynamic Mode automatically adjusts undervolt values based on real-time CPU load, providing optimal balance between performance and efficiency.
 
 **Features:**
-- **Adaptive Strategies**: Conservative (5s ramp), Balanced (2s ramp), Aggressive (500ms ramp), Custom
+- **Adaptive Strategies**: Conservative (5s ramp), Balanced (2s ramp), Aggressive (500ms ramp)
 - **Per-Core Control**: Independent load monitoring and value adjustment for each CPU core
 - **Hysteresis**: Prevents value hunting with configurable dead-band (1-20%)
 - **Smooth Transitions**: Linear interpolation with 1mV steps for stability
 - **Safety**: Watchdog, automatic rollback, respects platform limits
+
+**Configuration (Expert Mode → Manual → Dynamic Settings):**
+1. Select Dynamic mode in Manual tab
+2. Click "Dynamic Settings" button
+3. Choose strategy (Conservative/Balanced/Aggressive)
+4. Enable Simple Mode for unified control or use per-core settings
+5. Adjust value slider (if Simple Mode enabled)
+6. Click "Save Settings"
+7. Settings apply on next Dynamic mode start
 
 **How it works:**
 1. Monitors CPU load from `/proc/stat` in real-time
@@ -78,12 +89,6 @@ Dynamic Mode automatically adjusts undervolt values based on real-time CPU load,
 3. Applies values smoothly via ryzenadj
 4. Higher load → safer (less aggressive) values
 5. Lower load → more aggressive values for better efficiency
-
-**Configuration Profiles:**
-- Battery Saver (conservative, max battery life)
-- Balanced (moderate responsiveness)
-- Performance (fast adaptation)
-- Custom (user-defined load curves)
 
 #### Panic Disable Button
 
@@ -243,6 +248,40 @@ DeckTune/
 ├── bin/               # ryzenadj binary, gymdeck3
 └── tests/             # Property-based tests (pytest + hypothesis)
 ```
+
+### Modern UI Design
+
+DeckTune features a completely redesigned interface optimized for Steam Deck's Quick Access Menu (QAM).
+
+**Settings Tab:**
+- 🌐 **Language Card**: Persistent language selection (English/Russian) with save indicator
+- 🧪 **Expert Mode Card**: Extended range (-100mV) with pulsing animation when active
+- ℹ️ **Info Card**: Structured information with color-coded sections
+- ✨ **Smooth Animations**: fadeIn, slideUp, fadeInUp, slideDown, pulse effects
+- 🎨 **Modern Design**: Gradient backgrounds, shadows, icon badges in circles
+
+**Dynamic Settings:**
+- Inline configuration panel in Manual tab
+- Expandable settings with "Dynamic Settings" button
+- Strategy selection (Conservative/Balanced/Aggressive)
+- Simple Mode toggle for unified control
+- Value slider with real-time preview
+- Save button with loading indicator
+
+**Gamepad Support:**
+- Full navigation with D-Pad and analog stick
+- A button to activate/select
+- B button to go back
+- L1/R1 for quick tab switching
+- All interactive elements use `Focusable` components
+- Visual feedback with focus indicators
+
+**Compact Design:**
+- Optimized for 310px QAM width
+- Responsive layouts with flex containers
+- Compact fonts (8-13px) and spacing
+- Collapsible sections to save space
+- Card-based organization for clarity
 
 ### Testing
 

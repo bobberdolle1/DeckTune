@@ -2,6 +2,62 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.14] - 2026-01-17
+
+### Added
+- **Dynamic Mode Settings UI** - Inline configuration panel in Manual tab
+  - Strategy selection (Conservative/Balanced/Aggressive)
+  - Simple Mode toggle for unified control
+  - Value slider with real-time preview
+  - Expandable panel with "Dynamic Settings" button
+  - Settings persist and apply on next Dynamic mode start
+- **Language Persistence** - Language selection now saved in localStorage
+  - Fixes issue where language reset on QAM close/reopen
+  - Syncs between localStorage and backend settings
+  - Automatic restore on plugin load
+- **RPC Methods for Dynamic Config**
+  - `get_dynamic_config()` - retrieve current configuration
+  - `save_dynamic_config(config)` - save with validation
+- **API Methods**
+  - `getDynamicConfig()` - fetch dynamic configuration
+  - `saveDynamicConfig(config)` - save dynamic configuration
+  - `enableGymdeck()` - start gymdeck3 with current settings
+  - `disableGymdeck()` - stop gymdeck3
+
+### Changed
+- **Settings Tab Complete Redesign**
+  - Modern card-based UI with gradients and shadows
+  - 🌐 Language Card (blue) with save indicator
+  - 🧪 Expert Mode Card (red when active) with pulsing animation
+  - ℹ️ Info Card (green) with structured information
+  - Smooth animations: fadeIn, slideUp, fadeInUp, slideDown, pulse
+  - Icon badges in circles with color coding
+  - Improved modal dialog with better visual hierarchy
+- **Dynamic Settings Location**
+  - Moved from separate tab to inline panel in Manual tab
+  - Appears when Dynamic mode is selected
+  - More intuitive workflow: select mode → configure → save
+  - Compact design optimized for QAM (310px width)
+
+### Improved
+- **Gamepad Navigation**
+  - All interactive elements use Focusable components
+  - Full D-Pad and analog stick support
+  - A button to activate, B button to go back
+  - Visual focus indicators with glow effects
+  - Proper focus flow for all new components
+- **UI Consistency**
+  - Unified color scheme across all components
+  - Consistent spacing and typography
+  - Responsive layouts with flex containers
+  - Better visual feedback for all interactions
+
+### Documentation
+- Added `FIXES_SUMMARY.md` - Detailed technical documentation (EN)
+- Added `FIXES_RU.md` - User guide in Russian
+- Added `SETTINGS_IMPROVEMENTS.md` - Settings redesign details
+- Updated README.md with new UI features and Dynamic Mode configuration
+
 ## [3.1.13] - 2026-01-17
 
 ### Fixed
