@@ -113,6 +113,12 @@ class TestRunner:
             timeout=310,
             parse_fn=_parse_stress_ng_output
         ),
+        "cpu_loop": TestCase(
+            name="CPU Loop (Infinite)",
+            command=["stress-ng", "--cpu", "4", "--timeout", "0"],  # 0 = infinite
+            timeout=0,  # No timeout - runs until cancelled
+            parse_fn=_parse_stress_ng_output
+        ),
         "ram_quick": TestCase(
             name="RAM Quick",
             command=["memtester", "512M", "1"],

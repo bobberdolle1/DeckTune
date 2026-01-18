@@ -25,6 +25,7 @@ import {
 } from "react-icons/fa";
 import { useDeckTune, useProfiles } from "../context";
 import { Preset, GameProfile } from "../api/types";
+import { FocusableButton } from "./FocusableButton";
 
 export const PresetsTabNew: FC = () => {
   const { state, api } = useDeckTune();
@@ -63,31 +64,45 @@ export const PresetsTabNew: FC = () => {
           }}
           flow-children="horizontal"
         >
-          <Focusable
-            className={`section-button ${activeSection === "profiles" ? "active" : ""}`}
-            focusClassName="gpfocus"
-            onActivate={() => setActiveSection("profiles")}
+          <FocusableButton
             onClick={() => setActiveSection("profiles")}
             style={{ flex: 1 }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "4px", 
+              padding: "6px", 
+              fontSize: "10px",
+              backgroundColor: activeSection === "profiles" ? "#1a9fff" : "transparent",
+              borderRadius: "4px",
+              color: activeSection === "profiles" ? "#fff" : "#8b929a",
+            }}>
               <FaGamepad size={10} />
               <span>Game Profiles</span>
             </div>
-          </Focusable>
+          </FocusableButton>
           
-          <Focusable
-            className={`section-button ${activeSection === "presets" ? "active" : ""}`}
-            focusClassName="gpfocus"
-            onActivate={() => setActiveSection("presets")}
+          <FocusableButton
             onClick={() => setActiveSection("presets")}
             style={{ flex: 1 }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "4px", 
+              padding: "6px", 
+              fontSize: "10px",
+              backgroundColor: activeSection === "presets" ? "#1a9fff" : "transparent",
+              borderRadius: "4px",
+              color: activeSection === "presets" ? "#fff" : "#8b929a",
+            }}>
               <FaGlobe size={10} />
               <span>Global Presets</span>
             </div>
-          </Focusable>
+          </FocusableButton>
         </Focusable>
       </PanelSectionRow>
 
@@ -199,17 +214,26 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
       {/* Quick create button */}
       {runningAppId && runningAppName && (
         <PanelSectionRow>
-          <ButtonItem
-            layout="below"
+          <FocusableButton
             onClick={handleQuickCreate}
             disabled={isCreating}
-            style={{ backgroundColor: "#1a9fff", marginBottom: "8px", minHeight: "32px" }}
+            style={{ width: "100%", marginBottom: "8px" }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "6px", 
+              fontSize: "10px",
+              padding: "10px",
+              backgroundColor: "#1a9fff",
+              borderRadius: "6px",
+              fontWeight: "bold"
+            }}>
               {isCreating ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
               <span>Save for {runningAppName}</span>
             </div>
-          </ButtonItem>
+          </FocusableButton>
         </PanelSectionRow>
       )}
 
@@ -397,17 +421,26 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
     <>
       {/* Quick save button */}
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
+        <FocusableButton
           onClick={handleQuickSave}
           disabled={isSaving}
-          style={{ backgroundColor: "#1a9fff", marginBottom: "8px", minHeight: "32px" }}
+          style={{ width: "100%", marginBottom: "8px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            gap: "6px", 
+            fontSize: "10px",
+            padding: "10px",
+            backgroundColor: "#1a9fff",
+            borderRadius: "6px",
+            fontWeight: "bold"
+          }}>
             {isSaving ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
             <span>Save Current Values</span>
           </div>
-        </ButtonItem>
+        </FocusableButton>
       </PanelSectionRow>
 
       {/* Preset list */}

@@ -13,6 +13,8 @@
  * - Tests tab: Test selection, run button, history
  * - Diagnostics tab: System info, logs, export
  * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
+ * 
+ * v3.1.19: Complete focus system refactor with FocusableButton
  */
 
 import { useState, useEffect, FC } from "react";
@@ -21,82 +23,26 @@ import {
   PanelSection,
   PanelSectionRow,
   SliderField,
-  DropdownItem,
-  ProgressBarWithInfo,
   Focusable,
-  TextField,
-  ToggleField,
 } from "@decky/ui";
 import {
   FaSlidersH,
   FaList,
   FaVial,
   FaInfoCircle,
-  FaPlay,
   FaBan,
   FaCheck,
   FaTimes,
   FaDownload,
-  FaUpload,
-  FaTrash,
-  FaEdit,
   FaSpinner,
-  FaThermometerHalf,
-  FaMicrochip,
   FaExclamationTriangle,
-  FaExclamationCircle,
-  FaRocket,
   FaFan,
 } from "react-icons/fa";
-import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
-import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
-import { LoadGraph } from "./LoadGraph";
+import { useDeckTune, usePlatformInfo } from "../context";
 import { PresetsTabNew } from "./PresetsTabNew";
+import { TestsTabNew } from "./TestsTabNew";
 import { FanTab } from "./FanTab";
-
-/**
- * Compact styles for QAM (310px width).
- * 
- * Feature: decktune-critical-fixes
- * Validates: Requirements 2.1
- */
-const QAM_STYLES = {
-  container: {
-    maxWidth: "310px",
-    padding: "8px",
-  },
-  tabNav: {
-    display: "flex",
-    gap: "4px",
-    padding: "4px",
-  },
-  tabButton: {
-    flex: 1,
-    padding: "6px 4px",
-    fontSize: "10px",
-    minWidth: "0",
-  },
-  slider: {
-    marginBottom: "8px",
-  },
-  metricsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "6px",
-  },
-  button: {
-    padding: "8px 12px",
-    fontSize: "12px",
-  },
-  buttonContainer: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: "6px",
-  },
-  compactRow: {
-    marginBottom: "6px",
-  },
-};
+import { FocusableButton } from "./FocusableButton";
 
 /**
  * Tab type for Expert Mode navigation.
@@ -126,16 +72,18 @@ interface ExpertModeProps {
 }
 
 /**
- * Panic Disable Button component - always visible emergency reset.
+ * Panic Disable Button component - compact emergency reset.
  * Requirements: 4.5
  * 
  * Features:
- * - Always visible red button
+ * - Compact red button with white focus outline
  * - Immediate reset to 0 on click
+ * - Uses FocusableButton for custom focus
  */
 const PanicDisableButton: FC = () => {
   const { api } = useDeckTune();
   const [isPanicking, setIsPanicking] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handlePanicDisable = async () => {
     setIsPanicking(true);
@@ -148,13 +96,13 @@ const PanicDisableButton: FC = () => {
 
   return (
     <PanelSectionRow>
-      <ButtonItem
-        layout="below"
-        onClick={handlePanicDisable}
-        disabled={isPanicking}
+      <Focusable
+        onActivate={handlePanicDisable}
+        onGamepadFocus={() => setIsFocused(true)}
+        onGamepadBlur={() => setIsFocused(false)}
         style={{
-          backgroundColor: "#b71c1c",
-          borderRadius: "8px",
+          padding: 0,
+          margin: 0,
         }}
       >
         <div
@@ -163,23 +111,33 @@ const PanicDisableButton: FC = () => {
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
+            padding: "12px 16px",
+            backgroundColor: "#b71c1c",
+            borderRadius: "8px",
             color: "#fff",
             fontWeight: "bold",
+            fontSize: "12px",
+            border: isFocused && !isPanicking ? "3px solid #fff" : "3px solid transparent",
+            boxShadow: isFocused && !isPanicking ? "0 0 12px rgba(255, 255, 255, 0.6)" : "none",
+            transform: isFocused && !isPanicking ? "scale(1.05)" : "scale(1)",
+            transition: "all 0.2s ease",
+            cursor: isPanicking ? "not-allowed" : "pointer",
+            opacity: isPanicking ? 0.5 : 1,
           }}
         >
           {isPanicking ? (
             <>
-              <FaSpinner className="spin" />
+              <FaSpinner className="spin" style={{ fontSize: "12px" }} />
               <span>Disabling...</span>
             </>
           ) : (
             <>
-              <FaExclamationTriangle />
+              <FaExclamationTriangle style={{ fontSize: "12px" }} />
               <span>PANIC DISABLE</span>
             </>
           )}
         </div>
-      </ButtonItem>
+      </Focusable>
     </PanelSectionRow>
   );
 };
@@ -191,22 +149,32 @@ const PanicDisableButton: FC = () => {
 export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
   const [activeTab, setActiveTab] = useState<ExpertTab>(initialTab);
 
+  // NUCLEAR CACHE BUST - v3.1.19-20260118-2230
+  useEffect(() => {
+    const buildId = "v3.1.19-20260118-2230-FOCUSABLE-BUTTON";
+    console.log(`[DeckTune CACHE BUST] ${buildId} - FocusableButton refactor complete`);
+    (window as any).__DECKTUNE_BUILD_ID__ = buildId;
+    (window as any).__DECKTUNE_EXPERT_MODE_VERSION__ = "FOCUSABLE_BUTTON_V1";
+  }, []);
+
   return (
     <PanelSection title="Expert Mode">
       {/* Panic Disable Button - Always visible at top (Requirement 4.5) */}
       <PanicDisableButton />
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - always first in focus order */}
       <PanelSectionRow>
         <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       </PanelSectionRow>
 
-      {/* Tab Content */}
-      {activeTab === "manual" && <ManualTab />}
-      {activeTab === "presets" && <PresetsTabNew />}
-      {activeTab === "tests" && <TestsTab />}
-      {activeTab === "fan" && <FanTab />}
-      {activeTab === "diagnostics" && <DiagnosticsTab />}
+      {/* Tab Content - key forces remount on tab change to reset focus */}
+      <div key={activeTab}>
+        {activeTab === "manual" && <ManualTab />}
+        {activeTab === "presets" && <PresetsTabNew />}
+        {activeTab === "tests" && <TestsTabNew />}
+        {activeTab === "fan" && <FanTab />}
+        {activeTab === "diagnostics" && <DiagnosticsTab />}
+      </div>
     </PanelSection>
   );
 };
@@ -214,6 +182,9 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
 /**
  * Tab navigation component with compact display for QAM.
  * Ultra-compact tabs that fit in 310px width.
+ * 
+ * Fixed: Uses FocusableButton for proper focus management.
+ * Key prop on parent forces focus reset when tab changes.
  */
 interface TabNavigationProps {
   activeTab: ExpertTab;
@@ -237,12 +208,10 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
         return (
-          <Focusable
+          <FocusableButton
             key={tab.id}
-            className={`expert-tab ${isActive ? "active" : ""}`}
-            focusClassName="gpfocus"
-            onActivate={() => onTabChange(tab.id)}
             onClick={() => onTabChange(tab.id)}
+            focusColor={isActive ? "#1a9fff" : "#666"}
             style={{
               flex: 1,
               display: "flex",
@@ -251,17 +220,15 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
               gap: "1px",
               padding: "4px 2px",
               borderRadius: "3px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
               backgroundColor: isActive ? "#1a9fff" : "transparent",
               color: isActive ? "#fff" : "#8b929a",
             }}
           >
-            <Icon size={11} />
+            <Icon />
             <span style={{ fontSize: "8px", fontWeight: isActive ? "600" : "400" }}>
               {tab.label}
             </span>
-          </Focusable>
+          </FocusableButton>
         );
       })}
     </Focusable>
@@ -426,11 +393,9 @@ const ManualTab: FC = () => {
             </div>
 
             <Focusable style={{ display: "flex", gap: "8px" }} flow-children="horizontal">
-              <Focusable
-                style={{ flex: 1 }}
-                focusClassName="gpfocus"
-                onActivate={handleExpertModeConfirm}
+              <FocusableButton
                 onClick={handleExpertModeConfirm}
+                style={{ flex: 1 }}
               >
                 <div style={{ 
                   display: "flex", 
@@ -440,20 +405,17 @@ const ManualTab: FC = () => {
                   padding: "8px",
                   backgroundColor: "#b71c1c",
                   borderRadius: "4px",
-                  cursor: "pointer",
                   fontSize: "10px",
                   fontWeight: "bold"
                 }}>
                   <FaCheck size={10} />
                   <span>I Understand</span>
                 </div>
-              </Focusable>
+              </FocusableButton>
 
-              <Focusable
-                style={{ flex: 1 }}
-                focusClassName="gpfocus"
-                onActivate={handleExpertModeCancel}
+              <FocusableButton
                 onClick={handleExpertModeCancel}
+                style={{ flex: 1 }}
               >
                 <div style={{ 
                   display: "flex", 
@@ -463,14 +425,13 @@ const ManualTab: FC = () => {
                   padding: "8px",
                   backgroundColor: "#3d4450",
                   borderRadius: "4px",
-                  cursor: "pointer",
                   fontSize: "10px",
                   fontWeight: "bold"
                 }}>
                   <FaTimes size={10} />
                   <span>Cancel</span>
                 </div>
-              </Focusable>
+              </FocusableButton>
             </Focusable>
           </div>
         </div>
@@ -489,47 +450,39 @@ const ManualTab: FC = () => {
       <PanelSectionRow>
         <Focusable style={{ display: "flex", gap: "8px", marginBottom: "8px" }} flow-children="horizontal">
           {/* Simple Mode Toggle */}
-          <Focusable
-            style={{ flex: 1 }}
-            focusClassName="gpfocus"
-            onActivate={handleSimpleModeToggle}
+          <FocusableButton
             onClick={handleSimpleModeToggle}
+            style={{ flex: 1 }}
           >
             <div style={{
               padding: "6px",
               backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
               borderRadius: "4px",
-              cursor: "pointer",
               fontSize: "9px",
               fontWeight: "bold",
               textAlign: "center",
-              transition: "all 0.2s ease"
             }}>
               {simpleMode ? "✓ Simple Mode" : "Per-Core Mode"}
             </div>
-          </Focusable>
+          </FocusableButton>
 
           {/* Expert Mode Toggle */}
-          <Focusable
-            style={{ flex: 1 }}
-            focusClassName="gpfocus"
-            onActivate={handleExpertModeToggle}
+          <FocusableButton
             onClick={handleExpertModeToggle}
+            style={{ flex: 1 }}
           >
             <div style={{
               padding: "6px",
               backgroundColor: expertMode ? "#b71c1c" : "#3d4450",
               borderRadius: "4px",
-              cursor: "pointer",
               fontSize: "9px",
               fontWeight: "bold",
               textAlign: "center",
-              transition: "all 0.2s ease",
               color: expertMode ? "#fff" : "#8b929a"
             }}>
               {expertMode ? "⚠ Expert Mode" : "Expert Mode"}
             </div>
-          </Focusable>
+          </FocusableButton>
         </Focusable>
       </PanelSectionRow>
 
@@ -589,11 +542,10 @@ const ManualTab: FC = () => {
       {/* Action buttons */}
       <PanelSectionRow>
         <Focusable style={{ display: "flex", gap: "6px", marginTop: "8px" }} flow-children="horizontal">
-          <Focusable
-            style={{ flex: 1 }}
-            focusClassName="gpfocus"
-            onActivate={handleApply}
+          <FocusableButton
             onClick={handleApply}
+            disabled={isApplying}
+            style={{ flex: 1 }}
           >
             <div style={{
               display: "flex",
@@ -602,22 +554,18 @@ const ManualTab: FC = () => {
               gap: "4px",
               padding: "8px",
               backgroundColor: "#1a9fff",
-              borderRadius: "4px",
-              cursor: "pointer",
+              borderRadius: "6px",
               fontSize: "10px",
               fontWeight: "bold",
-              opacity: isApplying ? 0.5 : 1
             }}>
               {isApplying ? <FaSpinner className="spin" size={10} /> : <FaCheck size={10} />}
               <span>Apply</span>
             </div>
-          </Focusable>
+          </FocusableButton>
 
-          <Focusable
-            style={{ flex: 1 }}
-            focusClassName="gpfocus"
-            onActivate={handleDisable}
+          <FocusableButton
             onClick={handleDisable}
+            style={{ flex: 1 }}
           >
             <div style={{
               display: "flex",
@@ -626,21 +574,18 @@ const ManualTab: FC = () => {
               gap: "4px",
               padding: "8px",
               backgroundColor: "#3d4450",
-              borderRadius: "4px",
-              cursor: "pointer",
+              borderRadius: "6px",
               fontSize: "10px",
               fontWeight: "bold"
             }}>
               <FaBan size={10} />
               <span>Disable</span>
             </div>
-          </Focusable>
+          </FocusableButton>
 
-          <Focusable
-            style={{ flex: 1 }}
-            focusClassName="gpfocus"
-            onActivate={handleReset}
+          <FocusableButton
             onClick={handleReset}
+            style={{ flex: 1 }}
           >
             <div style={{
               display: "flex",
@@ -649,8 +594,7 @@ const ManualTab: FC = () => {
               gap: "4px",
               padding: "8px",
               backgroundColor: "#5c4813",
-              borderRadius: "4px",
-              cursor: "pointer",
+              borderRadius: "6px",
               fontSize: "10px",
               fontWeight: "bold",
               color: "#ff9800"
@@ -658,271 +602,18 @@ const ManualTab: FC = () => {
               <FaTimes size={10} />
               <span>Reset</span>
             </div>
-          </Focusable>
+          </FocusableButton>
         </Focusable>
       </PanelSectionRow>
 
       <style>
         {`
-          .gpfocus {
-            box-shadow: 0 0 8px rgba(26, 159, 255, 0.8) !important;
-            transform: scale(1.02);
-          }
           .spin {
             animation: spin 1s linear infinite;
           }
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-    </>
-  );
-};
-
-
-/**
- * Presets tab component - now uses PresetsTabNew with profile management.
- * Requirements: 3.2, 5.1, 5.4, 7.3, 9.1, 9.2
- */
-const PresetsTab: FC = PresetsTabNew;
-
-
-/**
- * Available test options.
- */
-const TEST_OPTIONS = [
-  { value: "cpu_quick", label: "CPU Quick (30s)" },
-  { value: "cpu_long", label: "CPU Long (5m)" },
-  { value: "ram_quick", label: "RAM Quick (2m)" },
-  { value: "ram_thorough", label: "RAM Thorough (15m)" },
-  { value: "combo", label: "Combo Stress (5m)" },
-];
-
-/**
- * Tests tab component.
- * Requirements: 7.4
- * 
- * Features:
- * - Test selection dropdown
- * - Run test button with progress
- * - Last 10 test results history
- * - Warning banner if binaries missing
- */
-const TestsTab: FC = () => {
-  const { history, currentTest, isRunning, runTest } = useTests();
-  const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
-  const [selectedTest, setSelectedTest] = useState<string>("cpu_quick");
-
-  // Check binaries on mount
-  useEffect(() => {
-    checkBinaries();
-  }, []);
-
-  /**
-   * Handle run test button click.
-   */
-  const handleRunTest = async () => {
-    await runTest(selectedTest);
-  };
-
-  /**
-   * Format duration for display.
-   */
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    if (mins > 0) {
-      return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
-  };
-
-  /**
-   * Format timestamp for display.
-   */
-  const formatTimestamp = (timestamp: string): string => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString();
-    } catch {
-      return timestamp;
-    }
-  };
-
-  /**
-   * Get test label from value.
-   */
-  const getTestLabel = (value: string): string => {
-    return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
-  };
-
-  return (
-    <>
-      {/* Missing Binaries Warning */}
-      {hasMissing && (
-        <PanelSectionRow>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "10px",
-              padding: "12px",
-              backgroundColor: "#5c4813",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              border: "1px solid #ff9800",
-            }}
-          >
-            <FaExclamationCircle style={{ color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" }} />
-            <div>
-              <div style={{ fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" }}>
-                Missing Components
-              </div>
-              <div style={{ fontSize: "12px", color: "#ffe0b2" }}>
-                Required tools not found: <strong>{missingBinaries.join(", ")}</strong>
-              </div>
-              <div style={{ fontSize: "11px", color: "#ffcc80", marginTop: "4px" }}>
-                Stress tests are unavailable until binaries are installed.
-              </div>
-            </div>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Test selection */}
-      <PanelSectionRow>
-        <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          Run Stress Test
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <DropdownItem
-          label="Select Test"
-          menuLabel="Select Test"
-          rgOptions={TEST_OPTIONS.map((t, idx) => ({
-            data: idx,
-            label: t.label,
-          }))}
-          selectedOption={TEST_OPTIONS.findIndex(t => t.value === selectedTest)}
-          onChange={(option: any) => {
-            const test = TEST_OPTIONS[option.data];
-            if (test) setSelectedTest(test.value);
-          }}
-          disabled={hasMissing}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleRunTest}
-          disabled={isRunning || hasMissing}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: hasMissing ? 0.5 : 1 }}>
-            {isRunning ? (
-              <>
-                <FaSpinner className="spin" />
-                <span>Running {getTestLabel(currentTest || selectedTest)}...</span>
-              </>
-            ) : (
-              <>
-                <FaPlay />
-                <span>Run Test</span>
-              </>
-            )}
-          </div>
-        </ButtonItem>
-      </PanelSectionRow>
-
-      {/* Running test indicator */}
-      {isRunning && (
-        <PanelSectionRow>
-          <div
-            style={{
-              padding: "12px",
-              backgroundColor: "#1a3a5c",
-              borderRadius: "8px",
-              marginTop: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <FaSpinner className="spin" style={{ color: "#1a9fff" }} />
-              <span>Test in progress...</span>
-            </div>
-            <div style={{ fontSize: "12px", color: "#8b929a" }}>
-              Running: {getTestLabel(currentTest || selectedTest)}
-            </div>
-          </div>
-        </PanelSectionRow>
-      )}
-
-      {/* Test history */}
-      <PanelSectionRow>
-        <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
-          Test History (Last 10)
-        </div>
-      </PanelSectionRow>
-
-      {history.length === 0 ? (
-        <PanelSectionRow>
-          <div style={{ color: "#8b929a", textAlign: "center", padding: "16px" }}>
-            No tests run yet.
-          </div>
-        </PanelSectionRow>
-      ) : (
-        history.slice(0, 10).map((entry, index) => (
-          <PanelSectionRow key={index}>
-            <Focusable
-              style={{
-                padding: "10px",
-                backgroundColor: "#23262e",
-                borderRadius: "6px",
-                marginBottom: "6px",
-                borderLeft: `3px solid ${entry.passed ? "#4caf50" : "#f44336"}`,
-              }}
-              focusClassName="gpfocus"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {entry.passed ? (
-                    <FaCheck style={{ color: "#4caf50" }} />
-                  ) : (
-                    <FaTimes style={{ color: "#f44336" }} />
-                  )}
-                  <span style={{ fontWeight: "bold", fontSize: "13px" }}>
-                    {getTestLabel(entry.test_name)}
-                  </span>
-                </div>
-                <span style={{ fontSize: "11px", color: "#8b929a" }}>
-                  {formatDuration(entry.duration)}
-                </span>
-              </div>
-              <div style={{ fontSize: "11px", color: "#8b929a", marginTop: "4px" }}>
-                {formatTimestamp(entry.timestamp)}
-              </div>
-              <div style={{ fontSize: "10px", color: "#8b929a", marginTop: "2px" }}>
-                Cores: [{entry.cores_tested.join(", ")}]
-              </div>
-            </Focusable>
-          </PanelSectionRow>
-        ))
-      )}
-
-      <style>
-        {`
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .gpfocus {
-            border: 2px solid #1a9fff !important;
-            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
           }
         `}
       </style>
@@ -1089,26 +780,27 @@ const DiagnosticsTab: FC = () => {
 
       {/* Export Diagnostics Button */}
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleExportDiagnostics}
-          disabled={isExporting}
-          style={{ marginTop: "16px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            {isExporting ? (
-              <>
-                <FaSpinner className="spin" />
-                <span>Exporting...</span>
-              </>
-            ) : (
-              <>
-                <FaDownload />
-                <span>Export Diagnostics</span>
-              </>
-            )}
-          </div>
-        </ButtonItem>
+        <div style={{ marginTop: "16px" }}>
+          <ButtonItem
+            layout="below"
+            onClick={handleExportDiagnostics}
+            disabled={isExporting}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              {isExporting ? (
+                <>
+                  <FaSpinner className="spin" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <FaDownload />
+                  <span>Export Diagnostics</span>
+                </>
+              )}
+            </div>
+          </ButtonItem>
+        </div>
       </PanelSectionRow>
 
       {/* Export result */}
@@ -1199,84 +891,5 @@ const formatUptime = (seconds: number): string => {
   
   return parts.length > 0 ? parts.join(" ") : "< 1m";
 };
-
-// Global styles for ExpertMode
-const expertModeStyles = `
-  .expert-tab {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-  }
-  
-  .expert-tab::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #1a9fff, transparent);
-    transition: all 0.3s ease;
-    transform: translateX(-50%);
-  }
-  
-  .expert-tab.active::after {
-    width: 80%;
-  }
-  
-  .expert-tab.gpfocus {
-    border: 2px solid #1a9fff;
-    box-shadow: 0 0 15px rgba(26, 159, 255, 0.6);
-    transform: scale(1.05);
-  }
-  
-  .expert-tab:hover {
-    background-color: rgba(26, 159, 255, 0.2);
-    transform: translateY(-2px);
-  }
-  
-  .expert-tab.active {
-    box-shadow: 0 4px 12px rgba(26, 159, 255, 0.4);
-  }
-  
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  
-  @keyframes buttonPulse {
-    0%, 100% {
-      box-shadow: 0 0 0 0 rgba(26, 159, 255, 0.7);
-    }
-    50% {
-      box-shadow: 0 0 0 10px rgba(26, 159, 255, 0);
-    }
-  }
-  
-  .animated-button {
-    animation: slideIn 0.3s ease-out;
-    transition: all 0.2s ease;
-  }
-  
-  .animated-button:active {
-    transform: scale(0.95);
-  }
-`;
-
-// Inject styles
-if (typeof document !== 'undefined') {
-  const styleId = 'expert-mode-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = expertModeStyles;
-    document.head.appendChild(style);
-  }
-}
 
 export default ExpertMode;

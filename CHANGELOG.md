@@ -2,6 +2,28 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.21] - 2026-01-18
+
+### Fixed
+- **Critical**: Fixed gamepad A button not working on Expert Mode tabs
+  - Removed `onClick` from `Focusable` wrapper in `FocusableButton` component
+  - Now only uses `onActivate` handler which properly handles both gamepad and touch input
+  - Tab switching now works correctly with gamepad A button
+- **UI**: Fixed Panic Disable button focus border placement
+  - Border now appears on inner red button div instead of wrapper
+  - White focus outline now follows rounded corners (borderRadius: 8px) correctly
+  - Increased button size: padding 12px 16px (was 8px 12px), fontSize 12px (was 10px)
+- **UI**: Replaced remaining ButtonItem components in PresetsTabNew with FocusableButton
+  - "Save for [game]" button now has rounded focus border
+  - "Save Current Values" button now has rounded focus border
+  - All buttons now have consistent gamepad support
+
+### Changed
+- **License**: Changed from MIT to GPL-3.0
+- **UI**: All focus borders are now rounded (pill-shaped) using `border` instead of `outline`
+  - FocusableButton uses `border-radius: 8px` for consistent rounded appearance
+  - Fixes issue where CSS `outline` property always renders as square
+
 ## [3.1.13] - 2026-01-17
 
 ### Fixed
