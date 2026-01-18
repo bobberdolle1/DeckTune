@@ -25,9 +25,11 @@ import {
 } from "react-icons/fa";
 import { useDeckTune, useProfiles } from "../context";
 import { Preset, GameProfile } from "../api/types";
+import { useTranslation } from "../i18n/translations";
 
 export const PresetsTabNew: FC = () => {
   const { state, api } = useDeckTune();
+  const { t } = useTranslation();
   const profilesHook = useProfiles();
   
   // Extra safety: ensure profiles is always an array
@@ -72,7 +74,7 @@ export const PresetsTabNew: FC = () => {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
               <FaGamepad size={10} />
-              <span>Game Profiles</span>
+              <span>{t.gameProfiles}</span>
             </div>
           </Focusable>
           
@@ -85,7 +87,7 @@ export const PresetsTabNew: FC = () => {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" }}>
               <FaGlobe size={10} />
-              <span>Global Presets</span>
+              <span>{t.globalPresets}</span>
             </div>
           </Focusable>
         </Focusable>
@@ -159,6 +161,7 @@ interface GameProfilesSectionProps {
 }
 
 const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activeProfile, runningAppId, runningAppName, api }) => {
+  const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
 
   const handleQuickCreate = async () => {
@@ -178,10 +181,10 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
   const handleDelete = async (appId: number, name: string) => {
     showModal(
       <ConfirmModal
-        strTitle="Delete Profile"
-        strDescription={`Delete profile for ${name}?`}
-        strOKButtonText="Delete"
-        strCancelButtonText="Cancel"
+        strTitle={t.deleteProfile}
+        strDescription={`${t.deleteProfile} ${name}?`}
+        strOKButtonText={t.delete}
+        strCancelButtonText={t.cancel}
         onOK={async () => {
           await api.deleteProfile(appId);
         }}
@@ -207,7 +210,7 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
               {isCreating ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
-              <span>Save for {runningAppName}</span>
+              <span>{t.saveFor} {runningAppName}</span>
             </div>
           </ButtonItem>
         </PanelSectionRow>
@@ -217,8 +220,8 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
       {profiles.length === 0 ? (
         <PanelSectionRow>
           <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" }}>
-            No game profiles yet.
-            {runningAppId && <div style={{ marginTop: "4px" }}>Click above to create one!</div>}
+            {t.noGameProfiles}
+            {runningAppId && <div style={{ marginTop: "4px" }}>{t.clickToCreate}</div>}
           </div>
         </PanelSectionRow>
       ) : (
@@ -241,7 +244,7 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
                     </span>
                     {isActive && (
                       <span style={{ fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" }}>
-                        ACTIVE
+                        {t.active}
                       </span>
                     )}
                   </div>
@@ -280,7 +283,7 @@ const GameProfilesSection: FC<GameProfilesSectionProps> = ({ profiles, activePro
                       transition: "all 0.2s ease"
                     }}>
                       <FaTrash size={8} />
-                      <span>Delete Profile</span>
+                      <span>{t.deleteProfile}</span>
                     </div>
                   </Focusable>
                 </Focusable>
@@ -314,6 +317,7 @@ interface GlobalPresetsSectionProps {
 }
 
 const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) => {
+  const { t } = useTranslation();
   const [isApplying, setIsApplying] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -329,10 +333,10 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
   const handleDelete = async (appId: number, label: string) => {
     showModal(
       <ConfirmModal
-        strTitle="Delete Preset"
-        strDescription={`Delete preset "${label}"?`}
-        strOKButtonText="Delete"
-        strCancelButtonText="Cancel"
+        strTitle={t.delete}
+        strDescription={`${t.delete} "${label}"?`}
+        strOKButtonText={t.delete}
+        strCancelButtonText={t.cancel}
         onOK={async () => {
           await api.deletePreset(appId);
         }}
@@ -405,7 +409,7 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" }}>
             {isSaving ? <FaSpinner className="spin" size={10} /> : <FaPlus size={10} />}
-            <span>Save Current Values</span>
+            <span>{t.saveCurrentValues}</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -414,8 +418,8 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
       {presets.length === 0 ? (
         <PanelSectionRow>
           <div style={{ color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" }}>
-            No global presets saved.
-            <div style={{ marginTop: "4px" }}>Click above to save your current values!</div>
+            {t.noGlobalPresets}
+            <div style={{ marginTop: "4px" }}>{t.clickToCreate}</div>
           </div>
         </PanelSectionRow>
       ) : (
@@ -431,7 +435,7 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
                   </div>
                   <div style={{ fontSize: "9px", color: "#8b929a", marginTop: "2px" }}>
                     {formatCores(preset.value)}
-                    {preset.tested && <span style={{ marginLeft: "6px", color: "#4caf50" }}>✓ Tested</span>}
+                    {preset.tested && <span style={{ marginLeft: "6px", color: "#4caf50" }}>✓ {t.tested}</span>}
                   </div>
                 </div>
                 
@@ -468,7 +472,7 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
                       transition: "all 0.2s ease"
                     }}>
                       {isApplyingThis ? <FaSpinner className="spin" size={9} /> : <FaCheck size={9} />}
-                      <span>Apply</span>
+                      <span>{t.apply}</span>
                     </div>
                   </Focusable>
                   
@@ -494,7 +498,7 @@ const GlobalPresetsSection: FC<GlobalPresetsSectionProps> = ({ presets, api }) =
                       transition: "all 0.2s ease"
                     }}>
                       <FaTrash size={8} />
-                      <span>Delete</span>
+                      <span>{t.delete}</span>
                     </div>
                   </Focusable>
                 </Focusable>

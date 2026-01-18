@@ -2496,333 +2496,569 @@
     };
 
     /**
-     * LoadGraph component for displaying real-time CPU load and undervolt values.
+     * DynamicModeVisualization component for Expert Mode.
      *
-     * Feature: decktune-3.0-automation
-     * Requirements: 6.3, 6.4
-     *
-     * Displays per-core CPU load percentages and applied undervolt values.
-     * Shows historical data with dual Y-axes and profile change markers.
-     * Implements 60-second rolling window with 1-second resolution.
+     * Displays real-time visualization of dynamic undervolt adaptation:
+     * - Load vs Undervolt curve for each strategy
+     * - Current operating point
+     * - Per-core load and undervolt values
+     * - Compact design optimized for QAM (310px width)
      */
-
-    const MAX_HISTORY_POINTS = 60; // Keep 60 data points (1 minute at 1Hz)
-    const GRAPH_HEIGHT$1 = 120;
-    const GRAPH_WIDTH$1 = 300;
-    const MARGIN_LEFT = 35;
-    const MARGIN_RIGHT = 35;
+    // Graph dimensions optimized for QAM
+    const GRAPH_WIDTH$1 = 280;
+    const GRAPH_HEIGHT$1 = 140;
+    const MARGIN$1 = { top: 20, right: 25, bottom: 25, left: 35 };
+    const INNER_WIDTH$1 = GRAPH_WIDTH$1 - MARGIN$1.left - MARGIN$1.right;
+    const INNER_HEIGHT$1 = GRAPH_HEIGHT$1 - MARGIN$1.top - MARGIN$1.bottom;
+    // Load and undervolt ranges
+    const LOAD_MIN = 0;
+    const LOAD_MAX = 100;
+    const VOLT_MIN = -100;
+    const VOLT_MAX = 0;
     /**
-     * Get color for a specific core (load lines).
+     * Strategy curve definitions (load% -> undervolt mV)
+     */
+    const STRATEGY_CURVES = {
+        conservative: [
+            { load: 0, volt: -30 },
+            { load: 20, volt: -25 },
+            { load: 40, volt: -20 },
+            { load: 60, volt: -15 },
+            { load: 80, volt: -10 },
+            { load: 100, volt: -5 },
+        ],
+        balanced: [
+            { load: 0, volt: -35 },
+            { load: 20, volt: -30 },
+            { load: 40, volt: -25 },
+            { load: 60, volt: -20 },
+            { load: 80, volt: -12 },
+            { load: 100, volt: -5 },
+        ],
+        aggressive: [
+            { load: 0, volt: -45 },
+            { load: 20, volt: -38 },
+            { load: 40, volt: -30 },
+            { load: 60, volt: -22 },
+            { load: 80, volt: -15 },
+            { load: 100, volt: -8 },
+        ],
+    };
+    /**
+     * Convert load to X coordinate
+     */
+    const loadToX = (load) => {
+        const normalized = (load - LOAD_MIN) / (LOAD_MAX - LOAD_MIN);
+        return MARGIN$1.left + normalized * INNER_WIDTH$1;
+    };
+    /**
+     * Convert undervolt to Y coordinate (inverted - more negative at bottom)
+     */
+    const voltToY = (volt) => {
+        const normalized = (volt - VOLT_MIN) / (VOLT_MAX - VOLT_MIN);
+        return MARGIN$1.top + INNER_HEIGHT$1 - normalized * INNER_HEIGHT$1;
+    };
+    /**
+     * Generate SVG path for strategy curve
+     */
+    const generateCurvePath$1 = (strategy) => {
+        const curve = STRATEGY_CURVES[strategy] || STRATEGY_CURVES.balanced;
+        let path = `M ${loadToX(curve[0].load)} ${voltToY(curve[0].volt)}`;
+        for (let i = 1; i < curve.length; i++) {
+            path += ` L ${loadToX(curve[i].load)} ${voltToY(curve[i].volt)}`;
+        }
+        return path;
+    };
+    /**
+     * Get strategy color
+     */
+    const getStrategyColor = (strategy) => {
+        switch (strategy) {
+            case "conservative": return "#4caf50";
+            case "balanced": return "#1a9fff";
+            case "aggressive": return "#ff9800";
+            default: return "#1a9fff";
+        }
+    };
+    /**
+     * Get core color
      */
     const getCoreColor = (coreIndex) => {
         const colors = ["#1a9fff", "#4caf50", "#ff9800", "#f44336"];
         return colors[coreIndex] || "#8b929a";
     };
     /**
-     * Get color for undervolt value lines (orange tones).
+     * DynamicModeVisualization component
      */
-    const getValueColor = (coreIndex) => {
-        const colors = ["#ff9800", "#ffb74d", "#ffa726", "#ff8a65"];
-        return colors[coreIndex] || "#ff9800";
-    };
-    /**
-     * LoadGraph component - displays real-time CPU load and undervolt values.
-     * Requirements: 6.3, 6.4
-     */
-    const LoadGraph = ({ load, values, isActive, activeProfile }) => {
-        const [history, setHistory] = SP_REACT.useState([]);
-        const [previousProfile, setPreviousProfile] = SP_REACT.useState(activeProfile);
-        const canvasRef = SP_REACT.useRef(null);
-        const updateIntervalRef = SP_REACT.useRef(null);
-        // Update history at 1-second intervals (Requirements: 6.3)
-        SP_REACT.useEffect(() => {
-            if (!isActive || load.length !== 4 || values.length !== 4) {
-                // Clear history when not active
-                setHistory([]);
-                setPreviousProfile(undefined);
-                if (updateIntervalRef.current) {
-                    clearInterval(updateIntervalRef.current);
-                    updateIntervalRef.current = null;
-                }
-                return;
-            }
-            // Detect profile change
-            const profileChanged = activeProfile !== previousProfile && previousProfile !== undefined;
-            // Add new data point
-            const addDataPoint = () => {
-                setHistory((prev) => {
-                    const newPoint = {
-                        timestamp: Date.now(),
-                        load: [...load],
-                        values: [...values],
-                        profile: profileChanged ? activeProfile : undefined,
-                    };
-                    const newHistory = [...prev, newPoint];
-                    // Keep only the last MAX_HISTORY_POINTS (60-second rolling window)
-                    if (newHistory.length > MAX_HISTORY_POINTS) {
-                        return newHistory.slice(-MAX_HISTORY_POINTS);
-                    }
-                    return newHistory;
-                });
-                if (profileChanged) {
-                    setPreviousProfile(activeProfile);
-                }
-            };
-            // Add initial point immediately
-            addDataPoint();
-            // Set up 1-second interval
-            updateIntervalRef.current = setInterval(addDataPoint, 1000);
-            return () => {
-                if (updateIntervalRef.current) {
-                    clearInterval(updateIntervalRef.current);
-                }
-            };
-        }, [load, values, isActive, activeProfile, previousProfile]);
-        // Draw the graph on canvas with dual Y-axes (Requirements: 6.3, 6.4)
-        SP_REACT.useEffect(() => {
-            const canvas = canvasRef.current;
-            if (!canvas || history.length === 0) {
-                return;
-            }
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                return;
-            }
-            // Clear canvas
-            ctx.clearRect(0, 0, GRAPH_WIDTH$1, GRAPH_HEIGHT$1);
-            // Draw background grid
-            ctx.strokeStyle = "#3d4450";
-            ctx.lineWidth = 1;
-            // Horizontal grid lines (every 25%)
-            for (let i = 0; i <= 4; i++) {
-                const y = (i * GRAPH_HEIGHT$1) / 4;
-                ctx.beginPath();
-                ctx.moveTo(MARGIN_LEFT, y);
-                ctx.lineTo(GRAPH_WIDTH$1 - MARGIN_RIGHT, y);
-                ctx.stroke();
-            }
-            // Calculate graph area
-            const graphWidth = GRAPH_WIDTH$1 - MARGIN_LEFT - MARGIN_RIGHT;
-            const pointSpacing = graphWidth / (MAX_HISTORY_POINTS - 1);
-            // Draw profile change markers (Requirements: 6.3)
-            history.forEach((point, index) => {
-                if (point.profile) {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    // Draw vertical line
-                    ctx.strokeStyle = "#4caf50";
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 3]);
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, GRAPH_HEIGHT$1);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                    // Draw label
-                    ctx.fillStyle = "#4caf50";
-                    ctx.font = "9px sans-serif";
-                    ctx.save();
-                    ctx.translate(x + 2, GRAPH_HEIGHT$1 - 5);
-                    ctx.rotate(-Math.PI / 2);
-                    ctx.fillText(point.profile || "Profile", 0, 0);
-                    ctx.restore();
-                }
-            });
-            // Draw load lines for each core (blue tones, left Y-axis)
-            for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
-                ctx.strokeStyle = getCoreColor(coreIndex);
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                let firstPoint = true;
-                history.forEach((point, index) => {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    const loadValue = point.load[coreIndex] || 0;
-                    // Invert Y axis (0% at bottom, 100% at top)
-                    const y = GRAPH_HEIGHT$1 - (loadValue / 100) * GRAPH_HEIGHT$1;
-                    if (firstPoint) {
-                        ctx.moveTo(x, y);
-                        firstPoint = false;
-                    }
-                    else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-                ctx.stroke();
-            }
-            // Draw undervolt value lines (orange tones, right Y-axis)
-            // Requirements: 6.3, 6.4
-            const minValue = -50; // Minimum expected undervolt value
-            const maxValue = 0; // Maximum expected undervolt value
-            const valueRange = maxValue - minValue;
-            for (let coreIndex = 0; coreIndex < 4; coreIndex++) {
-                ctx.strokeStyle = getValueColor(coreIndex);
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([3, 2]);
-                ctx.beginPath();
-                let firstPoint = true;
-                history.forEach((point, index) => {
-                    const x = MARGIN_LEFT + index * pointSpacing;
-                    const value = point.values[coreIndex] || 0;
-                    // Map value to graph height (0mV at top, -50mV at bottom)
-                    const normalizedValue = (value - minValue) / valueRange;
-                    const y = GRAPH_HEIGHT$1 - normalizedValue * GRAPH_HEIGHT$1;
-                    if (firstPoint) {
-                        ctx.moveTo(x, y);
-                        firstPoint = false;
-                    }
-                    else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-            // If dynamic mode is inactive, draw static line (Requirements: 6.4)
-            if (!isActive && values.length === 4) {
-                const avgValue = values.reduce((sum, v) => sum + v, 0) / values.length;
-                const normalizedValue = (avgValue - minValue) / valueRange;
-                const y = GRAPH_HEIGHT$1 - normalizedValue * GRAPH_HEIGHT$1;
-                ctx.strokeStyle = "#ff9800";
-                ctx.lineWidth = 2;
-                ctx.setLineDash([]);
-                ctx.beginPath();
-                ctx.moveTo(MARGIN_LEFT, y);
-                ctx.lineTo(GRAPH_WIDTH$1 - MARGIN_RIGHT, y);
-                ctx.stroke();
-            }
-        }, [history, isActive, values]);
-        if (!isActive && values.length === 0) {
-            return null;
-        }
+    const DynamicModeVisualization = ({ strategy, load, values, isActive, simpleMode, simpleValue, }) => {
+        const strategyColor = getStrategyColor(strategy);
+        const avgLoad = load.length > 0 ? load.reduce((sum, l) => sum + l, 0) / load.length : 0;
+        const avgVolt = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
         return (window.SP_REACT.createElement("div", { style: {
-                padding: "12px",
-                backgroundColor: "#23262e",
-                borderRadius: "8px",
-                marginBottom: "16px",
+                background: "linear-gradient(135deg, #1a1d23 0%, #23262e 100%)",
+                borderRadius: "10px",
+                padding: "10px",
+                border: "1px solid rgba(26, 159, 255, 0.2)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
             } },
             window.SP_REACT.createElement("div", { style: {
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "12px",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
                 } },
-                window.SP_REACT.createElement(FaMicrochip, { style: { color: "#1a9fff" } }),
-                window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "14px" } }, isActive ? "CPU Load & Undervolt (Real-time)" : "Undervolt Values (Manual Mode)")),
-            window.SP_REACT.createElement("div", { style: {
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        color: "#e0e0e0",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                    } },
+                    window.SP_REACT.createElement(FaBolt, { style: { color: strategyColor } }),
+                    window.SP_REACT.createElement("span", null, "Load \u2192 Undervolt Curve")),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "9px",
+                        color: strategyColor,
+                        fontWeight: "bold",
+                        textTransform: "capitalize",
+                    } }, strategy)),
+            window.SP_REACT.createElement("svg", { width: GRAPH_WIDTH$1, height: GRAPH_HEIGHT$1, style: { display: "block" } },
+                window.SP_REACT.createElement("defs", null,
+                    window.SP_REACT.createElement("linearGradient", { id: "curveGradientDynamic", x1: "0%", y1: "0%", x2: "0%", y2: "100%" },
+                        window.SP_REACT.createElement("stop", { offset: "0%", stopColor: strategyColor, stopOpacity: "0.3" }),
+                        window.SP_REACT.createElement("stop", { offset: "100%", stopColor: strategyColor, stopOpacity: "0.05" })),
+                    window.SP_REACT.createElement("filter", { id: "glowDynamic" },
+                        window.SP_REACT.createElement("feGaussianBlur", { stdDeviation: "2", result: "coloredBlur" }),
+                        window.SP_REACT.createElement("feMerge", null,
+                            window.SP_REACT.createElement("feMergeNode", { in: "coloredBlur" }),
+                            window.SP_REACT.createElement("feMergeNode", { in: "SourceGraphic" })))),
+                window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1", opacity: "0.5" },
+                    [0, -25, -50, -75, -100].map(volt => (window.SP_REACT.createElement("line", { key: `h-${volt}`, x1: MARGIN$1.left, y1: voltToY(volt), x2: MARGIN$1.left + INNER_WIDTH$1, y2: voltToY(volt), strokeDasharray: volt === 0 ? "none" : "2,2" }))),
+                    [0, 25, 50, 75, 100].map(load => (window.SP_REACT.createElement("line", { key: `v-${load}`, x1: loadToX(load), y1: MARGIN$1.top, x2: loadToX(load), y2: MARGIN$1.top + INNER_HEIGHT$1, strokeDasharray: "2,2" })))),
+                window.SP_REACT.createElement("g", { fill: "#b0b0b0", fontSize: "9", fontWeight: "500" },
+                    [0, -25, -50, -75, -100].map(volt => (window.SP_REACT.createElement("text", { key: `y-${volt}`, x: MARGIN$1.left - 5, y: voltToY(volt) + 3, textAnchor: "end" }, volt))),
+                    [0, 25, 50, 75, 100].map(load => (window.SP_REACT.createElement("text", { key: `x-${load}`, x: loadToX(load), y: MARGIN$1.top + INNER_HEIGHT$1 + 15, textAnchor: "middle" },
+                        load,
+                        "%")))),
+                window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "9", fontWeight: "600" },
+                    window.SP_REACT.createElement("text", { x: 10, y: MARGIN$1.top + INNER_HEIGHT$1 / 2, textAnchor: "middle", transform: `rotate(-90, 10, ${MARGIN$1.top + INNER_HEIGHT$1 / 2})` }, "mV"),
+                    window.SP_REACT.createElement("text", { x: MARGIN$1.left + INNER_WIDTH$1 / 2, y: GRAPH_HEIGHT$1 - 5, textAnchor: "middle" }, "CPU Load (%)")),
+                window.SP_REACT.createElement("path", { d: `${generateCurvePath$1(strategy)} L ${loadToX(100)} ${voltToY(VOLT_MIN)} L ${loadToX(0)} ${voltToY(VOLT_MIN)} Z`, fill: "url(#curveGradientDynamic)" }),
+                window.SP_REACT.createElement("path", { d: generateCurvePath$1(strategy), fill: "none", stroke: strategyColor, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", filter: "url(#glowDynamic)" }),
+                isActive && load.length > 0 && values.length > 0 && (window.SP_REACT.createElement("g", null,
+                    window.SP_REACT.createElement("circle", { cx: loadToX(avgLoad), cy: voltToY(avgVolt), r: "6", fill: strategyColor, stroke: "#fff", strokeWidth: "2", filter: "url(#glowDynamic)" },
+                        window.SP_REACT.createElement("animate", { attributeName: "r", values: "6;8;6", dur: "2s", repeatCount: "indefinite" })),
+                    !simpleMode && load.map((coreLoad, idx) => (window.SP_REACT.createElement("circle", { key: idx, cx: loadToX(coreLoad), cy: voltToY(values[idx]), r: "3", fill: getCoreColor(idx), stroke: "#fff", strokeWidth: "1", opacity: "0.8" }))),
+                    window.SP_REACT.createElement("rect", { x: loadToX(avgLoad) - 30, y: voltToY(avgVolt) - 20, width: "60", height: "14", rx: "3", fill: "rgba(0, 0, 0, 0.8)" }),
+                    window.SP_REACT.createElement("text", { x: loadToX(avgLoad), y: voltToY(avgVolt) - 10, fill: "#fff", fontSize: "9", fontWeight: "bold", textAnchor: "middle" },
+                        Math.round(avgLoad),
+                        "% / ",
+                        Math.round(avgVolt),
+                        "mV")))),
+            isActive && load.length > 0 && values.length > 0 && (window.SP_REACT.createElement("div", { style: {
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "8px",
-                    marginBottom: "12px",
-                } }, load.map((loadValue, index) => (window.SP_REACT.createElement("div", { key: index, style: {
-                    padding: "6px",
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "4px",
-                    textAlign: "center",
-                    borderLeft: `3px solid ${getCoreColor(index)}`,
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } },
-                    "Core ",
-                    index),
-                isActive && (window.SP_REACT.createElement("div", { style: {
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                        color: getCoreColor(index),
-                    } },
-                    loadValue.toFixed(1),
-                    "%")),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: isActive ? "11px" : "16px",
-                        fontWeight: isActive ? "normal" : "bold",
-                        color: getValueColor(index),
-                    } },
-                    values[index] || 0,
-                    "mV"))))),
-            window.SP_REACT.createElement("div", { style: {
-                    position: "relative",
-                    width: "100%",
-                    height: `${GRAPH_HEIGHT$1}px`,
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                } },
-                window.SP_REACT.createElement("canvas", { ref: canvasRef, width: GRAPH_WIDTH$1, height: GRAPH_HEIGHT$1, style: {
-                        width: "100%",
-                        height: "100%",
-                    } }),
-                window.SP_REACT.createElement("div", { style: {
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2px 4px",
-                        pointerEvents: "none",
-                    } }, [100, 75, 50, 25, 0].map((value) => (window.SP_REACT.createElement("div", { key: value, style: {
-                        fontSize: "9px",
-                        color: "#1a9fff",
-                        lineHeight: "1",
-                    } },
-                    value,
-                    "%")))),
-                window.SP_REACT.createElement("div", { style: {
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: "2px 4px",
-                        pointerEvents: "none",
-                    } }, [0, -12, -25, -37, -50].map((value) => (window.SP_REACT.createElement("div", { key: value, style: {
-                        fontSize: "9px",
-                        color: "#ff9800",
-                        lineHeight: "1",
-                        textAlign: "right",
-                    } }, value))))),
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "12px",
+                    gap: "4px",
                     marginTop: "8px",
-                    fontSize: "10px",
-                    flexWrap: "wrap",
+                } }, load.map((coreLoad, idx) => (window.SP_REACT.createElement("div", { key: idx, style: {
+                    padding: "6px 4px",
+                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                    borderRadius: "6px",
+                    border: `1px solid ${getCoreColor(idx)}`,
+                    textAlign: "center",
                 } },
-                isActive && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "16px",
-                                height: "3px",
-                                backgroundColor: "#1a9fff",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Load (solid)")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "16px",
-                                height: "2px",
-                                background: "repeating-linear-gradient(to right, #ff9800 0, #ff9800 3px, transparent 3px, transparent 5px)",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Undervolt (dashed)")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "3px",
-                                height: "16px",
-                                background: "repeating-linear-gradient(to bottom, #4caf50 0, #4caf50 5px, transparent 5px, transparent 8px)",
-                                borderRadius: "2px",
-                            } }),
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Profile change")))),
-                !isActive && (window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            width: "16px",
-                            height: "3px",
-                            backgroundColor: "#ff9800",
-                            borderRadius: "2px",
-                        } }),
-                    window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Manual undervolt"))))));
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "8px",
+                        color: "#8b929a",
+                        marginBottom: "2px",
+                    } },
+                    "C",
+                    idx),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "10px",
+                        fontWeight: "bold",
+                        color: getCoreColor(idx),
+                    } },
+                    Math.round(coreLoad),
+                    "%"),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "9px",
+                        color: "#e0e0e0",
+                    } },
+                    values[idx],
+                    "mV")))))),
+            simpleMode && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: "8px",
+                    padding: "6px",
+                    backgroundColor: "rgba(26, 159, 255, 0.1)",
+                    borderRadius: "6px",
+                    fontSize: "9px",
+                    color: "#1a9fff",
+                    textAlign: "center",
+                    border: "1px solid rgba(26, 159, 255, 0.2)",
+                } },
+                "Simple Mode: ",
+                simpleValue,
+                "mV for all cores at low load")),
+            window.SP_REACT.createElement("div", { style: {
+                    marginTop: "8px",
+                    padding: "6px",
+                    backgroundColor: "rgba(0, 0, 0, 0.2)",
+                    borderRadius: "6px",
+                    fontSize: "8px",
+                    color: "#8b929a",
+                    lineHeight: "1.4",
+                } },
+                window.SP_REACT.createElement("strong", { style: { color: strategyColor } },
+                    strategy === "conservative" && "Conservative: ",
+                    strategy === "balanced" && "Balanced: ",
+                    strategy === "aggressive" && "Aggressive: "),
+                strategy === "conservative" && "Безопасная адаптация, меньше андервольт при нагрузке",
+                strategy === "balanced" && "Оптимальный баланс производительности и стабильности",
+                strategy === "aggressive" && "Максимальный андервольт, быстрая адаптация")));
     };
+
+    /**
+     * useTranslation hook for accessing translations in components
+     */
+
+    function useTranslation() {
+        const { state } = useDeckTune();
+        // Get language from state or localStorage, fallback to English
+        const language = SP_REACT.useMemo(() => {
+            try {
+                const saved = localStorage.getItem('decktune_language');
+                if (saved === "en" || saved === "ru")
+                    return saved;
+            }
+            catch {
+                // Ignore localStorage errors
+            }
+            return state.settings.language || "en";
+        }, [state.settings.language]);
+        const t = SP_REACT.useMemo(() => getTranslation(language), [language]);
+        return { t, language };
+    }
+
+    /**
+     * Translations for DeckTune UI
+     */
+    const translations = {
+        en: {
+            // Settings Tab
+            settingsTitle: "Settings",
+            languageSection: "Language",
+            interfaceLanguage: "Interface Language",
+            selectLanguage: "Select Language",
+            localizationComingSoon: "Localization coming soon! Currently English only.",
+            expertModeSection: "Expert Undervolter Mode",
+            enableExpertMode: "Enable Expert Mode",
+            expertModeDescription: "Unlock extended range (-100mV) for all control modes",
+            expertModeActiveGlobally: "Expert Mode Active Globally",
+            expertModeWarningTitle: "Enable Expert Mode",
+            expertModeWarningText: "⚠️ WARNING: Expert mode removes safety limits globally.",
+            expertModeWarningAffects: "Affects: Manual, Per-Core, and Dynamic modes (-100mV range).",
+            expertModeWarningRisk: "Use at your own risk!",
+            iUnderstand: "I Understand",
+            cancel: "Cancel",
+            aboutSettingsSection: "About Settings",
+            aboutExpertMode: "Expert Mode: Removes safety limits (-100mV). Applies globally to all control modes (Single, Per-Core, Dynamic).",
+            aboutControlMode: "Control Mode Selection: Choose your preferred voltage control method in the Manual tab.",
+            aboutLanguage: "Language: Interface localization.",
+            // Expert Mode Tabs
+            manualTab: "Manual",
+            presetsTab: "Presets",
+            testsTab: "Tests",
+            fanTab: "Fan",
+            diagnosticsTab: "Diagnostics",
+            // Manual Tab
+            simpleMode: "Simple Mode",
+            perCoreMode: "Per-Core Mode",
+            dynamicMode: "Dynamic Mode",
+            expertMode: "Expert Mode",
+            expertModeActive: "Expert mode active",
+            expertModeRange: "Range: -100mV",
+            allCores: "All Cores",
+            core: "Core",
+            apply: "Apply",
+            disable: "Disable",
+            reset: "Reset",
+            currentValues: "Current Values",
+            controlMode: "Control Mode",
+            single: "Single",
+            perCore: "Per-Core",
+            dynamic: "Dynamic",
+            // Dynamic Mode
+            dynamicModeTitle: "Dynamic Mode",
+            dynamicModeDescription: "Enable for automatic undervolt adaptation based on CPU load",
+            dynamicModeDescriptionActive: "Automatic voltage adjustment based on real-time CPU load",
+            active: "ACTIVE",
+            off: "OFF",
+            start: "Start",
+            stop: "Stop",
+            settings: "Settings",
+            strategy: "Strategy",
+            conservative: "Conservative",
+            balanced: "Balanced",
+            aggressive: "Aggressive",
+            simpleModeDynamic: "Simple Mode",
+            simpleModeDescription: "One value for all cores",
+            undervoltValue: "Undervolt Value",
+            sampleInterval: "Sample Interval",
+            sampleIntervalDescription: "How often to check CPU load",
+            hysteresis: "Hysteresis",
+            hysteresisDescription: "Prevents frequent value switching",
+            save: "Save",
+            saving: "Saving...",
+            howItWorks: "How it works:",
+            // Presets Tab
+            gameProfiles: "Game Profiles",
+            globalPresets: "Global Presets",
+            saveFor: "Save for",
+            noGameProfiles: "No game profiles yet.",
+            clickToCreate: "Click above to create one!",
+            deleteProfile: "Delete Profile",
+            noGlobalPresets: "No global presets saved.",
+            saveCurrentValues: "Save Current Values",
+            tested: "Tested",
+            delete: "Delete",
+            // Fan Tab
+            fanControl: "Fan Control",
+            enableFanControl: "Enable Fan Control",
+            enableFanControlDescription: "Take manual control of the fan",
+            fanMode: "Fan Mode",
+            fanModeDefault: "Default (BIOS)",
+            fanModeCustom: "Custom Curve",
+            fanModeFixed: "Fixed Speed",
+            fanStatus: "Fan Status",
+            temperature: "Temperature",
+            fanSpeed: "Fan Speed",
+            mode: "Mode",
+            safetyOverride: "SAFETY OVERRIDE",
+            safetyOverrideDescription: "Safety override active: Fan running at maximum speed due to high temperature",
+            quickPresets: "Quick Presets",
+            stock: "Stock",
+            stockDescription: "Factory BIOS curve",
+            silent: "Silent",
+            silentDescription: "Minimal noise, higher temps",
+            cool: "Cool",
+            coolDescription: "Low temps, more noise",
+            gaming: "Gaming",
+            gamingDescription: "Optimized for gaming",
+            eco: "Eco",
+            ecoDescription: "Power saving",
+            zeroRPM: "Zero RPM Mode",
+            zeroRPMDescription: "Allow fan to stop below 45°C (risky!)",
+            temperatureHysteresis: "Temperature Hysteresis",
+            temperatureHysteresisDescription: "Prevents rapid speed changes",
+            fixedFanSpeed: "Fixed Fan Speed",
+            balancedDescription: "Balance of noise and temps",
+            aggressiveDescription: "Maximum cooling",
+            // Tests Tab
+            runStressTest: "Run Stress Test",
+            selectTest: "Select Test",
+            runTest: "Run Test",
+            running: "Running",
+            testInProgress: "Test in progress...",
+            testHistory: "Test History (Last 10)",
+            noTests: "No tests run yet.",
+            optionalPackages: "Optional Packages",
+            notInstalled: "Not installed:",
+            packagesNeeded: "These packages are only needed for stress tests.",
+            otherFeaturesWork: "All other plugin features work without them.",
+            install: "Install",
+            installing: "Installing...",
+            // Diagnostics Tab
+            systemInformation: "System Information",
+            platform: "Platform",
+            safeLimit: "Safe Limit",
+            detection: "Detection",
+            successful: "Successful",
+            failed: "Failed",
+            currentConfiguration: "Current Configuration",
+            activeCores: "Active Cores",
+            lkgCores: "LKG Cores",
+            status: "Status",
+            presetsCount: "Presets Count",
+            recentLogs: "Recent Logs",
+            noLogs: "No logs available",
+            exportDiagnostics: "Export Diagnostics",
+            exporting: "Exporting...",
+            exportSuccessful: "Export Successful",
+            exportFailed: "Export Failed",
+            savedTo: "Saved to:",
+            // Common
+            english: "English",
+            russian: "Русский",
+            loading: "Loading...",
+            error: "Error",
+            panicDisable: "PANIC DISABLE",
+            disabling: "Disabling...",
+            // Fan Tab - Loading/Error states
+            loadingFanConfig: "Loading fan configuration...",
+            tryAgain: "Try Again",
+            fanConfigUnavailable: "Fan configuration unavailable",
+        },
+        ru: {
+            // Settings Tab
+            settingsTitle: "Настройки",
+            languageSection: "Язык",
+            interfaceLanguage: "Язык интерфейса",
+            selectLanguage: "Выбрать язык",
+            localizationComingSoon: "Локализация скоро! Пока доступен только английский.",
+            expertModeSection: "Экспертный режим андервольта",
+            enableExpertMode: "Включить экспертный режим",
+            expertModeDescription: "Разблокировать расширенный диапазон (-100мВ) для всех режимов",
+            expertModeActiveGlobally: "Экспертный режим активен глобально",
+            expertModeWarningTitle: "Включить экспертный режим",
+            expertModeWarningText: "⚠️ ВНИМАНИЕ: Экспертный режим снимает ограничения безопасности глобально.",
+            expertModeWarningAffects: "Влияет на: Ручной, По-ядерный и Динамический режимы (диапазон -100мВ).",
+            expertModeWarningRisk: "Используйте на свой риск!",
+            iUnderstand: "Я понимаю",
+            cancel: "Отмена",
+            aboutSettingsSection: "О настройках",
+            aboutExpertMode: "Экспертный режим: Снимает ограничения безопасности (-100мВ). Применяется глобально ко всем режимам управления (Единый, По-ядерный, Динамический).",
+            aboutControlMode: "Выбор режима управления: Выберите предпочитаемый метод управления напряжением во вкладке Ручной.",
+            aboutLanguage: "Язык: Локализация интерфейса.",
+            // Expert Mode Tabs
+            manualTab: "Ручной",
+            presetsTab: "Пресеты",
+            testsTab: "Тесты",
+            fanTab: "Вентилятор",
+            diagnosticsTab: "Диагностика",
+            // Manual Tab
+            simpleMode: "Простой режим",
+            perCoreMode: "По-ядерный режим",
+            dynamicMode: "Динамический режим",
+            expertMode: "Экспертный режим",
+            expertModeActive: "Экспертный режим активен",
+            expertModeRange: "Диапазон: -100мВ",
+            allCores: "Все ядра",
+            core: "Ядро",
+            apply: "Применить",
+            disable: "Отключить",
+            reset: "Сброс",
+            currentValues: "Текущие значения",
+            controlMode: "Режим управления",
+            single: "Единый",
+            perCore: "По-ядерный",
+            dynamic: "Динамический",
+            // Dynamic Mode
+            dynamicModeTitle: "Динамический режим",
+            dynamicModeDescription: "Включите для автоматической адаптации андервольта под нагрузку процессора",
+            dynamicModeDescriptionActive: "Автоматическая подстройка напряжения на основе нагрузки CPU в реальном времени",
+            active: "АКТИВЕН",
+            off: "ВЫКЛ",
+            start: "Запустить",
+            stop: "Остановить",
+            settings: "Настройки",
+            strategy: "Стратегия",
+            conservative: "Безопасная",
+            balanced: "Сбалансированная",
+            aggressive: "Агрессивная",
+            simpleModeDynamic: "Простой режим",
+            simpleModeDescription: "Одно значение для всех ядер",
+            undervoltValue: "Значение андервольта",
+            sampleInterval: "Интервал опроса",
+            sampleIntervalDescription: "Как часто проверять нагрузку CPU",
+            hysteresis: "Гистерезис",
+            hysteresisDescription: "Предотвращает частые переключения значений",
+            save: "Сохранить",
+            saving: "Сохранение...",
+            howItWorks: "Как работает:",
+            // Presets Tab
+            gameProfiles: "Игровые профили",
+            globalPresets: "Глобальные пресеты",
+            saveFor: "Сохранить для",
+            noGameProfiles: "Нет игровых профилей.",
+            clickToCreate: "Нажмите выше, чтобы создать!",
+            deleteProfile: "Удалить профиль",
+            noGlobalPresets: "Нет сохранённых пресетов.",
+            saveCurrentValues: "Сохранить текущие значения",
+            tested: "Протестировано",
+            delete: "Удалить",
+            // Fan Tab
+            fanControl: "Управление вентилятором",
+            enableFanControl: "Включить управление вентилятором",
+            enableFanControlDescription: "Взять ручное управление вентилятором",
+            fanMode: "Режим вентилятора",
+            fanModeDefault: "По умолчанию (BIOS)",
+            fanModeCustom: "Своя кривая",
+            fanModeFixed: "Фиксированная скорость",
+            fanStatus: "Статус вентилятора",
+            temperature: "Температура",
+            fanSpeed: "Скорость вентилятора",
+            mode: "Режим",
+            safetyOverride: "ЗАЩИТНОЕ ПЕРЕОПРЕДЕЛЕНИЕ",
+            safetyOverrideDescription: "Защитное переопределение активно: Вентилятор работает на максимальной скорости из-за высокой температуры",
+            quickPresets: "Быстрые пресеты",
+            stock: "Заводской",
+            stockDescription: "Заводская кривая BIOS",
+            silent: "Тихий",
+            silentDescription: "Минимальный шум, выше температура",
+            cool: "Холодный",
+            coolDescription: "Низкая температура, больше шума",
+            gaming: "Игровой",
+            gamingDescription: "Оптимально для игр",
+            eco: "Эко",
+            ecoDescription: "Экономия энергии",
+            zeroRPM: "Режим Zero RPM",
+            zeroRPMDescription: "Разрешить остановку вентилятора ниже 45°C (рискованно!)",
+            temperatureHysteresis: "Гистерезис температуры",
+            temperatureHysteresisDescription: "Предотвращает быстрые изменения скорости",
+            fixedFanSpeed: "Фиксированная скорость вентилятора",
+            balancedDescription: "Баланс шума и температуры",
+            aggressiveDescription: "Максимальное охлаждение",
+            // Tests Tab
+            runStressTest: "Запустить стресс-тест",
+            selectTest: "Выбрать тест",
+            runTest: "Запустить тест",
+            running: "Выполняется",
+            testInProgress: "Тест выполняется...",
+            testHistory: "История тестов (последние 10)",
+            noTests: "Тесты ещё не запускались.",
+            optionalPackages: "Опциональные пакеты",
+            notInstalled: "Не установлены:",
+            packagesNeeded: "Эти пакеты нужны только для стресс-тестов.",
+            otherFeaturesWork: "Остальные функции плагина работают без них.",
+            install: "Установить",
+            installing: "Установка...",
+            // Diagnostics Tab
+            systemInformation: "Системная информация",
+            platform: "Платформа",
+            safeLimit: "Безопасный лимит",
+            detection: "Определение",
+            successful: "Успешно",
+            failed: "Не удалось",
+            currentConfiguration: "Текущая конфигурация",
+            activeCores: "Активные ядра",
+            lkgCores: "LKG ядра",
+            status: "Статус",
+            presetsCount: "Количество пресетов",
+            recentLogs: "Последние логи",
+            noLogs: "Логи недоступны",
+            exportDiagnostics: "Экспорт диагностики",
+            exporting: "Экспорт...",
+            exportSuccessful: "Экспорт успешен",
+            exportFailed: "Экспорт не удался",
+            savedTo: "Сохранено в:",
+            // Common
+            english: "English",
+            russian: "Русский",
+            loading: "Загрузка...",
+            error: "Ошибка",
+            panicDisable: "АВАРИЙНОЕ ОТКЛЮЧЕНИЕ",
+            disabling: "Отключение...",
+            // Fan Tab - Loading/Error states
+            loadingFanConfig: "Загрузка конфигурации вентилятора...",
+            tryAgain: "Попробовать снова",
+            fanConfigUnavailable: "Конфигурация вентилятора недоступна",
+        },
+    };
+    function getTranslation(lang) {
+        return translations[lang] || translations.en;
+    }
 
     /**
      * Redesigned Presets tab - compact and gamepad-friendly.
@@ -2834,6 +3070,7 @@
 
     const PresetsTabNew = () => {
         const { state, api } = useDeckTune();
+        const { t } = useTranslation();
         const profilesHook = useProfiles();
         // Extra safety: ensure profiles is always an array
         const profiles = Array.isArray(profilesHook.profiles) ? profilesHook.profiles : [];
@@ -2864,11 +3101,11 @@
                     window.SP_REACT.createElement(DFL.Focusable, { className: `section-button ${activeSection === "profiles" ? "active" : ""}`, focusClassName: "gpfocus", onActivate: () => setActiveSection("profiles"), onClick: () => setActiveSection("profiles"), style: { flex: 1 } },
                         window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" } },
                             window.SP_REACT.createElement(FaGamepad, { size: 10 }),
-                            window.SP_REACT.createElement("span", null, "Game Profiles"))),
+                            window.SP_REACT.createElement("span", null, t.gameProfiles))),
                     window.SP_REACT.createElement(DFL.Focusable, { className: `section-button ${activeSection === "presets" ? "active" : ""}`, focusClassName: "gpfocus", onActivate: () => setActiveSection("presets"), onClick: () => setActiveSection("presets"), style: { flex: 1 } },
                         window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px", fontSize: "10px" } },
                             window.SP_REACT.createElement(FaGlobe, { size: 10 }),
-                            window.SP_REACT.createElement("span", null, "Global Presets"))))),
+                            window.SP_REACT.createElement("span", null, t.globalPresets))))),
             activeSection === "profiles" ? (window.SP_REACT.createElement(GameProfilesSection, { profiles: profiles, activeProfile: activeProfile, runningAppId: runningAppId, runningAppName: runningAppName, api: api })) : (window.SP_REACT.createElement(GlobalPresetsSection, { presets: state.presets, api: api })),
             window.SP_REACT.createElement("style", null, `
           .section-button {
@@ -2915,6 +3152,7 @@
         `)));
     };
     const GameProfilesSection = ({ profiles, activeProfile, runningAppId, runningAppName, api }) => {
+        const { t } = useTranslation();
         const [isCreating, setIsCreating] = SP_REACT.useState(false);
         const handleQuickCreate = async () => {
             if (!runningAppId || !runningAppName)
@@ -2931,7 +3169,7 @@
             }
         };
         const handleDelete = async (appId, name) => {
-            DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Profile", strDescription: `Delete profile for ${name}?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
+            DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: t.deleteProfile, strDescription: `${t.deleteProfile} ${name}?`, strOKButtonText: t.delete, strCancelButtonText: t.cancel, onOK: async () => {
                     await api.deleteProfile(appId);
                 } }));
         };
@@ -2945,12 +3183,13 @@
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" } },
                         isCreating ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
                         window.SP_REACT.createElement("span", null,
-                            "Save for ",
+                            t.saveFor,
+                            " ",
                             runningAppName))))),
             profiles.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
-                    "No game profiles yet.",
-                    runningAppId && window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to create one!")))) : (profiles.map((profile) => {
+                    t.noGameProfiles,
+                    runningAppId && window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, t.clickToCreate)))) : (profiles.map((profile) => {
                 const isActive = activeProfile?.app_id === profile.app_id || runningAppId === profile.app_id;
                 return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: profile.app_id },
                     window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
@@ -2963,7 +3202,7 @@
                             } },
                             window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
                                 window.SP_REACT.createElement("span", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, profile.name),
-                                isActive && (window.SP_REACT.createElement("span", { style: { fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" } }, "ACTIVE"))),
+                                isActive && (window.SP_REACT.createElement("span", { style: { fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" } }, t.active))),
                             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
                                 formatCores(profile.cores),
                                 profile.dynamic_enabled && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u26A1 Dynamic"))),
@@ -2988,7 +3227,7 @@
                                         transition: "all 0.2s ease"
                                     } },
                                     window.SP_REACT.createElement(FaTrash, { size: 8 }),
-                                    window.SP_REACT.createElement("span", null, "Delete Profile")))))));
+                                    window.SP_REACT.createElement("span", null, t.deleteProfile)))))));
             })),
             window.SP_REACT.createElement("style", null, `
           .spin {
@@ -3001,6 +3240,7 @@
         `)));
     };
     const GlobalPresetsSection = ({ presets, api }) => {
+        const { t } = useTranslation();
         const [isApplying, setIsApplying] = SP_REACT.useState(null);
         const [isSaving, setIsSaving] = SP_REACT.useState(false);
         const handleApply = async (preset) => {
@@ -3013,7 +3253,7 @@
             }
         };
         const handleDelete = async (appId, label) => {
-            DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Preset", strDescription: `Delete preset "${label}"?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
+            DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: t.delete, strDescription: `${t.delete} "${label}"?`, strOKButtonText: t.delete, strCancelButtonText: t.cancel, onOK: async () => {
                     await api.deletePreset(appId);
                 } }));
         };
@@ -3068,11 +3308,11 @@
                 window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleQuickSave, disabled: isSaving, style: { backgroundColor: "#1a9fff", marginBottom: "8px", minHeight: "32px" } },
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "10px" } },
                         isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Save Current Values")))),
+                        window.SP_REACT.createElement("span", null, t.saveCurrentValues)))),
             presets.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
-                    "No global presets saved.",
-                    window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to save your current values!")))) : (presets.map((preset) => {
+                    t.noGlobalPresets,
+                    window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, t.clickToCreate)))) : (presets.map((preset) => {
                 const isApplyingThis = isApplying === preset.app_id;
                 return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.app_id },
                     window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
@@ -3080,7 +3320,9 @@
                             window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, preset.label),
                             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
                                 formatCores(preset.value),
-                                preset.tested && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u2713 Tested"))),
+                                preset.tested && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } },
+                                    "\u2713 ",
+                                    t.tested))),
                         window.SP_REACT.createElement(DFL.Focusable, { style: {
                                 display: "flex",
                                 gap: "4px",
@@ -3104,7 +3346,7 @@
                                         transition: "all 0.2s ease"
                                     } },
                                     isApplyingThis ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 9 }) : window.SP_REACT.createElement(FaCheck, { size: 9 }),
-                                    window.SP_REACT.createElement("span", null, "Apply"))),
+                                    window.SP_REACT.createElement("span", null, t.apply))),
                             window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, className: "preset-action-btn preset-delete", focusClassName: "gpfocus", onActivate: () => handleDelete(preset.app_id, preset.label), onClick: () => handleDelete(preset.app_id, preset.label) },
                                 window.SP_REACT.createElement("div", { style: {
                                         display: "flex",
@@ -3121,7 +3363,7 @@
                                         transition: "all 0.2s ease"
                                     } },
                                     window.SP_REACT.createElement(FaTrash, { size: 8 }),
-                                    window.SP_REACT.createElement("span", null, "Delete")))))));
+                                    window.SP_REACT.createElement("span", null, t.delete)))))));
             })),
             window.SP_REACT.createElement("style", null, `
           .spin {
@@ -3144,10 +3386,10 @@
      * and real-time preview of the curve.
      */
 
-    // Graph dimensions
-    const GRAPH_WIDTH = 280;
-    const GRAPH_HEIGHT = 160;
-    const MARGIN = { top: 20, right: 30, bottom: 30, left: 40 };
+    // Graph dimensions - увеличен для лучшей видимости
+    const GRAPH_WIDTH = 300;
+    const GRAPH_HEIGHT = 200;
+    const MARGIN = { top: 25, right: 35, bottom: 35, left: 45 };
     const INNER_WIDTH = GRAPH_WIDTH - MARGIN.left - MARGIN.right;
     const INNER_HEIGHT = GRAPH_HEIGHT - MARGIN.top - MARGIN.bottom;
     // Temperature and speed ranges
@@ -3156,8 +3398,12 @@
     const SPEED_MIN = 0;
     const SPEED_MAX = 100;
     // Point interaction
-    const POINT_RADIUS = 8;
-    const POINT_HIT_RADIUS = 15;
+    const POINT_RADIUS = 7;
+    const POINT_HIT_RADIUS = 16;
+    // Temperature zones for visual feedback
+    const TEMP_SAFE = 70;
+    const TEMP_WARNING = 80;
+    const TEMP_DANGER = 85;
     /** Default fan curve */
     const DEFAULT_CURVE = [
         { temp_c: 40, speed_percent: 20 },
@@ -3166,6 +3412,109 @@
         { temp_c: 70, speed_percent: 60 },
         { temp_c: 80, speed_percent: 80 },
         { temp_c: 85, speed_percent: 100 },
+    ];
+    /**
+     * Get fan presets with translated descriptions
+     */
+    const getFanPresets = (t) => [
+        {
+            id: "stock",
+            name: t.stock,
+            descriptionKey: "stockDescription",
+            icon: "🏭",
+            curve: [
+                { temp_c: 40, speed_percent: 20 },
+                { temp_c: 50, speed_percent: 30 },
+                { temp_c: 60, speed_percent: 45 },
+                { temp_c: 70, speed_percent: 60 },
+                { temp_c: 80, speed_percent: 80 },
+                { temp_c: 85, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "silent",
+            name: t.silent,
+            descriptionKey: "silentDescription",
+            icon: "🔇",
+            curve: [
+                { temp_c: 45, speed_percent: 15 },
+                { temp_c: 55, speed_percent: 25 },
+                { temp_c: 65, speed_percent: 35 },
+                { temp_c: 75, speed_percent: 50 },
+                { temp_c: 82, speed_percent: 70 },
+                { temp_c: 88, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "balanced",
+            name: t.balanced,
+            descriptionKey: "balancedDescription",
+            icon: "⚖️",
+            curve: [
+                { temp_c: 40, speed_percent: 20 },
+                { temp_c: 50, speed_percent: 30 },
+                { temp_c: 60, speed_percent: 45 },
+                { temp_c: 70, speed_percent: 60 },
+                { temp_c: 80, speed_percent: 80 },
+                { temp_c: 85, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "cool",
+            name: t.cool,
+            descriptionKey: "coolDescription",
+            icon: "❄️",
+            curve: [
+                { temp_c: 35, speed_percent: 25 },
+                { temp_c: 45, speed_percent: 40 },
+                { temp_c: 55, speed_percent: 55 },
+                { temp_c: 65, speed_percent: 70 },
+                { temp_c: 75, speed_percent: 85 },
+                { temp_c: 80, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "aggressive",
+            name: t.aggressive,
+            descriptionKey: "aggressiveDescription",
+            icon: "🌪️",
+            curve: [
+                { temp_c: 30, speed_percent: 30 },
+                { temp_c: 40, speed_percent: 50 },
+                { temp_c: 50, speed_percent: 65 },
+                { temp_c: 60, speed_percent: 80 },
+                { temp_c: 70, speed_percent: 90 },
+                { temp_c: 75, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "gaming",
+            name: t.gaming,
+            descriptionKey: "gamingDescription",
+            icon: "🎮",
+            curve: [
+                { temp_c: 40, speed_percent: 25 },
+                { temp_c: 55, speed_percent: 40 },
+                { temp_c: 65, speed_percent: 55 },
+                { temp_c: 72, speed_percent: 70 },
+                { temp_c: 78, speed_percent: 85 },
+                { temp_c: 83, speed_percent: 100 },
+            ],
+        },
+        {
+            id: "eco",
+            name: t.eco,
+            descriptionKey: "ecoDescription",
+            icon: "🌱",
+            curve: [
+                { temp_c: 50, speed_percent: 20 },
+                { temp_c: 60, speed_percent: 30 },
+                { temp_c: 70, speed_percent: 45 },
+                { temp_c: 78, speed_percent: 60 },
+                { temp_c: 85, speed_percent: 80 },
+                { temp_c: 90, speed_percent: 100 },
+            ],
+        },
     ];
     /**
      * Convert temperature to X coordinate
@@ -3224,6 +3573,8 @@
      * FanCurveEditor component
      */
     const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = false, }) => {
+        const { t } = useTranslation();
+        const FAN_PRESETS = getFanPresets(t);
         const svgRef = SP_REACT.useRef(null);
         const [draggingIndex, setDraggingIndex] = SP_REACT.useState(null);
         const [hasChanges, setHasChanges] = SP_REACT.useState(false);
@@ -3294,6 +3645,14 @@
             onConfigChange({ ...config, curve: [...DEFAULT_CURVE] });
             setHasChanges(true);
         }, [config, onConfigChange]);
+        // Apply preset curve
+        const handleApplyPreset = SP_REACT.useCallback((presetId) => {
+            const preset = FAN_PRESETS.find(p => p.id === presetId);
+            if (preset) {
+                onConfigChange({ ...config, curve: [...preset.curve] });
+                setHasChanges(true);
+            }
+        }, [config, onConfigChange]);
         // Save configuration
         const handleSave = SP_REACT.useCallback(async () => {
             setIsSaving(true);
@@ -3307,84 +3666,292 @@
         }, [config, onSave]);
         // Mode options for dropdown
         const modeOptions = [
-            { data: "default", label: "Default (BIOS)" },
-            { data: "custom", label: "Custom Curve" },
-            { data: "fixed", label: "Fixed Speed" },
+            { data: "default", label: t.fanModeDefault },
+            { data: "custom", label: t.fanModeCustom },
+            { data: "fixed", label: t.fanModeFixed },
         ];
         // Sort curve for display
         const sortedCurve = [...config.curve].sort((a, b) => a.temp_c - b.temp_c);
         return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: "Enable Fan Control", description: "Take manual control of the fan", checked: config.enabled, onChange: (enabled) => {
+                window.SP_REACT.createElement(DFL.ToggleField, { label: t.enableFanControl, description: t.enableFanControlDescription, checked: config.enabled, onChange: (enabled) => {
                         onConfigChange({ ...config, enabled });
                         setHasChanges(true);
                     }, disabled: isLoading })),
             config.enabled && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.DropdownItem, { label: "Fan Mode", rgOptions: modeOptions, selectedOption: config.mode, onChange: (option) => {
+                    window.SP_REACT.createElement(DFL.DropdownItem, { label: t.fanMode, rgOptions: modeOptions, selectedOption: config.mode, onChange: (option) => {
                             onConfigChange({ ...config, mode: option.data });
                             setHasChanges(true);
                         }, disabled: isLoading })),
                 status && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "8px 12px",
-                            backgroundColor: "#23262e",
-                            borderRadius: "8px",
-                            fontSize: "13px",
+                            padding: "12px",
+                            background: status.safety_override
+                                ? "linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)"
+                                : "linear-gradient(135deg, #1a3a5c 0%, #1a2a3a 100%)",
+                            borderRadius: "10px",
+                            border: status.safety_override
+                                ? "2px solid #f44336"
+                                : "2px solid rgba(26, 159, 255, 0.3)",
+                            boxShadow: status.safety_override
+                                ? "0 0 20px rgba(244, 67, 54, 0.4)"
+                                : "0 4px 12px rgba(0, 0, 0, 0.3)",
                         } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                            window.SP_REACT.createElement(FaFan, { style: {
-                                    color: status.safety_override ? "#f44336" : "#4caf50",
-                                    animation: status.speed_percent > 0 ? "spin 1s linear infinite" : "none",
-                                } }),
-                            window.SP_REACT.createElement("span", null,
-                                status.temp_c,
-                                "\u00B0C")),
-                        window.SP_REACT.createElement("div", { style: { color: "#8b929a" } },
-                            status.speed_percent,
-                            "% ",
-                            status.rpm ? `(${status.rpm} RPM)` : ""),
-                        status.safety_override && (window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "11px" } }, "Safety Override"))))),
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "10px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                } },
+                                window.SP_REACT.createElement(FaFan, { style: {
+                                        color: status.safety_override ? "#ffcdd2" : "#4caf50",
+                                        fontSize: "18px",
+                                    }, className: status.speed_percent > 0 ? "fan-spin" : "" }),
+                                window.SP_REACT.createElement("span", { style: {
+                                        fontSize: "13px",
+                                        fontWeight: "bold",
+                                        color: status.safety_override ? "#ffcdd2" : "#e0e0e0",
+                                    } }, t.fanStatus)),
+                            status.safety_override && (window.SP_REACT.createElement("div", { style: {
+                                    padding: "4px 8px",
+                                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                                    borderRadius: "4px",
+                                    fontSize: "9px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                } },
+                                window.SP_REACT.createElement(FaExclamationTriangle, null),
+                                t.safetyOverride))),
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gap: "10px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    padding: "10px",
+                                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                    borderRadius: "8px",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "9px",
+                                        color: "#8b929a",
+                                        marginBottom: "4px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                    } }, t.temperature),
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "20px",
+                                        fontWeight: "bold",
+                                        color: status.temp_c >= TEMP_DANGER ? "#f44336" :
+                                            status.temp_c >= TEMP_WARNING ? "#ff9800" :
+                                                status.temp_c >= TEMP_SAFE ? "#ffc107" : "#4caf50",
+                                        display: "flex",
+                                        alignItems: "baseline",
+                                        gap: "2px",
+                                    } },
+                                    status.temp_c,
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "12px", opacity: 0.8 } }, "\u00B0C"))),
+                            window.SP_REACT.createElement("div", { style: {
+                                    padding: "10px",
+                                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                    borderRadius: "8px",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "9px",
+                                        color: "#8b929a",
+                                        marginBottom: "4px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                    } }, t.fanSpeed),
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "20px",
+                                        fontWeight: "bold",
+                                        color: "#1a9fff",
+                                        display: "flex",
+                                        alignItems: "baseline",
+                                        gap: "2px",
+                                    } },
+                                    status.speed_percent,
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "12px", opacity: 0.8 } }, "%"))),
+                            status.rpm !== undefined && (window.SP_REACT.createElement("div", { style: {
+                                    padding: "10px",
+                                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                    borderRadius: "8px",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "9px",
+                                        color: "#8b929a",
+                                        marginBottom: "4px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                    } }, "RPM"),
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "20px",
+                                        fontWeight: "bold",
+                                        color: "#66bb6a",
+                                    } }, status.rpm))),
+                            window.SP_REACT.createElement("div", { style: {
+                                    padding: "10px",
+                                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                    borderRadius: "8px",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "9px",
+                                        color: "#8b929a",
+                                        marginBottom: "4px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
+                                    } }, t.mode),
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "13px",
+                                        fontWeight: "bold",
+                                        color: "#e0e0e0",
+                                    } }, status.mode))),
+                        status.safety_override && (window.SP_REACT.createElement("div", { style: {
+                                marginTop: "10px",
+                                padding: "8px",
+                                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                borderRadius: "6px",
+                                fontSize: "10px",
+                                color: "#ffcdd2",
+                                lineHeight: "1.4",
+                            } }, t.safetyOverrideDescription))),
+                    window.SP_REACT.createElement("style", null, `
+                .fan-spin {
+                  animation: fan-spin-anim ${Math.max(0.3, 2 - (status.speed_percent / 100) * 1.7)}s linear infinite;
+                }
+                @keyframes fan-spin-anim {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+              `))),
                 config.mode === "custom" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement("div", { style: {
-                            backgroundColor: "#1a1d23",
-                            borderRadius: "8px",
-                            padding: "8px",
+                            background: "linear-gradient(135deg, #1a1d23 0%, #23262e 100%)",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            border: "1px solid rgba(26, 159, 255, 0.2)",
+                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                         } },
-                        window.SP_REACT.createElement("svg", { ref: svgRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: { cursor: draggingIndex !== null ? "grabbing" : "crosshair" }, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onMouseLeave: handleMouseUp, onClick: handleGraphClick },
-                            window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1" },
-                                [0, 25, 50, 75, 100].map(speed => (window.SP_REACT.createElement("line", { key: `h-${speed}`, x1: MARGIN.left, y1: speedToY(speed), x2: MARGIN.left + INNER_WIDTH, y2: speedToY(speed) }))),
-                                [40, 50, 60, 70, 80, 90].map(temp => (window.SP_REACT.createElement("line", { key: `v-${temp}`, x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT })))),
-                            window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "10" },
-                                [0, 50, 100].map(speed => (window.SP_REACT.createElement("text", { key: `y-${speed}`, x: MARGIN.left - 5, y: speedToY(speed) + 3, textAnchor: "end" },
+                        window.SP_REACT.createElement("svg", { ref: svgRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: {
+                                cursor: draggingIndex !== null ? "grabbing" : "crosshair",
+                                display: "block",
+                            }, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onMouseLeave: handleMouseUp, onClick: handleGraphClick },
+                            window.SP_REACT.createElement("defs", null,
+                                window.SP_REACT.createElement("linearGradient", { id: "curveGradient", x1: "0%", y1: "0%", x2: "0%", y2: "100%" },
+                                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "#1a9fff", stopOpacity: "0.4" }),
+                                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "#1a9fff", stopOpacity: "0.05" })),
+                                window.SP_REACT.createElement("linearGradient", { id: "dangerGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
+                                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "rgba(244, 67, 54, 0.05)" }),
+                                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "rgba(244, 67, 54, 0.15)" })),
+                                window.SP_REACT.createElement("linearGradient", { id: "warningGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
+                                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "rgba(255, 152, 0, 0.03)" }),
+                                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "rgba(255, 152, 0, 0.08)" })),
+                                window.SP_REACT.createElement("filter", { id: "glow" },
+                                    window.SP_REACT.createElement("feGaussianBlur", { stdDeviation: "2", result: "coloredBlur" }),
+                                    window.SP_REACT.createElement("feMerge", null,
+                                        window.SP_REACT.createElement("feMergeNode", { in: "coloredBlur" }),
+                                        window.SP_REACT.createElement("feMergeNode", { in: "SourceGraphic" })))),
+                            window.SP_REACT.createElement("g", null,
+                                window.SP_REACT.createElement("rect", { x: MARGIN.left, y: MARGIN.top, width: tempToX(TEMP_SAFE) - MARGIN.left, height: INNER_HEIGHT, fill: "rgba(76, 175, 80, 0.03)" }),
+                                window.SP_REACT.createElement("rect", { x: tempToX(TEMP_SAFE), y: MARGIN.top, width: tempToX(TEMP_WARNING) - tempToX(TEMP_SAFE), height: INNER_HEIGHT, fill: "url(#warningGradient)" }),
+                                window.SP_REACT.createElement("rect", { x: tempToX(TEMP_WARNING), y: MARGIN.top, width: tempToX(TEMP_DANGER) - tempToX(TEMP_WARNING), height: INNER_HEIGHT, fill: "rgba(255, 152, 0, 0.08)" }),
+                                window.SP_REACT.createElement("rect", { x: tempToX(TEMP_DANGER), y: MARGIN.top, width: MARGIN.left + INNER_WIDTH - tempToX(TEMP_DANGER), height: INNER_HEIGHT, fill: "url(#dangerGradient)" })),
+                            window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1", opacity: "0.5" },
+                                [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(speed => (window.SP_REACT.createElement("line", { key: `h-${speed}`, x1: MARGIN.left, y1: speedToY(speed), x2: MARGIN.left + INNER_WIDTH, y2: speedToY(speed), strokeDasharray: speed % 25 === 0 ? "none" : "2,2", opacity: speed % 25 === 0 ? 0.6 : 0.3 }))),
+                                [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95].map(temp => (window.SP_REACT.createElement("line", { key: `v-${temp}`, x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT, strokeDasharray: temp % 10 === 0 ? "none" : "2,2", opacity: temp % 10 === 0 ? 0.6 : 0.3 })))),
+                            window.SP_REACT.createElement("g", null, [TEMP_SAFE, TEMP_WARNING, TEMP_DANGER].map((temp, idx) => (window.SP_REACT.createElement("g", { key: `zone-${temp}` },
+                                window.SP_REACT.createElement("line", { x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT, stroke: idx === 0 ? "#4caf50" : idx === 1 ? "#ff9800" : "#f44336", strokeWidth: "1.5", strokeDasharray: "4,3", opacity: "0.4" }))))),
+                            window.SP_REACT.createElement("g", { fill: "#b0b0b0", fontSize: "11", fontWeight: "500" },
+                                [0, 25, 50, 75, 100].map(speed => (window.SP_REACT.createElement("text", { key: `y-${speed}`, x: MARGIN.left - 8, y: speedToY(speed) + 4, textAnchor: "end", fill: speed === 100 ? "#f44336" : speed === 0 ? "#4caf50" : "#b0b0b0" },
                                     speed,
                                     "%"))),
-                                [40, 60, 80].map(temp => (window.SP_REACT.createElement("text", { key: `x-${temp}`, x: tempToX(temp), y: MARGIN.top + INNER_HEIGHT + 15, textAnchor: "middle" },
+                                [30, 40, 50, 60, 70, 80, 90].map(temp => (window.SP_REACT.createElement("text", { key: `x-${temp}`, x: tempToX(temp), y: MARGIN.top + INNER_HEIGHT + 18, textAnchor: "middle", fill: temp >= TEMP_DANGER ? "#f44336" : temp >= TEMP_WARNING ? "#ff9800" : "#b0b0b0" },
                                     temp,
-                                    "\u00B0C")))),
-                            window.SP_REACT.createElement("rect", { x: tempToX(85), y: MARGIN.top, width: MARGIN.left + INNER_WIDTH - tempToX(85), height: INNER_HEIGHT, fill: "rgba(244, 67, 54, 0.1)" }),
-                            status && (window.SP_REACT.createElement("line", { x1: tempToX(status.temp_c), y1: MARGIN.top, x2: tempToX(status.temp_c), y2: MARGIN.top + INNER_HEIGHT, stroke: "#4caf50", strokeWidth: "2", strokeDasharray: "4,4" })),
-                            window.SP_REACT.createElement("path", { d: generateCurvePath(sortedCurve), fill: "none", stroke: "#1a9fff", strokeWidth: "2" }),
-                            window.SP_REACT.createElement("path", { d: `${generateCurvePath(sortedCurve)} L ${MARGIN.left + INNER_WIDTH} ${MARGIN.top + INNER_HEIGHT} L ${MARGIN.left} ${MARGIN.top + INNER_HEIGHT} Z`, fill: "rgba(26, 159, 255, 0.1)" }),
-                            sortedCurve.map((point, index) => (window.SP_REACT.createElement("g", { key: index },
-                                window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_HIT_RADIUS, fill: "transparent", style: { cursor: "grab" }, onMouseDown: (e) => handlePointMouseDown(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent), e), onDoubleClick: () => handleRemovePoint(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent)) }),
-                                window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS, fill: "#1a9fff", stroke: "#fff", strokeWidth: "2", style: { pointerEvents: "none" } }),
-                                window.SP_REACT.createElement("text", { x: tempToX(point.temp_c), y: speedToY(point.speed_percent) - 12, fill: "#fff", fontSize: "9", textAnchor: "middle", style: { pointerEvents: "none" } },
-                                    point.temp_c,
-                                    "\u00B0/",
-                                    point.speed_percent,
-                                    "%"))))),
+                                    "\u00B0")))),
+                            window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "10", fontWeight: "600" },
+                                window.SP_REACT.createElement("text", { x: 12, y: MARGIN.top + INNER_HEIGHT / 2, textAnchor: "middle", transform: `rotate(-90, 12, ${MARGIN.top + INNER_HEIGHT / 2})` }, "Fan Speed (%)"),
+                                window.SP_REACT.createElement("text", { x: MARGIN.left + INNER_WIDTH / 2, y: GRAPH_HEIGHT - 5, textAnchor: "middle" }, "Temperature (\u00B0C)")),
+                            status && (window.SP_REACT.createElement("g", { filter: "url(#glow)" },
+                                window.SP_REACT.createElement("line", { x1: tempToX(status.temp_c), y1: MARGIN.top, x2: tempToX(status.temp_c), y2: MARGIN.top + INNER_HEIGHT, stroke: "#4caf50", strokeWidth: "2.5", strokeDasharray: "5,3", opacity: "0.8" },
+                                    window.SP_REACT.createElement("animate", { attributeName: "stroke-dashoffset", from: "0", to: "8", dur: "1s", repeatCount: "indefinite" })),
+                                window.SP_REACT.createElement("circle", { cx: tempToX(status.temp_c), cy: speedToY(status.speed_percent), r: "6", fill: "#4caf50", stroke: "#fff", strokeWidth: "2" },
+                                    window.SP_REACT.createElement("animate", { attributeName: "r", values: "6;8;6", dur: "2s", repeatCount: "indefinite" })),
+                                window.SP_REACT.createElement("rect", { x: tempToX(status.temp_c) - 35, y: MARGIN.top - 18, width: "70", height: "16", rx: "3", fill: "#4caf50", opacity: "0.9" }),
+                                window.SP_REACT.createElement("text", { x: tempToX(status.temp_c), y: MARGIN.top - 7, textAnchor: "middle", fill: "#fff", fontSize: "10", fontWeight: "bold" },
+                                    "NOW: ",
+                                    status.temp_c,
+                                    "\u00B0C"))),
+                            window.SP_REACT.createElement("path", { d: `${generateCurvePath(sortedCurve)} L ${MARGIN.left + INNER_WIDTH} ${MARGIN.top + INNER_HEIGHT} L ${MARGIN.left} ${MARGIN.top + INNER_HEIGHT} Z`, fill: "url(#curveGradient)" }),
+                            window.SP_REACT.createElement("path", { d: generateCurvePath(sortedCurve), fill: "none", stroke: "#1a9fff", strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round", filter: "url(#glow)" }),
+                            sortedCurve.map((point, index) => {
+                                const isDragging = draggingIndex === config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent);
+                                return (window.SP_REACT.createElement("g", { key: index },
+                                    window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_HIT_RADIUS, fill: "transparent", style: { cursor: isDragging ? "grabbing" : "grab" }, onMouseDown: (e) => handlePointMouseDown(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent), e), onDoubleClick: () => handleRemovePoint(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent)) }),
+                                    window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS + 3, fill: "none", stroke: "#1a9fff", strokeWidth: "2", opacity: isDragging ? "0.6" : "0.3", style: { pointerEvents: "none" } }),
+                                    window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS, fill: isDragging ? "#66bb6a" : "#1a9fff", stroke: "#fff", strokeWidth: "2.5", style: { pointerEvents: "none" }, filter: "url(#glow)" }),
+                                    window.SP_REACT.createElement("g", { style: { pointerEvents: "none" } },
+                                        window.SP_REACT.createElement("rect", { x: tempToX(point.temp_c) - 28, y: speedToY(point.speed_percent) - 22, width: "56", height: "14", rx: "3", fill: "rgba(0, 0, 0, 0.8)" }),
+                                        window.SP_REACT.createElement("text", { x: tempToX(point.temp_c), y: speedToY(point.speed_percent) - 12, fill: "#fff", fontSize: "10", fontWeight: "bold", textAnchor: "middle" },
+                                            point.temp_c,
+                                            "\u00B0 / ",
+                                            point.speed_percent,
+                                            "%"))));
+                            })),
                         window.SP_REACT.createElement("div", { style: {
-                                fontSize: "10px",
+                                display: "flex",
+                                justifyContent: "space-around",
+                                fontSize: "9px",
                                 color: "#8b929a",
-                                textAlign: "center",
-                                marginTop: "4px",
-                            } }, "Click to add point \u2022 Drag to move \u2022 Double-click to remove")))),
+                                marginTop: "8px",
+                                padding: "6px",
+                                backgroundColor: "rgba(26, 159, 255, 0.05)",
+                                borderRadius: "6px",
+                                gap: "8px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#1a9fff", fontSize: "12px" } }, "\u25CF"),
+                                window.SP_REACT.createElement("span", null, "Click = Add")),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#1a9fff", fontSize: "12px" } }, "\u2194"),
+                                window.SP_REACT.createElement("span", null, "Drag = Move")),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
+                                window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "12px" } }, "\u2715"),
+                                window.SP_REACT.createElement("span", null, "Double = Remove"))),
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "grid",
+                                gridTemplateColumns: "repeat(4, 1fr)",
+                                gap: "4px",
+                                marginTop: "8px",
+                                fontSize: "8px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "3px" } },
+                                window.SP_REACT.createElement("div", { style: { width: "12px", height: "12px", backgroundColor: "rgba(76, 175, 80, 0.3)", borderRadius: "2px" } }),
+                                window.SP_REACT.createElement("span", { style: { color: "#4caf50" } }, "Safe")),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "3px" } },
+                                window.SP_REACT.createElement("div", { style: { width: "12px", height: "12px", backgroundColor: "rgba(255, 152, 0, 0.3)", borderRadius: "2px" } }),
+                                window.SP_REACT.createElement("span", { style: { color: "#ff9800" } }, "Warm")),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "3px" } },
+                                window.SP_REACT.createElement("div", { style: { width: "12px", height: "12px", backgroundColor: "rgba(255, 152, 0, 0.5)", borderRadius: "2px" } }),
+                                window.SP_REACT.createElement("span", { style: { color: "#ff9800" } }, "Hot")),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "3px" } },
+                                window.SP_REACT.createElement("div", { style: { width: "12px", height: "12px", backgroundColor: "rgba(244, 67, 54, 0.3)", borderRadius: "2px" } }),
+                                window.SP_REACT.createElement("span", { style: { color: "#f44336" } }, "Critical")))))),
                 config.mode === "fixed" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.SliderField, { label: "Fixed Fan Speed", value: config.curve[0]?.speed_percent ?? 50, min: 0, max: 100, step: 5, showValue: true, onChange: (value) => {
+                    window.SP_REACT.createElement(DFL.SliderField, { label: t.fixedFanSpeed, value: config.curve[0]?.speed_percent ?? 50, min: 0, max: 100, step: 5, showValue: true, onChange: (value) => {
                             onConfigChange({
                                 ...config,
                                 curve: [{ temp_c: 0, speed_percent: value }],
@@ -3392,15 +3959,74 @@
                             setHasChanges(true);
                         }, disabled: isLoading }))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.ToggleField, { label: "Zero RPM Mode", description: "Allow fan to stop below 45\u00B0C (risky!)", checked: config.zero_rpm_enabled, onChange: (zero_rpm_enabled) => {
+                    window.SP_REACT.createElement(DFL.ToggleField, { label: t.zeroRPM, description: t.zeroRPMDescription, checked: config.zero_rpm_enabled, onChange: (zero_rpm_enabled) => {
                             onConfigChange({ ...config, zero_rpm_enabled });
                             setHasChanges(true);
                         }, disabled: isLoading })),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.SliderField, { label: "Temperature Hysteresis", description: "Prevents rapid speed changes", value: config.hysteresis_temp, min: 1, max: 10, step: 1, showValue: true, valueSuffix: "\u00B0C", onChange: (hysteresis_temp) => {
+                    window.SP_REACT.createElement(DFL.SliderField, { label: t.temperatureHysteresis, description: t.temperatureHysteresisDescription, value: config.hysteresis_temp, min: 1, max: 10, step: 1, showValue: true, valueSuffix: "\u00B0C", onChange: (hysteresis_temp) => {
                             onConfigChange({ ...config, hysteresis_temp });
                             setHasChanges(true);
                         }, disabled: isLoading })),
+                config.mode === "custom" && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "12px",
+                                fontWeight: "bold",
+                                marginTop: "12px",
+                                marginBottom: "8px",
+                                color: "#e0e0e0",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                            } },
+                            window.SP_REACT.createElement("span", null, "\u26A1"),
+                            window.SP_REACT.createElement("span", null, t.quickPresets))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gap: "6px",
+                                marginBottom: "8px",
+                            } }, FAN_PRESETS.map((preset) => (window.SP_REACT.createElement(DFL.Focusable, { key: preset.id, onActivate: () => handleApplyPreset(preset.id), onClick: () => handleApplyPreset(preset.id), style: {
+                                padding: "10px 8px",
+                                background: "linear-gradient(135deg, #2a2d35 0%, #23262e 100%)",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                border: "1px solid rgba(26, 159, 255, 0.2)",
+                                transition: "all 0.2s ease",
+                            }, focusClassName: "preset-focus" },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "4px",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                    } },
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "16px" } }, preset.icon),
+                                    window.SP_REACT.createElement("span", { style: {
+                                            fontSize: "11px",
+                                            fontWeight: "bold",
+                                            color: "#e0e0e0",
+                                        } }, preset.name)),
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "8px",
+                                        color: "#8b929a",
+                                        lineHeight: "1.3",
+                                    } }, t[preset.descriptionKey]))))))),
+                    window.SP_REACT.createElement("style", null, `
+                .preset-focus {
+                  border: 2px solid #1a9fff !important;
+                  box-shadow: 0 0 12px rgba(26, 159, 255, 0.5);
+                  transform: scale(1.02);
+                }
+                .preset-focus:hover {
+                  background: linear-gradient(135deg, #1a9fff 0%, #1976d2 100%) !important;
+                }
+              `))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
                         window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleReset, disabled: isLoading || isSaving },
@@ -3426,6 +4052,7 @@
      */
     const FanTab = () => {
         const { api } = useDeckTune();
+        const { t } = useTranslation();
         const [config, setConfig] = SP_REACT.useState(null);
         const [status, setStatus] = SP_REACT.useState(null);
         const [isLoading, setIsLoading] = SP_REACT.useState(true);
@@ -3509,7 +4136,7 @@
                         color: "#8b929a",
                     } },
                     window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    window.SP_REACT.createElement("span", null, "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430...")),
+                    window.SP_REACT.createElement("span", null, t.loadingFanConfig)),
                 window.SP_REACT.createElement("style", null, `
             .spin {
               animation: spin 1s linear infinite;
@@ -3535,7 +4162,7 @@
                     } },
                     window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#f44336", fontSize: "24px" } }),
                     window.SP_REACT.createElement("div", { style: { color: "#ffcdd2", textAlign: "center", fontSize: "12px" } }, error),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => window.location.reload() }, "\u041F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430"))));
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => window.location.reload() }, t.tryAgain))));
         }
         // No config available
         if (!config) {
@@ -3544,7 +4171,7 @@
                         textAlign: "center",
                         padding: "24px",
                         color: "#8b929a",
-                    } }, "\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430")));
+                    } }, t.fanConfigUnavailable)));
         }
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
             error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
@@ -3579,6 +4206,7 @@
 
     const InstallBinariesButtonExpert = ({ onInstalled }) => {
         const { api } = useDeckTune();
+        const { t } = useTranslation();
         const [isInstalling, setIsInstalling] = SP_REACT.useState(false);
         const [result, setResult] = SP_REACT.useState(null);
         const handleInstall = async () => {
@@ -3620,7 +4248,7 @@
                         opacity: isInstalling ? 0.7 : 1
                     } },
                     isInstalling ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : window.SP_REACT.createElement(FaDownload, null),
-                    window.SP_REACT.createElement("span", null, isInstalling ? "Установка... / Installing..." : "Установить / Install"))),
+                    window.SP_REACT.createElement("span", null, isInstalling ? t.installing : t.install))),
             result && (window.SP_REACT.createElement("div", { style: {
                     marginTop: "6px",
                     padding: "6px",
@@ -3630,9 +4258,9 @@
                     color: "#fff"
                 } }, result.success ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(FaCheck, { style: { marginRight: "4px" } }),
-                result.message || "Установлено! / Installed!")) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                result.message || t.exportSuccessful)) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(FaTimes, { style: { marginRight: "4px" } }),
-                result.error || "Ошибка установки / Installation failed")))),
+                result.error || t.exportFailed)))),
             window.SP_REACT.createElement("style", null, `
         .spin {
           animation: spin 1s linear infinite;
@@ -3644,11 +4272,11 @@
       `)));
     };
     const TABS = [
-        { id: "manual", label: "Manual", icon: FaSlidersH },
-        { id: "presets", label: "Presets", icon: FaList },
-        { id: "tests", label: "Tests", icon: FaVial },
-        { id: "fan", label: "Fan", icon: FaFan },
-        { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
+        { id: "manual", labelKey: "manualTab", icon: FaSlidersH },
+        { id: "presets", labelKey: "presetsTab", icon: FaList },
+        { id: "tests", labelKey: "testsTab", icon: FaVial },
+        { id: "fan", labelKey: "fanTab", icon: FaFan },
+        { id: "diagnostics", labelKey: "diagnosticsTab", icon: FaInfoCircle },
     ];
     /**
      * Panic Disable Button component - always visible emergency reset.
@@ -3660,6 +4288,7 @@
      */
     const PanicDisableButton = () => {
         const { api } = useDeckTune();
+        const { t } = useTranslation();
         const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
         const handlePanicDisable = async () => {
             setIsPanicking(true);
@@ -3684,9 +4313,9 @@
                         padding: "12px"
                     } }, isPanicking ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                     window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    window.SP_REACT.createElement("span", null, "Disabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                    window.SP_REACT.createElement("span", null, t.disabling))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                     window.SP_REACT.createElement(FaExclamationTriangle, null),
-                    window.SP_REACT.createElement("span", null, "PANIC DISABLE")))))));
+                    window.SP_REACT.createElement("span", null, t.panicDisable)))))));
     };
     /**
      * ExpertMode component - detailed controls for power users.
@@ -3712,6 +4341,7 @@
                 window.SP_REACT.createElement(DiagnosticsTab, null))));
     };
     const TabNavigation = ({ activeTab, onTabChange }) => {
+        const { t } = useTranslation();
         return (window.SP_REACT.createElement(DFL.Focusable, { style: {
                 display: "flex",
                 marginBottom: "8px",
@@ -3736,7 +4366,7 @@
                     color: isActive ? "#fff" : "#8b929a",
                 } },
                 window.SP_REACT.createElement(Icon, null),
-                window.SP_REACT.createElement("span", { style: { fontSize: "8px", fontWeight: isActive ? "600" : "400" } }, tab.label)));
+                window.SP_REACT.createElement("span", { style: { fontSize: "8px", fontWeight: isActive ? "600" : "400" } }, t[tab.labelKey])));
         })));
     };
     /**
@@ -3745,6 +4375,7 @@
      */
     const DynamicSettingsInline = () => {
         const { state, api } = useDeckTune();
+        const { t } = useTranslation();
         const [strategy, setStrategy] = SP_REACT.useState("balanced");
         const [simpleMode, setSimpleMode] = SP_REACT.useState(false);
         const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
@@ -3848,7 +4479,7 @@
                                     fontSize: "12px",
                                     fontWeight: "bold",
                                     color: isDynamicRunning ? "#a5d6a7" : "#1a9fff"
-                                } }, "\u0414\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0440\u0435\u0436\u0438\u043C / Dynamic Mode")),
+                                } }, t.dynamicModeTitle)),
                         window.SP_REACT.createElement("div", { style: {
                                 padding: "4px 8px",
                                 backgroundColor: isDynamicRunning ? "#4caf50" : "#3d4450",
@@ -3856,15 +4487,15 @@
                                 fontSize: "9px",
                                 fontWeight: "bold",
                                 color: "#fff"
-                            } }, isDynamicRunning ? "🟢 АКТИВЕН" : "⚫ ВЫКЛ")),
+                            } }, isDynamicRunning ? `🟢 ${t.active}` : `⚫ ${t.off}`)),
                     window.SP_REACT.createElement("div", { style: {
                             fontSize: "9px",
                             color: isDynamicRunning ? "#c8e6c9" : "#8b929a",
                             marginBottom: "12px",
                             lineHeight: "1.4"
                         } }, isDynamicRunning
-                        ? "Автоматическая подстройка напряжения на основе нагрузки CPU в реальном времени"
-                        : "Включите для автоматической адаптации андервольта под нагрузку процессора"),
+                        ? t.dynamicModeDescriptionActive
+                        : t.dynamicModeDescription),
                     window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px" }, "flow-children": "horizontal" },
                         !isDynamicRunning ? (window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleStart, onClick: handleStart },
                             window.SP_REACT.createElement("div", { style: {
@@ -3881,7 +4512,7 @@
                                     opacity: isStarting ? 0.6 : 1
                                 } },
                                 isStarting ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaPlay, { size: 11 }),
-                                window.SP_REACT.createElement("span", null, "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C / Start")))) : (window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleStop, onClick: handleStop },
+                                window.SP_REACT.createElement("span", null, t.start)))) : (window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleStop, onClick: handleStop },
                             window.SP_REACT.createElement("div", { style: {
                                     display: "flex",
                                     alignItems: "center",
@@ -3896,7 +4527,7 @@
                                     opacity: isStopping ? 0.6 : 1
                                 } },
                                 isStopping ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaBan, { size: 11 }),
-                                window.SP_REACT.createElement("span", null, "\u041E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C / Stop")))),
+                                window.SP_REACT.createElement("span", null, t.stop)))),
                         window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => setShowSettings(!showSettings), onClick: () => setShowSettings(!showSettings) },
                             window.SP_REACT.createElement("div", { style: {
                                     display: "flex",
@@ -3911,9 +4542,9 @@
                                     fontWeight: "bold"
                                 } },
                                 window.SP_REACT.createElement(FaCog, { size: 11 }),
-                                window.SP_REACT.createElement("span", null, "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 / Settings")))))),
+                                window.SP_REACT.createElement("span", null, t.settings)))))),
             isDynamicRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(LoadGraph, { load: [0, 0, 0, 0], values: state.cores, isActive: true, activeProfile: undefined }))),
+                window.SP_REACT.createElement(DynamicModeVisualization, { strategy: strategy, load: [0, 0, 0, 0], values: state.cores, isActive: true, simpleMode: simpleMode, simpleValue: simpleValue }))),
             showSettings && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "12px",
@@ -3923,11 +4554,11 @@
                         animation: "slideDown 0.3s ease-out"
                     } },
                     window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" } }, "\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044F / Strategy"),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" } }, t.strategy),
                         window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" }, "flow-children": "horizontal" }, [
-                            { id: "conservative", label: "Conservative", desc: "Безопасно" },
-                            { id: "balanced", label: "Balanced", desc: "По умолч." },
-                            { id: "aggressive", label: "Aggressive", desc: "Макс." }
+                            { id: "conservative", label: t.conservative },
+                            { id: "balanced", label: t.balanced },
+                            { id: "aggressive", label: t.aggressive }
                         ].map((s) => (window.SP_REACT.createElement(DFL.Focusable, { key: s.id, style: { flex: 1 }, onActivate: () => setStrategy(s.id), onClick: () => setStrategy(s.id) },
                             window.SP_REACT.createElement("div", { style: {
                                     padding: "8px 4px",
@@ -3941,19 +4572,18 @@
                                 } },
                                 window.SP_REACT.createElement("div", null,
                                     strategy === s.id ? "✓ " : "",
-                                    s.label),
-                                window.SP_REACT.createElement("div", { style: { fontSize: "7px", opacity: 0.7, marginTop: "2px" } }, s.desc))))))),
+                                    s.label))))))),
                     window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
-                        window.SP_REACT.createElement(DFL.ToggleField, { label: "\u041F\u0440\u043E\u0441\u0442\u043E\u0439 \u0440\u0435\u0436\u0438\u043C / Simple Mode", description: "\u041E\u0434\u043D\u043E \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0434\u043B\u044F \u0432\u0441\u0435\u0445 \u044F\u0434\u0435\u0440", checked: simpleMode, onChange: setSimpleMode, bottomSeparator: "none" })),
+                        window.SP_REACT.createElement(DFL.ToggleField, { label: t.simpleModeDynamic, description: t.simpleModeDescription, checked: simpleMode, onChange: setSimpleMode, bottomSeparator: "none" })),
                     simpleMode && (window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "\u0417\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0430\u043D\u0434\u0435\u0440\u0432\u043E\u043B\u044C\u0442\u0430 / Undervolt Value", value: simpleValue, min: minLimit, max: 0, step: 1, showValue: true, onChange: (value) => setSimpleValue(value), valueSuffix: " mV", bottomSeparator: "none" }),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, "\u041F\u0440\u0438\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F \u043A\u043E \u0432\u0441\u0435\u043C \u044F\u0434\u0440\u0430\u043C \u043F\u0440\u0438 \u043D\u0438\u0437\u043A\u043E\u0439 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0435"))),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: t.undervoltValue, value: simpleValue, min: minLimit, max: 0, step: 1, showValue: true, onChange: (value) => setSimpleValue(value), valueSuffix: " mV", bottomSeparator: "none" }),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, t.simpleModeDescription))),
                     window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "\u0418\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043E\u043F\u0440\u043E\u0441\u0430 / Sample Interval", value: sampleInterval, min: 50, max: 500, step: 10, showValue: true, onChange: (value) => setSampleInterval(value), valueSuffix: " ms", bottomSeparator: "none" }),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, "\u041A\u0430\u043A \u0447\u0430\u0441\u0442\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0443 CPU")),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: t.sampleInterval, value: sampleInterval, min: 50, max: 500, step: 10, showValue: true, onChange: (value) => setSampleInterval(value), valueSuffix: " ms", bottomSeparator: "none" }),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, t.sampleIntervalDescription)),
                     window.SP_REACT.createElement("div", { style: { marginBottom: "12px" } },
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "\u0413\u0438\u0441\u0442\u0435\u0440\u0435\u0437\u0438\u0441 / Hysteresis", value: hysteresis, min: 1, max: 20, step: 1, showValue: true, onChange: (value) => setHysteresis(value), valueSuffix: " %", bottomSeparator: "none" }),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, "\u041F\u0440\u0435\u0434\u043E\u0442\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0447\u0430\u0441\u0442\u044B\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439")),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: t.hysteresis, value: hysteresis, min: 1, max: 20, step: 1, showValue: true, onChange: (value) => setHysteresis(value), valueSuffix: " %", bottomSeparator: "none" }),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px" } }, t.hysteresisDescription)),
                     window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleSave, onClick: handleSave },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
@@ -3971,7 +4601,7 @@
                                 transition: "all 0.2s ease"
                             } },
                             isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaCheck, { size: 11 }),
-                            window.SP_REACT.createElement("span", null, isSaving ? "Сохранение..." : "Сохранить / Save"))),
+                            window.SP_REACT.createElement("span", null, isSaving ? t.saving : t.save))),
                     window.SP_REACT.createElement("div", { style: {
                             marginTop: "10px",
                             padding: "8px",
@@ -3982,19 +4612,26 @@
                             lineHeight: "1.5",
                             border: "1px solid rgba(26, 159, 255, 0.2)"
                         } },
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" } }, "\u2139\uFE0F \u041A\u0430\u043A \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442:"),
-                        "\u2022 \u041C\u043E\u043D\u0438\u0442\u043E\u0440\u0438\u043D\u0433 \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 CPU \u043A\u0430\u0436\u0434\u044B\u0435 ",
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" } },
+                            "\u2139\uFE0F ",
+                            t.howItWorks),
+                        "\u2022 ",
+                        t.sampleIntervalDescription,
+                        ": ",
                         sampleInterval,
                         "ms",
                         window.SP_REACT.createElement("br", null),
-                        "\u2022 \u0410\u0434\u0430\u043F\u0442\u0430\u0446\u0438\u044F \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u044F \u043F\u043E \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u0438 ",
+                        "\u2022 ",
+                        t.strategy,
+                        ": ",
                         strategy,
                         window.SP_REACT.createElement("br", null),
-                        "\u2022 \u0413\u0438\u0441\u0442\u0435\u0440\u0435\u0437\u0438\u0441 ",
+                        "\u2022 ",
+                        t.hysteresis,
+                        ": ",
                         hysteresis,
-                        "% \u0434\u043B\u044F \u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u0438",
-                        window.SP_REACT.createElement("br", null),
-                        "\u2022 \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u0440\u0435\u0436\u0438\u043C \u0434\u043B\u044F \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439")))),
+                        "%",
+                        window.SP_REACT.createElement("br", null))))),
             window.SP_REACT.createElement("style", null, `
         @keyframes slideDown {
           from {
@@ -4015,6 +4652,7 @@
     const ManualTab = () => {
         const { state, api } = useDeckTune();
         const { info: platformInfo } = usePlatformInfo();
+        const { t } = useTranslation();
         const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
         const [controlMode, setControlMode] = SP_REACT.useState("single");
         const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
@@ -4103,7 +4741,7 @@
                         "\u041B\u0438\u043C\u0438\u0442 / Limit: ",
                         window.SP_REACT.createElement("strong", { style: { color: expertMode ? "#ff9800" : "#4caf50" } }, expertMode ? "-100mV (Expert)" : `${platformInfo.safe_limit}mV`))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" } }, "\u0420\u0435\u0436\u0438\u043C \u0443\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u044F / Control Mode")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" } }, t.controlMode)),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px", marginBottom: "12px" }, "flow-children": "horizontal" },
                     window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleControlModeChange("single"), onClick: () => handleControlModeChange("single") },
@@ -4119,8 +4757,7 @@
                                 border: controlMode === "single" ? "2px solid #1a9fff" : "2px solid transparent"
                             } },
                             window.SP_REACT.createElement("div", null, controlMode === "single" ? "✓" : ""),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, "\u0415\u0434\u0438\u043D\u044B\u0439"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "8px", opacity: 0.7 } }, "Single"))),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, t.single))),
                     window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleControlModeChange("percore"), onClick: () => handleControlModeChange("percore") },
                         window.SP_REACT.createElement("div", { style: {
                                 padding: "10px 6px",
@@ -4134,8 +4771,7 @@
                                 border: controlMode === "percore" ? "2px solid #1a9fff" : "2px solid transparent"
                             } },
                             window.SP_REACT.createElement("div", null, controlMode === "percore" ? "✓" : ""),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, "\u041F\u043E-\u044F\u0434\u0435\u0440\u043D\u044B\u0439"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "8px", opacity: 0.7 } }, "Per-Core"))),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, t.perCore))),
                     window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleControlModeChange("dynamic"), onClick: () => handleControlModeChange("dynamic") },
                         window.SP_REACT.createElement("div", { style: {
                                 padding: "10px 6px",
@@ -4150,8 +4786,7 @@
                                 border: controlMode === "dynamic" ? "2px solid #4caf50" : "2px solid transparent"
                             } },
                             window.SP_REACT.createElement("div", null, controlMode === "dynamic" ? "✓" : ""),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, "\u0414\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0439"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "8px", opacity: 0.7 } }, "Dynamic"))))),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", marginTop: "2px" } }, t.dynamic))))),
             controlMode === "dynamic" && (window.SP_REACT.createElement(DynamicSettingsInline, null)),
             controlMode !== "dynamic" && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
@@ -4161,7 +4796,7 @@
                             borderRadius: "6px",
                             marginBottom: "8px"
                         } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginBottom: "4px" } }, "\u0422\u0435\u043A\u0443\u0449\u0438\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F / Current Values"),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginBottom: "4px" } }, t.currentValues),
                         window.SP_REACT.createElement("div", { style: {
                                 display: "grid",
                                 gridTemplateColumns: "repeat(4, 1fr)",
@@ -4183,10 +4818,10 @@
                 controlMode === "single" ? (
                 /* Single Mode: One slider for all cores */
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.SliderField, { label: "\u0412\u0441\u0435 \u044F\u0434\u0440\u0430 / All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
+                    window.SP_REACT.createElement(DFL.SliderField, { label: t.allCores, value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
                 /* Per-core sliders */
                 [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
-                    window.SP_REACT.createElement(DFL.SliderField, { label: `Ядро / Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
+                    window.SP_REACT.createElement(DFL.SliderField, { label: `${t.core} ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px", marginTop: "12px" }, "flow-children": "horizontal" },
                         window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleApply, onClick: handleApply },
@@ -4205,10 +4840,7 @@
                                     transition: "all 0.2s ease"
                                 } },
                                 isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 11 }) : window.SP_REACT.createElement(FaCheck, { size: 11 }),
-                                window.SP_REACT.createElement("span", null,
-                                    "\u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C",
-                                    window.SP_REACT.createElement("br", null),
-                                    "Apply"))),
+                                window.SP_REACT.createElement("span", null, t.apply))),
                         window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleDisable, onClick: handleDisable },
                             window.SP_REACT.createElement("div", { style: {
                                     display: "flex",
@@ -4224,10 +4856,7 @@
                                     transition: "all 0.2s ease"
                                 } },
                                 window.SP_REACT.createElement(FaBan, { size: 11 }),
-                                window.SP_REACT.createElement("span", null,
-                                    "\u0412\u044B\u043A\u043B",
-                                    window.SP_REACT.createElement("br", null),
-                                    "Disable"))),
+                                window.SP_REACT.createElement("span", null, t.disable))),
                         window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: handleReset, onClick: handleReset },
                             window.SP_REACT.createElement("div", { style: {
                                     display: "flex",
@@ -4244,10 +4873,7 @@
                                     transition: "all 0.2s ease"
                                 } },
                                 window.SP_REACT.createElement(FaTimes, { size: 11 }),
-                                window.SP_REACT.createElement("span", null,
-                                    "\u0421\u0431\u0440\u043E\u0441",
-                                    window.SP_REACT.createElement("br", null),
-                                    "Reset"))))))),
+                                window.SP_REACT.createElement("span", null, t.reset))))))),
             window.SP_REACT.createElement("style", null, `
           .spin {
             animation: spin 1s linear infinite;
@@ -4279,6 +4905,7 @@
      * - Warning banner if binaries missing
      */
     const TestsTab = () => {
+        const { t } = useTranslation();
         const { history, currentTest, isRunning, runTest } = useTests();
         const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
         const [selectedTest, setSelectedTest] = SP_REACT.useState("cpu_quick");
@@ -4335,19 +4962,22 @@
                     } },
                     window.SP_REACT.createElement(FaExclamationCircle, { style: { color: "#1a9fff", fontSize: "16px", flexShrink: 0, marginTop: "1px" } }),
                     window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#64b5f6", marginBottom: "4px", fontSize: "11px" } }, "\u2139\uFE0F \u041E\u043F\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u043F\u0430\u043A\u0435\u0442\u044B / Optional Packages"),
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#64b5f6", marginBottom: "4px", fontSize: "11px" } },
+                            "\u2139\uFE0F ",
+                            t.optionalPackages),
                         window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#bbdefb", marginBottom: "4px" } },
-                            "\u041D\u0435 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u044B: ",
+                            t.notInstalled,
+                            " ",
                             window.SP_REACT.createElement("strong", null, missingBinaries.join(", "))),
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#90caf9", marginBottom: "6px" } },
-                            "\u042D\u0442\u0438 \u043F\u0430\u043A\u0435\u0442\u044B \u043D\u0443\u0436\u043D\u044B \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0441\u0442\u0440\u0435\u0441\u0441-\u0442\u0435\u0441\u0442\u043E\u0432.",
+                            t.packagesNeeded,
                             window.SP_REACT.createElement("br", null),
-                            "\u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u043F\u043B\u0430\u0433\u0438\u043D\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u0431\u0435\u0437 \u043D\u0438\u0445."),
+                            t.otherFeaturesWork),
                         window.SP_REACT.createElement(InstallBinariesButtonExpert, { onInstalled: checkBinaries }))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Run Stress Test")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, t.runStressTest)),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.DropdownItem, { label: "Select Test", menuLabel: "Select Test", rgOptions: TEST_OPTIONS.map((t, idx) => ({
+                window.SP_REACT.createElement(DFL.DropdownItem, { label: t.selectTest, menuLabel: t.selectTest, rgOptions: TEST_OPTIONS.map((t, idx) => ({
                         data: idx,
                         label: t.label,
                     })), selectedOption: TEST_OPTIONS.findIndex(t => t.value === selectedTest), onChange: (option) => {
@@ -4360,11 +4990,12 @@
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: hasMissing ? 0.5 : 1 } }, isRunning ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                         window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
                         window.SP_REACT.createElement("span", null,
-                            "Running ",
+                            t.running,
+                            " ",
                             getTestLabel(currentTest || selectedTest),
                             "..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                         window.SP_REACT.createElement(FaPlay, null),
-                        window.SP_REACT.createElement("span", null, "Run Test")))))),
+                        window.SP_REACT.createElement("span", null, t.runTest)))))),
             isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "12px",
@@ -4374,14 +5005,15 @@
                     } },
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
                         window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#1a9fff" } }),
-                        window.SP_REACT.createElement("span", null, "Test in progress...")),
+                        window.SP_REACT.createElement("span", null, t.testInProgress)),
                     window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } },
-                        "Running: ",
+                        t.running,
+                        ": ",
                         getTestLabel(currentTest || selectedTest))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Test History (Last 10)")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.testHistory)),
             history.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px" } }, "No tests run yet."))) : (history.slice(0, 10).map((entry, index) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: index },
+                window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px" } }, t.noTests))) : (history.slice(0, 10).map((entry, index) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: index },
                 window.SP_REACT.createElement(DFL.Focusable, { style: {
                         padding: "10px",
                         backgroundColor: "#23262e",
@@ -4423,6 +5055,7 @@
      * - Export Diagnostics button
      */
     const DiagnosticsTab = () => {
+        const { t } = useTranslation();
         const { api } = useDeckTune();
         const { info: platformInfo } = usePlatformInfo();
         const [systemInfo, setSystemInfo] = SP_REACT.useState(null);
@@ -4465,19 +5098,19 @@
         };
         return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "System Information")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, t.systemInformation)),
             isLoading ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", color: "#8b929a" } },
                     window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    window.SP_REACT.createElement("span", null, "Loading system info...")))) : (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                    window.SP_REACT.createElement("span", null, t.loading)))) : (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "12px",
                         backgroundColor: "#23262e",
                         borderRadius: "8px",
                     } },
-                    window.SP_REACT.createElement(InfoRow, { label: "Platform", value: platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown" }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Safe Limit", value: platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown" }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Detection", value: platformInfo?.detected ? "Successful" : "Failed" }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.platform, value: platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown" }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.safeLimit, value: platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown" }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.detection, value: platformInfo?.detected ? t.successful : t.failed }),
                     systemInfo && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                         window.SP_REACT.createElement("div", { style: { borderTop: "1px solid #3d4450", margin: "8px 0" } }),
                         window.SP_REACT.createElement(InfoRow, { label: "SteamOS Version", value: systemInfo.steamos_version || "Unknown" }),
@@ -4485,19 +5118,19 @@
                         window.SP_REACT.createElement(InfoRow, { label: "Hostname", value: systemInfo.hostname || "Unknown" }),
                         systemInfo.uptime && (window.SP_REACT.createElement(InfoRow, { label: "Uptime", value: formatUptime(systemInfo.uptime) }))))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Current Configuration")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.currentConfiguration)),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "12px",
                         backgroundColor: "#23262e",
                         borderRadius: "8px",
                     } }, systemInfo?.config ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                    window.SP_REACT.createElement(InfoRow, { label: "Active Cores", value: `[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]` }),
-                    window.SP_REACT.createElement(InfoRow, { label: "LKG Cores", value: `[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]` }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Status", value: systemInfo.config.status || "Unknown" }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Presets Count", value: String(systemInfo.config.presets_count || 0) }))) : (window.SP_REACT.createElement("div", { style: { color: "#8b929a" } }, "Configuration not available")))),
+                    window.SP_REACT.createElement(InfoRow, { label: t.activeCores, value: `[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.lkgCores, value: `[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.status, value: systemInfo.config.status || "Unknown" }),
+                    window.SP_REACT.createElement(InfoRow, { label: t.presetsCount, value: String(systemInfo.config.presets_count || 0) }))) : (window.SP_REACT.createElement("div", { style: { color: "#8b929a" } }, "Configuration not available")))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Recent Logs")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, t.recentLogs)),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "8px",
@@ -4508,14 +5141,14 @@
                         fontFamily: "monospace",
                         fontSize: "10px",
                         color: "#8b929a",
-                    } }, systemInfo?.logs ? (systemInfo.logs.split("\n").slice(-20).map((line, index) => (window.SP_REACT.createElement("div", { key: index, style: { marginBottom: "2px" } }, line)))) : (window.SP_REACT.createElement("div", null, "No logs available")))),
+                    } }, systemInfo?.logs ? (systemInfo.logs.split("\n").slice(-20).map((line, index) => (window.SP_REACT.createElement("div", { key: index, style: { marginBottom: "2px" } }, line)))) : (window.SP_REACT.createElement("div", null, t.noLogs)))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportDiagnostics, disabled: isExporting },
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "16px" } }, isExporting ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                         window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                        window.SP_REACT.createElement("span", null, "Exporting..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                        window.SP_REACT.createElement("span", null, t.exporting))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                         window.SP_REACT.createElement(FaDownload, null),
-                        window.SP_REACT.createElement("span", null, "Export Diagnostics")))))),
+                        window.SP_REACT.createElement("span", null, t.exportDiagnostics)))))),
             exportResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         padding: "12px",
@@ -4525,13 +5158,14 @@
                     } }, exportResult.success ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                     window.SP_REACT.createElement("div", { style: { fontWeight: "bold", marginBottom: "4px" } },
                         window.SP_REACT.createElement(FaCheck, { style: { marginRight: "8px" } }),
-                        "Export Successful"),
+                        t.exportSuccessful),
                     window.SP_REACT.createElement("div", { style: { fontSize: "12px", wordBreak: "break-all" } },
-                        "Saved to: ",
+                        t.savedTo,
+                        " ",
                         exportResult.path))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                     window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
                         window.SP_REACT.createElement(FaTimes, { style: { marginRight: "8px" } }),
-                        "Export Failed"),
+                        t.exportFailed),
                     window.SP_REACT.createElement("div", { style: { fontSize: "12px" } }, exportResult.error)))))),
             window.SP_REACT.createElement("style", null, `
           .spin {
@@ -4645,89 +5279,6 @@
             style.textContent = expertModeStyles;
             document.head.appendChild(style);
         }
-    }
-
-    /**
-     * Translations for DeckTune UI
-     */
-    const translations = {
-        en: {
-            // Settings Tab
-            settingsTitle: "Settings",
-            languageSection: "Language",
-            interfaceLanguage: "Interface Language",
-            selectLanguage: "Select Language",
-            localizationComingSoon: "Localization coming soon! Currently English only.",
-            expertModeSection: "Expert Undervolter Mode",
-            enableExpertMode: "Enable Expert Mode",
-            expertModeDescription: "Unlock extended range (-100mV) for all control modes",
-            expertModeActiveGlobally: "Expert Mode Active Globally",
-            expertModeWarningTitle: "Enable Expert Mode",
-            expertModeWarningText: "⚠️ WARNING: Expert mode removes safety limits globally.",
-            expertModeWarningAffects: "Affects: Manual, Per-Core, and Dynamic modes (-100mV range).",
-            expertModeWarningRisk: "Use at your own risk!",
-            iUnderstand: "I Understand",
-            cancel: "Cancel",
-            aboutSettingsSection: "About Settings",
-            aboutExpertMode: "Expert Mode: Removes safety limits (-100mV). Applies globally to all control modes (Single, Per-Core, Dynamic).",
-            aboutControlMode: "Control Mode Selection: Choose your preferred voltage control method in the Manual tab.",
-            aboutLanguage: "Language: Interface localization.",
-            // Manual Tab
-            manualTab: "Manual",
-            simpleMode: "Simple Mode",
-            perCoreMode: "Per-Core Mode",
-            expertMode: "Expert Mode",
-            expertModeActive: "Expert mode active",
-            expertModeRange: "Range: -100mV",
-            allCores: "All Cores",
-            core: "Core",
-            apply: "Apply",
-            disable: "Disable",
-            reset: "Reset",
-            // Common
-            english: "English",
-            russian: "Русский",
-        },
-        ru: {
-            // Settings Tab
-            settingsTitle: "Настройки",
-            languageSection: "Язык",
-            interfaceLanguage: "Язык интерфейса",
-            selectLanguage: "Выбрать язык",
-            localizationComingSoon: "Локализация скоро! Пока доступен только английский.",
-            expertModeSection: "Экспертный режим андервольта",
-            enableExpertMode: "Включить экспертный режим",
-            expertModeDescription: "Разблокировать расширенный диапазон (-100мВ) для всех режимов",
-            expertModeActiveGlobally: "Экспертный режим активен глобально",
-            expertModeWarningTitle: "Включить экспертный режим",
-            expertModeWarningText: "⚠️ ВНИМАНИЕ: Экспертный режим снимает ограничения безопасности глобально.",
-            expertModeWarningAffects: "Влияет на: Ручной, По-ядерный и Динамический режимы (диапазон -100мВ).",
-            expertModeWarningRisk: "Используйте на свой риск!",
-            iUnderstand: "Я понимаю",
-            cancel: "Отмена",
-            aboutSettingsSection: "О настройках",
-            aboutExpertMode: "Экспертный режим: Снимает ограничения безопасности (-100мВ). Применяется глобально ко всем режимам управления (Единый, По-ядерный, Динамический).",
-            aboutControlMode: "Выбор режима управления: Выберите предпочитаемый метод управления напряжением во вкладке Ручной.",
-            aboutLanguage: "Язык: Локализация интерфейса.",
-            // Manual Tab
-            manualTab: "Ручной",
-            simpleMode: "Простой режим",
-            perCoreMode: "По-ядерный режим",
-            expertMode: "Экспертный режим",
-            expertModeActive: "Экспертный режим активен",
-            expertModeRange: "Диапазон: -100мВ",
-            allCores: "Все ядра",
-            core: "Ядро",
-            apply: "Применить",
-            disable: "Отключить",
-            reset: "Сброс",
-            // Common
-            english: "English",
-            russian: "Русский",
-        },
-    };
-    function getTranslation(lang) {
-        return translations[lang] || translations.en;
     }
 
     /**

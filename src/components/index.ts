@@ -13,6 +13,8 @@ export type { ExpertTab } from "./ExpertMode";
 
 export { LoadGraph } from "./LoadGraph";
 
+export { DynamicModeVisualization } from "./DynamicModeVisualization";
+
 export { FanCurveEditor } from "./FanCurveEditor";
 export type { FanConfig, FanCurvePoint, FanStatus } from "./FanCurveEditor";
 

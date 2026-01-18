@@ -2,6 +2,81 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.5.0] - 2026-01-18
+
+### Added
+- **Complete Localization System** 🌍
+  - Full English and Russian language support
+  - 120+ translation keys covering all UI elements
+  - Type-safe translation system with TypeScript
+  - Instant language switching without reload
+  - Language preference persists across sessions
+- **Enhanced Fan Tab Visualization** 🌡️
+  - Interactive SVG fan curve editor with drag-and-drop
+  - Temperature zones (Safe/Warm/Hot/Critical) with color coding
+  - Real-time current temperature indicator with animation
+  - 7 ready-to-use presets: Stock, Silent, Balanced, Cool, Aggressive, Gaming, Eco
+  - Improved status card with metrics grid (Temperature, Fan Speed, RPM, Mode)
+  - Fan icon rotation animation based on speed
+  - Safety override warnings
+- **Dynamic Mode Visualization** ⚡
+  - Load → Undervolt curve visualization for each strategy
+  - Real-time pulsating current operating point
+  - Per-core load and voltage display in compact 4x1 grid
+  - Strategy-specific colors and descriptions
+  - Optimized for QAM 310px width
+- **Gamepad Navigation Improvements** 🎮
+  - Full gamepad support audit completed
+  - All interactive elements properly wrapped in Focusable
+  - Tab navigation works across all Expert Mode tabs
+  - Preset selection with gamepad
+  - Fan curve preset selection with gamepad
+
+### Changed
+- **All Expert Mode Tabs Localized**
+  - Manual Tab: All controls, modes, and labels
+  - Presets Tab: Game profiles and global presets
+  - Tests Tab: Test selection, history, and install button
+  - Fan Tab: All controls, presets, and status display
+  - Diagnostics Tab: System info, logs, and export
+- **Translation Keys Structure**
+  - Organized by component/feature
+  - Consistent naming convention
+  - Easy to extend for new languages
+- **Fan Curve Presets**
+  - Dynamic preset system with translated descriptions
+  - Preset descriptions update on language change
+  - All preset names and descriptions localized
+
+### Improved
+- **User Experience**
+  - No more confusing bilingual "English / Русский" texts
+  - Professional, clean appearance
+  - Consistent terminology across all components
+  - Better visual feedback for all interactions
+- **Code Quality**
+  - Centralized translation management
+  - No string duplication
+  - Type-safe translations prevent typos
+  - Easy to maintain and extend
+- **Documentation**
+  - Added `docs/LOCALIZATION_SYSTEM.md` - Complete system documentation
+  - Added `docs/LOCALIZATION_PROGRESS.md` - Translation coverage tracking
+  - Added `docs/FAN_TAB_IMPROVEMENTS.md` - Fan tab feature documentation
+  - Added `docs/GAMEPAD_NAVIGATION_AUDIT.md` - Gamepad support audit
+
+### Technical
+- **Translation Infrastructure**
+  - `src/i18n/translations.ts` - 120+ translation keys
+  - `src/i18n/useTranslation.ts` - React hook for translations
+  - Language stored in localStorage and backend settings
+  - Automatic component re-render on language change
+- **Component Updates**
+  - All Expert Mode components use `useTranslation` hook
+  - Dynamic content (presets, modes) properly localized
+  - Error messages and loading states translated
+  - Status indicators and labels translated
+
 ## [3.1.15] - 2026-01-18
 
 ### Added

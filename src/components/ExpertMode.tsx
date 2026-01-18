@@ -54,8 +54,10 @@ import {
 import { useDeckTune, usePlatformInfo, useTests, useBinaries, useProfiles } from "../context";
 import { Preset, TestHistoryEntry, TestResult, GameProfile } from "../api/types";
 import { LoadGraph } from "./LoadGraph";
+import { DynamicModeVisualization } from "./DynamicModeVisualization";
 import { PresetsTabNew } from "./PresetsTabNew";
 import { FanTab } from "./FanTab";
+import { useTranslation, Translations } from "../i18n/translations";
 
 /**
  * Install Binaries Button component for ExpertMode.
@@ -67,6 +69,7 @@ interface InstallBinariesButtonExpertProps {
 
 const InstallBinariesButtonExpert: FC<InstallBinariesButtonExpertProps> = ({ onInstalled }) => {
   const { api } = useDeckTune();
+  const { t } = useTranslation();
   const [isInstalling, setIsInstalling] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
 
@@ -114,7 +117,7 @@ const InstallBinariesButtonExpert: FC<InstallBinariesButtonExpertProps> = ({ onI
           opacity: isInstalling ? 0.7 : 1
         }}>
           {isInstalling ? <FaSpinner className="spin" /> : <FaDownload />}
-          <span>{isInstalling ? "Установка... / Installing..." : "Установить / Install"}</span>
+          <span>{isInstalling ? t.installing : t.install}</span>
         </div>
       </Focusable>
 
@@ -131,12 +134,12 @@ const InstallBinariesButtonExpert: FC<InstallBinariesButtonExpertProps> = ({ onI
           {result.success ? (
             <>
               <FaCheck style={{ marginRight: "4px" }} />
-              {result.message || "Установлено! / Installed!"}
+              {result.message || t.exportSuccessful}
             </>
           ) : (
             <>
               <FaTimes style={{ marginRight: "4px" }} />
-              {result.error || "Ошибка установки / Installation failed"}
+              {result.error || t.exportFailed}
             </>
           )}
         </div>
@@ -207,16 +210,16 @@ export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics";
 
 interface TabConfig {
   id: ExpertTab;
-  label: string;
+  labelKey: keyof Pick<Translations, 'manualTab' | 'presetsTab' | 'testsTab' | 'fanTab' | 'diagnosticsTab'>;
   icon: FC;
 }
 
 const TABS: TabConfig[] = [
-  { id: "manual", label: "Manual", icon: FaSlidersH },
-  { id: "presets", label: "Presets", icon: FaList },
-  { id: "tests", label: "Tests", icon: FaVial },
-  { id: "fan", label: "Fan", icon: FaFan },
-  { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
+  { id: "manual", labelKey: "manualTab", icon: FaSlidersH },
+  { id: "presets", labelKey: "presetsTab", icon: FaList },
+  { id: "tests", labelKey: "testsTab", icon: FaVial },
+  { id: "fan", labelKey: "fanTab", icon: FaFan },
+  { id: "diagnostics", labelKey: "diagnosticsTab", icon: FaInfoCircle },
 ];
 
 /**
@@ -236,6 +239,7 @@ interface ExpertModeProps {
  */
 const PanicDisableButton: FC = () => {
   const { api } = useDeckTune();
+  const { t } = useTranslation();
   const [isPanicking, setIsPanicking] = useState(false);
 
   const handlePanicDisable = async () => {
@@ -270,12 +274,12 @@ const PanicDisableButton: FC = () => {
           {isPanicking ? (
             <>
               <FaSpinner className="spin" />
-              <span>Disabling...</span>
+              <span>{t.disabling}</span>
             </>
           ) : (
             <>
               <FaExclamationTriangle />
-              <span>PANIC DISABLE</span>
+              <span>{t.panicDisable}</span>
             </>
           )}
         </div>
@@ -333,6 +337,8 @@ interface TabNavigationProps {
 }
 
 const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
+  
   return (
     <Focusable
       style={{
@@ -371,7 +377,7 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
           >
             <Icon />
             <span style={{ fontSize: "8px", fontWeight: isActive ? "600" : "400" }}>
-              {tab.label}
+              {t[tab.labelKey]}
             </span>
           </Focusable>
         );
@@ -387,6 +393,7 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
  */
 const DynamicSettingsInline: FC = () => {
   const { state, api } = useDeckTune();
+  const { t } = useTranslation();
   const [strategy, setStrategy] = useState<string>("balanced");
   const [simpleMode, setSimpleMode] = useState<boolean>(false);
   const [simpleValue, setSimpleValue] = useState<number>(-25);
@@ -496,7 +503,7 @@ const DynamicSettingsInline: FC = () => {
                 fontWeight: "bold",
                 color: isDynamicRunning ? "#a5d6a7" : "#1a9fff"
               }}>
-                Динамический режим / Dynamic Mode
+                {t.dynamicModeTitle}
               </span>
             </div>
             <div style={{
@@ -507,7 +514,7 @@ const DynamicSettingsInline: FC = () => {
               fontWeight: "bold",
               color: "#fff"
             }}>
-              {isDynamicRunning ? "🟢 АКТИВЕН" : "⚫ ВЫКЛ"}
+              {isDynamicRunning ? `🟢 ${t.active}` : `⚫ ${t.off}`}
             </div>
           </div>
 
@@ -519,8 +526,8 @@ const DynamicSettingsInline: FC = () => {
             lineHeight: "1.4"
           }}>
             {isDynamicRunning 
-              ? "Автоматическая подстройка напряжения на основе нагрузки CPU в реальном времени"
-              : "Включите для автоматической адаптации андервольта под нагрузку процессора"
+              ? t.dynamicModeDescriptionActive
+              : t.dynamicModeDescription
             }
           </div>
 
@@ -546,7 +553,7 @@ const DynamicSettingsInline: FC = () => {
                   opacity: isStarting ? 0.6 : 1
                 }}>
                   {isStarting ? <FaSpinner className="spin" size={11} /> : <FaPlay size={11} />}
-                  <span>Запустить / Start</span>
+                  <span>{t.start}</span>
                 </div>
               </Focusable>
             ) : (
@@ -569,7 +576,7 @@ const DynamicSettingsInline: FC = () => {
                   opacity: isStopping ? 0.6 : 1
                 }}>
                   {isStopping ? <FaSpinner className="spin" size={11} /> : <FaBan size={11} />}
-                  <span>Остановить / Stop</span>
+                  <span>{t.stop}</span>
                 </div>
               </Focusable>
             )}
@@ -592,21 +599,23 @@ const DynamicSettingsInline: FC = () => {
                 fontWeight: "bold"
               }}>
                 <FaCog size={11} />
-                <span>Настройки / Settings</span>
+                <span>{t.settings}</span>
               </div>
             </Focusable>
           </Focusable>
         </div>
       </PanelSectionRow>
 
-      {/* Real-time Graph (only when running) */}
+      {/* Real-time Visualization (only when running) */}
       {isDynamicRunning && (
         <PanelSectionRow>
-          <LoadGraph
+          <DynamicModeVisualization
+            strategy={strategy}
             load={[0, 0, 0, 0]} // TODO: Get real load data from backend
             values={state.cores}
             isActive={true}
-            activeProfile={undefined} // TODO: Get active profile name
+            simpleMode={simpleMode}
+            simpleValue={simpleValue}
           />
         </PanelSectionRow>
       )}
@@ -624,13 +633,13 @@ const DynamicSettingsInline: FC = () => {
             {/* Strategy Selection */}
             <div style={{ marginBottom: "12px" }}>
               <div style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
-                Стратегия / Strategy
+                {t.strategy}
               </div>
               <Focusable style={{ display: "flex", gap: "4px" }} flow-children="horizontal">
                 {[
-                  { id: "conservative", label: "Conservative", desc: "Безопасно" },
-                  { id: "balanced", label: "Balanced", desc: "По умолч." },
-                  { id: "aggressive", label: "Aggressive", desc: "Макс." }
+                  { id: "conservative", label: t.conservative },
+                  { id: "balanced", label: t.balanced },
+                  { id: "aggressive", label: t.aggressive }
                 ].map((s) => (
                   <Focusable
                     key={s.id}
@@ -649,7 +658,6 @@ const DynamicSettingsInline: FC = () => {
                       transition: "all 0.2s ease"
                     }}>
                       <div>{strategy === s.id ? "✓ " : ""}{s.label}</div>
-                      <div style={{ fontSize: "7px", opacity: 0.7, marginTop: "2px" }}>{s.desc}</div>
                     </div>
                   </Focusable>
                 ))}
@@ -659,8 +667,8 @@ const DynamicSettingsInline: FC = () => {
             {/* Simple Mode Toggle */}
             <div style={{ marginBottom: "12px" }}>
               <ToggleField
-                label="Простой режим / Simple Mode"
-                description="Одно значение для всех ядер"
+                label={t.simpleModeDynamic}
+                description={t.simpleModeDescription}
                 checked={simpleMode}
                 onChange={setSimpleMode}
                 bottomSeparator="none"
@@ -671,7 +679,7 @@ const DynamicSettingsInline: FC = () => {
             {simpleMode && (
               <div style={{ marginBottom: "12px" }}>
                 <SliderField
-                  label="Значение андервольта / Undervolt Value"
+                  label={t.undervoltValue}
                   value={simpleValue}
                   min={minLimit}
                   max={0}
@@ -682,7 +690,7 @@ const DynamicSettingsInline: FC = () => {
                   bottomSeparator="none"
                 />
                 <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
-                  Применяется ко всем ядрам при низкой нагрузке
+                  {t.simpleModeDescription}
                 </div>
               </div>
             )}
@@ -690,7 +698,7 @@ const DynamicSettingsInline: FC = () => {
             {/* Sample Interval */}
             <div style={{ marginBottom: "12px" }}>
               <SliderField
-                label="Интервал опроса / Sample Interval"
+                label={t.sampleInterval}
                 value={sampleInterval}
                 min={50}
                 max={500}
@@ -701,14 +709,14 @@ const DynamicSettingsInline: FC = () => {
                 bottomSeparator="none"
               />
               <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
-                Как часто проверять нагрузку CPU
+                {t.sampleIntervalDescription}
               </div>
             </div>
 
             {/* Hysteresis */}
             <div style={{ marginBottom: "12px" }}>
               <SliderField
-                label="Гистерезис / Hysteresis"
+                label={t.hysteresis}
                 value={hysteresis}
                 min={1}
                 max={20}
@@ -719,7 +727,7 @@ const DynamicSettingsInline: FC = () => {
                 bottomSeparator="none"
               />
               <div style={{ fontSize: "8px", color: "#8b929a", marginTop: "4px" }}>
-                Предотвращает частые переключения значений
+                {t.hysteresisDescription}
               </div>
             </div>
 
@@ -744,7 +752,7 @@ const DynamicSettingsInline: FC = () => {
                 transition: "all 0.2s ease"
               }}>
                 {isSaving ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
-                <span>{isSaving ? "Сохранение..." : "Сохранить / Save"}</span>
+                <span>{isSaving ? t.saving : t.save}</span>
               </div>
             </Focusable>
 
@@ -759,11 +767,10 @@ const DynamicSettingsInline: FC = () => {
               lineHeight: "1.5",
               border: "1px solid rgba(26, 159, 255, 0.2)"
             }}>
-              <div style={{ fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" }}>ℹ️ Как работает:</div>
-              • Мониторинг нагрузки CPU каждые {sampleInterval}ms<br/>
-              • Адаптация напряжения по стратегии {strategy}<br/>
-              • Гистерезис {hysteresis}% для стабильности<br/>
-              • Перезапустите режим для применения изменений
+              <div style={{ fontWeight: "bold", color: "#1a9fff", marginBottom: "4px" }}>ℹ️ {t.howItWorks}</div>
+              • {t.sampleIntervalDescription}: {sampleInterval}ms<br/>
+              • {t.strategy}: {strategy}<br/>
+              • {t.hysteresis}: {hysteresis}%<br/>
             </div>
           </div>
         </PanelSectionRow>
@@ -793,6 +800,7 @@ const DynamicSettingsInline: FC = () => {
 const ManualTab: FC = () => {
   const { state, api } = useDeckTune();
   const { info: platformInfo } = usePlatformInfo();
+  const { t } = useTranslation();
   const [coreValues, setCoreValues] = useState<number[]>([...state.cores]);
   const [controlMode, setControlMode] = useState<"single" | "percore" | "dynamic">("single");
   const [simpleValue, setSimpleValue] = useState<number>(-25);
@@ -900,7 +908,7 @@ const ManualTab: FC = () => {
       {/* Control Mode Selection */}
       <PanelSectionRow>
         <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "6px", color: "#e0e0e0" }}>
-          Режим управления / Control Mode
+          {t.controlMode}
         </div>
       </PanelSectionRow>
       <PanelSectionRow>
@@ -922,8 +930,7 @@ const ManualTab: FC = () => {
               border: controlMode === "single" ? "2px solid #1a9fff" : "2px solid transparent"
             }}>
               <div>{controlMode === "single" ? "✓" : ""}</div>
-              <div style={{ fontSize: "9px", marginTop: "2px" }}>Единый</div>
-              <div style={{ fontSize: "8px", opacity: 0.7 }}>Single</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>{t.single}</div>
             </div>
           </Focusable>
 
@@ -944,8 +951,7 @@ const ManualTab: FC = () => {
               border: controlMode === "percore" ? "2px solid #1a9fff" : "2px solid transparent"
             }}>
               <div>{controlMode === "percore" ? "✓" : ""}</div>
-              <div style={{ fontSize: "9px", marginTop: "2px" }}>По-ядерный</div>
-              <div style={{ fontSize: "8px", opacity: 0.7 }}>Per-Core</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>{t.perCore}</div>
             </div>
           </Focusable>
 
@@ -967,8 +973,7 @@ const ManualTab: FC = () => {
               border: controlMode === "dynamic" ? "2px solid #4caf50" : "2px solid transparent"
             }}>
               <div>{controlMode === "dynamic" ? "✓" : ""}</div>
-              <div style={{ fontSize: "9px", marginTop: "2px" }}>Динамический</div>
-              <div style={{ fontSize: "8px", opacity: 0.7 }}>Dynamic</div>
+              <div style={{ fontSize: "9px", marginTop: "2px" }}>{t.dynamic}</div>
             </div>
           </Focusable>
         </Focusable>
@@ -991,7 +996,7 @@ const ManualTab: FC = () => {
               marginBottom: "8px"
             }}>
               <div style={{ fontSize: "9px", color: "#8b929a", marginBottom: "4px" }}>
-                Текущие значения / Current Values
+                {t.currentValues}
               </div>
               <div style={{
                 display: "grid",
@@ -1020,7 +1025,7 @@ const ManualTab: FC = () => {
             /* Single Mode: One slider for all cores */
             <PanelSectionRow>
               <SliderField
-                label="Все ядра / All Cores"
+                label={t.allCores}
                 value={simpleValue}
                 min={currentMinLimit}
                 max={0}
@@ -1036,7 +1041,7 @@ const ManualTab: FC = () => {
             [0, 1, 2, 3].map((core) => (
               <PanelSectionRow key={core}>
                 <SliderField
-                  label={`Ядро / Core ${core}`}
+                  label={`${t.core} ${core}`}
                   value={coreValues[core]}
                   min={currentMinLimit}
                   max={0}
@@ -1073,7 +1078,7 @@ const ManualTab: FC = () => {
                   transition: "all 0.2s ease"
                 }}>
                   {isApplying ? <FaSpinner className="spin" size={11} /> : <FaCheck size={11} />}
-                  <span>Применить<br/>Apply</span>
+                  <span>{t.apply}</span>
                 </div>
               </Focusable>
 
@@ -1096,7 +1101,7 @@ const ManualTab: FC = () => {
                   transition: "all 0.2s ease"
                 }}>
                   <FaBan size={11} />
-                  <span>Выкл<br/>Disable</span>
+                  <span>{t.disable}</span>
                 </div>
               </Focusable>
 
@@ -1120,7 +1125,7 @@ const ManualTab: FC = () => {
                   transition: "all 0.2s ease"
                 }}>
                   <FaTimes size={11} />
-                  <span>Сброс<br/>Reset</span>
+                  <span>{t.reset}</span>
                 </div>
               </Focusable>
             </Focusable>
@@ -1173,6 +1178,7 @@ const TEST_OPTIONS = [
  * - Warning banner if binaries missing
  */
 const TestsTab: FC = () => {
+  const { t } = useTranslation();
   const { history, currentTest, isRunning, runTest } = useTests();
   const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
   const [selectedTest, setSelectedTest] = useState<string>("cpu_quick");
@@ -1240,14 +1246,14 @@ const TestsTab: FC = () => {
             <FaExclamationCircle style={{ color: "#1a9fff", fontSize: "16px", flexShrink: 0, marginTop: "1px" }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: "bold", color: "#64b5f6", marginBottom: "4px", fontSize: "11px" }}>
-                ℹ️ Опциональные пакеты / Optional Packages
+                ℹ️ {t.optionalPackages}
               </div>
               <div style={{ fontSize: "10px", color: "#bbdefb", marginBottom: "4px" }}>
-                Не установлены: <strong>{missingBinaries.join(", ")}</strong>
+                {t.notInstalled} <strong>{missingBinaries.join(", ")}</strong>
               </div>
               <div style={{ fontSize: "9px", color: "#90caf9", marginBottom: "6px" }}>
-                Эти пакеты нужны только для стресс-тестов.<br/>
-                Остальные функции плагина работают без них.
+                {t.packagesNeeded}<br/>
+                {t.otherFeaturesWork}
               </div>
               
               {/* Install Button */}
@@ -1260,14 +1266,14 @@ const TestsTab: FC = () => {
       {/* Test selection */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          Run Stress Test
+          {t.runStressTest}
         </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
         <DropdownItem
-          label="Select Test"
-          menuLabel="Select Test"
+          label={t.selectTest}
+          menuLabel={t.selectTest}
           rgOptions={TEST_OPTIONS.map((t, idx) => ({
             data: idx,
             label: t.label,
@@ -1291,12 +1297,12 @@ const TestsTab: FC = () => {
             {isRunning ? (
               <>
                 <FaSpinner className="spin" />
-                <span>Running {getTestLabel(currentTest || selectedTest)}...</span>
+                <span>{t.running} {getTestLabel(currentTest || selectedTest)}...</span>
               </>
             ) : (
               <>
                 <FaPlay />
-                <span>Run Test</span>
+                <span>{t.runTest}</span>
               </>
             )}
           </div>
@@ -1316,10 +1322,10 @@ const TestsTab: FC = () => {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
               <FaSpinner className="spin" style={{ color: "#1a9fff" }} />
-              <span>Test in progress...</span>
+              <span>{t.testInProgress}</span>
             </div>
             <div style={{ fontSize: "12px", color: "#8b929a" }}>
-              Running: {getTestLabel(currentTest || selectedTest)}
+              {t.running}: {getTestLabel(currentTest || selectedTest)}
             </div>
           </div>
         </PanelSectionRow>
@@ -1328,14 +1334,14 @@ const TestsTab: FC = () => {
       {/* Test history */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
-          Test History (Last 10)
+          {t.testHistory}
         </div>
       </PanelSectionRow>
 
       {history.length === 0 ? (
         <PanelSectionRow>
           <div style={{ color: "#8b929a", textAlign: "center", padding: "16px" }}>
-            No tests run yet.
+            {t.noTests}
           </div>
         </PanelSectionRow>
       ) : (
@@ -1407,6 +1413,7 @@ const TestsTab: FC = () => {
  * - Export Diagnostics button
  */
 const DiagnosticsTab: FC = () => {
+  const { t } = useTranslation();
   const { api } = useDeckTune();
   const { info: platformInfo } = usePlatformInfo();
   const [systemInfo, setSystemInfo] = useState<any>(null);
@@ -1452,7 +1459,7 @@ const DiagnosticsTab: FC = () => {
       {/* System Info Section */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          System Information
+          {t.systemInformation}
         </div>
       </PanelSectionRow>
 
@@ -1460,7 +1467,7 @@ const DiagnosticsTab: FC = () => {
         <PanelSectionRow>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#8b929a" }}>
             <FaSpinner className="spin" />
-            <span>Loading system info...</span>
+            <span>{t.loading}</span>
           </div>
         </PanelSectionRow>
       ) : (
@@ -1473,9 +1480,9 @@ const DiagnosticsTab: FC = () => {
             }}
           >
             {/* Platform info */}
-            <InfoRow label="Platform" value={platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown"} />
-            <InfoRow label="Safe Limit" value={platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown"} />
-            <InfoRow label="Detection" value={platformInfo?.detected ? "Successful" : "Failed"} />
+            <InfoRow label={t.platform} value={platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown"} />
+            <InfoRow label={t.safeLimit} value={platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown"} />
+            <InfoRow label={t.detection} value={platformInfo?.detected ? t.successful : t.failed} />
             
             {/* System info from backend */}
             {systemInfo && (
@@ -1496,7 +1503,7 @@ const DiagnosticsTab: FC = () => {
       {/* Current Config Section */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
-          Current Configuration
+          {t.currentConfiguration}
         </div>
       </PanelSectionRow>
 
@@ -1510,10 +1517,10 @@ const DiagnosticsTab: FC = () => {
         >
           {systemInfo?.config ? (
             <>
-              <InfoRow label="Active Cores" value={`[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]`} />
-              <InfoRow label="LKG Cores" value={`[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]`} />
-              <InfoRow label="Status" value={systemInfo.config.status || "Unknown"} />
-              <InfoRow label="Presets Count" value={String(systemInfo.config.presets_count || 0)} />
+              <InfoRow label={t.activeCores} value={`[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]`} />
+              <InfoRow label={t.lkgCores} value={`[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]`} />
+              <InfoRow label={t.status} value={systemInfo.config.status || "Unknown"} />
+              <InfoRow label={t.presetsCount} value={String(systemInfo.config.presets_count || 0)} />
             </>
           ) : (
             <div style={{ color: "#8b929a" }}>Configuration not available</div>
@@ -1524,7 +1531,7 @@ const DiagnosticsTab: FC = () => {
       {/* Log Viewer Section */}
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" }}>
-          Recent Logs
+          {t.recentLogs}
         </div>
       </PanelSectionRow>
 
@@ -1548,7 +1555,7 @@ const DiagnosticsTab: FC = () => {
               </div>
             ))
           ) : (
-            <div>No logs available</div>
+            <div>{t.noLogs}</div>
           )}
         </div>
       </PanelSectionRow>
@@ -1564,12 +1571,12 @@ const DiagnosticsTab: FC = () => {
             {isExporting ? (
               <>
                 <FaSpinner className="spin" />
-                <span>Exporting...</span>
+                <span>{t.exporting}</span>
               </>
             ) : (
               <>
                 <FaDownload />
-                <span>Export Diagnostics</span>
+                <span>{t.exportDiagnostics}</span>
               </>
             )}
           </div>
@@ -1591,17 +1598,17 @@ const DiagnosticsTab: FC = () => {
               <>
                 <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
                   <FaCheck style={{ marginRight: "8px" }} />
-                  Export Successful
+                  {t.exportSuccessful}
                 </div>
                 <div style={{ fontSize: "12px", wordBreak: "break-all" }}>
-                  Saved to: {exportResult.path}
+                  {t.savedTo} {exportResult.path}
                 </div>
               </>
             ) : (
               <>
                 <div style={{ fontWeight: "bold" }}>
                   <FaTimes style={{ marginRight: "8px" }} />
-                  Export Failed
+                  {t.exportFailed}
                 </div>
                 <div style={{ fontSize: "12px" }}>
                   {exportResult.error}

@@ -12,6 +12,7 @@ import { PanelSectionRow, ButtonItem } from "@decky/ui";
 import { FaSpinner, FaExclamationTriangle } from "react-icons/fa";
 import { useDeckTune } from "../context";
 import { FanCurveEditor, FanConfig, FanStatus } from "./FanCurveEditor";
+import { useTranslation } from "../i18n/translations";
 
 /**
  * FanTab component for Expert Mode.
@@ -21,6 +22,7 @@ import { FanCurveEditor, FanConfig, FanStatus } from "./FanCurveEditor";
  */
 export const FanTab: FC = () => {
   const { api } = useDeckTune();
+  const { t } = useTranslation();
   const [config, setConfig] = useState<FanConfig | null>(null);
   const [status, setStatus] = useState<FanStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,7 +111,7 @@ export const FanTab: FC = () => {
           }}
         >
           <FaSpinner className="spin" />
-          <span>Загрузка конфигурации вентилятора...</span>
+          <span>{t.loadingFanConfig}</span>
         </div>
         <style>
           {`
@@ -150,7 +152,7 @@ export const FanTab: FC = () => {
             layout="below"
             onClick={() => window.location.reload()}
           >
-            Попробовать снова
+            {t.tryAgain}
           </ButtonItem>
         </div>
       </PanelSectionRow>
@@ -168,7 +170,7 @@ export const FanTab: FC = () => {
             color: "#8b929a",
           }}
         >
-          Конфигурация вентилятора недоступна
+          {t.fanConfigUnavailable}
         </div>
       </PanelSectionRow>
     );
