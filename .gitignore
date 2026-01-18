@@ -79,3 +79,7 @@ diagnostics_*.tar.gz
 
 # Release artifacts
 release/
+*.zip
+
+# Deployment temp files
+DeckTune-deploy/
