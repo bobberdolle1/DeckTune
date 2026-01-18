@@ -4806,6 +4806,46 @@
     }
 
     /**
+     * Title view component that shows status badge in plugin list.
+     */
+    const DeckTuneTitleView = () => {
+        const { state } = useDeckTune();
+        const getStatusColor = () => {
+            if (state.status === "enabled" || state.status === "DYNAMIC RUNNING")
+                return "#4caf50";
+            if (state.status === "error")
+                return "#f44336";
+            return "#8b929a";
+        };
+        const getStatusText = () => {
+            if (state.status === "DYNAMIC RUNNING")
+                return "DYN";
+            if (state.status === "enabled")
+                return "ON";
+            if (state.status === "error")
+                return "ERR";
+            return "OFF";
+        };
+        return (window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+            window.SP_REACT.createElement("span", null, "DeckTune"),
+            window.SP_REACT.createElement("div", { style: {
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    padding: "2px 6px",
+                    backgroundColor: getStatusColor(),
+                    borderRadius: "4px",
+                    boxShadow: `0 0 8px ${getStatusColor()}`,
+                    animation: state.status === "enabled" || state.status === "DYNAMIC RUNNING" ? "pulse 2s ease-in-out infinite" : "none"
+                } }, getStatusText()),
+            window.SP_REACT.createElement("style", null, `
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+        `)));
+    };
+    /**
      * DeckTune plugin entry point.
      *
      * Feature: decktune-critical-fixes
@@ -4814,6 +4854,9 @@
     var index = definePlugin(() => {
         return {
             name: "DeckTune",
+            titleView: (window.SP_REACT.createElement(DeckTuneErrorBoundary, null,
+                window.SP_REACT.createElement(DeckTuneProvider, null,
+                    window.SP_REACT.createElement(DeckTuneTitleView, null)))),
             content: (window.SP_REACT.createElement(DeckTuneErrorBoundary, null,
                 window.SP_REACT.createElement(DeckTuneProvider, null,
                     window.SP_REACT.createElement(DeckTuneApp, null)))),
