@@ -136,6 +136,64 @@ class Plugin:
                 except Exception as e:
                     decky.logger.warning(f"Could not set permission for {binary_path}: {e}")
 
+    async def _apply_startup_profile(self):
+        """Apply last active profile on startup if Apply on Startup is enabled.
+        
+        Checks the apply_on_startup setting and applies the last_active_profile
+        if both conditions are met. Handles missing profiles gracefully.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5
+        """
+        try:
+            # Check if Apply on Startup is enabled
+            apply_on_startup = self.game_only_settings_manager.get_setting("apply_on_startup", False)
+            
+            if not apply_on_startup:
+                decky.logger.info("Apply on Startup is disabled, skipping startup profile application")
+                return
+            
+            # Get last active profile
+            last_active_profile = self.game_only_settings_manager.get_setting("last_active_profile")
+            
+            if not last_active_profile:
+                decky.logger.info("Apply on Startup is enabled but no last active profile found, skipping")
+                return
+            
+            decky.logger.info(f"Apply on Startup is enabled, attempting to apply profile: {last_active_profile}")
+            
+            # Check if profile exists
+            # Note: last_active_profile could be either an app_id (int) or profile name (str)
+            # We'll try to parse it as an int first, then fall back to string
+            try:
+                app_id = int(last_active_profile)
+                profile = self.profile_manager.get_profile(app_id)
+            except (ValueError, TypeError):
+                # Not an int, might be a profile name - search by name
+                all_profiles = self.profile_manager.get_all_profiles()
+                profile = next((p for p in all_profiles if p.name == last_active_profile), None)
+                app_id = profile.app_id if profile else None
+            
+            if not profile:
+                decky.logger.warning(
+                    f"Apply on Startup: Profile '{last_active_profile}' not found, skipping application"
+                )
+                return
+            
+            # Apply the profile
+            decky.logger.info(f"Applying startup profile: {profile.name} (app_id: {app_id})")
+            success = await self.profile_manager.apply_profile(app_id)
+            
+            if success:
+                decky.logger.info(f"Successfully applied startup profile: {profile.name}")
+            else:
+                decky.logger.error(f"Failed to apply startup profile: {profile.name}")
+                
+        except Exception as e:
+            # Handle errors gracefully - don't crash plugin initialization
+            decky.logger.error(f"Error during startup profile application: {e}", exc_info=True)
+            decky.logger.info("Plugin initialization will continue despite startup profile error")
+
     async def init(self):
         """Initialize plugin and all modules."""
         decky.logger.info("Initializing DeckTune plugin...")
@@ -244,7 +302,8 @@ class Plugin:
             settings_manager=settings,
             ryzenadj=self.ryzenadj,
             dynamic_controller=self.dynamic_controller,
-            event_emitter=self.event_emitter
+            event_emitter=self.event_emitter,
+            core_settings_manager=None  # Will be set after CoreSettingsManager is initialized
         )
         
         # Set profile manager in RPC
@@ -263,7 +322,61 @@ class Plugin:
         await self.app_watcher.start()
         decky.logger.info("AppWatcher started for automatic profile switching")
         
-        # 12. Check for boot recovery (Requirement: Integration)
+        # 12. Initialize Game Only Mode
+        from backend.core.game_only_mode import GameOnlyModeController
+        from backend.core.game_state_monitor import GameStateMonitor
+        from backend.core.settings_manager import SettingsManager as CoreSettingsManager
+        
+        # Create settings manager for Game Only Mode with legacy migration support
+        self.game_only_settings_manager = CoreSettingsManager(legacy_settings_manager=settings)
+        
+        # Set core settings manager in ProfileManager for Apply on Startup tracking
+        self.profile_manager.core_settings = self.game_only_settings_manager
+        
+        # Create game state monitor with callbacks
+        async def on_game_start_callback(app_id: int):
+            """Callback for game start events."""
+            if hasattr(self, 'game_only_mode_controller'):
+                await self.game_only_mode_controller.on_game_start(app_id)
+        
+        async def on_game_exit_callback():
+            """Callback for game exit events."""
+            if hasattr(self, 'game_only_mode_controller'):
+                await self.game_only_mode_controller.on_game_exit()
+        
+        self.game_state_monitor = GameStateMonitor(
+            on_game_start=on_game_start_callback,
+            on_game_exit=on_game_exit_callback,
+            poll_interval=2.0
+        )
+        
+        # Create Game Only Mode controller
+        self.game_only_mode_controller = GameOnlyModeController(
+            game_state_monitor=self.game_state_monitor,
+            ryzenadj=self.ryzenadj,
+            settings_manager=self.game_only_settings_manager,
+            event_emitter=self.event_emitter
+        )
+        
+        # Set in RPC
+        self.rpc.set_game_state_monitor(self.game_state_monitor)
+        self.rpc.set_game_only_mode_controller(self.game_only_mode_controller)
+        self.rpc.set_settings_manager(self.game_only_settings_manager)
+        
+        # Check if Game Only Mode should be enabled on startup
+        game_only_mode_enabled = self.game_only_settings_manager.get_setting("game_only_mode", False)
+        if game_only_mode_enabled:
+            decky.logger.info("Game Only Mode is enabled, starting monitoring")
+            await self.game_only_mode_controller.enable()
+        
+        decky.logger.info("Game Only Mode initialized")
+        
+        # 13. Apply on Startup - Apply last active profile if enabled
+        # Feature: ui-refactor-settings
+        # Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5
+        await self._apply_startup_profile()
+        
+        # 14. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -585,6 +698,34 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             config[key] = settings.getSetting(key)
         decky.logger.info(f"Config fetched: {config}")
         return config
+    
+    # ==================== Game Only Mode ====================
+    # Feature: ui-refactor-settings
+    # Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
+    
+    async def enable_game_only_mode(self):
+        """Enable Game Only Mode.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.1, 5.2, 5.5
+        """
+        return await self.rpc.enable_game_only_mode()
+    
+    async def disable_game_only_mode(self):
+        """Disable Game Only Mode.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.3, 5.5
+        """
+        return await self.rpc.disable_game_only_mode()
+    
+    async def get_game_only_mode_status(self):
+        """Get current Game Only Mode status.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.5
+        """
+        return await self.rpc.get_game_only_mode_status()
 
     # ==================== Dynamic Mode (Gymdeck3) ====================
     # Requirements: 10.1-10.7, 11.3
@@ -997,6 +1138,11 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         Requirements: 4.6
         """
         decky.logger.info("Unloading DeckTune plugin...")
+        
+        # Stop Game Only Mode if enabled
+        if hasattr(self, 'game_only_mode_controller') and self.game_only_mode_controller.is_enabled():
+            await self.game_only_mode_controller.disable()
+            decky.logger.info("Game Only Mode stopped")
         
         # Stop AppWatcher
         if self.app_watcher and self.app_watcher.is_running():

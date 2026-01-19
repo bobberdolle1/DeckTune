@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from ..core.safety import SafetyManager
     from ..core.blackbox import BlackBox
     from ..core.fan_control import FanControlService
+    from ..core.settings_manager import SettingsManager
+    from ..core.game_state_monitor import GameStateMonitor
     from ..platform.detect import PlatformInfo
     from ..tuning.autotune import AutotuneEngine, AutotuneConfig
     from ..tuning.runner import TestRunner
@@ -2978,3 +2980,290 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to reset wizard: {e}")
             return {"success": False, "error": str(e)}
+
+    # ==================== Settings Management ====================
+    # Feature: ui-refactor-settings
+    # Requirements: 3.1, 3.2, 3.3, 10.3, 10.4
+    
+    async def save_setting(self, key: str, value: Any) -> Dict[str, Any]:
+        """Save a single setting to persistent storage.
+        
+        Saves critical plugin settings (Expert Mode, Apply on Startup,
+        Game Only Mode, last active profile) to backend storage.
+        
+        Args:
+            key: Setting key
+            value: Setting value (must be JSON-serializable)
+            
+        Returns:
+            Dictionary with success status
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.1, 10.3
+        """
+        if not hasattr(self, '_settings_manager'):
+            return {"success": False, "error": "Settings manager not initialized"}
+        
+        try:
+            success = self._settings_manager.save_setting(key, value)
+            
+            if success:
+                logger.debug(f"Saved setting: {key}")
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Failed to save setting"}
+                
+        except Exception as e:
+            logger.error(f"Failed to save setting '{key}': {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_setting(self, key: str, default: Any = None) -> Dict[str, Any]:
+        """Retrieve a setting from storage.
+        
+        Args:
+            key: Setting key
+            default: Default value if key doesn't exist
+            
+        Returns:
+            Dictionary with success status and value
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.2, 10.3
+        """
+        if not hasattr(self, '_settings_manager'):
+            return {"success": False, "error": "Settings manager not initialized"}
+        
+        try:
+            value = self._settings_manager.get_setting(key, default)
+            
+            return {
+                "success": True,
+                "value": value
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get setting '{key}': {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def load_all_settings(self) -> Dict[str, Any]:
+        """Load all settings from storage.
+        
+        Returns all persisted settings including Expert Mode,
+        Apply on Startup, Game Only Mode, and last active profile.
+        
+        Returns:
+            Dictionary with success status and all settings
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.2, 10.4
+        """
+        if not hasattr(self, '_settings_manager'):
+            return {"success": False, "error": "Settings manager not initialized"}
+        
+        try:
+            settings = self._settings_manager.load_all_settings()
+            
+            return {
+                "success": True,
+                "settings": settings
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to load all settings: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_settings_manager(self, manager: "SettingsManager") -> None:
+        """Set the settings manager.
+        
+        Args:
+            manager: SettingsManager instance
+        """
+        self._settings_manager = manager
+
+    # ==================== Game State Monitor ====================
+    # Feature: ui-refactor-settings
+    # Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+    
+    async def start_monitoring(self) -> Dict[str, Any]:
+        """Start game state monitoring for Game Only Mode.
+        
+        Starts monitoring Steam game launches and exits.
+        Invokes callbacks when game state changes are detected.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 6.1, 6.4
+        """
+        if not hasattr(self, '_game_state_monitor'):
+            return {"success": False, "error": "Game state monitor not initialized"}
+        
+        try:
+            success = await self._game_state_monitor.start_monitoring()
+            
+            if success:
+                logger.info("Game state monitoring started")
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Failed to start monitoring"}
+                
+        except Exception as e:
+            logger.error(f"Failed to start game state monitoring: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def stop_monitoring(self) -> Dict[str, Any]:
+        """Stop game state monitoring.
+        
+        Stops monitoring Steam game launches and exits.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 6.5
+        """
+        if not hasattr(self, '_game_state_monitor'):
+            return {"success": False, "error": "Game state monitor not initialized"}
+        
+        try:
+            await self._game_state_monitor.stop_monitoring()
+            logger.info("Game state monitoring stopped")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to stop game state monitoring: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def is_game_running(self) -> Dict[str, Any]:
+        """Check if a game is currently running.
+        
+        Returns:
+            Dictionary with success status and game running state
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 6.1
+        """
+        if not hasattr(self, '_game_state_monitor'):
+            return {"success": False, "error": "Game state monitor not initialized"}
+        
+        try:
+            is_running = self._game_state_monitor.is_game_running()
+            app_id = self._game_state_monitor.get_current_app_id()
+            
+            return {
+                "success": True,
+                "is_game_running": is_running,
+                "app_id": app_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to check game running state: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_game_state_monitor(self, monitor: "GameStateMonitor") -> None:
+        """Set the game state monitor.
+        
+        Args:
+            monitor: GameStateMonitor instance
+        """
+        self._game_state_monitor = monitor
+    
+    # ==================== Game Only Mode ====================
+    # Feature: ui-refactor-settings
+    # Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
+    
+    async def enable_game_only_mode(self) -> Dict[str, Any]:
+        """Enable Game Only Mode.
+        
+        Starts game state monitoring and configures callbacks for
+        automatic profile application on game start and reset on game exit.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.1, 5.2, 5.5
+        """
+        if not hasattr(self, '_game_only_mode_controller'):
+            return {"success": False, "error": "Game Only Mode controller not initialized"}
+        
+        try:
+            success = await self._game_only_mode_controller.enable()
+            
+            if success:
+                # Save setting
+                if hasattr(self, '_settings_manager'):
+                    self._settings_manager.save_setting("game_only_mode", True)
+                
+                logger.info("Game Only Mode enabled")
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Failed to enable Game Only Mode"}
+                
+        except Exception as e:
+            logger.error(f"Failed to enable Game Only Mode: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def disable_game_only_mode(self) -> Dict[str, Any]:
+        """Disable Game Only Mode.
+        
+        Stops game state monitoring and resets undervolt to default.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.3, 5.5
+        """
+        if not hasattr(self, '_game_only_mode_controller'):
+            return {"success": False, "error": "Game Only Mode controller not initialized"}
+        
+        try:
+            success = await self._game_only_mode_controller.disable()
+            
+            if success:
+                # Save setting
+                if hasattr(self, '_settings_manager'):
+                    self._settings_manager.save_setting("game_only_mode", False)
+                
+                logger.info("Game Only Mode disabled")
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Failed to disable Game Only Mode"}
+                
+        except Exception as e:
+            logger.error(f"Failed to disable Game Only Mode: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_game_only_mode_status(self) -> Dict[str, Any]:
+        """Get current Game Only Mode status.
+        
+        Returns:
+            Dictionary with success status and Game Only Mode state
+            
+        Feature: ui-refactor-settings
+        Validates: Requirements 5.5
+        """
+        if not hasattr(self, '_game_only_mode_controller'):
+            return {"success": False, "error": "Game Only Mode controller not initialized"}
+        
+        try:
+            status = self._game_only_mode_controller.get_status()
+            
+            return {
+                "success": True,
+                **status
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get Game Only Mode status: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def set_game_only_mode_controller(self, controller) -> None:
+        """Set the Game Only Mode controller.
+        
+        Args:
+            controller: GameOnlyModeController instance
+        """
+        self._game_only_mode_controller = controller

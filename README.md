@@ -1,6 +1,6 @@
 # DeckTune
 
-**Current Stable Version**: v3.1.25 | [Branch Info](BRANCHES.md)
+**Current Stable Version**: v3.1.26 | [Branch Info](BRANCHES.md)
 
 **English** | [Русский](#russian)
 
@@ -16,6 +16,7 @@
 - **Autotune** — automatic discovery of optimal values for your specific chip
 - **Automated Silicon Binning** — discover your chip's maximum stable undervolt automatically
 - **Per-Game Profiles** — automatic profile switching based on running game
+- **Settings Management** — centralized settings with persistent storage and Game Only Mode
 - **Low-Level Fan Control** — custom fan curves with visual editor and safety overrides
 - **Safety System** — watchdog, automatic rollback on freeze, LKG (Last Known Good)
 - **Built-in Stress Tests** — CPU, RAM, Combo for stability verification
@@ -90,6 +91,49 @@ Dynamic Mode automatically adjusts undervolt values based on real-time CPU load,
 #### Panic Disable Button
 
 The red "Panic Disable" button is always available — instantly resets all values to 0.
+
+### Settings Management (NEW in v3.1.26)
+
+DeckTune 3.1.26 introduces a comprehensive settings management system with persistent storage and advanced features.
+
+**Features:**
+- **Header Bar Navigation**: Compact icon-based access to Fan Control and Settings
+- **Settings Menu**: Centralized modal for global plugin configuration
+- **Expert Mode**: Advanced mode with confirmation dialog and safety warnings
+- **Apply on Startup**: Automatically apply your last profile when Steam Deck boots
+- **Game Only Mode**: Apply undervolt only during games, reset to default in Steam menu
+- **Persistent Storage**: All settings survive plugin reloads and system reboots
+
+**Usage (Settings Menu):**
+1. Click the Settings icon (⚙️) in the header bar
+2. Toggle Expert Mode (requires confirmation for safety)
+3. Settings are saved automatically
+
+**Usage (Manual Tab - Startup Behavior):**
+1. Open Expert Mode → Manual tab
+2. Enable "Apply on Startup" to auto-apply last profile on boot
+3. Enable "Game Only Mode" to apply undervolt only during games
+4. Settings persist across reboots
+
+**Game Only Mode:**
+- Monitors Steam game launches and exits
+- Applies your saved undervolt profile when a game starts
+- Resets undervolt to 0 (default) when you exit to Steam menu
+- Transitions happen within 2 seconds
+- Perfect for users who want performance during gaming but stability in menus
+
+**Apply on Startup:**
+- Automatically applies your last active profile during plugin initialization
+- No need to manually apply settings after each reboot
+- Skips application if no previous profile exists
+- Logs all startup application results
+
+**Technical Details:**
+- Backend storage: `~/homebrew/settings/decktune/settings.json`
+- Atomic writes with backup for data safety
+- Game state monitoring via Steam events with polling fallback
+- React Context API for unified settings access across components
+- Graceful error handling with fallback to default values
 
 ### Automated Silicon Binning
 

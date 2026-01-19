@@ -1429,6 +1429,180 @@ const useProfiles = () => {
 };
 
 /**
+ * Settings Context for DeckTune persistent settings management.
+ *
+ * Feature: ui-refactor-settings
+ * Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5
+ *
+ * Provides centralized settings management with backend persistence:
+ * - expertMode: Enable/disable dangerous limits
+ * - applyOnStartup: Auto-apply last profile on boot
+ * - gameOnlyMode: Apply undervolt only during games
+ * - lastActiveProfile: Track last applied profile
+ */
+
+/**
+ * Default settings values.
+ */
+const DEFAULT_SETTINGS = {
+    expertMode: false,
+    applyOnStartup: false,
+    gameOnlyMode: false,
+    lastActiveProfile: null,
+    isLoaded: false,
+};
+// Create context with null default
+const SettingsContext = SP_REACT.createContext(null);
+/**
+ * Provider component for Settings context.
+ *
+ * Loads settings from backend on mount and provides methods
+ * to update settings with immediate persistence.
+ *
+ * Feature: ui-refactor-settings
+ * Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5
+ */
+const SettingsProvider = ({ children }) => {
+    const [settings, setSettings] = SP_REACT.useState(DEFAULT_SETTINGS);
+    /**
+     * Load all settings from backend storage.
+     *
+     * Validates: Requirements 3.2, 10.4
+     */
+    const loadSettings = SP_REACT.useCallback(async () => {
+        try {
+            const response = await call("load_all_settings");
+            if (response.success) {
+                setSettings({
+                    expertMode: response.settings.expert_mode ?? false,
+                    applyOnStartup: response.settings.apply_on_startup ?? false,
+                    gameOnlyMode: response.settings.game_only_mode ?? false,
+                    lastActiveProfile: response.settings.last_active_profile ?? null,
+                    isLoaded: true,
+                });
+                console.log("[SettingsContext] Settings loaded:", response.settings);
+            }
+            else {
+                console.error("[SettingsContext] Failed to load settings");
+                setSettings({ ...DEFAULT_SETTINGS, isLoaded: true });
+            }
+        }
+        catch (error) {
+            console.error("[SettingsContext] Error loading settings:", error);
+            setSettings({ ...DEFAULT_SETTINGS, isLoaded: true });
+        }
+    }, []);
+    /**
+     * Set Expert Mode setting.
+     *
+     * Validates: Requirements 2.3, 2.4, 3.1, 10.3
+     */
+    const setExpertMode = SP_REACT.useCallback(async (value) => {
+        try {
+            const response = await call("save_setting", "expert_mode", value);
+            if (response.success) {
+                setSettings((prev) => ({ ...prev, expertMode: value }));
+                console.log("[SettingsContext] Expert Mode updated:", value);
+            }
+            else {
+                console.error("[SettingsContext] Failed to save Expert Mode");
+            }
+        }
+        catch (error) {
+            console.error("[SettingsContext] Error saving Expert Mode:", error);
+        }
+    }, []);
+    /**
+     * Set Apply on Startup setting.
+     *
+     * Validates: Requirements 4.1, 4.2, 3.1, 10.3
+     */
+    const setApplyOnStartup = SP_REACT.useCallback(async (value) => {
+        try {
+            const response = await call("save_setting", "apply_on_startup", value);
+            if (response.success) {
+                setSettings((prev) => ({ ...prev, applyOnStartup: value }));
+                console.log("[SettingsContext] Apply on Startup updated:", value);
+            }
+            else {
+                console.error("[SettingsContext] Failed to save Apply on Startup");
+            }
+        }
+        catch (error) {
+            console.error("[SettingsContext] Error saving Apply on Startup:", error);
+        }
+    }, []);
+    /**
+     * Set Game Only Mode setting.
+     *
+     * Validates: Requirements 5.1, 5.2, 3.1, 10.3
+     */
+    const setGameOnlyMode = SP_REACT.useCallback(async (value) => {
+        try {
+            const response = await call("save_setting", "game_only_mode", value);
+            if (response.success) {
+                setSettings((prev) => ({ ...prev, gameOnlyMode: value }));
+                console.log("[SettingsContext] Game Only Mode updated:", value);
+            }
+            else {
+                console.error("[SettingsContext] Failed to save Game Only Mode");
+            }
+        }
+        catch (error) {
+            console.error("[SettingsContext] Error saving Game Only Mode:", error);
+        }
+    }, []);
+    /**
+     * Set last active profile.
+     *
+     * Validates: Requirements 4.2, 3.1, 10.3
+     */
+    const setLastActiveProfile = SP_REACT.useCallback(async (profile) => {
+        try {
+            const response = await call("save_setting", "last_active_profile", profile);
+            if (response.success) {
+                setSettings((prev) => ({ ...prev, lastActiveProfile: profile }));
+                console.log("[SettingsContext] Last Active Profile updated:", profile);
+            }
+            else {
+                console.error("[SettingsContext] Failed to save Last Active Profile");
+            }
+        }
+        catch (error) {
+            console.error("[SettingsContext] Error saving Last Active Profile:", error);
+        }
+    }, []);
+    // Load settings on mount
+    SP_REACT.useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
+    const contextValue = {
+        settings,
+        setExpertMode,
+        setApplyOnStartup,
+        setGameOnlyMode,
+        setLastActiveProfile,
+        loadSettings,
+    };
+    return (window.SP_REACT.createElement(SettingsContext.Provider, { value: contextValue }, children));
+};
+/**
+ * Hook to access Settings context.
+ *
+ * @throws Error if used outside of SettingsProvider
+ *
+ * Feature: ui-refactor-settings
+ * Validates: Requirements 10.1, 10.2
+ */
+const useSettings = () => {
+    const context = SP_REACT.useContext(SettingsContext);
+    if (!context) {
+        throw new Error("useSettings must be used within a SettingsProvider");
+    }
+    return context;
+};
+
+/**
  * WizardMode component for DeckTune.
  *
  * Feature: decktune, Frontend UI Components - Wizard Mode
@@ -5088,14 +5262,329 @@ const FanControl = ({ onBack }) => {
 };
 
 /**
+ * HeaderBar component for DeckTune.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
+ *
+ * Provides compact navigation to Fan Control and Settings:
+ * - Fan Control icon button (FaFan)
+ * - Settings icon button (FaCog)
+ * - Compact display with 20px icons
+ * - Gamepad navigation support via FocusableButton
+ */
+/**
+ * HeaderBar component - compact navigation for Fan Control and Settings.
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
+ *
+ * Features:
+ * - Positioned at top of DeckTuneApp
+ * - Two icon buttons: Fan Control (FaFan) and Settings (FaCog)
+ * - Icons sized at 20px for compact display (Requirement 1.5)
+ * - Gamepad navigation support via FocusableButton
+ * - Hover and focus states for accessibility
+ */
+const HeaderBar = ({ onFanControlClick, onSettingsClick, }) => {
+    return (window.SP_REACT.createElement("div", { style: {
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 12px",
+            backgroundColor: "rgba(26, 29, 35, 0.5)",
+            borderRadius: "8px",
+            marginBottom: "12px",
+        }, role: "navigation", "aria-label": "Quick navigation" },
+        window.SP_REACT.createElement(FocusableButton, { onClick: onFanControlClick, style: { padding: 0 }, "aria-label": "Open Fan Control" },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "36px",
+                    height: "36px",
+                    backgroundColor: "rgba(61, 68, 80, 0.5)",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                } },
+                window.SP_REACT.createElement(FaFan, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))),
+        window.SP_REACT.createElement(FocusableButton, { onClick: onSettingsClick, style: { padding: 0 }, "aria-label": "Open Settings" },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "36px",
+                    height: "36px",
+                    backgroundColor: "rgba(61, 68, 80, 0.5)",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                } },
+                window.SP_REACT.createElement(FaCog, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } })))));
+};
+
+/**
+ * SettingsMenu component for DeckTune.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
+ *
+ * Provides centralized settings management interface:
+ * - Expert Mode toggle with confirmation dialog
+ * - Modal overlay with backdrop dismiss
+ * - Gamepad navigation support
+ * - Accessibility compliant (WCAG AA)
+ */
+
+/**
+ * Expert Mode Warning Dialog component.
+ *
+ * Requirements: 2.3, 2.4, 9.3
+ *
+ * Displays warning about risks and requires explicit confirmation
+ * before enabling Expert Mode.
+ */
+const ExpertWarningDialog = ({ isOpen, onConfirm, onCancel, }) => {
+    if (!isOpen)
+        return null;
+    return (window.SP_REACT.createElement("div", { style: {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+        }, role: "dialog", "aria-modal": "true", "aria-labelledby": "expert-warning-title", "aria-describedby": "expert-warning-description" },
+        window.SP_REACT.createElement("div", { style: {
+                backgroundColor: "#1a1d23",
+                borderRadius: "8px",
+                padding: "16px",
+                maxWidth: "400px",
+                border: "2px solid #ff6b6b",
+            } },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "12px",
+                } },
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" }, "aria-hidden": "true" }),
+                window.SP_REACT.createElement("div", { id: "expert-warning-title", style: {
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#ff6b6b",
+                    } }, "Expert Undervolter Mode")),
+            window.SP_REACT.createElement("div", { id: "expert-warning-description", style: {
+                    fontSize: "11px",
+                    lineHeight: "1.5",
+                    marginBottom: "12px",
+                    color: "#e0e0e0",
+                } },
+                window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
+                    window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
+                    " Expert mode removes safety limits."),
+                window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
+                    window.SP_REACT.createElement("strong", null, "Risks:"),
+                    " System instability, crashes, data loss, hardware damage."),
+                window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, "Use at your own risk!")),
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement(FocusableButton, { onClick: onConfirm, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#b71c1c",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                        } },
+                        window.SP_REACT.createElement(FaCheck, { size: 10, "aria-hidden": "true" }),
+                        window.SP_REACT.createElement("span", null, "I Understand"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: onCancel, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#3d4450",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                        } },
+                        window.SP_REACT.createElement(FaTimes, { size: 10, "aria-hidden": "true" }),
+                        window.SP_REACT.createElement("span", null, "Cancel")))))));
+};
+/**
+ * SettingsMenu component - centralized settings management.
+ *
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
+ *
+ * Features:
+ * - Modal overlay with backdrop dismiss
+ * - Expert Mode toggle with confirmation
+ * - Auto-save on changes (Requirement 9.4)
+ * - Gamepad navigation support
+ * - WCAG AA compliant
+ */
+const SettingsMenu = ({ isOpen, onClose }) => {
+    const { settings, setExpertMode } = useSettings();
+    const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+    if (!isOpen)
+        return null;
+    /**
+     * Handle Expert Mode toggle.
+     *
+     * Requirements: 2.3, 2.4
+     * Shows confirmation dialog when enabling, directly disables when turning off.
+     */
+    const handleExpertModeToggle = () => {
+        if (!settings.expertMode) {
+            // Enabling - show warning dialog
+            setShowExpertWarning(true);
+        }
+        else {
+            // Disabling - no confirmation needed
+            setExpertMode(false);
+        }
+    };
+    /**
+     * Handle Expert Mode confirmation.
+     *
+     * Requirements: 2.4, 9.4
+     */
+    const handleExpertModeConfirm = async () => {
+        await setExpertMode(true);
+        setShowExpertWarning(false);
+    };
+    /**
+     * Handle Expert Mode cancellation.
+     *
+     * Requirements: 2.4
+     */
+    const handleExpertModeCancel = () => {
+        setShowExpertWarning(false);
+    };
+    /**
+     * Handle backdrop click to close menu.
+     *
+     * Requirements: 2.1, 9.5
+     */
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement("div", { style: {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.85)",
+                zIndex: 9999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+            }, onClick: handleBackdropClick, role: "dialog", "aria-modal": "true", "aria-labelledby": "settings-menu-title" },
+            window.SP_REACT.createElement("div", { style: {
+                    backgroundColor: "#1a1d23",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    maxWidth: "400px",
+                    width: "100%",
+                    border: "1px solid #3d4450",
+                }, onClick: (e) => e.stopPropagation() },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "16px",
+                    } },
+                    window.SP_REACT.createElement("h2", { id: "settings-menu-title", style: {
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            color: "#fff",
+                            margin: 0,
+                        } }, "Settings"),
+                    window.SP_REACT.createElement(FocusableButton, { onClick: onClose },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "32px",
+                                height: "32px",
+                                backgroundColor: "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                            }, "aria-label": "Close settings" },
+                            window.SP_REACT.createElement(FaTimes, { size: 14, color: "#fff", "aria-hidden": "true" })))),
+                window.SP_REACT.createElement(DFL.PanelSection, null,
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Expert Mode"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "8px",
+                                    lineHeight: "1.4",
+                                } }, "Removes safety limits for advanced undervolting. Use with caution."),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: handleExpertModeToggle, style: { width: "100%" } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "10px 12px",
+                                        backgroundColor: settings.expertMode
+                                            ? "#b71c1c"
+                                            : "#3d4450",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                    }, role: "switch", "aria-checked": settings.expertMode, "aria-label": "Expert Mode toggle" },
+                                    window.SP_REACT.createElement("span", null, settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"),
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.expertMode ? "ON" : "OFF"))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "9px",
+                                color: "#4caf50",
+                                textAlign: "center",
+                                padding: "4px",
+                            } }, "\u2713 Changes saved automatically"))))),
+        window.SP_REACT.createElement(ExpertWarningDialog, { isOpen: showExpertWarning, onConfirm: handleExpertModeConfirm, onCancel: handleExpertModeCancel })));
+};
+
+/**
  * DeckTuneApp - Main application component.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
 /**
  * Main content component with mode switching and first-run detection.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
  */
 const DeckTuneContent = () => {
     // Load saved mode from localStorage, default to wizard
+    // Requirements: 8.1, 8.2 - Fan Control accessed only via header, not in mode list
     const [mode, setMode] = SP_REACT.useState(() => {
         try {
             const saved = localStorage.getItem('decktune_ui_mode');
@@ -5105,13 +5594,20 @@ const DeckTuneContent = () => {
             return "wizard";
         }
     });
+    // Settings Menu visibility state - Requirements: 1.3
+    const [showSettingsMenu, setShowSettingsMenu] = SP_REACT.useState(false);
     const [showSetupWizard, setShowSetupWizard] = SP_REACT.useState(false);
     const [isFirstRun, setIsFirstRun] = SP_REACT.useState(null);
     const { state, api } = useDeckTune();
     // Save mode to localStorage whenever it changes
+    // Requirements: 8.5 - Preserve mode state when navigating to/from Fan Control
     SP_REACT.useEffect(() => {
         try {
             localStorage.setItem('decktune_ui_mode', mode);
+            // Save last non-fan mode for back navigation
+            if (mode !== "fan") {
+                localStorage.setItem('decktune_last_mode', mode);
+            }
         }
         catch (e) {
             console.error("Failed to save UI mode:", e);
@@ -5145,8 +5641,33 @@ const DeckTuneContent = () => {
         setShowSetupWizard(false);
         setIsFirstRun(false);
     };
-    const handleRunSetupWizard = () => {
-        setShowSetupWizard(true);
+    /**
+     * Handle Fan Control navigation from header.
+     * Requirements: 1.2, 8.3, 8.5
+     */
+    const handleFanControlClick = () => {
+        setMode("fan");
+    };
+    /**
+     * Handle Settings navigation from header.
+     * Requirements: 1.3
+     */
+    const handleSettingsClick = () => {
+        setShowSettingsMenu(true);
+    };
+    /**
+     * Handle back navigation from Fan Control.
+     * Requirements: 8.4, 8.5 - Preserve previously selected mode
+     */
+    const handleFanControlBack = () => {
+        // Return to the last non-fan mode (wizard or expert)
+        const lastMode = localStorage.getItem('decktune_last_mode');
+        if (lastMode === "expert" || lastMode === "wizard") {
+            setMode(lastMode);
+        }
+        else {
+            setMode("wizard");
+        }
     };
     if (showSetupWizard) {
         return (window.SP_REACT.createElement(SetupWizard, { onComplete: handleSetupComplete, onCancel: handleSetupCancel, onSkip: handleSetupSkip }));
@@ -5253,17 +5774,23 @@ const DeckTuneContent = () => {
             animation: fadeInUp 0.5s ease-out;
           }
         `),
+        window.SP_REACT.createElement(HeaderBar, { onFanControlClick: handleFanControlClick, onSettingsClick: handleSettingsClick }),
+        window.SP_REACT.createElement(SettingsMenu, { isOpen: showSettingsMenu, onClose: () => setShowSettingsMenu(false) }),
         window.SP_REACT.createElement(DFL.PanelSection, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { className: "fade-in" },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("wizard"), className: `mode-button ${mode === "wizard" ? "active" : ""}`, style: {
+                    window.SP_REACT.createElement("div", { style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
                             marginBottom: "6px",
                             borderRadius: "8px",
                             border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-                        } },
+                            position: "relative",
+                            overflow: "hidden",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            cursor: "pointer",
+                        }, onClick: () => setMode("wizard") },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
@@ -5288,14 +5815,18 @@ const DeckTuneContent = () => {
                                 } }, getStatusText())))))),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.1s" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("expert"), className: `mode-button ${mode === "expert" ? "active" : ""}`, style: {
+                    window.SP_REACT.createElement("div", { style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
                             marginBottom: "6px",
                             borderRadius: "8px",
                             border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-                        } },
+                            position: "relative",
+                            overflow: "hidden",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            cursor: "pointer",
+                        }, onClick: () => setMode("expert") },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
@@ -5318,33 +5849,15 @@ const DeckTuneContent = () => {
                                     borderRadius: "4px",
                                     fontWeight: "bold",
                                     boxShadow: `0 0 10px ${getStatusColor()}`,
-                                } }, getStatusText())))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.2s" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setMode("fan"), className: `mode-button ${mode === "fan" ? "active" : ""}`, style: {
-                            minHeight: "40px",
-                            padding: "8px 12px",
-                            backgroundColor: mode === "fan" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                            borderRadius: "8px",
-                            border: mode === "fan" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                fontSize: "12px",
-                                fontWeight: mode === "fan" ? "bold" : "normal",
-                                color: mode === "fan" ? "#fff" : "#8b929a"
-                            } },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                                window.SP_REACT.createElement(FaFan, { size: 14, style: {
-                                        filter: mode === "fan" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none",
-                                    } }),
-                                window.SP_REACT.createElement("span", null, "Fan Control"))))))),
-        window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.3s" } }, mode === "wizard" ? (window.SP_REACT.createElement(WizardMode, { onRunSetup: handleRunSetupWizard })) : mode === "expert" ? (window.SP_REACT.createElement(ExpertMode, { onRunSetup: handleRunSetupWizard })) : (window.SP_REACT.createElement(FanControl, { onBack: () => setMode("wizard") })))));
+                                } }, getStatusText()))))))),
+        window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.3s" } }, mode === "wizard" ? (window.SP_REACT.createElement(WizardMode, null)) : mode === "expert" ? (window.SP_REACT.createElement(ExpertMode, null)) : (window.SP_REACT.createElement(FanControl, { onBack: handleFanControlBack })))));
 };
 /**
  * Main app component with initialization.
+ * Wrapped with SettingsProvider for persistent settings management.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 10.1, 10.5
  */
 const DeckTuneApp = () => {
     const [initialized, setInitialized] = SP_REACT.useState(false);
@@ -5385,7 +5898,9 @@ const DeckTuneApp = () => {
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "16px", color: "#8b929a" } }, "Loading..."))));
     }
-    return window.SP_REACT.createElement(DeckTuneContent, null);
+    // Wrap content with SettingsProvider - Requirements: 10.1, 10.5
+    return (window.SP_REACT.createElement(SettingsProvider, null,
+        window.SP_REACT.createElement(DeckTuneContent, null)));
 };
 
 /**

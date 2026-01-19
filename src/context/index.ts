@@ -18,3 +18,10 @@ export {
   useTelemetry,
   initialState,
 } from "./DeckTuneContext";
+
+export {
+  SettingsProvider,
+  useSettings,
+  type SettingsState,
+  type SettingsContextValue,
+} from "./SettingsContext";

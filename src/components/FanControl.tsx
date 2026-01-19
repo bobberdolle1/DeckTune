@@ -362,7 +362,7 @@ export const FanControl: FC<FanControlProps> = ({ onBack }) => {
   return (
     <>
       <PanelSection>
-        {/* Back button */}
+        {/* Back button - Requirements: 8.4 */}
         <PanelSectionRow>
           <Focusable>
             <ButtonItem
@@ -377,7 +377,7 @@ export const FanControl: FC<FanControlProps> = ({ onBack }) => {
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <FaArrowLeft size={14} />
-                <span>Back to Admin Panel</span>
+                <span>Back to Main View</span>
               </div>
             </ButtonItem>
           </Focusable>

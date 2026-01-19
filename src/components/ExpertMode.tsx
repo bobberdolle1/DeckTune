@@ -39,6 +39,7 @@ import {
   FaFan,
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo } from "../context";
+import { useSettings } from "../context/SettingsContext";
 import { PresetsTabNew } from "./PresetsTabNew";
 import { TestsTabNew } from "./TestsTabNew";
 import { FanTab } from "./FanTab";
@@ -238,19 +239,21 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 /**
  * Manual tab component with simple/per-core modes.
+ * 
+ * Feature: ui-refactor-settings
+ * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
  */
 const ManualTab: FC = () => {
   const { state, api } = useDeckTune();
   const { info: platformInfo } = usePlatformInfo();
+  const { settings, setApplyOnStartup, setGameOnlyMode } = useSettings();
   const [coreValues, setCoreValues] = useState<number[]>([...state.cores]);
   const [simpleMode, setSimpleMode] = useState<boolean>(true);
   const [simpleValue, setSimpleValue] = useState<number>(-25);
   const [isApplying, setIsApplying] = useState(false);
-  const [expertMode, setExpertMode] = useState<boolean>(false);
-  const [showExpertWarning, setShowExpertWarning] = useState<boolean>(false);
 
   const safeLimit = platformInfo?.safe_limit ?? -30;
-  const currentMinLimit = expertMode ? -100 : safeLimit;
+  const currentMinLimit = settings.expertMode ? -100 : safeLimit;
 
   // Sync with state.cores
   useEffect(() => {
@@ -258,32 +261,6 @@ const ManualTab: FC = () => {
     const avg = Math.round(state.cores.reduce((sum, val) => sum + val, 0) / 4);
     setSimpleValue(avg);
   }, [state.cores]);
-
-  /**
-   * Handle expert mode toggle.
-   */
-  const handleExpertModeToggle = () => {
-    if (!expertMode) {
-      setShowExpertWarning(true);
-    } else {
-      setExpertMode(false);
-    }
-  };
-
-  /**
-   * Confirm expert mode activation.
-   */
-  const handleExpertModeConfirm = () => {
-    setExpertMode(true);
-    setShowExpertWarning(false);
-  };
-
-  /**
-   * Cancel expert mode activation.
-   */
-  const handleExpertModeCancel = () => {
-    setShowExpertWarning(false);
-  };
 
   /**
    * Handle simple mode toggle.
@@ -347,96 +324,6 @@ const ManualTab: FC = () => {
 
   return (
     <>
-      {/* Expert Mode Warning Dialog with gamepad support */}
-      {showExpertWarning && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.9)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#1a1d23",
-              borderRadius: "8px",
-              padding: "16px",
-              maxWidth: "400px",
-              border: "2px solid #ff6b6b",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <FaExclamationTriangle style={{ color: "#ff6b6b", fontSize: "20px" }} />
-              <div style={{ fontSize: "14px", fontWeight: "bold", color: "#ff6b6b" }}>
-                Expert Undervolter Mode
-              </div>
-            </div>
-
-            <div style={{ fontSize: "11px", lineHeight: "1.5", marginBottom: "12px", color: "#e0e0e0" }}>
-              <p style={{ marginBottom: "8px" }}>
-                <strong>⚠️ WARNING:</strong> Expert mode removes safety limits.
-              </p>
-              <p style={{ marginBottom: "8px", color: "#ff9800" }}>
-                <strong>Risks:</strong> System instability, crashes, data loss, hardware damage.
-              </p>
-              <p style={{ color: "#f44336", fontWeight: "bold", fontSize: "10px" }}>
-                Use at your own risk!
-              </p>
-            </div>
-
-            <Focusable style={{ display: "flex", gap: "8px" }} flow-children="horizontal">
-              <FocusableButton
-                onClick={handleExpertModeConfirm}
-                style={{ flex: 1 }}
-              >
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  gap: "4px",
-                  padding: "8px",
-                  backgroundColor: "#b71c1c",
-                  borderRadius: "4px",
-                  fontSize: "10px",
-                  fontWeight: "bold"
-                }}>
-                  <FaCheck size={10} />
-                  <span>I Understand</span>
-                </div>
-              </FocusableButton>
-
-              <FocusableButton
-                onClick={handleExpertModeCancel}
-                style={{ flex: 1 }}
-              >
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  gap: "4px",
-                  padding: "8px",
-                  backgroundColor: "#3d4450",
-                  borderRadius: "4px",
-                  fontSize: "10px",
-                  fontWeight: "bold"
-                }}>
-                  <FaTimes size={10} />
-                  <span>Cancel</span>
-                </div>
-              </FocusableButton>
-            </Focusable>
-          </div>
-        </div>
-      )}
-
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>
@@ -446,13 +333,92 @@ const ManualTab: FC = () => {
         </PanelSectionRow>
       )}
 
-      {/* Mode toggles */}
+      {/* Startup Behavior Section */}
       <PanelSectionRow>
-        <Focusable style={{ display: "flex", gap: "8px", marginBottom: "8px" }} flow-children="horizontal">
+        <div style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "8px", marginTop: "4px" }}>
+          Startup Behavior
+        </div>
+      </PanelSectionRow>
+
+      {/* Apply on Startup Toggle */}
+      <PanelSectionRow>
+        <Focusable style={{ marginBottom: "8px" }}>
+          <FocusableButton
+            onClick={() => setApplyOnStartup(!settings.applyOnStartup)}
+            style={{ width: "100%" }}
+          >
+            <div style={{
+              padding: "10px",
+              backgroundColor: settings.applyOnStartup ? "#1a9fff" : "#3d4450",
+              borderRadius: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}>
+              <div style={{
+                fontSize: "11px",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}>
+                {settings.applyOnStartup ? "✓" : "○"} Apply on Startup
+              </div>
+              <div style={{
+                fontSize: "9px",
+                color: settings.applyOnStartup ? "#e0e0e0" : "#8b929a",
+                lineHeight: "1.3",
+              }}>
+                Automatically apply last profile when Steam Deck boots
+              </div>
+            </div>
+          </FocusableButton>
+        </Focusable>
+      </PanelSectionRow>
+
+      {/* Game Only Mode Toggle */}
+      <PanelSectionRow>
+        <Focusable style={{ marginBottom: "12px" }}>
+          <FocusableButton
+            onClick={() => setGameOnlyMode(!settings.gameOnlyMode)}
+            style={{ width: "100%" }}
+          >
+            <div style={{
+              padding: "10px",
+              backgroundColor: settings.gameOnlyMode ? "#1a9fff" : "#3d4450",
+              borderRadius: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}>
+              <div style={{
+                fontSize: "11px",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}>
+                {settings.gameOnlyMode ? "✓" : "○"} Game Only Mode
+              </div>
+              <div style={{
+                fontSize: "9px",
+                color: settings.gameOnlyMode ? "#e0e0e0" : "#8b929a",
+                lineHeight: "1.3",
+              }}>
+                Apply undervolt only when games are running, reset in Steam menu
+              </div>
+            </div>
+          </FocusableButton>
+        </Focusable>
+      </PanelSectionRow>
+
+      {/* Mode toggle */}
+      <PanelSectionRow>
+        <Focusable style={{ marginBottom: "8px" }}>
           {/* Simple Mode Toggle */}
           <FocusableButton
             onClick={handleSimpleModeToggle}
-            style={{ flex: 1 }}
+            style={{ width: "100%" }}
           >
             <div style={{
               padding: "6px",
@@ -465,29 +431,11 @@ const ManualTab: FC = () => {
               {simpleMode ? "✓ Simple Mode" : "Per-Core Mode"}
             </div>
           </FocusableButton>
-
-          {/* Expert Mode Toggle */}
-          <FocusableButton
-            onClick={handleExpertModeToggle}
-            style={{ flex: 1 }}
-          >
-            <div style={{
-              padding: "6px",
-              backgroundColor: expertMode ? "#b71c1c" : "#3d4450",
-              borderRadius: "4px",
-              fontSize: "9px",
-              fontWeight: "bold",
-              textAlign: "center",
-              color: expertMode ? "#fff" : "#8b929a"
-            }}>
-              {expertMode ? "⚠ Expert Mode" : "Expert Mode"}
-            </div>
-          </FocusableButton>
         </Focusable>
       </PanelSectionRow>
 
       {/* Expert Mode Active Warning */}
-      {expertMode && (
+      {settings.expertMode && (
         <PanelSectionRow>
           <div style={{
             padding: "6px",

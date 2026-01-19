@@ -1,28 +1,37 @@
 /**
  * DeckTuneApp - Main application component.
+ * 
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
 import {
   PanelSection,
   PanelSectionRow,
-  ButtonItem,
 } from "@decky/ui";
 import { addEventListener, removeEventListener } from "@decky/api";
 import { useState, useEffect, FC } from "react";
-import { FaCog, FaMagic, FaWrench, FaFan } from "react-icons/fa";
+import { FaCog, FaMagic } from "react-icons/fa";
 
 import { useDeckTune, initialState } from "../context";
+import { SettingsProvider } from "../context/SettingsContext";
 import { WizardMode } from "./WizardMode";
 import { ExpertMode } from "./ExpertMode";
 import { SetupWizard } from "./SetupWizard";
 import { FanControl } from "./FanControl";
+import { HeaderBar } from "./HeaderBar";
+import { SettingsMenu } from "./SettingsMenu";
 import { getApiInstance } from "../api";
 
 /**
  * Main content component with mode switching and first-run detection.
+ * 
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
  */
 const DeckTuneContent: FC = () => {
   // Load saved mode from localStorage, default to wizard
+  // Requirements: 8.1, 8.2 - Fan Control accessed only via header, not in mode list
   const [mode, setMode] = useState<"wizard" | "expert" | "fan">(() => {
     try {
       const saved = localStorage.getItem('decktune_ui_mode');
@@ -32,14 +41,22 @@ const DeckTuneContent: FC = () => {
     }
   });
   
+  // Settings Menu visibility state - Requirements: 1.3
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
   const { state, api } = useDeckTune();
 
   // Save mode to localStorage whenever it changes
+  // Requirements: 8.5 - Preserve mode state when navigating to/from Fan Control
   useEffect(() => {
     try {
       localStorage.setItem('decktune_ui_mode', mode);
+      // Save last non-fan mode for back navigation
+      if (mode !== "fan") {
+        localStorage.setItem('decktune_last_mode', mode);
+      }
     } catch (e) {
       console.error("Failed to save UI mode:", e);
     }
@@ -77,8 +94,34 @@ const DeckTuneContent: FC = () => {
     setIsFirstRun(false);
   };
 
-  const handleRunSetupWizard = () => {
-    setShowSetupWizard(true);
+  /**
+   * Handle Fan Control navigation from header.
+   * Requirements: 1.2, 8.3, 8.5
+   */
+  const handleFanControlClick = () => {
+    setMode("fan");
+  };
+
+  /**
+   * Handle Settings navigation from header.
+   * Requirements: 1.3
+   */
+  const handleSettingsClick = () => {
+    setShowSettingsMenu(true);
+  };
+
+  /**
+   * Handle back navigation from Fan Control.
+   * Requirements: 8.4, 8.5 - Preserve previously selected mode
+   */
+  const handleFanControlBack = () => {
+    // Return to the last non-fan mode (wizard or expert)
+    const lastMode = localStorage.getItem('decktune_last_mode');
+    if (lastMode === "expert" || lastMode === "wizard") {
+      setMode(lastMode);
+    } else {
+      setMode("wizard");
+    }
   };
 
   if (showSetupWizard) {
@@ -201,22 +244,36 @@ const DeckTuneContent: FC = () => {
         `}
       </style>
 
+      {/* Header Bar - Requirements: 1.1, 1.2, 1.3, 1.4 */}
+      <HeaderBar
+        onFanControlClick={handleFanControlClick}
+        onSettingsClick={handleSettingsClick}
+      />
+
+      {/* Settings Menu - Requirements: 1.3, 2.1 */}
+      <SettingsMenu
+        isOpen={showSettingsMenu}
+        onClose={() => setShowSettingsMenu(false)}
+      />
+
       <PanelSection>
-        {/* Mode switcher with animations */}
+        {/* Mode switcher with animations - Requirements: 8.1, 8.2 */}
+        {/* Large Fan Control button removed per Requirements 8.1, 8.2 */}
         <PanelSectionRow>
           <div className="fade-in">
-            <ButtonItem
-              layout="below"
-              onClick={() => setMode("wizard")}
-              className={`mode-button ${mode === "wizard" ? "active" : ""}`}
-              style={{ 
-                minHeight: "40px", 
-                padding: "8px 12px",
-                backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                marginBottom: "6px",
-                borderRadius: "8px",
-                border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-              }}
+            <div style={{ 
+              minHeight: "40px", 
+              padding: "8px 12px",
+              backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+              marginBottom: "6px",
+              borderRadius: "8px",
+              border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+              position: "relative",
+              overflow: "hidden",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              cursor: "pointer",
+            }}
+            onClick={() => setMode("wizard")}
             >
               <div style={{ 
                 display: "flex", 
@@ -246,24 +303,25 @@ const DeckTuneContent: FC = () => {
                   </div>
                 )}
               </div>
-            </ButtonItem>
+            </div>
           </div>
         </PanelSectionRow>
         
         <PanelSectionRow>
           <div className="fade-in" style={{ animationDelay: "0.1s" }}>
-            <ButtonItem
-              layout="below"
-              onClick={() => setMode("expert")}
-              className={`mode-button ${mode === "expert" ? "active" : ""}`}
-              style={{ 
-                minHeight: "40px", 
-                padding: "8px 12px",
-                backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                marginBottom: "6px",
-                borderRadius: "8px",
-                border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-              }}
+            <div style={{ 
+              minHeight: "40px", 
+              padding: "8px 12px",
+              backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+              marginBottom: "6px",
+              borderRadius: "8px",
+              border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+              position: "relative",
+              overflow: "hidden",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              cursor: "pointer",
+            }}
+            onClick={() => setMode("expert")}
             >
               <div style={{ 
                 display: "flex", 
@@ -294,51 +352,18 @@ const DeckTuneContent: FC = () => {
                   </div>
                 )}
               </div>
-            </ButtonItem>
-          </div>
-        </PanelSectionRow>
-        
-        <PanelSectionRow>
-          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
-            <ButtonItem
-              layout="below"
-              onClick={() => setMode("fan")}
-              className={`mode-button ${mode === "fan" ? "active" : ""}`}
-              style={{ 
-                minHeight: "40px", 
-                padding: "8px 12px",
-                backgroundColor: mode === "fan" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                borderRadius: "8px",
-                border: mode === "fan" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-              }}
-            >
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "space-between",
-                fontSize: "12px",
-                fontWeight: mode === "fan" ? "bold" : "normal",
-                color: mode === "fan" ? "#fff" : "#8b929a"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FaFan size={14} style={{ 
-                    filter: mode === "fan" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none",
-                  }} />
-                  <span>Fan Control</span>
-                </div>
-              </div>
-            </ButtonItem>
+            </div>
           </div>
         </PanelSectionRow>
       </PanelSection>
 
       <div className="fade-in" style={{ animationDelay: "0.3s" }}>
         {mode === "wizard" ? (
-          <WizardMode onRunSetup={handleRunSetupWizard} />
+          <WizardMode />
         ) : mode === "expert" ? (
-          <ExpertMode onRunSetup={handleRunSetupWizard} />
+          <ExpertMode />
         ) : (
-          <FanControl onBack={() => setMode("wizard")} />
+          <FanControl onBack={handleFanControlBack} />
         )}
       </div>
     </>
@@ -347,6 +372,10 @@ const DeckTuneContent: FC = () => {
 
 /**
  * Main app component with initialization.
+ * Wrapped with SettingsProvider for persistent settings management.
+ * 
+ * Feature: ui-refactor-settings
+ * Requirements: 10.1, 10.5
  */
 export const DeckTuneApp: FC = () => {
   const [initialized, setInitialized] = useState(false);
@@ -368,7 +397,7 @@ export const DeckTuneApp: FC = () => {
 
     const handleServerEvent = (event: unknown) => {
       const api = getApiInstance(initialState);
-      api.handleServerEvent(event);
+      api.handleServerEvent(event as any);
     };
 
     addEventListener("server_event", handleServerEvent);
@@ -404,5 +433,10 @@ export const DeckTuneApp: FC = () => {
     );
   }
 
-  return <DeckTuneContent />;
+  // Wrap content with SettingsProvider - Requirements: 10.1, 10.5
+  return (
+    <SettingsProvider>
+      <DeckTuneContent />
+    </SettingsProvider>
+  );
 };

@@ -318,7 +318,8 @@ class ProfileManager:
         settings_manager,
         ryzenadj: "RyzenadjWrapper",
         dynamic_controller: Optional["DynamicController"],
-        event_emitter: "EventEmitter"
+        event_emitter: "EventEmitter",
+        core_settings_manager: Optional[Any] = None
     ):
         """Initialize the profile manager.
         
@@ -327,11 +328,13 @@ class ProfileManager:
             ryzenadj: RyzenadjWrapper for applying undervolt values
             dynamic_controller: DynamicController for dynamic mode (optional)
             event_emitter: EventEmitter for status updates
+            core_settings_manager: CoreSettingsManager for Apply on Startup tracking (optional)
         """
         self.settings = settings_manager
         self.ryzenadj = ryzenadj
         self.dynamic_controller = dynamic_controller
         self.event_emitter = event_emitter
+        self.core_settings = core_settings_manager  # For Apply on Startup tracking
         
         # In-memory cache of profiles (keyed by app_id)
         self._profiles: Dict[int, GameProfile] = {}
@@ -824,6 +827,15 @@ class ProfileManager:
             
             # Update current app_id
             self._current_app_id = app_id
+            
+            # Update last active profile for Apply on Startup
+            # Feature: ui-refactor-settings, Validates: Requirements 4.2
+            if self.core_settings:
+                try:
+                    self.core_settings.save_setting("last_active_profile", str(app_id))
+                    logger.debug(f"Updated last_active_profile to {app_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to update last_active_profile: {e}")
             
             # Emit event to frontend
             self.event_emitter.emit_profile_changed(profile.name, app_id)

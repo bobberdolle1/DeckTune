@@ -2,6 +2,86 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.26] - 2026-01-19
+
+### Added
+- **UI Refactor: Settings Management** — Complete settings system overhaul
+  - **Header Bar Navigation** — Compact icon-based navigation (Fan Control, Settings)
+  - **Settings Menu** — Centralized modal for global plugin configuration
+  - **Expert Mode Confirmation** — Warning dialog with explicit confirmation required
+  - **Apply on Startup** — Automatically apply last profile on Steam Deck boot
+  - **Game Only Mode** — Apply undervolt only during games, reset in Steam menu
+  - **Persistent Settings** — All settings survive plugin reloads and reboots
+  - **Backend Storage** — Python-based settings manager with atomic writes
+  - **Game State Monitor** — Tracks Steam game launches/exits for Game Only Mode
+  - **Settings Context** — React Context API for unified settings access
+  - **Manual Tab Cleanup** — Removed Expert Mode toggle, added startup behavior controls
+
+### Implementation
+- **Backend** (`backend/core/settings_manager.py`):
+  - `SettingsManager` class with atomic write operations
+  - Storage at `~/homebrew/settings/decktune/settings.json`
+  - RPC methods: `save_setting()`, `get_setting()`, `load_all_settings()`
+- **Backend** (`backend/core/game_state_monitor.py`):
+  - `GameStateMonitor` class with Steam event subscription
+  - Polling fallback (2-second interval)
+  - RPC methods: `enable_game_only_mode()`, `disable_game_only_mode()`
+- **Backend** (`backend/core/game_only_mode.py`):
+  - `GameOnlyMode` class for profile application/reset logic
+  - Integrates with `GameStateMonitor` and `SettingsManager`
+- **Frontend** (`src/context/SettingsContext.tsx`):
+  - `SettingsProvider` with React Context API
+  - `useSettings()` hook for component access
+  - State: expertMode, applyOnStartup, gameOnlyMode, lastActiveProfile
+- **Frontend** (`src/components/HeaderBar.tsx`):
+  - Compact icon buttons (20px) for Fan Control and Settings
+  - Right-aligned layout with gamepad support
+- **Frontend** (`src/components/SettingsMenu.tsx`):
+  - Modal overlay with Expert Mode toggle
+  - Expert Mode warning dialog with confirmation
+  - Auto-save on changes
+- **Frontend** (`src/components/DeckTuneApp.tsx`):
+  - Integrated HeaderBar above mode selection
+  - Removed large Fan Control button from mode list
+  - Settings Menu state management
+
+### Testing
+- **91 comprehensive tests** covering all functionality
+- **10 property-based tests** for correctness verification:
+  - Property 1: Settings persistence round-trip
+  - Property 2: Expert Mode confirmation requirement
+  - Property 3: Game state transition triggers
+  - Property 4: Startup profile application
+  - Property 5: Settings context synchronization
+  - Property 6: Storage failure resilience
+  - Property 7: Game Only Mode monitoring lifecycle
+  - Property 8: Header navigation exclusivity
+  - Property 9: Manual tab control exclusivity
+  - Property 10: Settings menu state isolation
+- **Integration tests** for full workflows
+- **Manual testing materials** prepared (checklist, guide, accessibility checker)
+
+### Requirements Validated
+- ✅ Requirement 1: Header bar with compact navigation
+- ✅ Requirement 2: Dedicated Settings menu
+- ✅ Requirement 3: Settings persistence across reloads
+- ✅ Requirement 4: Apply on Startup functionality
+- ✅ Requirement 5: Game Only Mode with automatic switching
+- ✅ Requirement 6: Backend game state monitoring
+- ✅ Requirement 7: Manual tab focused on undervolt controls
+- ✅ Requirement 8: Fan Control accessible only via header
+- ✅ Requirement 9: Logical settings organization
+- ✅ Requirement 10: Centralized settings management
+
+### Technical
+- All automated tests passing (91 tests)
+- Property-based testing with Hypothesis
+- Type-safe React Context with TypeScript
+- Atomic file writes with backup
+- Graceful error handling and fallback behavior
+- WCAG AA accessibility compliance
+- Gamepad navigation support throughout
+
 ## [3.1.25] - 2026-01-19
 
 ### Fixed
