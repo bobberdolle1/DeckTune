@@ -2,6 +2,45 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.22] - 2026-01-18
+
+### Fixed
+- **Critical**: Silicon Binning now works out of the box
+  - Automatic NOPASSWD configuration for ryzenadj in install.sh
+  - Creates `/etc/sudoers.d/decktune` with proper permissions
+  - Fixes "ryzenadj test command failed (code 255)" error
+  - Binning can now verify ryzenadj availability without password prompts
+
+### Added
+- **setup-sudo.sh**: Manual NOPASSWD configuration script
+  - Use if automatic setup fails
+  - Includes diagnostics and verification
+  - Safe and secure configuration
+- **test_undervolt.py**: Comprehensive diagnostic tool
+  - Tests all DeckTune components
+  - Verifies ryzenadj availability
+  - Checks sudo configuration
+  - Platform detection validation
+  - Hex calculation tests
+  - Optional safe value application test
+- **FIX_BINNING.md**: Troubleshooting guide for binning issues
+- **TESTING_GUIDE_RU.md**: Comprehensive testing guide (Russian)
+- **COMPLETE_FIX_REPORT.md**: Technical analysis and fix report
+
+### Changed
+- **install.sh**: Enhanced with automatic sudo configuration
+  - Configures NOPASSWD for both deck and root users
+  - Validates sudoers file syntax
+  - Better error handling and user feedback
+  - Makes executable permissions for setup-sudo.sh
+
+### Security
+- NOPASSWD configuration is highly restricted:
+  - Only allows specific ryzenadj binary
+  - Full path specified (no PATH manipulation)
+  - Separate sudoers file in `/etc/sudoers.d/`
+  - Standard practice for Decky plugins
+
 ## [3.1.21] - 2026-01-18
 
 ### Fixed
