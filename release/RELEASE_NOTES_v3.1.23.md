@@ -2,25 +2,48 @@
 
 **Release Date**: January 19, 2026
 
-## 🔧 Critical Hotfix
+## 🔧 Critical Hotfixes
 
-This is a hotfix release that resolves a critical issue with Silicon Binning diagnostics introduced by ryzenadj's exit code behavior.
+This hotfix release resolves critical issues with Silicon Binning diagnostics and plugin loading in Decky Loader v3.2+.
 
 ### What's Fixed
 
-**ryzenadj Exit Code Handling**
+**1. ES Module Format for Decky Loader v3.2+**
+- Fixed "TypeError: plugin exports is not a function" error
+- Changed rollup output format from IIFE to ES module
+- Decky Loader v3.2+ requires ES modules with `export default`
+- Plugin now loads correctly in latest Decky version
+
+**2. ryzenadj Exit Code Handling**
 - Fixed false-positive diagnostic failures in Silicon Binning
 - ryzenadj binary returns exit code 255 even on successful execution (this is normal behavior)
 - Modified `diagnose()` method to validate success by checking stdout content instead of exit code
 - Now checks for "CPU Family" or "STAPM" in output to confirm ryzenadj is working
-- Silicon Binning diagnostics now work correctly
+
+**3. Binary Executable Permissions**
+- Fixed "ryzenadj binary is not executable" error
+- Zip archive now preserves executable permissions for Linux binaries
+- Created on Linux to maintain proper file permissions
+- All binaries (ryzenadj, gymdeck3, stress-ng, memtester) are now executable
 
 ### Technical Details
 
-The ryzenadj binary has an unusual behavior where it returns exit code 255 (`exit_group(-1)`) even when executing successfully. This was causing the `diagnose()` method to incorrectly report failures during Silicon Binning initialization.
+**ES Module Format**
+- Decky Loader v3.2+ uses dynamic `import()` for plugin loading
+- Requires ES module format with `export default`
+- Old IIFE format `(function() { ... })()` no longer works
+- New format: `export { index as default };`
 
-**Before**: Checked `returncode == 0` → Always failed
-**After**: Checks if stdout contains valid data → Works correctly
+**ryzenadj Exit Code**
+- ryzenadj has unusual behavior: returns exit code 255 (`exit_group(-1)`) even on success
+- This was causing `diagnose()` to incorrectly report failures
+- **Before**: Checked `returncode == 0` → Always failed
+- **After**: Checks if stdout contains valid data → Works correctly
+
+**Binary Permissions**
+- Windows zip tools don't preserve Unix executable bits
+- Now building release zip on Linux (Steam Deck) to maintain permissions
+- Ensures binaries work immediately after installation
 
 ### Testing
 
