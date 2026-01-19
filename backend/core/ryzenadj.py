@@ -151,7 +151,13 @@ class RyzenadjWrapper:
         # 4. Тестовый запуск ryzenadj --info (безопасная команда)
         try:
             logger.debug("Running test command: ryzenadj --info")
-            test_command = ["sudo", self.binary_path, "--info"]
+            # If we're already root, don't use sudo (it causes issues)
+            if os.geteuid() == 0:
+                test_command = [self.binary_path, "--info"]
+                logger.debug("Running as root, skipping sudo")
+            else:
+                test_command = ["sudo", self.binary_path, "--info"]
+            
             test_result = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: subprocess.run(
@@ -163,14 +169,19 @@ class RyzenadjWrapper:
                 )
             )
             
-            if test_result.returncode == 0:
-                result["test_command_result"] = test_result.stdout.strip() if test_result.stdout else "Success (no output)"
+            # NOTE: ryzenadj ALWAYS returns exit code 255, even on success!
+            # We need to check if stdout contains valid data instead of checking returncode
+            stdout_content = test_result.stdout.strip() if test_result.stdout else ""
+            
+            # Check if output contains expected ryzenadj info (CPU Family, etc.)
+            if stdout_content and ("CPU Family" in stdout_content or "STAPM" in stdout_content):
+                result["test_command_result"] = stdout_content
                 result["error"] = None  # Очищаем предыдущие некритичные ошибки
-                logger.info("ryzenadj test command executed successfully")
+                logger.info(f"ryzenadj test command executed successfully (exit code {test_result.returncode} is normal)")
                 logger.debug(f"Test command output: {result['test_command_result'][:200]}...")
             else:
                 stderr_content = test_result.stderr.strip() if test_result.stderr else ""
-                error_msg = f"ryzenadj test command failed (code {test_result.returncode}): {stderr_content}"
+                error_msg = f"ryzenadj test command failed (code {test_result.returncode}): {stderr_content if stderr_content else 'no valid output'}"
                 result["test_command_result"] = None
                 result["error"] = error_msg
                 logger.error(error_msg)
