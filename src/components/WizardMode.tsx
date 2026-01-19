@@ -1197,13 +1197,13 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
 }) => {
   // Format ETA
   const formatEta = (seconds: number): string => {
-    if (seconds <= 0) return "Завершение...";
+    if (seconds <= 0) return "Finishing...";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     if (mins > 0) {
-      return `~${mins}м ${secs}с`;
+      return `~${mins}m ${secs}s`;
     }
-    return `~${secs}с`;
+    return `~${secs}s`;
   };
 
   // Calculate progress percentage using max_iterations if available
@@ -1236,7 +1236,7 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
 
       <PanelSectionRow>
         <div style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
-          Поиск максимального Undervolt
+          Finding Maximum Undervolt
         </div>
       </PanelSectionRow>
 
@@ -1244,8 +1244,8 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
         <>
           <PanelSectionRow>
             <ProgressBarWithInfo
-              label={`Итерация ${progress.iteration}/${progress.max_iterations || 20}`}
-              description={`Тестируется: ${progress.current_value}mV`}
+              label={`Iteration ${progress.iteration}/${progress.max_iterations || 20}`}
+              description={`Testing: ${progress.current_value}mV`}
               nProgress={calculateProgress() / 100}
               sOperationText={formatEta(progress.eta)}
             />
@@ -1265,19 +1265,19 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#8b929a" }}>Текущее значение:</span>
+                <span style={{ color: "#8b929a" }}>Current Value:</span>
                 <span style={{ fontWeight: "bold" }}>{progress.current_value}mV</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#8b929a" }}>Последнее стабильное:</span>
+                <span style={{ color: "#8b929a" }}>Last Stable:</span>
                 <span style={{ fontWeight: "bold", color: "#4caf50" }}>{progress.last_stable}mV</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#8b929a" }}>Осталось:</span>
+                <span style={{ color: "#8b929a" }}>Remaining:</span>
                 <span style={{ fontWeight: "bold" }}>{formatEta(progress.eta)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#8b929a" }}>Прогресс:</span>
+                <span style={{ color: "#8b929a" }}>Progress:</span>
                 <span style={{ fontWeight: "bold" }}>{calculateProgress().toFixed(1)}%</span>
               </div>
             </div>
@@ -1288,7 +1288,7 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
       {!progress && isRunning && (
         <PanelSectionRow>
           <div style={{ textAlign: "center", color: "#8b929a" }}>
-            Инициализация binning...
+            Initializing binning...
           </div>
         </PanelSectionRow>
       )}
@@ -1301,7 +1301,7 @@ const BinningProgressStep: FC<BinningProgressStepProps> = ({
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" }}>
             <FaTimes />
-            <span>Остановить</span>
+            <span>Stop</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>

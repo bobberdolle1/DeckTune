@@ -2,6 +2,14 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.25] - 2026-01-19
+
+### Fixed
+- **UI Language Consistency** — Fixed Russian language strings in Binning Progress component
+  - Translated all UI text in `BinningProgressStep` to English
+  - Ensures consistent English interface across entire Wizard Mode
+  - Affected strings: "Завершение", "Итерация", "Тестируется", "Текущее значение", "Последнее стабильное", "Осталось", "Прогресс", "Инициализация binning", "Остановить"
+
 ## [3.1.24] - 2026-01-19
 
 ### Added
