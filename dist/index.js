@@ -1,8 +1,5 @@
-(function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-    typeof define === 'function' && define.amd ? define(factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.index = factory());
-})(this, (function () { 'use strict';
+(function () {
+    'use strict';
 
     const manifest = {"name":"DeckTune","author":"bobberdolle1","version":"3.1.23","api_version":1,"flags":["root"],"publish":{"tags":["root","undervolt","autotune","performance","temperature","ryzenadj","curve optimizer","battery-saving","safety","stress-test","dynamic-mode","rust"],"description":"Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), and stress testing.","image":"https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"}};
     const API_VERSION = 2;
@@ -5056,5 +5053,5 @@
 
     return index;
 
-}));
+})();
 //# sourceMappingURL=index.js.map
