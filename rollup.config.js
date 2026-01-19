@@ -44,6 +44,8 @@ export default defineConfig({
     },
     file: 'dist/index.js',
     format: 'iife',
+    name: 'index',
+    exports: 'default',
     sourcemap: true,
     sourcemapPathTransform: (relativeSourcePath) => relativeSourcePath.replace(/^\.\.\//, `decky://decky/plugin/${encodeURIComponent(manifest.name)}/`),
   },
