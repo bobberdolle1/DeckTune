@@ -2,6 +2,24 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.23] - 2026-01-19
+
+### Fixed
+- **Critical**: Fixed ryzenadj diagnostics exit code handling
+  - ryzenadj binary returns exit code 255 even on successful execution
+  - Modified `diagnose()` method to check stdout content instead of returncode
+  - Now validates success by checking for "CPU Family" or "STAPM" in output
+  - Fixes false-positive "ryzenadj test command failed" errors in binning
+  - Silicon Binning diagnostics now work correctly
+
+### Added
+- **test_binning_api.py**: Comprehensive binning prerequisites test
+  - Verifies platform detection
+  - Tests ryzenadj initialization
+  - Validates diagnostics (same checks as binning)
+  - Tests undervolt application and reset
+  - Useful for troubleshooting binning issues
+
 ## [3.1.22] - 2026-01-18
 
 ### Fixed
