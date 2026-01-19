@@ -25,3 +25,13 @@ export {
   type SettingsState,
   type SettingsContextValue,
 } from "./SettingsContext";
+
+export {
+  WizardProvider,
+  useWizard,
+  type WizardConfig,
+  type WizardProgress,
+  type WizardResult,
+  type CurveDataPoint,
+  type CrashInfo,
+} from "./WizardContext";

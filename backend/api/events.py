@@ -530,3 +530,51 @@ class EventEmitter:
             f"power={power_w:.1f}W, load={load_percent:.1f}%"
         )
         await self._emit_event("telemetry_sample", sample_data)
+    
+    # Wizard Mode Events
+    # Feature: Wizard Mode Refactoring
+    
+    async def emit_wizard_progress(self, progress_data: Dict[str, Any]) -> None:
+        """Emit wizard progress update.
+        
+        Args:
+            progress_data: Dictionary containing:
+                - state: Current wizard state
+                - current_stage: Human-readable stage description
+                - current_offset: Offset being tested
+                - progress_percent: Overall completion (0-100)
+                - eta_seconds: Estimated time remaining
+                - ota_seconds: Overall time active (elapsed)
+                - heartbeat: Timestamp of last update
+                - live_metrics: Current temp, freq, voltage
+        """
+        logger.debug(f"Wizard progress: {progress_data.get('current_stage')} "
+                    f"({progress_data.get('progress_percent', 0):.1f}%)")
+        await self._emit_event("wizard_progress", progress_data)
+    
+    async def emit_wizard_complete(self, result_data: Dict[str, Any]) -> None:
+        """Emit wizard completion event.
+        
+        Args:
+            result_data: Dictionary containing:
+                - id: Session ID
+                - name: Result name
+                - timestamp: ISO timestamp
+                - chip_grade: Quality tier
+                - offsets: Final stable offsets per domain
+                - curve_data: List of test points for visualization
+                - duration: Total session duration
+                - iterations: Number of test iterations
+        """
+        logger.info(f"Wizard complete: grade={result_data.get('chip_grade')}, "
+                   f"offsets={result_data.get('offsets')}")
+        await self._emit_event("wizard_complete", result_data)
+    
+    async def emit_wizard_error(self, error_message: str) -> None:
+        """Emit wizard error event.
+        
+        Args:
+            error_message: Error description
+        """
+        logger.error(f"Wizard error: {error_message}")
+        await self._emit_event("wizard_error", {"error": error_message})

@@ -105,6 +105,7 @@ class Plugin:
         self.profile_manager = None  # Per-game profile manager
         self.app_watcher = None  # Steam app watcher
         self.fan_control_service = None  # Fan control service
+        self.wizard_session = None  # Wizard mode session
 
     def _ensure_binary_permissions(self):
         """Ensure all binaries have executable permissions.
@@ -376,7 +377,33 @@ class Plugin:
         # Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5
         await self._apply_startup_profile()
         
-        # 14. Check for boot recovery (Requirement: Integration)
+        # 14. Initialize Wizard Mode Session
+        # Feature: Wizard Mode Refactoring
+        from backend.tuning.wizard_session import WizardSession
+        
+        self.wizard_session = WizardSession(
+            ryzenadj=self.ryzenadj,
+            runner=self.test_runner,
+            safety=self.safety,
+            event_emitter=self.event_emitter,
+            settings_dir=SETTINGS_DIR
+        )
+        
+        # Set in RPC
+        self.rpc.set_wizard_session(self.wizard_session)
+        
+        # Check for dirty exit on startup
+        crash_info = self.wizard_session.check_dirty_exit()
+        if crash_info:
+            decky.logger.warning(f"Wizard dirty exit detected: {crash_info}")
+            await self.event_emitter.emit_wizard_error(
+                f"Previous wizard session crashed at {crash_info['current_offset']}mV. "
+                f"Last stable: {crash_info['last_stable']}mV"
+            )
+        
+        decky.logger.info("Wizard session initialized")
+        
+        # 15. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -597,6 +624,42 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
     async def get_benchmark_history(self):
         """Get last 20 benchmark results with comparisons."""
         return await self.rpc.get_benchmark_history()
+    
+    # ==================== Wizard Mode ====================
+    # Feature: Wizard Mode Refactoring
+    
+    async def start_wizard(self, config):
+        """Start wizard session.
+        
+        Args:
+            config: Dictionary with target_domains, aggressiveness, test_duration, safety_limits
+        """
+        return await self.rpc.start_wizard(config)
+    
+    async def cancel_wizard(self):
+        """Cancel running wizard session."""
+        return await self.rpc.cancel_wizard()
+    
+    async def get_wizard_status(self):
+        """Get current wizard status."""
+        return await self.rpc.get_wizard_status()
+    
+    async def check_wizard_dirty_exit(self):
+        """Check for dirty exit from previous wizard session."""
+        return await self.rpc.check_wizard_dirty_exit()
+    
+    async def get_wizard_results_history(self):
+        """Get history of wizard results."""
+        return await self.rpc.get_wizard_results_history()
+    
+    async def apply_wizard_result(self, result_id, save_as_preset=True):
+        """Apply a wizard result.
+        
+        Args:
+            result_id: UUID of the wizard result
+            save_as_preset: Whether to save as a preset
+        """
+        return await self.rpc.apply_wizard_result(result_id, save_as_preset)
 
     # ==================== Preset Management (delegated to RPC) ====================
 

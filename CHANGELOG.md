@@ -2,6 +2,47 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.27] - 2026-01-20
+
+### Added
+- **Wizard Mode Refactoring** — Complete redesign of automated undervolt discovery
+  - **Step-down algorithm** — Iterative testing from -10mV until failure
+  - **Crash recovery** — Dirty exit detection with automatic rollback to last stable
+  - **Chip quality grading** — Bronze/Silver/Gold/Platinum tiers based on max stable offset
+  - **Real-time progress** — ETA, OTA, heartbeat, live metrics display
+  - **Curve visualization** — SVG chart showing test progression and results
+  - **Configurable aggressiveness** — Safe (2mV steps), Balanced (5mV), Aggressive (10mV)
+  - **Safety margins** — Automatic +10/+5/+2mV margin based on aggressiveness level
+  - **Results history** — Persistent storage of wizard sessions with replay capability
+  - **Crash recovery modal** — Automatic detection with crash details on next boot
+
+### Implementation
+- **Backend** (`backend/tuning/wizard_session.py`):
+  - `WizardSession` class with state management (IDLE, RUNNING, CRASHED, FINISHED)
+  - Crash flag system with dirty exit detection
+  - Chip grading algorithm (Platinum ≥-51mV, Gold -36 to -50mV, Silver -21 to -35mV, Bronze -10 to -20mV)
+  - Curve data collection for visualization
+  - State persistence to `~/homebrew/settings/decktune/wizard_state.json`
+- **Backend** (`backend/api/rpc.py`):
+  - 6 new RPC methods: `start_wizard()`, `cancel_wizard()`, `get_wizard_status()`, `check_wizard_dirty_exit()`, `get_wizard_results_history()`, `apply_wizard_result()`
+- **Backend** (`backend/api/events.py`):
+  - 3 new events: `wizard_progress`, `wizard_complete`, `wizard_error`
+- **Frontend** (`src/context/WizardContext.tsx`):
+  - `WizardProvider` with state management and API integration
+  - `useWizard()` hook for component access
+- **Frontend** (`src/components/WizardMode.tsx`):
+  - Configuration screen with aggressiveness/duration settings
+  - Progress screen with ETA/OTA/heartbeat display
+  - Results screen with chip grade badge and curve chart
+  - Crash recovery modal with automatic detection
+  - Panic disable button (always visible)
+
+### Technical Details
+- **Algorithm**: Binary search with 3-failure stop condition
+- **Safety limits**: Platform-specific (LCD: -100mV, OLED: -80mV)
+- **Test durations**: Short (30s), Long (120s)
+- **Performance**: Safe mode ~15-20min, Balanced ~5-10min, Aggressive ~3-5min
+
 ## [3.1.26] - 2026-01-19
 
 ### Added

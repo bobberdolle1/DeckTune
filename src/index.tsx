@@ -3,7 +3,7 @@ import { FaMagic } from "react-icons/fa";
 import { FC, useEffect } from "react";
 
 import { DeckTuneApp } from "./components/DeckTuneApp";
-import { DeckTuneProvider, useDeckTune } from "./context";
+import { DeckTuneProvider, useDeckTune, WizardProvider } from "./context";
 import { DeckTuneErrorBoundary } from "./components/ErrorBoundary";
 
 // NUCLEAR CACHE BUST - Force new module evaluation
@@ -100,16 +100,20 @@ export default definePlugin(() => {
     titleView: (
       <DeckTuneErrorBoundary>
         <DeckTuneProvider>
-          <DeckTuneTitleView />
+          <WizardProvider>
+            <DeckTuneTitleView />
+          </WizardProvider>
         </DeckTuneProvider>
       </DeckTuneErrorBoundary>
     ),
     content: (
       <DeckTuneErrorBoundary>
         <DeckTuneProvider>
-          <div className="decktune-plugin">
-            <DeckTuneApp />
-          </div>
+          <WizardProvider>
+            <div className="decktune-plugin">
+              <DeckTuneApp />
+            </div>
+          </WizardProvider>
         </DeckTuneProvider>
       </DeckTuneErrorBoundary>
     ),

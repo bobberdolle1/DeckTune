@@ -3267,3 +3267,224 @@ class DeckTuneRPC:
             controller: GameOnlyModeController instance
         """
         self._game_only_mode_controller = controller
+    
+    # ==================== Wizard Mode ====================
+    # Feature: Wizard Mode Refactoring
+    
+    def set_wizard_session(self, session) -> None:
+        """Set the wizard session instance.
+        
+        Args:
+            session: WizardSession instance
+        """
+        from ..tuning.wizard_session import WizardSession
+        self._wizard_session: Optional[WizardSession] = session
+        self._wizard_task: Optional[asyncio.Task] = None
+    
+    async def start_wizard(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start wizard session.
+        
+        Args:
+            config: Dictionary containing:
+                - target_domains: List of domains to test ["cpu", "gpu", "soc"]
+                - aggressiveness: "safe", "balanced", or "aggressive"
+                - test_duration: "short" or "long"
+                - safety_limits: Dict of domain -> limit (mV)
+        
+        Returns:
+            Dictionary with success status and session_id
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        if self._wizard_session.is_running():
+            return {"success": False, "error": "Wizard is already running"}
+        
+        try:
+            from ..tuning.wizard_session import WizardConfig, AggressivenessLevel, TestDuration
+            
+            # Parse config
+            wizard_config = WizardConfig(
+                target_domains=config.get("target_domains", ["cpu"]),
+                aggressiveness=AggressivenessLevel(config.get("aggressiveness", "balanced")),
+                test_duration=TestDuration(config.get("test_duration", "short")),
+                safety_limits=config.get("safety_limits", {"cpu": self.platform.safe_limit})
+            )
+            
+            # Start wizard in background task
+            self._wizard_task = asyncio.create_task(
+                self._wizard_session.start(wizard_config)
+            )
+            
+            logger.info(f"Wizard started with session_id: {self._wizard_session._session_id}")
+            
+            return {
+                "success": True,
+                "session_id": self._wizard_session._session_id
+            }
+            
+        except ValueError as e:
+            logger.error(f"Invalid wizard config: {e}")
+            return {"success": False, "error": f"Invalid configuration: {str(e)}"}
+        except Exception as e:
+            logger.error(f"Failed to start wizard: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+    
+    async def cancel_wizard(self) -> Dict[str, Any]:
+        """Cancel running wizard session.
+        
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        if not self._wizard_session.is_running():
+            return {"success": False, "error": "No wizard running"}
+        
+        try:
+            self._wizard_session.cancel()
+            
+            # Wait for task to complete cancellation
+            if self._wizard_task:
+                try:
+                    await asyncio.wait_for(self._wizard_task, timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Wizard cancellation timed out")
+                except asyncio.CancelledError:
+                    pass
+            
+            logger.info("Wizard cancelled")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to cancel wizard: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_wizard_status(self) -> Dict[str, Any]:
+        """Get current wizard status.
+        
+        Returns:
+            Dictionary with running status and state
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"running": False, "state": "idle"}
+        
+        return {
+            "running": self._wizard_session.is_running(),
+            "state": self._wizard_session.get_state().value
+        }
+    
+    async def check_wizard_dirty_exit(self) -> Dict[str, Any]:
+        """Check for dirty exit from previous wizard session.
+        
+        Returns:
+            Dictionary with dirty_exit flag and crash_info if applicable
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"dirty_exit": False}
+        
+        try:
+            crash_info = self._wizard_session.check_dirty_exit()
+            
+            if crash_info:
+                logger.warning(f"Wizard dirty exit detected: {crash_info}")
+                return {
+                    "dirty_exit": True,
+                    "crash_info": crash_info
+                }
+            
+            return {"dirty_exit": False}
+            
+        except Exception as e:
+            logger.error(f"Failed to check wizard dirty exit: {e}")
+            return {"dirty_exit": False, "error": str(e)}
+    
+    async def get_wizard_results_history(self) -> List[Dict[str, Any]]:
+        """Get history of wizard results.
+        
+        Returns:
+            List of wizard result dictionaries
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return []
+        
+        try:
+            from dataclasses import asdict
+            results = self._wizard_session.get_results_history()
+            return [asdict(r) for r in results]
+            
+        except Exception as e:
+            logger.error(f"Failed to get wizard results history: {e}")
+            return []
+    
+    async def apply_wizard_result(
+        self,
+        result_id: str,
+        save_as_preset: bool = True
+    ) -> Dict[str, Any]:
+        """Apply a wizard result.
+        
+        Args:
+            result_id: UUID of the wizard result to apply
+            save_as_preset: Whether to save as a preset
+        
+        Returns:
+            Dictionary with success status and preset_id if saved
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        try:
+            # Find result
+            results = self._wizard_session.get_results_history()
+            result = next((r for r in results if r.id == result_id), None)
+            
+            if not result:
+                return {"success": False, "error": "Result not found"}
+            
+            # Apply CPU offset (convert to 4-core array)
+            cpu_offset = result.offsets.get("cpu", 0)
+            values = [cpu_offset, cpu_offset, cpu_offset, cpu_offset]
+            
+            # Apply values
+            success, error = await self.ryzenadj.apply_values_async(values)
+            if not success:
+                return {"success": False, "error": error}
+            
+            # Update status
+            await self.event_emitter.emit_status("enabled")
+            
+            # Save as preset if requested
+            preset_id = None
+            if save_as_preset:
+                preset = {
+                    "app_id": None,  # Global preset
+                    "label": result.name,
+                    "value": values,
+                    "timeout": 0,
+                    "use_timeout": False,
+                    "created_at": result.timestamp,
+                    "tested": True,
+                    "wizard_result_id": result.id,
+                    "chip_grade": result.chip_grade
+                }
+                
+                presets = self.settings.getSetting("presets", [])
+                presets.append(preset)
+                self.settings.setSetting("presets", presets)
+                
+                preset_id = result.id
+                logger.info(f"Wizard result saved as preset: {result.name}")
+            
+            logger.info(f"Applied wizard result: {result.name} ({cpu_offset}mV)")
+            
+            return {
+                "success": True,
+                "applied_values": values,
+                "preset_id": preset_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to apply wizard result: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
