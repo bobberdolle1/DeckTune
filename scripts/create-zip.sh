@@ -1,19 +1,15 @@
-#!/bin/bash
-# Build DeckTune release for Decky Loader
-# This script should be run in WSL or Linux environment
+#!/bin/sh
+# Create DeckTune release zip with proper Unix permissions
+# Run after building frontend with npm run build
 
 set -e
 
-echo "=== DeckTune Release Builder ==="
+echo "=== DeckTune Release Packager ==="
 echo ""
-
-# Get project root directory
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$PROJECT_DIR"
 
 # Get version from plugin.json
 VERSION=$(grep '"version"' plugin.json | cut -d'"' -f4)
-echo "Building DeckTune v$VERSION"
+echo "Packaging DeckTune v$VERSION"
 echo ""
 
 # Clean previous builds
@@ -23,27 +19,13 @@ rm -f release/DeckTune.zip
 rm -f release/DeckTune-v*.zip
 mkdir -p release/DeckTune
 
-# Build frontend
-echo ""
-echo "Building frontend..."
-if ! command -v pnpm >/dev/null 2>&1; then
-    echo "Error: pnpm not found. Install with: npm install -g pnpm"
-    exit 1
-fi
-
-pnpm install
-pnpm run build
-
-# Check if dist/index.js was created
+# Check if dist/index.js exists
 if [ ! -f "dist/index.js" ]; then
-    echo "Error: dist/index.js not found after build"
+    echo "Error: dist/index.js not found. Run 'npm run build' first."
     exit 1
 fi
-
-echo "Frontend build complete: dist/index.js"
 
 # Copy files to release directory
-echo ""
 echo "Copying files to release directory..."
 
 # Required files per Decky Loader documentation
@@ -64,31 +46,30 @@ cp -r backend release/DeckTune/
 # Copy bin directory (binaries)
 cp -r bin release/DeckTune/
 
-# Copy defaults directory
-cp -r defaults release/DeckTune/
+# Copy defaults directory if it exists
+if [ -d "defaults" ]; then
+    cp -r defaults release/DeckTune/
+fi
 
 # Copy shell scripts
 cp install.sh release/DeckTune/
 cp setup-sudo.sh release/DeckTune/
 
 # Set executable permissions
-echo ""
 echo "Setting executable permissions..."
 chmod +x release/DeckTune/bin/*
 chmod +x release/DeckTune/*.sh
 
 # Fix line endings for shell scripts (CRLF -> LF)
-echo ""
 echo "Fixing line endings for shell scripts..."
 for script in release/DeckTune/*.sh; do
     if [ -f "$script" ]; then
         sed -i 's/\r$//' "$script" 2>/dev/null || true
-        echo "  Fixed: $(basename $script)"
+        echo "  Fixed: $(basename "$script")"
     fi
 done
 
 # Create zip archive with proper Unix paths
-echo ""
 echo "Creating zip archive..."
 cd release
 zip -r "DeckTune-v${VERSION}.zip" DeckTune/ -x "*.pyc" "*/__pycache__/*"
@@ -97,7 +78,7 @@ cp "DeckTune-v${VERSION}.zip" DeckTune.zip
 # Calculate size
 SIZE=$(du -h "DeckTune-v${VERSION}.zip" | cut -f1)
 echo ""
-echo "=== Build Complete ==="
+echo "=== Package Complete ==="
 echo "Version: v$VERSION"
 echo "Output: release/DeckTune-v${VERSION}.zip"
 echo "Size: $SIZE"
