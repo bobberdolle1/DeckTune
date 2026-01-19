@@ -106,9 +106,42 @@ class Plugin:
         self.app_watcher = None  # Steam app watcher
         self.fan_control_service = None  # Fan control service
 
+    def _ensure_binary_permissions(self):
+        """Ensure all binaries have executable permissions.
+        
+        This runs automatically on plugin load to fix permissions
+        without requiring manual install.sh execution.
+        """
+        if not PLUGIN_DIR:
+            decky.logger.warning("PLUGIN_DIR not set, skipping permission setup")
+            return
+        
+        binaries = [
+            os.path.join(PLUGIN_DIR, "bin", "ryzenadj"),
+            os.path.join(PLUGIN_DIR, "bin", "gymdeck3"),
+            os.path.join(PLUGIN_DIR, "bin", "stress-ng"),
+            os.path.join(PLUGIN_DIR, "bin", "memtester"),
+        ]
+        
+        import stat
+        for binary_path in binaries:
+            if os.path.exists(binary_path):
+                try:
+                    current_mode = os.stat(binary_path).st_mode
+                    # Add executable permissions (0o755)
+                    new_mode = current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+                    if current_mode != new_mode:
+                        os.chmod(binary_path, new_mode)
+                        decky.logger.info(f"Set executable permission: {binary_path}")
+                except Exception as e:
+                    decky.logger.warning(f"Could not set permission for {binary_path}: {e}")
+
     async def init(self):
         """Initialize plugin and all modules."""
         decky.logger.info("Initializing DeckTune plugin...")
+        
+        # Auto-setup: Ensure binary permissions
+        self._ensure_binary_permissions()
         
         # Initialize default settings
         for key in DEFAULT_SETTINGS:
@@ -307,6 +340,74 @@ class Plugin:
         if self.delay_task:
             self.delay_task.cancel()
             self.delay_task = None
+
+    # ==================== Setup & Permissions ====================
+    
+    async def setup_sudo_permissions(self):
+        """Configure sudo NOPASSWD for ryzenadj.
+        
+        Creates /etc/sudoers.d/decktune to allow ryzenadj to run without password.
+        This is called from UI when user clicks "Setup Permissions" button.
+        
+        Returns:
+            dict: {"success": bool, "message": str, "already_configured": bool}
+        """
+        if not PLUGIN_DIR:
+            return {"success": False, "message": "PLUGIN_DIR not set", "already_configured": False}
+        
+        import subprocess
+        
+        ryzenadj_path = os.path.join(PLUGIN_DIR, "bin", "ryzenadj")
+        sudoers_file = "/etc/sudoers.d/decktune"
+        
+        # Check if already configured
+        if os.path.exists(sudoers_file):
+            decky.logger.info("sudo already configured")
+            return {"success": True, "message": "Permissions already configured", "already_configured": True}
+        
+        try:
+            # Create sudoers content
+            sudoers_content = f"""# DeckTune - Allow ryzenadj to run without password
+deck ALL=(ALL) NOPASSWD: {ryzenadj_path}
+root ALL=(ALL) NOPASSWD: {ryzenadj_path}
+"""
+            
+            # Write to sudoers file using sudo tee
+            process = subprocess.run(
+                ["sudo", "tee", sudoers_file],
+                input=sudoers_content.encode(),
+                capture_output=True,
+                timeout=30
+            )
+            
+            if process.returncode != 0:
+                error_msg = process.stderr.decode() if process.stderr else "Unknown error"
+                decky.logger.error(f"Failed to create sudoers file: {error_msg}")
+                return {"success": False, "message": f"Failed to create sudoers file: {error_msg}", "already_configured": False}
+            
+            # Set correct permissions
+            subprocess.run(["sudo", "chmod", "0440", sudoers_file], timeout=10)
+            
+            # Verify configuration
+            verify = subprocess.run(
+                ["sudo", "visudo", "-c", "-f", sudoers_file],
+                capture_output=True,
+                timeout=10
+            )
+            
+            if verify.returncode != 0:
+                decky.logger.error("sudoers configuration invalid, removing")
+                subprocess.run(["sudo", "rm", "-f", sudoers_file], timeout=10)
+                return {"success": False, "message": "Invalid sudoers configuration", "already_configured": False}
+            
+            decky.logger.info("sudo permissions configured successfully")
+            return {"success": True, "message": "Permissions configured successfully", "already_configured": False}
+            
+        except subprocess.TimeoutExpired:
+            return {"success": False, "message": "Operation timed out", "already_configured": False}
+        except Exception as e:
+            decky.logger.error(f"Error configuring sudo: {e}")
+            return {"success": False, "message": str(e), "already_configured": False}
 
     # ==================== Platform Info (delegated to RPC) ====================
     

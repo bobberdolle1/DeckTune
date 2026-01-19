@@ -8,7 +8,19 @@ All notable changes to DeckTune will be documented in this file.
 - **UI Language Consistency** — Fixed Russian language strings in Binning Progress component
   - Translated all UI text in `BinningProgressStep` to English
   - Ensures consistent English interface across entire Wizard Mode
-  - Affected strings: "Завершение", "Итерация", "Тестируется", "Текущее значение", "Последнее стабильное", "Осталось", "Прогресс", "Инициализация binning", "Остановить"
+
+### Added
+- **Auto-Setup Integration** — Binary permissions now set automatically on plugin load
+  - `_ensure_binary_permissions()` runs on every plugin initialization
+  - No manual `install.sh` execution required for basic functionality
+  - Added `setup_sudo_permissions()` RPC method for sudoers configuration
+  - Shell scripts automatically converted from CRLF to LF in release zip
+
+### Technical
+- Fixed line ending issues in shell scripts (CRLF → LF)
+- Added `package.json` to release (required by Decky Loader)
+- Proper Unix-style paths and executable permissions in zip archive
+- Python-based build script ensures cross-platform compatibility
 
 ## [3.1.24] - 2026-01-19
 

@@ -1,4 +1,4 @@
-const manifest = {"name":"DeckTune","author":"bobberdolle1","version":"3.1.24","api_version":1,"flags":["root"],"publish":{"tags":["root","undervolt","autotune","performance","temperature","ryzenadj","curve optimizer","battery-saving","safety","stress-test","dynamic-mode","rust","fan-control"],"description":"Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), fan control with custom curves, and stress testing.","image":"https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"}};
+const manifest = {"name":"DeckTune","author":"bobberdolle1","version":"3.1.25","api_version":1,"flags":["root"],"publish":{"tags":["root","undervolt","autotune","performance","temperature","ryzenadj","curve optimizer","battery-saving","safety","stress-test","dynamic-mode","rust","fan-control"],"description":"Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), fan control with custom curves, and stress testing.","image":"https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"}};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
 if (!internalAPIConnection) {
@@ -2089,13 +2089,13 @@ const BinningProgressStep = ({ progress, isRunning, onCancel, }) => {
     // Format ETA
     const formatEta = (seconds) => {
         if (seconds <= 0)
-            return "Завершение...";
+            return "Finishing...";
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         if (mins > 0) {
-            return `~${mins}м ${secs}с`;
+            return `~${mins}m ${secs}s`;
         }
-        return `~${secs}с`;
+        return `~${secs}s`;
     };
     // Calculate progress percentage using max_iterations if available
     const calculateProgress = () => {
@@ -2118,10 +2118,10 @@ const BinningProgressStep = ({ progress, isRunning, onCancel, }) => {
                     } }),
                 window.SP_REACT.createElement("style", null, `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "\u041F\u043E\u0438\u0441\u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0433\u043E Undervolt")),
+            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Finding Maximum Undervolt")),
         progress && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: `Итерация ${progress.iteration}/${progress.max_iterations || 20}`, description: `Тестируется: ${progress.current_value}mV`, nProgress: calculateProgress() / 100, sOperationText: formatEta(progress.eta) })),
+                window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: `Iteration ${progress.iteration}/${progress.max_iterations || 20}`, description: `Testing: ${progress.current_value}mV`, nProgress: calculateProgress() / 100, sOperationText: formatEta(progress.eta) })),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { style: {
                         display: "flex",
@@ -2134,30 +2134,30 @@ const BinningProgressStep = ({ progress, isRunning, onCancel, }) => {
                         borderRadius: "4px",
                     } },
                     window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435:"),
+                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Current Value:"),
                         window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } },
                             progress.current_value,
                             "mV")),
                     window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0435:"),
+                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Last Stable:"),
                         window.SP_REACT.createElement("span", { style: { fontWeight: "bold", color: "#4caf50" } },
                             progress.last_stable,
                             "mV")),
                     window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C:"),
+                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Remaining:"),
                         window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, formatEta(progress.eta))),
                     window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "\u041F\u0440\u043E\u0433\u0440\u0435\u0441\u0441:"),
+                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Progress:"),
                         window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } },
                             calculateProgress().toFixed(1),
                             "%")))))),
         !progress && isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "\u0418\u043D\u0438\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F binning..."))),
+            window.SP_REACT.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "Initializing binning..."))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, style: { marginTop: "16px" } },
                 window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
                     window.SP_REACT.createElement(FaTimes, null),
-                    window.SP_REACT.createElement("span", null, "\u041E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C"))))));
+                    window.SP_REACT.createElement("span", null, "Stop"))))));
 };
 const BinningResultsStep = ({ result, platformInfo, onApplyRecommended, onStartOver, }) => {
     // Format duration
