@@ -12,14 +12,15 @@ This guide covers all major features in DeckTune, including the new reliability 
 6. [Context-Aware Profiles](#context-aware-profiles)
 7. [Progressive Recovery](#progressive-recovery)
 8. [BlackBox Recorder](#blackbox-recorder)
-9. [Acoustic Fan Profiles](#acoustic-fan-profiles)
-10. [PWM Smoothing](#pwm-smoothing)
-11. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
-12. [Automated Silicon Binning](#automated-silicon-binning)
-13. [Per-Game Profiles](#per-game-profiles)
-14. [Benchmarking](#benchmarking)
-15. [Best Practices](#best-practices)
-16. [Troubleshooting](#troubleshooting)
+9. [Fan Control with Custom Curves](#fan-control-with-custom-curves)
+10. [Acoustic Fan Profiles](#acoustic-fan-profiles)
+11. [PWM Smoothing](#pwm-smoothing)
+12. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
+13. [Automated Silicon Binning](#automated-silicon-binning)
+14. [Per-Game Profiles](#per-game-profiles)
+15. [Benchmarking](#benchmarking)
+16. [Best Practices](#best-practices)
+17. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -315,6 +316,171 @@ Every 500ms, the BlackBox captures:
   ]
 }
 ```
+
+---
+
+## Fan Control with Custom Curves
+
+DeckTune now includes comprehensive fan control with customizable fan curves, allowing you to fine-tune cooling behavior for your specific needs.
+
+### What is Fan Control?
+
+Fan control lets you define custom temperature-to-speed mappings (fan curves) that determine how fast the fan spins at different temperatures. This gives you precise control over the balance between cooling performance and noise levels.
+
+### Key Features
+
+- **Custom Fan Curves**: Define 3-10 temperature/speed points
+- **Linear Interpolation**: Smooth speed transitions between points
+- **Three Presets**: Stock, Silent, and Turbo curves
+- **Safety Overrides**: Automatic 100% fan speed at critical temperatures (≥95°C)
+- **Persistent Configuration**: Curves saved and restored across reboots
+- **Real-Time Monitoring**: View current temperature, fan speed, and target speed
+
+### Accessing Fan Control
+
+1. **Open DeckTune** from the Decky menu
+2. **Switch to Expert Mode**
+3. **Navigate to Admin Panel** (button in top-right)
+4. **Click "Fan Control"** button
+
+### Using Preset Curves
+
+#### Stock Preset (Balanced)
+```
+40°C → 0%   (Zero RPM)
+60°C → 40%
+75°C → 70%
+85°C → 100%
+```
+Best for: General use, balanced cooling and noise
+
+#### Silent Preset (Quiet)
+```
+50°C → 0%   (Zero RPM)
+70°C → 30%
+85°C → 60%
+95°C → 100%
+```
+Best for: Quiet environments, light tasks, prioritizing low noise
+
+#### Turbo Preset (Aggressive)
+```
+30°C → 20%  (Always spinning)
+50°C → 60%
+65°C → 80%
+80°C → 100%
+```
+Best for: Heavy gaming, benchmarking, maximum cooling
+
+### Applying a Preset
+
+1. **Open Fan Control** menu
+2. **Click one of the preset buttons**: Stock, Silent, or Turbo
+3. **Preset applies immediately**
+4. **Monitor status** to verify fan behavior
+
+### Creating Custom Curves
+
+1. **Click "Edit Curve"** button
+2. **Add points** by clicking on the graph
+3. **Drag points** to adjust temperature/speed
+4. **Remove points** by double-clicking them
+5. **Save** when satisfied
+
+#### Custom Curve Rules
+
+- **Minimum 3 points** required
+- **Maximum 10 points** allowed
+- **Temperature range**: 0-120°C
+- **Speed range**: 0-100%
+- **Automatic sorting**: Points sorted by temperature
+
+#### Example Custom Curve
+
+For quiet operation with good cooling:
+```
+45°C → 0%   (Zero RPM threshold)
+60°C → 35%  (Gentle ramp-up)
+70°C → 55%  (Moderate cooling)
+80°C → 80%  (Strong cooling)
+90°C → 100% (Maximum cooling)
+```
+
+### Safety Features
+
+#### Critical Temperature Override
+- **≥95°C**: Fan forced to 100% regardless of curve
+- **≥90°C**: Minimum 80% fan speed enforced
+- **Cannot be disabled**: Safety always active
+
+#### Zero RPM Safety
+- **0% speed only allowed** when temperature ≤ minimum curve point
+- **Prevents overheating** from fan stopping at high temps
+- **Automatic enforcement**: No configuration needed
+
+### Monitoring Fan Status
+
+The status display shows:
+- **Current Temperature**: Real-time CPU/GPU temperature
+- **Current Speed**: Actual fan speed percentage
+- **Target Speed**: Calculated speed from active curve
+- **Active Curve**: Name of current preset or "Custom"
+- **Monitoring Status**: Whether automatic control is active
+
+### Configuration Persistence
+
+Fan curves are saved to:
+```
+~/.config/decktune/fan_control.json
+```
+
+This includes:
+- Active curve (preset or custom)
+- All custom curves
+- Last applied settings
+- Configuration version
+
+### Tips for Custom Curves
+
+✅ **DO:**
+- Start with a preset and modify it
+- Test curves during actual gaming
+- Monitor temperatures during heavy load
+- Keep at least one point below 50°C
+- Use gradual speed increases for quieter operation
+
+❌ **DON'T:**
+- Set 0% speed above 50°C (overheating risk)
+- Use too few points (< 3)
+- Create extreme jumps between points
+- Disable safety overrides (not possible anyway)
+- Forget to test under load
+
+### Troubleshooting Fan Control
+
+**Fan not responding to curve:**
+- Check that monitoring is active
+- Verify hwmon interface is available
+- Look for permission errors in Diagnostics
+- Restart the plugin
+
+**Fan speed incorrect:**
+- Safety override may be active (check temperature)
+- Curve points may need adjustment
+- Check for conflicting fan control software
+- Verify PWM interface is accessible
+
+**Configuration not persisting:**
+- Check file permissions on config directory
+- Verify disk space available
+- Look for write errors in Diagnostics
+- Try manually saving curve again
+
+**Hardware interface unavailable:**
+- hwmon interface may not be detected
+- Check `/sys/class/hwmon/` exists
+- Verify kernel modules loaded
+- May not be supported on all devices
 
 ---
 

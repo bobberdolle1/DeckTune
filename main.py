@@ -104,6 +104,7 @@ class Plugin:
         self.dynamic_controller = None  # New gymdeck3 controller
         self.profile_manager = None  # Per-game profile manager
         self.app_watcher = None  # Steam app watcher
+        self.fan_control_service = None  # Fan control service
 
     async def init(self):
         """Initialize plugin and all modules."""
@@ -180,6 +181,19 @@ class Plugin:
             binning_engine=self.binning_engine,
             benchmark_runner=self.benchmark_runner
         )
+        
+        # 8.5. Initialize Fan Control Service
+        from backend.core.fan_control import HwmonInterface, FanControlService
+        
+        hwmon_interface = HwmonInterface()
+        self.fan_control_service = FanControlService(hwmon_interface)
+        
+        # Set fan control service in RPC
+        self.rpc.set_fan_control_service(self.fan_control_service)
+        
+        # Start fan monitoring
+        self.fan_control_service.start_monitoring()
+        decky.logger.info("Fan control service initialized and monitoring started")
         
         # 9. Initialize DynamicController for gymdeck3
         gymdeck3_path = os.path.join(PLUGIN_DIR, GYMDECK3_CLI_PATH) if PLUGIN_DIR else GYMDECK3_CLI_PATH
@@ -744,6 +758,37 @@ class Plugin:
     async def enable_fan_control(self, enabled):
         """Enable or disable fan control."""
         return await self.rpc.enable_fan_control(enabled)
+    
+    # ==================== Fan Control Curves ====================
+    # Requirements: 1.1, 3.1, 6.1, 6.2, 6.3
+    
+    async def fan_apply_preset(self, preset_name):
+        """Apply a predefined fan curve preset."""
+        return await self.rpc.fan_apply_preset(preset_name)
+    
+    async def fan_create_custom(self, name, points):
+        """Create a custom fan curve."""
+        return await self.rpc.fan_create_custom(name, points)
+    
+    async def fan_load_custom(self, name):
+        """Load and activate a custom fan curve."""
+        return await self.rpc.fan_load_custom(name)
+    
+    async def fan_delete_custom(self, name):
+        """Delete a custom fan curve."""
+        return await self.rpc.fan_delete_custom(name)
+    
+    async def fan_list_presets(self):
+        """Get list of available fan curve presets."""
+        return await self.rpc.fan_list_presets()
+    
+    async def fan_list_custom(self):
+        """Get list of custom fan curves."""
+        return await self.rpc.fan_list_custom()
+    
+    async def fan_get_status(self):
+        """Get current fan control status."""
+        return await self.rpc.fan_get_status()
 
     # ==================== Crash Metrics (v3.1) ====================
     # Feature: decktune-3.1-reliability-ux
@@ -861,5 +906,10 @@ class Plugin:
         if self.dynamic_controller and self.dynamic_controller.is_running():
             await self.dynamic_controller.stop()
             decky.logger.info("DynamicController stopped")
+        
+        # Stop fan control service
+        if self.fan_control_service:
+            self.fan_control_service.stop_monitoring()
+            decky.logger.info("Fan control service stopped")
         
         decky.logger.info("DeckTune plugin unloaded")

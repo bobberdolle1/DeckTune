@@ -2,6 +2,49 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.24] - 2026-01-19
+
+### Added
+- **Fan Control with Custom Curves** — comprehensive fan control system
+  - Custom fan curves with 3-10 temperature/speed points
+  - Three presets: Stock (balanced), Silent (quiet), Turbo (aggressive)
+  - Linear interpolation for smooth speed transitions
+  - Real-time monitoring of temperature, fan speed, and target speed
+  - Configuration persistence across reboots
+  - Safety overrides: 100% at ≥95°C, minimum 80% at ≥90°C
+  - Zero RPM safety enforcement
+  - Hardware interface abstraction via hwmon
+  - RPC API: `fan_apply_preset()`, `fan_create_custom()`, `fan_load_custom()`, `fan_delete_custom()`, `fan_list_presets()`, `fan_list_custom()`, `fan_get_status()`
+  - Frontend UI with preset buttons and custom curve editor
+  - Admin panel integration with dedicated Fan Control button
+
+### Implementation
+- **Backend** (`backend/core/fan_control.py`):
+  - `FanPoint` dataclass with validation (temp: 0-120°C, speed: 0-100%)
+  - `FanCurve` dataclass with automatic point sorting
+  - `FanControlService` with monitoring loop and configuration management
+  - `HwmonInterface` for hardware abstraction
+  - `calculate_fan_speed()` with linear interpolation
+  - `apply_safety_override()` for critical temperature handling
+  - Configuration storage at `~/.config/decktune/fan_control.json`
+- **Frontend** (`src/components/FanControl.tsx`):
+  - Preset selection UI with Stock, Silent, Turbo buttons
+  - Status display with current/target speed
+  - Custom curve editor (basic implementation)
+  - Admin panel navigation integration
+- **Testing**:
+  - 68 comprehensive tests covering all functionality
+  - Property-based tests for validation, interpolation, persistence
+  - Unit tests for edge cases and error handling
+  - Integration tests for RPC endpoints and workflows
+
+### Technical
+- All 570 tests passing (including 68 new fan control tests)
+- Comprehensive property-based testing with Hypothesis
+- Type-safe dataclasses with validation
+- Thread-safe monitoring with background thread
+- Graceful error handling and fallback behavior
+
 ## [3.1.23] - 2026-01-19
 
 ### Fixed

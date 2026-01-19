@@ -16,6 +16,8 @@ export { LoadGraph } from "./LoadGraph";
 export { FanCurveEditor } from "./FanCurveEditor";
 export type { FanConfig, FanCurvePoint, FanStatus } from "./FanCurveEditor";
 
+export { FanControl } from "./FanControl";
+
 export { SetupWizard, GOAL_ESTIMATES, GOAL_INFO } from "./SetupWizard";
 export type { WizardState, WizardStep, SetupGoal, GoalEstimate, WizardSettings } from "./SetupWizard";
 

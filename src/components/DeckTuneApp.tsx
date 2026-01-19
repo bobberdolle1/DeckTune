@@ -9,12 +9,13 @@ import {
 } from "@decky/ui";
 import { addEventListener, removeEventListener } from "@decky/api";
 import { useState, useEffect, FC } from "react";
-import { FaCog, FaMagic, FaWrench } from "react-icons/fa";
+import { FaCog, FaMagic, FaWrench, FaFan } from "react-icons/fa";
 
 import { useDeckTune, initialState } from "../context";
 import { WizardMode } from "./WizardMode";
 import { ExpertMode } from "./ExpertMode";
 import { SetupWizard } from "./SetupWizard";
+import { FanControl } from "./FanControl";
 import { getApiInstance } from "../api";
 
 /**
@@ -22,10 +23,10 @@ import { getApiInstance } from "../api";
  */
 const DeckTuneContent: FC = () => {
   // Load saved mode from localStorage, default to wizard
-  const [mode, setMode] = useState<"wizard" | "expert">(() => {
+  const [mode, setMode] = useState<"wizard" | "expert" | "fan">(() => {
     try {
       const saved = localStorage.getItem('decktune_ui_mode');
-      return (saved === "expert" || saved === "wizard") ? saved : "wizard";
+      return (saved === "expert" || saved === "wizard" || saved === "fan") ? saved : "wizard";
     } catch {
       return "wizard";
     }
@@ -259,6 +260,7 @@ const DeckTuneContent: FC = () => {
                 minHeight: "40px", 
                 padding: "8px 12px",
                 backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                marginBottom: "6px",
                 borderRadius: "8px",
                 border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
               }}
@@ -295,10 +297,49 @@ const DeckTuneContent: FC = () => {
             </ButtonItem>
           </div>
         </PanelSectionRow>
+        
+        <PanelSectionRow>
+          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
+            <ButtonItem
+              layout="below"
+              onClick={() => setMode("fan")}
+              className={`mode-button ${mode === "fan" ? "active" : ""}`}
+              style={{ 
+                minHeight: "40px", 
+                padding: "8px 12px",
+                backgroundColor: mode === "fan" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                borderRadius: "8px",
+                border: mode === "fan" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+              }}
+            >
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                fontSize: "12px",
+                fontWeight: mode === "fan" ? "bold" : "normal",
+                color: mode === "fan" ? "#fff" : "#8b929a"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <FaFan size={14} style={{ 
+                    filter: mode === "fan" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none",
+                  }} />
+                  <span>Fan Control</span>
+                </div>
+              </div>
+            </ButtonItem>
+          </div>
+        </PanelSectionRow>
       </PanelSection>
 
-      <div className="fade-in" style={{ animationDelay: "0.2s" }}>
-        {mode === "wizard" ? <WizardMode onRunSetup={handleRunSetupWizard} /> : <ExpertMode onRunSetup={handleRunSetupWizard} />}
+      <div className="fade-in" style={{ animationDelay: "0.3s" }}>
+        {mode === "wizard" ? (
+          <WizardMode onRunSetup={handleRunSetupWizard} />
+        ) : mode === "expert" ? (
+          <ExpertMode onRunSetup={handleRunSetupWizard} />
+        ) : (
+          <FanControl onBack={() => setMode("wizard")} />
+        )}
       </div>
     </>
   );

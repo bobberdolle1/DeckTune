@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from ..core.ryzenadj import RyzenadjWrapper
     from ..core.safety import SafetyManager
     from ..core.blackbox import BlackBox
+    from ..core.fan_control import FanControlService
     from ..platform.detect import PlatformInfo
     from ..tuning.autotune import AutotuneEngine, AutotuneConfig
     from ..tuning.runner import TestRunner
@@ -90,6 +91,7 @@ class DeckTuneRPC:
         self.benchmark_runner = benchmark_runner
         self.iron_seeker_engine = iron_seeker_engine
         self.blackbox = blackbox
+        self.fan_control_service = None  # Will be set via set_fan_control_service()
         
         self._delay_task: Optional[asyncio.Task] = None
         self._autotune_task: Optional[asyncio.Task] = None
@@ -160,6 +162,14 @@ class DeckTuneRPC:
             engine: IronSeekerEngine instance
         """
         self.iron_seeker_engine = engine
+    
+    def set_fan_control_service(self, service: "FanControlService") -> None:
+        """Set the fan control service.
+        
+        Args:
+            service: FanControlService instance
+        """
+        self.fan_control_service = service
     
     # ==================== Platform Info ====================
     
@@ -1782,6 +1792,178 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to toggle fan control: {e}")
             return {"success": False, "error": str(e)}
+
+    # ==================== Fan Control Curves ====================
+    # Requirements: 1.1, 3.1, 6.1, 6.2, 6.3
+    
+    async def fan_apply_preset(self, preset_name: str) -> Dict[str, Any]:
+        """Apply a predefined fan curve preset.
+        
+        Args:
+            preset_name: Name of the preset ("stock", "silent", or "turbo")
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 1.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        logger.info(f"Applying fan preset: {preset_name}")
+        
+        success = self.fan_control_service.apply_preset(preset_name)
+        
+        if success:
+            return {"success": True, "preset": preset_name}
+        else:
+            return {"success": False, "error": f"Unknown preset: {preset_name}"}
+    
+    async def fan_create_custom(self, name: str, points: List[Dict[str, int]]) -> Dict[str, Any]:
+        """Create a custom fan curve.
+        
+        Args:
+            name: Name for the custom curve
+            points: List of dictionaries with "temp" and "speed" keys
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        logger.info(f"Creating custom fan curve: {name} with {len(points)} points")
+        
+        try:
+            # Import FanPoint from fan_control module
+            from ..core.fan_control import FanPoint
+            
+            # Convert dict points to FanPoint objects
+            fan_points = []
+            for point in points:
+                temp = point.get("temp")
+                speed = point.get("speed")
+                
+                if temp is None or speed is None:
+                    return {"success": False, "error": "Each point must have 'temp' and 'speed' keys"}
+                
+                fan_points.append(FanPoint(temp=temp, speed=speed))
+            
+            # Create the custom curve
+            success = self.fan_control_service.create_custom_curve(name, fan_points)
+            
+            if success:
+                return {"success": True, "name": name, "points": len(fan_points)}
+            else:
+                return {"success": False, "error": "Failed to create custom curve (validation error)"}
+                
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
+        except Exception as e:
+            logger.error(f"Failed to create custom curve: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def fan_load_custom(self, name: str) -> Dict[str, Any]:
+        """Load and activate a custom fan curve.
+        
+        Args:
+            name: Name of the custom curve to load
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        logger.info(f"Loading custom fan curve: {name}")
+        
+        success = self.fan_control_service.load_custom_curve(name)
+        
+        if success:
+            return {"success": True, "name": name}
+        else:
+            return {"success": False, "error": f"Custom curve '{name}' not found"}
+    
+    async def fan_delete_custom(self, name: str) -> Dict[str, Any]:
+        """Delete a custom fan curve.
+        
+        Args:
+            name: Name of the custom curve to delete
+            
+        Returns:
+            Dictionary with success status
+            
+        Requirements: 3.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        logger.info(f"Deleting custom fan curve: {name}")
+        
+        success = self.fan_control_service.delete_custom_curve(name)
+        
+        if success:
+            return {"success": True, "name": name}
+        else:
+            return {"success": False, "error": f"Custom curve '{name}' not found"}
+    
+    async def fan_list_presets(self) -> Dict[str, Any]:
+        """Get list of available fan curve presets.
+        
+        Returns:
+            Dictionary with success status and list of preset names
+            
+        Requirements: 1.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        presets = self.fan_control_service.get_available_presets()
+        
+        return {
+            "success": True,
+            "presets": presets
+        }
+    
+    async def fan_list_custom(self) -> Dict[str, Any]:
+        """Get list of custom fan curves.
+        
+        Returns:
+            Dictionary with success status and list of custom curve names
+            
+        Requirements: 3.1
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        custom_curves = self.fan_control_service.list_custom_curves()
+        
+        return {
+            "success": True,
+            "custom_curves": custom_curves
+        }
+    
+    async def fan_get_status(self) -> Dict[str, Any]:
+        """Get current fan control status.
+        
+        Returns:
+            Dictionary with current temperature, fan speeds, and active curve info
+            
+        Requirements: 6.1, 6.2, 6.3
+        """
+        if not hasattr(self, 'fan_control_service') or self.fan_control_service is None:
+            return {"success": False, "error": "Fan control service not initialized"}
+        
+        status = self.fan_control_service.get_current_status()
+        
+        return {
+            "success": True,
+            **status
+        }
 
     # ==================== Iron Seeker ====================
     # Requirements: 1.1, 3.5, 5.1, 5.2, 5.3, 3.4

@@ -1,7 +1,7 @@
 {
   "name": "DeckTune",
   "author": "bobberdolle1",
-  "version": "3.1.23",
+  "version": "3.1.24",
   "api_version": 1,
   "flags": ["root"],
   "publish": {
@@ -17,9 +17,10 @@
       "safety",
       "stress-test",
       "dynamic-mode",
-      "rust"
+      "rust",
+      "fan-control"
     ],
-    "description": "Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), and stress testing.",
+    "description": "Automated undervolting and tuning solution for Steam Deck with safety features, autotune, dynamic mode (gymdeck3), fan control with custom curves, and stress testing.",
     "image": "https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"
   }
 }
