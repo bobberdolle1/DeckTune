@@ -1,172 +1,97 @@
-# DeckTune v3.1.29 - Wizard Mode Complete Implementation
+# DeckTune v3.1.29 Release Notes
 
-## 🎯 Major Features
+## Critical Fixes - Wizard Mode & UI
 
-### Wizard Mode Full Rewrite
-Complete implementation of automated undervolt discovery with gymdeck3 integration.
+### 🔧 Backend Fixes
 
-#### Core Features
-- ✅ **Per-core testing** - Individual core validation with taskset
-- ✅ **Dynamic undervolt** - gymdeck3 integration for adaptive voltage
-- ✅ **Hardware validation** - Real-time MCE/WHEA error detection
-- ✅ **Crash recovery** - Automatic rollback with dirty exit detection
-- ✅ **Chip grading** - Bronze/Silver/Gold/Platinum quality tiers
-- ✅ **Curve visualization** - Interactive SVG chart with pass/fail/crash indicators
-- ✅ **Progress tracking** - Real-time ETA/OTA with heartbeat
-- ✅ **Wizard presets** - Dedicated preset system with full metadata
-- ✅ **History browser** - View, compare, and manage all wizard runs
-- ✅ **Apply options** - Apply on Startup and Game Only Mode integration
+**1. Fixed "testing undefined mV" infinite loop**
+- `_current_offset` now properly initialized as `None` instead of `0`
+- Progress emission handles `None` offset during initialization
+- Prevents confusing "testing 0mV" messages before wizard starts
 
-#### Backend Implementation
+**2. Fixed wizard cancellation not working**
+- Added cancellation checks inside core test loop
+- Added cancellation checks inside per-core iteration
+- Wizard now responds immediately to cancel button
 
-**wizard_session.py**:
-- Per-core stress testing with `_test_offset_per_core()`
-- Dynamic undervolt integration via `DynamicController`
-- 60-second verification pass with automatic rollback
-- Comprehensive hardware error monitoring
-- Chip quality grading algorithm
-- Curve data collection for visualization
+**3. Fixed wizard state not persisting after restart**
+- Added localStorage persistence for wizard setup completion
+- Key: `decktune_wizard_setup_complete`
+- Prevents wizard setup from showing again after completion
 
-**runner.py**:
-- `run_per_core_test()` - Core-specific stress testing
-- `monitor_dmesg_realtime()` - Hardware error detection
-- `read_voltage_sensors()` - Voltage verification
-- `run_benchmark_with_progress()` - Real-time benchmark metrics
+### 🎮 UI/UX Fixes
 
-**rpc.py**:
-- `start_wizard()` - Launch wizard session
-- `cancel_wizard()` - Cancel running session
-- `apply_wizard_result()` - Apply with dynamic preset creation
-- `run_wizard_benchmark()` - Performance benchmarking
-- `get_wizard_results_history()` - Retrieve all runs
+**4. Fixed gamepad focus on Expert/Wizard mode buttons**
+- Added `.mode-button-focusable` CSS class
+- Gamepad focus now shows blue outline with glow effect
+- Proper focus-within and gpfocus support
 
-#### Frontend Implementation
+**5. Replaced dropdown with button grid in wizard config**
+- Aggressiveness: 3 buttons (Safe/Balanced/Aggressive)
+- Test Duration: 2 buttons (Short/Long)
+- Fully gamepad-navigable
+- Visual feedback for selected option
 
-**WizardMode.tsx**:
-- Configuration screen with aggressiveness/duration settings
-- Real-time progress with ETA/OTA display
-- Results screen with chip grade badge
-- Curve visualization with pass/fail indicators
-- Benchmark integration with progress bar
+**6. Added Reset Settings button**
+- Located in Settings menu
+- Clears all localStorage state
+- Resets binning config to defaults
+- Disables expert mode
+- Reloads page after reset
 
-**WizardHistory.tsx**:
-- Complete history of all wizard runs
-- Detailed view with curve data
-- Apply/Delete actions
-- Chip grade filtering
-- Timestamp sorting
+**7. Settings menu now gamepad-accessible**
+- All controls are Focusable
+- Proper navigation flow
+- Modal doesn't block gamepad input
 
-**SettingsMenu.tsx**:
-- Binning Settings (test duration, step size, start value)
-- Expert Mode toggle with confirmation
-- Persistent configuration storage
+### 📊 Technical Details
 
-**FocusableButton.tsx**:
-- Fixed mouse click handling
-- Gamepad navigation support
-- Visual focus indicators
+**Backend Changes:**
+- `backend/tuning/wizard_session.py`:
+  - `_current_offset: Optional[int] = None`
+  - Enhanced `_emit_progress()` with None handling
+  - Added 3 cancellation checkpoints in test loop
 
-### Settings & Persistence
+**Frontend Changes:**
+- `src/components/DeckTuneApp.tsx`:
+  - localStorage wizard setup persistence
+  - Gamepad focus CSS for mode buttons
+  
+- `src/components/WizardMode.tsx`:
+  - Removed Dropdown/Field imports
+  - Button grid for aggressiveness/duration
+  - Improved visual hierarchy
 
-**All settings persist across restarts**:
-- Wizard configuration (aggressiveness, duration)
-- Binning settings (test_duration, step_size, start_value)
-- Expert Mode state
-- Apply on Startup preference
-- Game Only Mode preference
-- Wizard results history (last 20 runs)
+- `src/components/SettingsMenu.tsx`:
+  - Reset Settings button with confirmation
+  - Clears localStorage and resets all configs
 
-### UI/UX Improvements
+### 🎯 User Impact
 
-**Gamepad Navigation**:
-- D-pad up/down for Wizard/Expert mode switching
-- Focusable components throughout
-- Proper focus indicators
+**Before:**
+- Wizard showed "testing undefinedmV" infinitely
+- Cancel button didn't work
+- Setup wizard appeared every restart
+- Couldn't select wizard presets with gamepad
+- No way to reset settings
 
-**Visual Feedback**:
-- Real-time progress bars
-- Chip grade badges with glow effects
-- Color-coded curve points (green/red/orange)
-- Status indicators (ON/OFF/DYN)
+**After:**
+- Clean initialization with proper offset display
+- Cancel works immediately
+- Setup state persists across restarts
+- Full gamepad navigation support
+- One-click settings reset
 
-**Error Handling**:
-- Crash recovery modal with details
-- Hardware error detection alerts
-- Graceful fallbacks on failures
+### 🔍 Testing Recommendations
 
-## 🔧 Technical Details
+1. Start wizard → verify no "undefined mV"
+2. Cancel during test → verify immediate stop
+3. Complete wizard → restart plugin → verify no setup screen
+4. Navigate with gamepad → verify all buttons focusable
+5. Settings → Reset → verify clean state
 
-### Validation Chain
-```
-1. Apply voltage offset (per-core or all cores)
-2. Verify via hwmon sensors
-3. Run stress test (30s or 120s)
-4. Monitor dmesg for MCE/WHEA in parallel
-5. Check system metrics (temp, freq)
-6. Record curve data point
-7. Run 60s verification pass
-8. Rollback if unstable (+5mV safety margin)
-9. Create dynamic preset with gymdeck3 config
-```
+---
 
-### Chip Grading Scale
-- **Platinum**: ≥ -51mV (Top 1-5%)
-- **Gold**: -36 to -50mV (Top 20%)
-- **Silver**: -21 to -35mV (Top 40%)
-- **Bronze**: -10 to -20mV (Bottom 60%)
-
-### Aggressiveness Levels
-- **Safe**: 2mV steps, +10mV margin, ~15-20 min
-- **Balanced**: 5mV steps, +5mV margin, ~5-10 min
-- **Aggressive**: 10mV steps, +2mV margin, ~3-5 min
-
-## 📋 Files Modified
-
-### Backend
-- `backend/tuning/wizard_session.py` - Complete rewrite (800+ lines)
-- `backend/tuning/runner.py` - Added 4 new methods (200+ lines)
-- `backend/api/rpc.py` - Wizard RPC methods (150+ lines)
-- `backend/api/events.py` - Wizard events (30 lines)
-- `main.py` - Wizard initialization (50 lines)
-
-### Frontend
-- `src/components/WizardMode.tsx` - Complete redesign (600+ lines)
-- `src/components/WizardHistory.tsx` - New component (400+ lines)
-- `src/components/SettingsMenu.tsx` - Binning settings (100+ lines)
-- `src/components/FocusableButton.tsx` - Click fix (5 lines)
-- `src/context/WizardContext.tsx` - State management (200+ lines)
-- `src/context/SettingsContext.tsx` - Settings persistence (50 lines)
-
-## ⚠️ Breaking Changes
-None - fully backward compatible
-
-## 🚀 Installation
-1. Download `DeckTune-v3.1.29.zip`
-2. Open Decky Loader in Developer Mode
-3. Install from ZIP
-4. Restart Steam
-
-## 🧪 Testing Checklist
-- [x] Per-core testing validates individual cores
-- [x] Hardware errors detected (MCE/WHEA)
-- [x] Dynamic presets created with gymdeck3
-- [x] Crash recovery works after system crash
-- [x] Benchmark shows real metrics with progress
-- [x] Settings persist after restart
-- [x] Gamepad navigation functional
-- [x] Expert Mode toggle works
-- [x] Apply on Startup works
-- [x] Game Only Mode works
-- [x] Wizard history browsable
-- [x] Curve visualization accurate
-
-## 📝 Known Limitations
-- GPU/SOC domain testing not yet implemented (CPU only)
-- Curve chart is basic SVG (no zoom/pan)
-- Maximum 20 wizard results stored
-
-## 🎯 Next Steps
-- GPU/SOC domain support
-- Enhanced curve visualization (recharts)
-- Export/import wizard results
-- Comparison view for multiple runs
+**Build:** v3.1.29  
+**Date:** 2026-01-20  
+**Commit:** Critical wizard fixes + gamepad UX improvements

@@ -29,6 +29,8 @@ import { getApiInstance } from "../api";
  * 
  * Feature: ui-refactor-settings
  * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
+ * 
+ * CRITICAL FIX: Wizard setup state persistence
  */
 const DeckTuneContent: FC = () => {
   // Load saved mode from localStorage, default to wizard
@@ -45,6 +47,7 @@ const DeckTuneContent: FC = () => {
   // Settings Menu visibility state - Requirements: 1.3
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   
+  // CRITICAL FIX: Persist wizard setup state
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
   const { state, api } = useDeckTune();
@@ -66,6 +69,14 @@ const DeckTuneContent: FC = () => {
   useEffect(() => {
     const checkFirstRun = async () => {
       try {
+        // CRITICAL FIX: Check localStorage first for wizard setup completion
+        const wizardSetupComplete = localStorage.getItem('decktune_wizard_setup_complete');
+        if (wizardSetupComplete === 'true') {
+          setIsFirstRun(false);
+          setShowSetupWizard(false);
+          return;
+        }
+        
         const firstRunComplete = await api.getSetting('first_run_complete');
         const isNew = firstRunComplete !== true;
         setIsFirstRun(isNew);
@@ -73,8 +84,15 @@ const DeckTuneContent: FC = () => {
           setShowSetupWizard(true);
         }
       } catch {
-        setIsFirstRun(true);
-        setShowSetupWizard(true);
+        // Check localStorage fallback
+        const wizardSetupComplete = localStorage.getItem('decktune_wizard_setup_complete');
+        if (wizardSetupComplete === 'true') {
+          setIsFirstRun(false);
+          setShowSetupWizard(false);
+        } else {
+          setIsFirstRun(true);
+          setShowSetupWizard(true);
+        }
       }
     };
     
@@ -82,6 +100,8 @@ const DeckTuneContent: FC = () => {
   }, [api]);
 
   const handleSetupComplete = () => {
+    // CRITICAL FIX: Persist wizard setup completion
+    localStorage.setItem('decktune_wizard_setup_complete', 'true');
     setShowSetupWizard(false);
     setIsFirstRun(false);
   };
@@ -91,6 +111,8 @@ const DeckTuneContent: FC = () => {
   };
 
   const handleSetupSkip = () => {
+    // CRITICAL FIX: Persist skip state
+    localStorage.setItem('decktune_wizard_setup_complete', 'true');
     setShowSetupWizard(false);
     setIsFirstRun(false);
   };
@@ -242,6 +264,14 @@ const DeckTuneContent: FC = () => {
           .fade-in {
             animation: fadeInUp 0.5s ease-out;
           }
+          
+          /* CRITICAL FIX: Gamepad focus highlight for mode buttons */
+          .mode-button-focusable:focus-within,
+          .mode-button-focusable.gpfocus {
+            outline: 3px solid #1a9fff !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(26, 159, 255, 0.6) !important;
+          }
         `}
       </style>
 
@@ -263,7 +293,7 @@ const DeckTuneContent: FC = () => {
         <PanelSectionRow>
           <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <Focusable
-              className="fade-in"
+              className="fade-in mode-button-focusable"
               style={{ 
                 minHeight: "40px", 
                 padding: "8px 12px",
@@ -309,7 +339,7 @@ const DeckTuneContent: FC = () => {
             </Focusable>
             
             <Focusable
-              className="fade-in"
+              className="fade-in mode-button-focusable"
               style={{ 
                 minHeight: "40px", 
                 padding: "8px 12px",

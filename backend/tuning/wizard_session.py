@@ -221,7 +221,7 @@ class WizardSession:
         self._cancelled: bool = False
         
         # Progress tracking
-        self._current_offset: int = 0
+        self._current_offset: Optional[int] = None  # CRITICAL FIX: None until search starts
         self._last_stable_offset: int = 0
         self._curve_data: List[CurveDataPoint] = []
         self._iterations: int = 0
@@ -381,6 +381,9 @@ class WizardSession:
         
         elapsed = time.time() - self._start_time
         
+        # CRITICAL FIX: Handle None offset during initialization
+        current_offset = self._current_offset if self._current_offset is not None else 0
+        
         # Estimate remaining time based on iterations
         # Rough estimate: 10 iterations average, current progress
         estimated_total_iterations = 10
@@ -400,7 +403,7 @@ class WizardSession:
         progress = WizardProgress(
             state=self._state,
             current_stage=stage,
-            current_offset=self._current_offset,
+            current_offset=current_offset,
             progress_percent=progress_percent,
             eta_seconds=eta,
             ota_seconds=int(elapsed),
@@ -703,6 +706,11 @@ class WizardSession:
                 logger.info(f"Reached safety limit: {safety_limit}mV")
                 break
             
+            # CRITICAL FIX: Check cancellation before emitting progress
+            if self._cancelled:
+                logger.info("Wizard cancelled during iteration")
+                break
+            
             # Emit progress
             await self._emit_progress(f"Testing {self._current_offset}mV")
             
@@ -710,6 +718,11 @@ class WizardSession:
             if domain == "cpu":
                 all_cores_passed = True
                 for core_id in range(4):  # Steam Deck has 4 cores
+                    # CRITICAL FIX: Check cancellation inside core loop
+                    if self._cancelled:
+                        logger.info(f"Wizard cancelled during core {core_id} test")
+                        break
+                    
                     logger.info(f"Testing core {core_id} at {self._current_offset}mV")
                     passed = await self._test_offset_per_core(self._current_offset, core_id)
                     
@@ -717,6 +730,10 @@ class WizardSession:
                         all_cores_passed = False
                         logger.warning(f"Core {core_id} failed at {self._current_offset}mV")
                         break  # Stop testing other cores if one fails
+                
+                # If cancelled during core loop, exit main loop
+                if self._cancelled:
+                    break
                 
                 passed = all_cores_passed
             else:

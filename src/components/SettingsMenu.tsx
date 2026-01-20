@@ -498,6 +498,50 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                 ✓ Changes saved automatically
               </div>
             </PanelSectionRow>
+            
+            {/* CRITICAL FIX: Reset Settings Button */}
+            <PanelSectionRow>
+              <FocusableButton
+                onClick={async () => {
+                  if (confirm("Reset all settings to defaults? This will clear wizard setup state and all configurations.")) {
+                    try {
+                      // Clear localStorage
+                      localStorage.removeItem('decktune_wizard_setup_complete');
+                      localStorage.removeItem('decktune_ui_mode');
+                      localStorage.removeItem('decktune_last_mode');
+                      
+                      // Reset binning config
+                      await call("update_binning_config", {
+                        test_duration: 60,
+                        step_size: 5,
+                        start_value: -10,
+                      });
+                      
+                      // Reset expert mode
+                      await setExpertMode(false);
+                      
+                      // Reload page
+                      window.location.reload();
+                    } catch (err) {
+                      console.error("Failed to reset settings:", err);
+                    }
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  backgroundColor: "#f44336",
+                  borderRadius: "4px",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                }}
+              >
+                Reset All Settings
+              </FocusableButton>
+            </PanelSectionRow>
           </PanelSection>
         </div>
       </div>

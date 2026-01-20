@@ -1926,18 +1926,58 @@ const ConfigurationScreen = ({ onStart, platformInfo }) => {
                 platformInfo.safe_limit,
                 "mV"))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Field, { label: "Aggressiveness" },
-                window.SP_REACT.createElement(DFL.Dropdown, { rgOptions: [
-                        { label: "Safe (2mV steps, +10mV margin)", data: "safe" },
-                        { label: "Balanced (5mV steps, +5mV margin)", data: "balanced" },
-                        { label: "Aggressive (10mV steps, +2mV margin)", data: "aggressive" },
-                    ], selectedOption: aggressiveness, onChange: (option) => setAggressiveness(option.data) }))),
+            window.SP_REACT.createElement("div", { style: { marginBottom: "8px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" } }, "Aggressiveness"),
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("safe"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "36px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Safe"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "8px" } }, "2mV steps"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("balanced"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "36px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Balanced"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "8px" } }, "5mV steps"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("aggressive"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "36px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Aggressive"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "8px" } }, "10mV steps")))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Field, { label: "Test Duration" },
-                window.SP_REACT.createElement(DFL.Dropdown, { rgOptions: [
-                        { label: "Short (30s per test)", data: "short" },
-                        { label: "Long (120s per test)", data: "long" },
-                    ], selectedOption: testDuration, onChange: (option) => setTestDuration(option.data) }))),
+            window.SP_REACT.createElement("div", { style: { marginBottom: "8px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" } }, "Test Duration"),
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("short"), style: {
+                            flex: 1,
+                            backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
+                            border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "36px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Short"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "8px" } }, "30s per test"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("long"), style: {
+                            flex: 1,
+                            backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
+                            border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "36px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "10px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Long"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "8px" } }, "120s per test")))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", textAlign: "center", padding: "5px" } },
                 "Estimated time: ~",
@@ -5555,7 +5595,41 @@ const SettingsMenu = ({ isOpen, onClose }) => {
                                 color: "#4caf50",
                                 textAlign: "center",
                                 padding: "4px",
-                            } }, "\u2713 Changes saved automatically"))))),
+                            } }, "\u2713 Changes saved automatically")),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement(FocusableButton, { onClick: async () => {
+                                if (confirm("Reset all settings to defaults? This will clear wizard setup state and all configurations.")) {
+                                    try {
+                                        // Clear localStorage
+                                        localStorage.removeItem('decktune_wizard_setup_complete');
+                                        localStorage.removeItem('decktune_ui_mode');
+                                        localStorage.removeItem('decktune_last_mode');
+                                        // Reset binning config
+                                        await call("update_binning_config", {
+                                            test_duration: 60,
+                                            step_size: 5,
+                                            start_value: -10,
+                                        });
+                                        // Reset expert mode
+                                        await setExpertMode(false);
+                                        // Reload page
+                                        window.location.reload();
+                                    }
+                                    catch (err) {
+                                        console.error("Failed to reset settings:", err);
+                                    }
+                                }
+                            }, style: {
+                                width: "100%",
+                                padding: "10px",
+                                backgroundColor: "#f44336",
+                                borderRadius: "4px",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "12px",
+                                textAlign: "center",
+                                cursor: "pointer",
+                            } }, "Reset All Settings"))))),
         window.SP_REACT.createElement(ExpertWarningDialog, { isOpen: showExpertWarning, onConfirm: handleExpertModeConfirm, onCancel: handleExpertModeCancel })));
 };
 
@@ -5571,6 +5645,8 @@ const SettingsMenu = ({ isOpen, onClose }) => {
  *
  * Feature: ui-refactor-settings
  * Requirements: 1.1, 1.2, 1.3, 8.1, 8.2, 8.3, 8.4, 8.5
+ *
+ * CRITICAL FIX: Wizard setup state persistence
  */
 const DeckTuneContent = () => {
     // Load saved mode from localStorage, default to wizard
@@ -5586,6 +5662,7 @@ const DeckTuneContent = () => {
     });
     // Settings Menu visibility state - Requirements: 1.3
     const [showSettingsMenu, setShowSettingsMenu] = SP_REACT.useState(false);
+    // CRITICAL FIX: Persist wizard setup state
     const [showSetupWizard, setShowSetupWizard] = SP_REACT.useState(false);
     const [isFirstRun, setIsFirstRun] = SP_REACT.useState(null);
     const { state, api } = useDeckTune();
@@ -5606,6 +5683,13 @@ const DeckTuneContent = () => {
     SP_REACT.useEffect(() => {
         const checkFirstRun = async () => {
             try {
+                // CRITICAL FIX: Check localStorage first for wizard setup completion
+                const wizardSetupComplete = localStorage.getItem('decktune_wizard_setup_complete');
+                if (wizardSetupComplete === 'true') {
+                    setIsFirstRun(false);
+                    setShowSetupWizard(false);
+                    return;
+                }
                 const firstRunComplete = await api.getSetting('first_run_complete');
                 const isNew = firstRunComplete !== true;
                 setIsFirstRun(isNew);
@@ -5614,13 +5698,23 @@ const DeckTuneContent = () => {
                 }
             }
             catch {
-                setIsFirstRun(true);
-                setShowSetupWizard(true);
+                // Check localStorage fallback
+                const wizardSetupComplete = localStorage.getItem('decktune_wizard_setup_complete');
+                if (wizardSetupComplete === 'true') {
+                    setIsFirstRun(false);
+                    setShowSetupWizard(false);
+                }
+                else {
+                    setIsFirstRun(true);
+                    setShowSetupWizard(true);
+                }
             }
         };
         checkFirstRun();
     }, [api]);
     const handleSetupComplete = () => {
+        // CRITICAL FIX: Persist wizard setup completion
+        localStorage.setItem('decktune_wizard_setup_complete', 'true');
         setShowSetupWizard(false);
         setIsFirstRun(false);
     };
@@ -5628,6 +5722,8 @@ const DeckTuneContent = () => {
         setShowSetupWizard(false);
     };
     const handleSetupSkip = () => {
+        // CRITICAL FIX: Persist skip state
+        localStorage.setItem('decktune_wizard_setup_complete', 'true');
         setShowSetupWizard(false);
         setIsFirstRun(false);
     };
@@ -5763,13 +5859,21 @@ const DeckTuneContent = () => {
           .fade-in {
             animation: fadeInUp 0.5s ease-out;
           }
+          
+          /* CRITICAL FIX: Gamepad focus highlight for mode buttons */
+          .mode-button-focusable:focus-within,
+          .mode-button-focusable.gpfocus {
+            outline: 3px solid #1a9fff !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(26, 159, 255, 0.6) !important;
+          }
         `),
         window.SP_REACT.createElement(HeaderBar, { onFanControlClick: handleFanControlClick, onSettingsClick: handleSettingsClick }),
         window.SP_REACT.createElement(SettingsMenu, { isOpen: showSettingsMenu, onClose: () => setShowSettingsMenu(false) }),
         window.SP_REACT.createElement(DFL.PanelSection, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px" } },
-                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in", style: {
+                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in mode-button-focusable", style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
@@ -5802,7 +5906,7 @@ const DeckTuneContent = () => {
                                     fontWeight: "bold",
                                     boxShadow: `0 0 10px ${getStatusColor()}`,
                                 } }, getStatusText())))),
-                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in", style: {
+                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in mode-button-focusable", style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",

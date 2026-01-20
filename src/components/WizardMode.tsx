@@ -18,9 +18,7 @@ import {
   PanelSectionRow,
   ProgressBarWithInfo,
   Focusable,
-  Field,
   ToggleField,
-  Dropdown,
 } from "@decky/ui";
 import { call } from "@decky/api";
 import {
@@ -225,31 +223,100 @@ const ConfigurationScreen: FC<{
         </PanelSectionRow>
       )}
 
+      {/* CRITICAL FIX: Replace Dropdown with Button Grid for gamepad control */}
       <PanelSectionRow>
-        <Field label="Aggressiveness">
-          <Dropdown
-            rgOptions={[
-              { label: "Safe (2mV steps, +10mV margin)", data: "safe" },
-              { label: "Balanced (5mV steps, +5mV margin)", data: "balanced" },
-              { label: "Aggressive (10mV steps, +2mV margin)", data: "aggressive" },
-            ]}
-            selectedOption={aggressiveness}
-            onChange={(option) => setAggressiveness(option.data)}
-          />
-        </Field>
+        <div style={{ marginBottom: "8px" }}>
+          <div style={{ fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" }}>
+            Aggressiveness
+          </div>
+          <Focusable style={{ display: "flex", gap: "6px" }}>
+            <ButtonItem
+              layout="below"
+              onClick={() => setAggressiveness("safe")}
+              style={{
+                flex: 1,
+                backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
+                border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "36px",
+              }}
+            >
+              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" }}>
+                <div style={{ fontWeight: "bold" }}>Safe</div>
+                <div style={{ fontSize: "8px" }}>2mV steps</div>
+              </div>
+            </ButtonItem>
+            <ButtonItem
+              layout="below"
+              onClick={() => setAggressiveness("balanced")}
+              style={{
+                flex: 1,
+                backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
+                border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "36px",
+              }}
+            >
+              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" }}>
+                <div style={{ fontWeight: "bold" }}>Balanced</div>
+                <div style={{ fontSize: "8px" }}>5mV steps</div>
+              </div>
+            </ButtonItem>
+            <ButtonItem
+              layout="below"
+              onClick={() => setAggressiveness("aggressive")}
+              style={{
+                flex: 1,
+                backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
+                border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "36px",
+              }}
+            >
+              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" }}>
+                <div style={{ fontWeight: "bold" }}>Aggressive</div>
+                <div style={{ fontSize: "8px" }}>10mV steps</div>
+              </div>
+            </ButtonItem>
+          </Focusable>
+        </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <Field label="Test Duration">
-          <Dropdown
-            rgOptions={[
-              { label: "Short (30s per test)", data: "short" },
-              { label: "Long (120s per test)", data: "long" },
-            ]}
-            selectedOption={testDuration}
-            onChange={(option) => setTestDuration(option.data)}
-          />
-        </Field>
+        <div style={{ marginBottom: "8px" }}>
+          <div style={{ fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" }}>
+            Test Duration
+          </div>
+          <Focusable style={{ display: "flex", gap: "6px" }}>
+            <ButtonItem
+              layout="below"
+              onClick={() => setTestDuration("short")}
+              style={{
+                flex: 1,
+                backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
+                border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "36px",
+              }}
+            >
+              <div style={{ fontSize: "10px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" }}>
+                <div style={{ fontWeight: "bold" }}>Short</div>
+                <div style={{ fontSize: "8px" }}>30s per test</div>
+              </div>
+            </ButtonItem>
+            <ButtonItem
+              layout="below"
+              onClick={() => setTestDuration("long")}
+              style={{
+                flex: 1,
+                backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
+                border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "36px",
+              }}
+            >
+              <div style={{ fontSize: "10px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" }}>
+                <div style={{ fontWeight: "bold" }}>Long</div>
+                <div style={{ fontSize: "8px" }}>120s per test</div>
+              </div>
+            </ButtonItem>
+          </Focusable>
+        </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
