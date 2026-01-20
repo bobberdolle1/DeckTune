@@ -267,6 +267,17 @@ const ConfigurationScreen: FC<{
         </ButtonItem>
       </PanelSectionRow>
 
+      {isBenchmarking && (
+        <PanelSectionRow>
+          <ProgressBarWithInfo
+            label="Running Benchmark"
+            description="Testing CPU performance..."
+            nProgress={50}
+            sOperationText="Please wait..."
+          />
+        </PanelSectionRow>
+      )}
+
       {benchmarkResult && (
         <PanelSectionRow>
           <div style={{ fontSize: "10px", color: "#4caf50", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
@@ -409,14 +420,17 @@ const ChipGradeBadge: FC<{ grade: string }> = ({ grade }) => {
   );
 };
 
-// ==================== Simple Curve Chart ====================
+// ==================== Enhanced Interactive Curve Chart ====================
 
-const SimpleCurveChart: FC<{ data: any[] }> = ({ data }) => {
+const EnhancedCurveChart: FC<{ data: any[] }> = ({ data }) => {
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
   if (!data || data.length === 0) return null;
 
-  const width = 280;
-  const height = 120;
-  const padding = 25;
+  const width = 320;
+  const height = 180;
+  const padding = { top: 20, right: 20, bottom: 40, left: 50 };
 
   const offsets = data.map((d) => d.offset);
   const temps = data.map((d) => d.temp);
@@ -427,48 +441,161 @@ const SimpleCurveChart: FC<{ data: any[] }> = ({ data }) => {
   const yMax = Math.max(...temps, 100);
 
   const xScale = (x: number) =>
-    padding + ((x - xMin) / (xMax - xMin)) * (width - 2 * padding);
+    padding.left + ((x - xMin) / (xMax - xMin)) * (width - padding.left - padding.right);
 
   const yScale = (y: number) =>
-    height - padding - ((y - yMin) / (yMax - yMin)) * (height - 2 * padding);
+    height - padding.bottom - ((y - yMin) / (yMax - yMin)) * (height - padding.top - padding.bottom);
+
+  const handlePointHover = (index: number, event: React.MouseEvent) => {
+    setHoveredPoint(index);
+    const rect = (event.currentTarget as SVGElement).getBoundingClientRect();
+    setTooltipPos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+  };
 
   return (
-    <svg width={width} height={height} style={{ backgroundColor: "#0d0f12", borderRadius: "4px" }}>
-      {/* Grid lines */}
-      <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#3d4450" strokeWidth={1} />
-      <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#3d4450" strokeWidth={1} />
+    <div style={{ position: "relative" }}>
+      <svg width={width} height={height} style={{ backgroundColor: "#0d0f12", borderRadius: "4px" }}>
+        {/* Grid lines */}
+        {[0, 25, 50, 75, 100].map((temp) => (
+          <g key={temp}>
+            <line
+              x1={padding.left}
+              y1={yScale(temp)}
+              x2={width - padding.right}
+              y2={yScale(temp)}
+              stroke="#2a2d34"
+              strokeWidth={1}
+              strokeDasharray="2,2"
+            />
+            <text x={padding.left - 5} y={yScale(temp) + 3} fontSize="9" fill="#5a5d64" textAnchor="end">
+              {temp}°C
+            </text>
+          </g>
+        ))}
 
-      {/* Data line */}
-      <polyline
-        points={data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" ")}
-        fill="none"
-        stroke="#1a9fff"
-        strokeWidth={2}
-      />
-
-      {/* Data points */}
-      {data.map((point, i) => (
-        <circle
-          key={i}
-          cx={xScale(point.offset)}
-          cy={yScale(point.temp)}
-          r={3}
-          fill={
-            point.result === "pass" ? "#4caf50" :
-            point.result === "fail" ? "#f44336" :
-            "#ff9800"
-          }
+        {/* Axes */}
+        <line
+          x1={padding.left}
+          y1={padding.top}
+          x2={padding.left}
+          y2={height - padding.bottom}
+          stroke="#3d4450"
+          strokeWidth={2}
         />
-      ))}
+        <line
+          x1={padding.left}
+          y1={height - padding.bottom}
+          x2={width - padding.right}
+          y2={height - padding.bottom}
+          stroke="#3d4450"
+          strokeWidth={2}
+        />
 
-      {/* Axis labels */}
-      <text x={width / 2} y={height - 5} fontSize="9" fill="#8b929a" textAnchor="middle">
-        Offset (mV)
-      </text>
-      <text x={10} y={height / 2} fontSize="9" fill="#8b929a" textAnchor="middle" transform={`rotate(-90, 10, ${height / 2})`}>
-        Temp (°C)
-      </text>
-    </svg>
+        {/* Data line with gradient */}
+        <defs>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#4caf50" />
+            <stop offset="50%" stopColor="#1a9fff" />
+            <stop offset="100%" stopColor="#f44336" />
+          </linearGradient>
+        </defs>
+
+        <polyline
+          points={data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" ")}
+          fill="none"
+          stroke="url(#lineGradient)"
+          strokeWidth={2}
+        />
+
+        {/* Data points with hover */}
+        {data.map((point, i) => {
+          const color =
+            point.result === "pass" ? "#4caf50" :
+            point.result === "fail" ? "#ff9800" :
+            "#f44336";
+          
+          return (
+            <g key={i}>
+              <circle
+                cx={xScale(point.offset)}
+                cy={yScale(point.temp)}
+                r={hoveredPoint === i ? 6 : 4}
+                fill={color}
+                stroke="#fff"
+                strokeWidth={hoveredPoint === i ? 2 : 1}
+                style={{ cursor: "pointer", transition: "all 0.2s" }}
+                onMouseEnter={(e) => handlePointHover(i, e)}
+                onMouseLeave={() => setHoveredPoint(null)}
+              />
+            </g>
+          );
+        })}
+
+        {/* Axis labels */}
+        <text
+          x={width / 2}
+          y={height - 5}
+          fontSize="11"
+          fill="#8b929a"
+          textAnchor="middle"
+          fontWeight="bold"
+        >
+          Voltage Offset (mV)
+        </text>
+        <text
+          x={15}
+          y={height / 2}
+          fontSize="11"
+          fill="#8b929a"
+          textAnchor="middle"
+          fontWeight="bold"
+          transform={`rotate(-90, 15, ${height / 2})`}
+        >
+          Temperature (°C)
+        </text>
+
+        {/* Legend */}
+        <g transform={`translate(${width - 100}, 15)`}>
+          <circle cx={0} cy={0} r={3} fill="#4caf50" />
+          <text x={8} y={3} fontSize="9" fill="#8b929a">Pass</text>
+          
+          <circle cx={0} cy={12} r={3} fill="#ff9800" />
+          <text x={8} y={15} fontSize="9" fill="#8b929a">Fail</text>
+          
+          <circle cx={0} cy={24} r={3} fill="#f44336" />
+          <text x={8} y={27} fontSize="9" fill="#8b929a">Crash</text>
+        </g>
+      </svg>
+
+      {/* Tooltip */}
+      {hoveredPoint !== null && (
+        <div
+          style={{
+            position: "absolute",
+            left: tooltipPos.x + 10,
+            top: tooltipPos.y - 40,
+            backgroundColor: "#1a1d24",
+            border: "1px solid #3d4450",
+            borderRadius: "4px",
+            padding: "6px 10px",
+            fontSize: "10px",
+            color: "#fff",
+            pointerEvents: "none",
+            zIndex: 1000,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div><strong>{data[hoveredPoint].offset}mV</strong></div>
+          <div>Temp: {data[hoveredPoint].temp}°C</div>
+          <div style={{ 
+            color: data[hoveredPoint].result === "pass" ? "#4caf50" : 
+                   data[hoveredPoint].result === "fail" ? "#ff9800" : "#f44336" 
+          }}>
+            {data[hoveredPoint].result.toUpperCase()}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -476,16 +603,18 @@ const SimpleCurveChart: FC<{ data: any[] }> = ({ data }) => {
 
 const ResultsScreen: FC<{
   result: any;
-  onApply: () => void;
+  onApply: (applyOnStartup: boolean, gameOnlyMode: boolean) => void;
   onStartOver: () => void;
 }> = ({ result, onApply, onStartOver }) => {
   const cpuOffset = result?.offsets?.cpu || 0;
   const [isApplying, setIsApplying] = useState(false);
+  const [applyOnStartup, setApplyOnStartup] = useState(false);
+  const [gameOnlyMode, setGameOnlyMode] = useState(false);
 
   const handleApply = async () => {
     setIsApplying(true);
     try {
-      await onApply();
+      await onApply(applyOnStartup, gameOnlyMode);
     } finally {
       setIsApplying(false);
     }
@@ -508,7 +637,7 @@ const ResultsScreen: FC<{
 
       <PanelSectionRow>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <SimpleCurveChart data={result?.curveData || []} />
+          <EnhancedCurveChart data={result?.curveData || []} />
         </div>
       </PanelSectionRow>
 
@@ -527,11 +656,30 @@ const ResultsScreen: FC<{
         </div>
       </PanelSectionRow>
 
+      {/* CRITICAL FIX #3: Apply on Startup and Game Only Mode options */}
+      <PanelSectionRow>
+        <ToggleField
+          label="Apply on Startup"
+          description="Automatically apply this preset when DeckTune starts"
+          checked={applyOnStartup}
+          onChange={setApplyOnStartup}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Game Only Mode"
+          description="Only apply when a game is running"
+          checked={gameOnlyMode}
+          onChange={setGameOnlyMode}
+        />
+      </PanelSectionRow>
+
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleApply} disabled={isApplying}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: isApplying ? "#8b929a" : "#4caf50" }}>
             {isApplying ? <FaSpinner className="spin" size={12} /> : <FaCheck size={12} />}
-            <span>{isApplying ? "Applying..." : "Apply & Save as Preset"}</span>
+            <span>{isApplying ? "Applying..." : "Apply & Save as Wizard Preset"}</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -544,6 +692,195 @@ const ResultsScreen: FC<{
           </div>
         </ButtonItem>
       </PanelSectionRow>
+    </Focusable>
+  );
+};
+
+// ==================== Wizard History View (Inline) ====================
+
+const WizardHistoryView: FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [presets, setPresets] = useState<any[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadPresets = async () => {
+    setIsLoading(true);
+    try {
+      const result = await call("get_wizard_presets");
+      setPresets(result || []);
+    } catch (err) {
+      console.error("Failed to load wizard presets:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPresets();
+  }, []);
+
+  const handleApply = async (preset: any) => {
+    try {
+      await call("apply_wizard_result", preset.id, true, preset.apply_on_startup, preset.game_only_mode);
+      console.log("Applied wizard preset:", preset.id);
+    } catch (err) {
+      console.error("Failed to apply preset:", err);
+    }
+  };
+
+  const handleDelete = async (presetId: string) => {
+    try {
+      await call("delete_wizard_preset", presetId);
+      console.log("Deleted wizard preset:", presetId);
+      setSelectedPreset(null);
+      await loadPresets();
+    } catch (err) {
+      console.error("Failed to delete preset:", err);
+    }
+  };
+
+  const handleUpdateOptions = async (presetId: string, applyOnStartup: boolean, gameOnlyMode: boolean) => {
+    try {
+      await call("update_wizard_preset_options", presetId, applyOnStartup, gameOnlyMode);
+      console.log("Updated wizard preset options:", presetId);
+      await loadPresets();
+    } catch (err) {
+      console.error("Failed to update preset options:", err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <PanelSectionRow>
+          <div style={{ textAlign: "center", padding: "20px" }}>
+            <FaSpinner className="spin" style={{ fontSize: "24px", color: "#1a9fff" }} />
+            <div style={{ fontSize: "12px", color: "#8b929a", marginTop: "10px" }}>
+              Loading presets...
+            </div>
+          </div>
+        </PanelSectionRow>
+      </Focusable>
+    );
+  }
+
+  if (selectedPreset) {
+    const cpuOffset = selectedPreset.offsets?.cpu || 0;
+    const [applyOnStartup, setApplyOnStartup] = useState(selectedPreset.apply_on_startup);
+    const [gameOnlyMode, setGameOnlyMode] = useState(selectedPreset.game_only_mode);
+
+    return (
+      <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setSelectedPreset(null)}>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <FaHistory size={10} />
+              <span>Back to List</span>
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ChipGradeBadge grade={selectedPreset.chip_grade} />
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <div style={{ textAlign: "center", padding: "10px" }}>
+            <div style={{ fontSize: "24px", fontWeight: "bold", color: "#1a9fff" }}>
+              {cpuOffset}mV
+            </div>
+            <div style={{ fontSize: "10px", color: "#8b929a" }}>
+              {new Date(selectedPreset.timestamp).toLocaleString()}
+            </div>
+          </div>
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ToggleField
+            label="Apply on Startup"
+            checked={applyOnStartup}
+            onChange={(val) => {
+              setApplyOnStartup(val);
+              handleUpdateOptions(selectedPreset.id, val, gameOnlyMode);
+            }}
+          />
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ToggleField
+            label="Game Only Mode"
+            checked={gameOnlyMode}
+            onChange={(val) => {
+              setGameOnlyMode(val);
+              handleUpdateOptions(selectedPreset.id, applyOnStartup, val);
+            }}
+          />
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => handleApply(selectedPreset)}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" }}>
+              <FaCheck size={12} />
+              <span>Apply Preset</span>
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => handleDelete(selectedPreset.id)}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" }}>
+              <FaTimes size={12} />
+              <span>Delete Preset</span>
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
+      </Focusable>
+    );
+  }
+
+  if (presets.length === 0) {
+    return (
+      <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <PanelSectionRow>
+          <div style={{ textAlign: "center", padding: "20px", color: "#8b929a", fontSize: "12px" }}>
+            No wizard presets found. Run the wizard to create your first preset.
+          </div>
+        </PanelSectionRow>
+      </Focusable>
+    );
+  }
+
+  return (
+    <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {presets.map((preset: any) => {
+        const cpuOffset = preset.offsets?.cpu || 0;
+        const date = new Date(preset.timestamp).toLocaleDateString();
+
+        return (
+          <PanelSectionRow key={preset.id}>
+            <ButtonItem layout="below" onClick={() => setSelectedPreset(preset)}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ fontSize: "16px" }}>
+                    {preset.chip_grade === "Platinum" && <FaTrophy style={{ color: "#e5e4e2" }} />}
+                    {preset.chip_grade === "Gold" && <FaMedal style={{ color: "#ffd700" }} />}
+                    {preset.chip_grade === "Silver" && <FaAward style={{ color: "#c0c0c0" }} />}
+                    {preset.chip_grade === "Bronze" && <FaCertificate style={{ color: "#cd7f32" }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "11px", fontWeight: "bold" }}>
+                      {preset.chip_grade} • {cpuOffset}mV
+                    </div>
+                    <div style={{ fontSize: "9px", color: "#8b929a" }}>
+                      {date}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ButtonItem>
+          </PanelSectionRow>
+        );
+      })}
     </Focusable>
   );
 };
@@ -564,6 +901,7 @@ export const WizardMode: FC = () => {
 
   const [showCrashModal, setShowCrashModal] = useState(false);
   const [localResult, setLocalResult] = useState<any>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (dirtyExit?.detected && !showCrashModal) {
@@ -594,10 +932,11 @@ export const WizardMode: FC = () => {
     }
   };
 
-  const handleApply = async () => {
+  const handleApply = async (applyOnStartup: boolean, gameOnlyMode: boolean) => {
     if (!localResult) return;
     try {
-      await applyResult(localResult.id, true);
+      await applyResult(localResult.id, true, applyOnStartup, gameOnlyMode);
+      console.log(`Applied wizard result with options: startup=${applyOnStartup}, gameOnly=${gameOnlyMode}`);
     } catch (err) {
       console.error("Failed to apply result:", err);
     }
@@ -611,6 +950,18 @@ export const WizardMode: FC = () => {
     <PanelSection title="Wizard Mode">
       <PanicDisableButton />
 
+      {/* History Toggle Button */}
+      {!isRunning && !localResult && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowHistory(!showHistory)}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
+              <FaHistory size={12} />
+              <span>{showHistory ? "Back to Wizard" : "View History"}</span>
+            </div>
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+
       {showCrashModal && dirtyExit?.crashInfo && (
         <CrashRecoveryModal
           crashInfo={dirtyExit.crashInfo}
@@ -618,8 +969,12 @@ export const WizardMode: FC = () => {
         />
       )}
 
-      {!isRunning && !localResult && (
+      {!isRunning && !localResult && !showHistory && (
         <ConfigurationScreen onStart={handleStart} platformInfo={platformInfo} />
+      )}
+
+      {!isRunning && !localResult && showHistory && (
+        <WizardHistoryView onClose={() => setShowHistory(false)} />
       )}
 
       {isRunning && progress && (

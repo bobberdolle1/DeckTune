@@ -47,6 +47,7 @@ export const FocusableButton: FC<FocusableButtonProps> = ({
   return (
     <Focusable
       onActivate={handleActivate}
+      onClick={handleClick}
       onGamepadFocus={() => setIsFocused(true)}
       onGamepadBlur={() => setIsFocused(false)}
       className={className}

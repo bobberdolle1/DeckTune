@@ -1,6 +1,6 @@
 {
   "name": "decktune",
-  "version": "3.1.26",
+  "version": "3.1.29",
   "description": "Automated undervolting and tuning solution for Steam Deck with safety features",
   "type": "module",
   "scripts": {

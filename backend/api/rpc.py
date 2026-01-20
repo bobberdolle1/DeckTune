@@ -3421,13 +3421,19 @@ class DeckTuneRPC:
     async def apply_wizard_result(
         self,
         result_id: str,
-        save_as_preset: bool = True
+        save_as_preset: bool = True,
+        apply_on_startup: bool = False,
+        game_only_mode: bool = False
     ) -> Dict[str, Any]:
-        """Apply a wizard result.
+        """Apply a wizard result and save as wizard preset with gymdeck3 integration.
+        
+        CRITICAL FIX #2 & #3: Save as wizard preset with dynamic config and apply options.
         
         Args:
             result_id: UUID of the wizard result to apply
-            save_as_preset: Whether to save as a preset
+            save_as_preset: Whether to save as a wizard preset
+            apply_on_startup: Whether to apply on startup
+            game_only_mode: Whether to enable only during games
         
         Returns:
             Dictionary with success status and preset_id if saved
@@ -3443,46 +3449,54 @@ class DeckTuneRPC:
             if not result:
                 return {"success": False, "error": "Result not found"}
             
-            # Apply CPU offset (convert to 4-core array)
+            # CRITICAL FIX #1: Use DynamicController if available and dynamic_config exists
             cpu_offset = result.offsets.get("cpu", 0)
-            values = [cpu_offset, cpu_offset, cpu_offset, cpu_offset]
             
-            # Apply values
-            success, error = await self.ryzenadj.apply_values_async(values)
-            if not success:
-                return {"success": False, "error": error}
+            if result.dynamic_config and hasattr(self, 'dynamic_controller') and self.dynamic_controller:
+                # Start dynamic mode with wizard config
+                from ..dynamic.config import DynamicConfig, CoreConfig
+                
+                dynamic_config = DynamicConfig(
+                    strategy=result.dynamic_config.get("strategy", "balanced"),
+                    simple_mode=result.dynamic_config.get("simple_mode", True),
+                    simple_value=result.dynamic_config.get("simple_value", cpu_offset),
+                    cores=[
+                        CoreConfig(**core_dict) for core_dict in result.dynamic_config.get("cores", [])
+                    ]
+                )
+                
+                success = await self.dynamic_controller.start(dynamic_config)
+                if not success:
+                    return {"success": False, "error": "Failed to start dynamic mode"}
+                
+                await self.event_emitter.emit_status("dynamic_running")
+                logger.info(f"Started dynamic mode with wizard config: {cpu_offset}mV")
+            else:
+                # Fallback to static ryzenadj
+                values = [cpu_offset, cpu_offset, cpu_offset, cpu_offset]
+                success, error = await self.ryzenadj.apply_values_async(values)
+                if not success:
+                    return {"success": False, "error": error}
+                
+                await self.event_emitter.emit_status("enabled")
+                logger.info(f"Applied static wizard values: {cpu_offset}mV")
             
-            # Update status
-            await self.event_emitter.emit_status("enabled")
-            
-            # Save as preset if requested
+            # CRITICAL FIX #2: Save as wizard preset with full metadata
             preset_id = None
             if save_as_preset:
-                preset = {
-                    "app_id": None,  # Global preset
-                    "label": result.name,
-                    "value": values,
-                    "timeout": 0,
-                    "use_timeout": False,
-                    "created_at": result.timestamp,
-                    "tested": True,
-                    "wizard_result_id": result.id,
-                    "chip_grade": result.chip_grade
-                }
-                
-                presets = self.settings.getSetting("presets", [])
-                presets.append(preset)
-                self.settings.setSetting("presets", presets)
-                
-                preset_id = result.id
-                logger.info(f"Wizard result saved as preset: {result.name}")
-            
-            logger.info(f"Applied wizard result: {result.name} ({cpu_offset}mV)")
+                preset_id = self._wizard_session.save_as_wizard_preset(
+                    result,
+                    apply_on_startup=apply_on_startup,
+                    game_only_mode=game_only_mode
+                )
+                logger.info(f"Saved wizard preset: {preset_id}")
             
             return {
                 "success": True,
-                "applied_values": values,
-                "preset_id": preset_id
+                "preset_id": preset_id,
+                "dynamic_enabled": result.dynamic_config is not None,
+                "apply_on_startup": apply_on_startup,
+                "game_only_mode": game_only_mode
             }
             
         except Exception as e:
@@ -3506,10 +3520,22 @@ class DeckTuneRPC:
         try:
             logger.info(f"Running wizard benchmark for {duration}s")
             
-            # Run benchmark with progress callback
+            # CRITICAL FIX #6: Pass progress callback for real-time updates
+            progress_updates = []
+            
+            def progress_callback(percent: int):
+                progress_updates.append(percent)
+                # Emit progress event to frontend
+                asyncio.create_task(
+                    self.event_emitter._emit_event("wizard_benchmark_progress", {
+                        "progress": percent,
+                        "duration": duration
+                    })
+                )
+            
             result = await self.test_runner.run_benchmark_with_progress(
                 duration=duration,
-                progress_callback=None  # Could emit progress events here
+                progress_callback=progress_callback
             )
             
             if "error" in result:
@@ -3525,4 +3551,90 @@ class DeckTuneRPC:
             
         except Exception as e:
             logger.error(f"Benchmark failed: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+    
+    # ==================== CRITICAL FIX #2: Wizard Preset Management ====================
+    
+    async def get_wizard_presets(self) -> List[Dict[str, Any]]:
+        """Get all wizard presets with full metadata.
+        
+        Returns:
+            List of wizard preset dictionaries
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return []
+        
+        try:
+            return self._wizard_session.get_wizard_presets()
+        except Exception as e:
+            logger.error(f"Failed to get wizard presets: {e}")
+            return []
+    
+    async def get_wizard_preset(self, preset_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific wizard preset by ID.
+        
+        Args:
+            preset_id: Preset ID
+            
+        Returns:
+            Preset dictionary or None if not found
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return None
+        
+        try:
+            return self._wizard_session.get_wizard_preset(preset_id)
+        except Exception as e:
+            logger.error(f"Failed to get wizard preset: {e}")
+            return None
+    
+    async def delete_wizard_preset(self, preset_id: str) -> Dict[str, Any]:
+        """Delete a wizard preset.
+        
+        Args:
+            preset_id: Preset ID to delete
+            
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        try:
+            success = self._wizard_session.delete_wizard_preset(preset_id)
+            return {"success": success}
+        except Exception as e:
+            logger.error(f"Failed to delete wizard preset: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def update_wizard_preset_options(
+        self,
+        preset_id: str,
+        apply_on_startup: Optional[bool] = None,
+        game_only_mode: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """Update wizard preset options (apply on startup, game only mode).
+        
+        CRITICAL FIX #3: Enable Apply on Startup and Game Only Mode for wizard presets.
+        
+        Args:
+            preset_id: Preset ID
+            apply_on_startup: Whether to apply on startup (None = no change)
+            game_only_mode: Whether to enable only during games (None = no change)
+            
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        try:
+            success = self._wizard_session.update_wizard_preset_options(
+                preset_id,
+                apply_on_startup=apply_on_startup,
+                game_only_mode=game_only_mode
+            )
+            return {"success": success}
+        except Exception as e:
+            logger.error(f"Failed to update wizard preset options: {e}")
             return {"success": False, "error": str(e)}

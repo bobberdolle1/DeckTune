@@ -72,7 +72,7 @@ interface WizardContextType {
   // Actions
   startWizard: (config: WizardConfig) => Promise<void>;
   cancelWizard: () => Promise<void>;
-  applyResult: (resultId: string, saveAsPreset: boolean) => Promise<void>;
+  applyResult: (resultId: string, saveAsPreset: boolean, applyOnStartup?: boolean, gameOnlyMode?: boolean) => Promise<void>;
   checkDirtyExit: () => Promise<void>;
   loadResultsHistory: () => Promise<void>;
   clearError: () => void;
@@ -162,11 +162,11 @@ export const WizardProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
   
-  const applyResult = useCallback(async (resultId: string, saveAsPreset: boolean) => {
+  const applyResult = useCallback(async (resultId: string, saveAsPreset: boolean, applyOnStartup: boolean = false, gameOnlyMode: boolean = false) => {
     try {
       setError(null);
       
-      const response = await call("apply_wizard_result", resultId, saveAsPreset) as { success: boolean; error?: string };
+      const response = await call("apply_wizard_result", resultId, saveAsPreset, applyOnStartup, gameOnlyMode) as { success: boolean; error?: string };
       
       if (!response?.success) {
         const errorMsg = response?.error || "Failed to apply wizard result";

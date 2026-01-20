@@ -6,14 +6,16 @@
  * 
  * Provides centralized settings management interface:
  * - Expert Mode toggle with confirmation dialog
+ * - Binning Settings (test duration, step size, start value)
  * - Modal overlay with backdrop dismiss
  * - Gamepad navigation support
  * - Accessibility compliant (WCAG AA)
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { PanelSection, PanelSectionRow, Focusable } from "@decky/ui";
 import { FaTimes, FaExclamationTriangle, FaCheck } from "react-icons/fa";
+import { call } from "@decky/api";
 import { useSettings } from "../context/SettingsContext";
 import { FocusableButton } from "./FocusableButton";
 
@@ -178,6 +180,7 @@ const ExpertWarningDialog: FC<ExpertWarningDialogProps> = ({
  * Features:
  * - Modal overlay with backdrop dismiss
  * - Expert Mode toggle with confirmation
+ * - Binning Settings (test duration, step size, start value)
  * - Auto-save on changes (Requirement 9.4)
  * - Gamepad navigation support
  * - WCAG AA compliant
@@ -185,6 +188,48 @@ const ExpertWarningDialog: FC<ExpertWarningDialogProps> = ({
 export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
   const { settings, setExpertMode } = useSettings();
   const [showExpertWarning, setShowExpertWarning] = useState(false);
+  
+  // Binning config state
+  const [binningConfig, setBinningConfig] = useState({
+    test_duration: 60,
+    step_size: 5,
+    start_value: -10,
+  });
+  const [binningLoaded, setBinningLoaded] = useState(false);
+
+  // Load binning config on mount
+  useEffect(() => {
+    if (isOpen && !binningLoaded) {
+      loadBinningConfig();
+    }
+  }, [isOpen]);
+
+  const loadBinningConfig = async () => {
+    try {
+      const response = await call("get_binning_config") as { success: boolean; config: any };
+      if (response.success && response.config) {
+        setBinningConfig({
+          test_duration: response.config.test_duration || 60,
+          step_size: response.config.step_size || 5,
+          start_value: response.config.start_value || -10,
+        });
+        setBinningLoaded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load binning config:", err);
+    }
+  };
+
+  const updateBinningConfig = async (updates: Partial<typeof binningConfig>) => {
+    const newConfig = { ...binningConfig, ...updates };
+    setBinningConfig(newConfig);
+    
+    try {
+      await call("update_binning_config", newConfig);
+    } catch (err) {
+      console.error("Failed to update binning config:", err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -364,6 +409,79 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                     </span>
                   </div>
                 </FocusableButton>
+              </div>
+            </PanelSectionRow>
+
+            {/* Binning Settings section */}
+            <PanelSectionRow>
+              <div style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Wizard Settings
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginBottom: "12px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Advanced configuration for Wizard Mode testing algorithm.
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
+                      Test Duration: {binningConfig.test_duration}s
+                    </div>
+                    <input
+                      type="range"
+                      min={30}
+                      max={300}
+                      step={10}
+                      value={binningConfig.test_duration}
+                      onChange={(e) => updateBinningConfig({ test_duration: parseInt(e.target.value) })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
+                      Step Size: {binningConfig.step_size}mV
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={binningConfig.step_size}
+                      onChange={(e) => updateBinningConfig({ step_size: parseInt(e.target.value) })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
+                      Start Value: {binningConfig.start_value}mV
+                    </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={20}
+                      step={5}
+                      value={Math.abs(binningConfig.start_value)}
+                      onChange={(e) => updateBinningConfig({ start_value: -parseInt(e.target.value) })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
               </div>
             </PanelSectionRow>
 

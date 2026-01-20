@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ..core.safety import SafetyManager
     from ..api.events import EventEmitter
     from .runner import TestRunner
+    from ..dynamic.controller import DynamicController
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,9 @@ class WizardResult:
         curve_data: List of test points for visualization
         duration: Total session duration in seconds
         iterations: Number of test iterations
+        dynamic_config: Dynamic mode configuration used (for gymdeck3 integration)
+        apply_on_startup: Whether to apply on startup
+        game_only_mode: Whether to enable only during games
     """
     id: str
     name: str
@@ -132,6 +136,9 @@ class WizardResult:
     curve_data: List[CurveDataPoint]
     duration: float
     iterations: int
+    dynamic_config: Optional[Dict[str, Any]] = None
+    apply_on_startup: bool = False
+    game_only_mode: bool = False
 
 
 @dataclass
@@ -178,6 +185,7 @@ class WizardSession:
     STATE_FILE = "wizard_state.json"
     CRASH_FLAG_FILE = "wizard_crash_flag"
     RESULTS_FILE = "wizard_results.json"
+    WIZARD_PRESETS_FILE = "wizard_presets.json"  # Separate storage for wizard presets
     
     def __init__(
         self,
@@ -185,7 +193,8 @@ class WizardSession:
         runner: "TestRunner",
         safety: "SafetyManager",
         event_emitter: "EventEmitter",
-        settings_dir: str
+        settings_dir: str,
+        dynamic_controller: Optional["DynamicController"] = None
     ):
         """Initialize wizard session.
         
@@ -195,12 +204,14 @@ class WizardSession:
             safety: SafetyManager for limits and recovery
             event_emitter: EventEmitter for progress updates
             settings_dir: Directory for persistent storage
+            dynamic_controller: DynamicController for gymdeck3 integration
         """
         self.ryzenadj = ryzenadj
         self.runner = runner
         self.safety = safety
         self.event_emitter = event_emitter
         self.settings_dir = Path(settings_dir)
+        self.dynamic_controller = dynamic_controller
         
         # Session state
         self._state: WizardState = WizardState.IDLE
@@ -430,15 +441,108 @@ class WizardSession:
         # (actual verification would require baseline comparison)
         return True
     
+    async def _test_offset_per_core(self, offset: int, core_id: int) -> bool:
+        """Test a specific offset on a single CPU core.
+        
+        Uses taskset to pin stress test to specific core for accurate validation.
+        
+        Args:
+            offset: Voltage offset in mV (negative)
+            core_id: CPU core ID (0-3)
+            
+        Returns:
+            True if stable, False if unstable
+        """
+        logger.info(f"Testing core {core_id} at {offset}mV")
+        
+        # Set crash flag before applying
+        self._set_crash_flag()
+        
+        # Apply offset to specific core
+        values = [0, 0, 0, 0]
+        values[core_id] = offset
+        
+        success, error = await self.ryzenadj.apply_values_async(values)
+        if not success:
+            logger.error(f"Failed to apply offset to core {core_id}: {error}")
+            self._clear_crash_flag()
+            return False
+        
+        # STEP 1: Verify voltage was actually applied
+        voltage_applied = await self._verify_voltage_applied(offset)
+        if not voltage_applied:
+            logger.error(f"Voltage verification failed for core {core_id}")
+            self._clear_crash_flag()
+            return False
+        
+        # STEP 2: Run per-core stress test
+        test_duration = self._config.get_test_duration_seconds()
+        
+        # Start dmesg monitoring in parallel
+        dmesg_task = asyncio.create_task(
+            self.runner.monitor_dmesg_realtime(test_duration)
+        )
+        
+        try:
+            result = await self.runner.run_per_core_test(core_id, test_duration)
+            passed = result.passed
+            
+            # STEP 3: Check for hardware errors during test
+            hardware_errors = await dmesg_task
+            if hardware_errors:
+                logger.error(f"Hardware errors detected on core {core_id}: {hardware_errors}")
+                passed = False
+            
+            # STEP 4: Get system metrics
+            metrics = self.runner.get_system_metrics()
+            temp = metrics.get("temperature", 0)
+            
+            # Record curve data point
+            curve_point = CurveDataPoint(
+                offset=offset,
+                result="pass" if passed else "fail",
+                temp=temp,
+                timestamp=datetime.now().isoformat()
+            )
+            self._curve_data.append(curve_point)
+            
+            # Clear crash flag after successful test
+            self._clear_crash_flag()
+            
+            if not passed:
+                logger.warning(f"Core {core_id} failed at {offset}mV")
+            
+            return passed
+            
+        except Exception as e:
+            logger.error(f"Test execution failed for core {core_id}: {e}")
+            
+            # Cancel dmesg monitoring
+            if not dmesg_task.done():
+                dmesg_task.cancel()
+            
+            # Record crash
+            curve_point = CurveDataPoint(
+                offset=offset,
+                result="crash",
+                temp=0,
+                timestamp=datetime.now().isoformat()
+            )
+            self._curve_data.append(curve_point)
+            
+            # Don't clear crash flag - system may have crashed
+            return False
+    
     async def _test_offset(self, offset: int, domain: str = "cpu") -> bool:
         """Test a specific offset value with comprehensive validation.
         
-        This method implements proper hardware stress testing:
-        1. Apply voltage offset
+        This method implements proper hardware stress testing using gymdeck3 dynamic mode:
+        1. Start dynamic mode with test offset via DynamicController
         2. Verify application via sensors
         3. Run stress test
         4. Monitor for hardware errors (MCE/WHEA)
         5. Check system metrics
+        6. Stop dynamic mode
         
         Args:
             offset: Voltage offset in mV (negative)
@@ -452,24 +556,53 @@ class WizardSession:
         # Set crash flag before applying
         self._set_crash_flag()
         
-        # Apply offset (for CPU, apply to all cores)
-        if domain == "cpu":
-            values = [offset, offset, offset, offset]
+        # CRITICAL FIX #1: Use DynamicController instead of static ryzenadj
+        if self.dynamic_controller:
+            # Import DynamicConfig here to avoid circular imports
+            from ..dynamic.config import DynamicConfig, CoreConfig
+            
+            # Create dynamic config with test offset
+            dynamic_config = DynamicConfig(
+                strategy="balanced",
+                simple_mode=True,
+                simple_value=offset,
+                cores=[
+                    CoreConfig(min_mv=offset, max_mv=offset, threshold=50.0),
+                    CoreConfig(min_mv=offset, max_mv=offset, threshold=50.0),
+                    CoreConfig(min_mv=offset, max_mv=offset, threshold=50.0),
+                    CoreConfig(min_mv=offset, max_mv=offset, threshold=50.0),
+                ]
+            )
+            
+            # Start dynamic mode with test offset
+            success = await self.dynamic_controller.start(dynamic_config)
+            if not success:
+                logger.error(f"Failed to start dynamic mode with offset {offset}mV")
+                self._clear_crash_flag()
+                return False
+            
+            # Give dynamic mode time to stabilize
+            await asyncio.sleep(2)
         else:
-            # For GPU/SOC, would need different ryzenadj commands
-            # Placeholder for now
-            values = [offset, offset, offset, offset]
-        
-        success, error = await self.ryzenadj.apply_values_async(values)
-        if not success:
-            logger.error(f"Failed to apply offset: {error}")
-            self._clear_crash_flag()
-            return False
+            # Fallback to static ryzenadj if dynamic controller not available
+            logger.warning("DynamicController not available, using static ryzenadj")
+            if domain == "cpu":
+                values = [offset, offset, offset, offset]
+            else:
+                values = [offset, offset, offset, offset]
+            
+            success, error = await self.ryzenadj.apply_values_async(values)
+            if not success:
+                logger.error(f"Failed to apply offset: {error}")
+                self._clear_crash_flag()
+                return False
         
         # STEP 1: Verify voltage was actually applied
         voltage_applied = await self._verify_voltage_applied(offset)
         if not voltage_applied:
             logger.error(f"Voltage verification failed - offset may not be applied")
+            if self.dynamic_controller:
+                await self.dynamic_controller.stop()
             self._clear_crash_flag()
             return False
         
@@ -505,6 +638,10 @@ class WizardSession:
             )
             self._curve_data.append(curve_point)
             
+            # Stop dynamic mode
+            if self.dynamic_controller:
+                await self.dynamic_controller.stop()
+            
             # Clear crash flag after successful test
             self._clear_crash_flag()
             
@@ -519,6 +656,10 @@ class WizardSession:
             # Cancel dmesg monitoring
             if not dmesg_task.done():
                 dmesg_task.cancel()
+            
+            # Stop dynamic mode
+            if self.dynamic_controller:
+                await self.dynamic_controller.stop()
             
             # Record crash
             curve_point = CurveDataPoint(
@@ -537,7 +678,7 @@ class WizardSession:
         
         Algorithm:
         1. Start at -10mV (safe starting point)
-        2. Test current offset
+        2. Test each core individually with per-core stress test
         3. If pass: step down (more negative), update last_stable
         4. If fail: return last_stable
         5. Stop at safety limit or 3 consecutive failures
@@ -565,8 +706,23 @@ class WizardSession:
             # Emit progress
             await self._emit_progress(f"Testing {self._current_offset}mV")
             
-            # Test current offset
-            passed = await self._test_offset(self._current_offset, domain)
+            # Test each core individually for CPU domain
+            if domain == "cpu":
+                all_cores_passed = True
+                for core_id in range(4):  # Steam Deck has 4 cores
+                    logger.info(f"Testing core {core_id} at {self._current_offset}mV")
+                    passed = await self._test_offset_per_core(self._current_offset, core_id)
+                    
+                    if not passed:
+                        all_cores_passed = False
+                        logger.warning(f"Core {core_id} failed at {self._current_offset}mV")
+                        break  # Stop testing other cores if one fails
+                
+                passed = all_cores_passed
+            else:
+                # For GPU/SOC, use full test
+                passed = await self._test_offset(self._current_offset, domain)
+            
             self._iterations += 1
             self._persist_state()
             
@@ -574,7 +730,7 @@ class WizardSession:
                 # Success - update last stable and continue
                 self._last_stable_offset = self._current_offset
                 self._consecutive_failures = 0
-                logger.info(f"✓ {self._current_offset}mV stable")
+                logger.info(f"✓ {self._current_offset}mV stable on all cores")
                 
                 # Step down (more negative)
                 self._current_offset -= step_size
@@ -740,6 +896,32 @@ class WizardSession:
             primary_offset = final_offsets.get("cpu", 0)
             chip_grade = self._calculate_chip_grade(primary_offset)
             
+            # CRITICAL FIX #2: Generate dynamic config for gymdeck3 integration
+            dynamic_config_dict = None
+            if self.dynamic_controller:
+                from ..dynamic.config import DynamicConfig, CoreConfig
+                
+                dynamic_config = DynamicConfig(
+                    strategy="balanced",
+                    simple_mode=True,
+                    simple_value=primary_offset,
+                    cores=[
+                        CoreConfig(min_mv=primary_offset, max_mv=primary_offset, threshold=50.0),
+                        CoreConfig(min_mv=primary_offset, max_mv=primary_offset, threshold=50.0),
+                        CoreConfig(min_mv=primary_offset, max_mv=primary_offset, threshold=50.0),
+                        CoreConfig(min_mv=primary_offset, max_mv=primary_offset, threshold=50.0),
+                    ]
+                )
+                dynamic_config_dict = {
+                    "strategy": dynamic_config.strategy,
+                    "simple_mode": dynamic_config.simple_mode,
+                    "simple_value": dynamic_config.simple_value,
+                    "cores": [
+                        {"min_mv": c.min_mv, "max_mv": c.max_mv, "threshold": c.threshold}
+                        for c in dynamic_config.cores
+                    ]
+                }
+            
             result = WizardResult(
                 id=self._session_id,
                 name=f"Wizard Result {datetime.now().strftime('%Y-%m-%d %H:%M')}",
@@ -748,7 +930,10 @@ class WizardSession:
                 offsets=final_offsets,
                 curve_data=self._curve_data,
                 duration=duration,
-                iterations=self._iterations
+                iterations=self._iterations,
+                dynamic_config=dynamic_config_dict,
+                apply_on_startup=False,
+                game_only_mode=False
             )
             
             # Save result
@@ -824,3 +1009,163 @@ class WizardSession:
         except Exception as e:
             logger.error(f"Failed to load results: {e}")
             return []
+    
+    # ==================== CRITICAL FIX #2: Wizard Preset Management ====================
+    
+    def save_as_wizard_preset(
+        self,
+        result: WizardResult,
+        apply_on_startup: bool = False,
+        game_only_mode: bool = False
+    ) -> str:
+        """Save wizard result as a dedicated wizard preset with full metadata.
+        
+        Args:
+            result: WizardResult to save
+            apply_on_startup: Whether to apply on startup
+            game_only_mode: Whether to enable only during games
+            
+        Returns:
+            Preset ID
+        """
+        presets_path = self.settings_dir / self.WIZARD_PRESETS_FILE
+        
+        # Load existing presets
+        presets = []
+        if presets_path.exists():
+            try:
+                presets = json.loads(presets_path.read_text())
+            except Exception as e:
+                logger.error(f"Failed to load wizard presets: {e}")
+        
+        # Create wizard preset with full metadata
+        preset = {
+            "id": result.id,
+            "name": result.name,
+            "chip_grade": result.chip_grade,
+            "offsets": result.offsets,
+            "curve_data": [asdict(point) for point in result.curve_data],
+            "duration": result.duration,
+            "iterations": result.iterations,
+            "timestamp": result.timestamp,
+            "dynamic_config": result.dynamic_config,
+            "apply_on_startup": apply_on_startup,
+            "game_only_mode": game_only_mode,
+            "wizard_generated": True
+        }
+        
+        # Check if preset already exists (update instead of duplicate)
+        existing_idx = next((i for i, p in enumerate(presets) if p.get("id") == result.id), None)
+        if existing_idx is not None:
+            presets[existing_idx] = preset
+            logger.info(f"Updated existing wizard preset: {result.id}")
+        else:
+            presets.append(preset)
+            logger.info(f"Created new wizard preset: {result.id}")
+        
+        # Keep only last 50 presets
+        presets = presets[-50:]
+        
+        # Save
+        presets_path.write_text(json.dumps(presets, indent=2))
+        
+        return result.id
+    
+    def get_wizard_presets(self) -> List[Dict[str, Any]]:
+        """Get all wizard presets.
+        
+        Returns:
+            List of wizard preset dictionaries
+        """
+        presets_path = self.settings_dir / self.WIZARD_PRESETS_FILE
+        
+        if not presets_path.exists():
+            return []
+        
+        try:
+            return json.loads(presets_path.read_text())
+        except Exception as e:
+            logger.error(f"Failed to load wizard presets: {e}")
+            return []
+    
+    def get_wizard_preset(self, preset_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific wizard preset by ID.
+        
+        Args:
+            preset_id: Preset ID
+            
+        Returns:
+            Preset dictionary or None if not found
+        """
+        presets = self.get_wizard_presets()
+        return next((p for p in presets if p.get("id") == preset_id), None)
+    
+    def delete_wizard_preset(self, preset_id: str) -> bool:
+        """Delete a wizard preset.
+        
+        Args:
+            preset_id: Preset ID to delete
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        presets_path = self.settings_dir / self.WIZARD_PRESETS_FILE
+        
+        if not presets_path.exists():
+            return False
+        
+        try:
+            presets = json.loads(presets_path.read_text())
+            original_len = len(presets)
+            presets = [p for p in presets if p.get("id") != preset_id]
+            
+            if len(presets) < original_len:
+                presets_path.write_text(json.dumps(presets, indent=2))
+                logger.info(f"Deleted wizard preset: {preset_id}")
+                return True
+            
+            return False
+        except Exception as e:
+            logger.error(f"Failed to delete wizard preset: {e}")
+            return False
+    
+    def update_wizard_preset_options(
+        self,
+        preset_id: str,
+        apply_on_startup: Optional[bool] = None,
+        game_only_mode: Optional[bool] = None
+    ) -> bool:
+        """Update wizard preset options (apply on startup, game only mode).
+        
+        Args:
+            preset_id: Preset ID
+            apply_on_startup: Whether to apply on startup (None = no change)
+            game_only_mode: Whether to enable only during games (None = no change)
+            
+        Returns:
+            True if updated, False if not found
+        """
+        presets_path = self.settings_dir / self.WIZARD_PRESETS_FILE
+        
+        if not presets_path.exists():
+            return False
+        
+        try:
+            presets = json.loads(presets_path.read_text())
+            preset = next((p for p in presets if p.get("id") == preset_id), None)
+            
+            if not preset:
+                return False
+            
+            if apply_on_startup is not None:
+                preset["apply_on_startup"] = apply_on_startup
+            if game_only_mode is not None:
+                preset["game_only_mode"] = game_only_mode
+            
+            presets_path.write_text(json.dumps(presets, indent=2))
+            logger.info(f"Updated wizard preset options: {preset_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update wizard preset options: {e}")
+            return False

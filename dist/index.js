@@ -103,6 +103,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 320 512"},"child":[{"tag":"path","attr":{"d":"M296 160H180.6l42.6-129.8C227.2 15 215.7 0 200 0H56C44 0 33.8 8.9 32.2 20.8l-32 240C-1.7 275.2 9.5 288 24 288h118.7L96.6 482.5c-3.6 15.2 8 29.5 23.3 29.5 8.4 0 16.4-4.4 20.8-12l176-304c9.3-15.9-2.2-36-20.7-36z"},"child":[]}]})(props);
 }function FaCertificate (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M458.622 255.92l45.985-45.005c13.708-12.977 7.316-36.039-10.664-40.339l-62.65-15.99 17.661-62.015c4.991-17.838-11.829-34.663-29.661-29.671l-61.994 17.667-15.984-62.671C337.085.197 313.765-6.276 300.99 7.228L256 53.57 211.011 7.229c-12.63-13.351-36.047-7.234-40.325 10.668l-15.984 62.671-61.995-17.667C74.87 57.907 58.056 74.738 63.046 92.572l17.661 62.015-62.65 15.99C.069 174.878-6.31 197.944 7.392 210.915l45.985 45.005-45.985 45.004c-13.708 12.977-7.316 36.039 10.664 40.339l62.65 15.99-17.661 62.015c-4.991 17.838 11.829 34.663 29.661 29.671l61.994-17.667 15.984 62.671c4.439 18.575 27.696 24.018 40.325 10.668L256 458.61l44.989 46.001c12.5 13.488 35.987 7.486 40.325-10.668l15.984-62.671 61.994 17.667c17.836 4.994 34.651-11.837 29.661-29.671l-17.661-62.015 62.65-15.99c17.987-4.302 24.366-27.367 10.664-40.339l-45.984-45.004z"},"child":[]}]})(props);
+}function FaChartLine (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M496 384H64V80c0-8.84-7.16-16-16-16H16C7.16 64 0 71.16 0 80v336c0 17.67 14.33 32 32 32h464c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16zM464 96H345.94c-21.38 0-32.09 25.85-16.97 40.97l32.4 32.4L288 242.75l-73.37-73.37c-12.5-12.5-32.76-12.5-45.25 0l-68.69 68.69c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L192 237.25l73.37 73.37c12.5 12.5 32.76 12.5 45.25 0l96-96 32.4 32.4c15.12 15.12 40.97 4.41 40.97-16.97V112c.01-8.84-7.15-16-15.99-16z"},"child":[]}]})(props);
 }function FaCheck (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"},"child":[]}]})(props);
 }function FaCog (props) {
@@ -1460,13 +1462,22 @@ const SettingsProvider = ({ children }) => {
     /**
      * Set Expert Mode setting.
      *
-     * Retries once on failure and displays user-friendly error message.
+     * Calls enable_expert_mode or disable_expert_mode RPC methods
+     * with proper confirmation handling.
      *
      * Validates: Requirements 2.3, 2.4, 3.1, 3.5, 10.3
      */
     const setExpertMode = SP_REACT.useCallback(async (value) => {
         try {
-            const response = await call("save_setting", "expert_mode", value);
+            let response;
+            if (value) {
+                // Enabling - requires confirmation
+                response = await call("enable_expert_mode", true);
+            }
+            else {
+                // Disabling - no confirmation needed
+                response = await call("disable_expert_mode");
+            }
             if (response.success) {
                 setSettings((prev) => ({ ...prev, expertMode: value }));
                 console.log("[SettingsContext] Expert Mode updated:", value);
@@ -1688,10 +1699,10 @@ const WizardProvider = ({ children }) => {
             setError(errorMsg);
         }
     }, []);
-    const applyResult = SP_REACT.useCallback(async (resultId, saveAsPreset) => {
+    const applyResult = SP_REACT.useCallback(async (resultId, saveAsPreset, applyOnStartup = false, gameOnlyMode = false) => {
         try {
             setError(null);
-            const response = await call("apply_wizard_result", resultId, saveAsPreset);
+            const response = await call("apply_wizard_result", resultId, saveAsPreset, applyOnStartup, gameOnlyMode);
             if (!response?.success) {
                 const errorMsg = response?.error || "Failed to apply wizard result";
                 setError(errorMsg);
@@ -1869,7 +1880,8 @@ const CrashRecoveryModal = ({ crashInfo, onDismiss }) => {
 const ConfigurationScreen = ({ onStart, platformInfo }) => {
     const [aggressiveness, setAggressiveness] = SP_REACT.useState("balanced");
     const [testDuration, setTestDuration] = SP_REACT.useState("short");
-    const [showAdvanced, setShowAdvanced] = SP_REACT.useState(false);
+    const [isBenchmarking, setIsBenchmarking] = SP_REACT.useState(false);
+    const [benchmarkResult, setBenchmarkResult] = SP_REACT.useState(null);
     const handleStart = () => {
         const config = {
             targetDomains: ["cpu"],
@@ -1881,12 +1893,28 @@ const ConfigurationScreen = ({ onStart, platformInfo }) => {
         };
         onStart(config);
     };
+    const handleRunBenchmark = async () => {
+        setIsBenchmarking(true);
+        setBenchmarkResult(null);
+        try {
+            const result = await call("run_wizard_benchmark", 10);
+            if (result?.success) {
+                setBenchmarkResult(result);
+            }
+        }
+        catch (err) {
+            console.error("Benchmark failed:", err);
+        }
+        finally {
+            setIsBenchmarking(false);
+        }
+    };
     const getEstimatedTime = () => {
         const base = testDuration === "short" ? 5 : 15;
         const multiplier = aggressiveness === "safe" ? 2 : aggressiveness === "aggressive" ? 0.5 : 1;
         return Math.round(base * multiplier);
     };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { fontSize: "13px", color: "#ccc", marginBottom: "10px" } }, "Automatically find the optimal undervolt for your chip through systematic testing.")),
         platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
@@ -1916,6 +1944,27 @@ const ConfigurationScreen = ({ onStart, platformInfo }) => {
                 getEstimatedTime(),
                 " minutes")),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunBenchmark, disabled: isBenchmarking },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    isBenchmarking ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 12 }) : window.SP_REACT.createElement(FaChartLine, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, isBenchmarking ? "Running..." : "Run Benchmark")))),
+        isBenchmarking && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: "Running Benchmark", description: "Testing CPU performance...", nProgress: 50, sOperationText: "Please wait..." }))),
+        benchmarkResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#4caf50", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
+                window.SP_REACT.createElement("div", null,
+                    "Score: ",
+                    benchmarkResult.score,
+                    " ops/sec"),
+                window.SP_REACT.createElement("div", null,
+                    "Max Temp: ",
+                    benchmarkResult.max_temp,
+                    "\u00B0C"),
+                window.SP_REACT.createElement("div", null,
+                    "Max Freq: ",
+                    benchmarkResult.max_freq,
+                    " MHz")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart },
                 window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
                     window.SP_REACT.createElement(FaPlay, { size: 12 }),
@@ -1933,7 +1982,7 @@ const ProgressScreen = ({ progress, onCancel }) => {
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "15px" } },
                 window.SP_REACT.createElement(FaSpinner, { style: {
@@ -2004,35 +2053,102 @@ const ChipGradeBadge = ({ grade }) => {
             window.SP_REACT.createElement("div", { style: { fontSize: "18px", fontWeight: "bold", color: config.color } }, grade),
             window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Chip Quality"))));
 };
-// ==================== Simple Curve Chart ====================
-const SimpleCurveChart = ({ data }) => {
+// ==================== Enhanced Interactive Curve Chart ====================
+const EnhancedCurveChart = ({ data }) => {
+    const [hoveredPoint, setHoveredPoint] = SP_REACT.useState(null);
+    const [tooltipPos, setTooltipPos] = SP_REACT.useState({ x: 0, y: 0 });
     if (!data || data.length === 0)
         return null;
-    const width = 280;
-    const height = 120;
-    const padding = 25;
+    const width = 320;
+    const height = 180;
+    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
     const offsets = data.map((d) => d.offset);
     const temps = data.map((d) => d.temp);
     const xMin = Math.min(...offsets);
     const xMax = Math.max(...offsets);
     const yMin = 0;
     const yMax = Math.max(...temps, 100);
-    const xScale = (x) => padding + ((x - xMin) / (xMax - xMin)) * (width - 2 * padding);
-    const yScale = (y) => height - padding - ((y - yMin) / (yMax - yMin)) * (height - 2 * padding);
-    return (window.SP_REACT.createElement("svg", { width: width, height: height, style: { backgroundColor: "#0d0f12", borderRadius: "4px" } },
-        window.SP_REACT.createElement("line", { x1: padding, y1: padding, x2: padding, y2: height - padding, stroke: "#3d4450", strokeWidth: 1 }),
-        window.SP_REACT.createElement("line", { x1: padding, y1: height - padding, x2: width - padding, y2: height - padding, stroke: "#3d4450", strokeWidth: 1 }),
-        window.SP_REACT.createElement("polyline", { points: data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" "), fill: "none", stroke: "#1a9fff", strokeWidth: 2 }),
-        data.map((point, i) => (window.SP_REACT.createElement("circle", { key: i, cx: xScale(point.offset), cy: yScale(point.temp), r: 3, fill: point.result === "pass" ? "#4caf50" :
-                point.result === "fail" ? "#f44336" :
-                    "#ff9800" }))),
-        window.SP_REACT.createElement("text", { x: width / 2, y: height - 5, fontSize: "9", fill: "#8b929a", textAnchor: "middle" }, "Offset (mV)"),
-        window.SP_REACT.createElement("text", { x: 10, y: height / 2, fontSize: "9", fill: "#8b929a", textAnchor: "middle", transform: `rotate(-90, 10, ${height / 2})` }, "Temp (\u00B0C)")));
+    const xScale = (x) => padding.left + ((x - xMin) / (xMax - xMin)) * (width - padding.left - padding.right);
+    const yScale = (y) => height - padding.bottom - ((y - yMin) / (yMax - yMin)) * (height - padding.top - padding.bottom);
+    const handlePointHover = (index, event) => {
+        setHoveredPoint(index);
+        const rect = event.currentTarget.getBoundingClientRect();
+        setTooltipPos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+    };
+    return (window.SP_REACT.createElement("div", { style: { position: "relative" } },
+        window.SP_REACT.createElement("svg", { width: width, height: height, style: { backgroundColor: "#0d0f12", borderRadius: "4px" } },
+            [0, 25, 50, 75, 100].map((temp) => (window.SP_REACT.createElement("g", { key: temp },
+                window.SP_REACT.createElement("line", { x1: padding.left, y1: yScale(temp), x2: width - padding.right, y2: yScale(temp), stroke: "#2a2d34", strokeWidth: 1, strokeDasharray: "2,2" }),
+                window.SP_REACT.createElement("text", { x: padding.left - 5, y: yScale(temp) + 3, fontSize: "9", fill: "#5a5d64", textAnchor: "end" },
+                    temp,
+                    "\u00B0C")))),
+            window.SP_REACT.createElement("line", { x1: padding.left, y1: padding.top, x2: padding.left, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
+            window.SP_REACT.createElement("line", { x1: padding.left, y1: height - padding.bottom, x2: width - padding.right, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
+            window.SP_REACT.createElement("defs", null,
+                window.SP_REACT.createElement("linearGradient", { id: "lineGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
+                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "#4caf50" }),
+                    window.SP_REACT.createElement("stop", { offset: "50%", stopColor: "#1a9fff" }),
+                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "#f44336" }))),
+            window.SP_REACT.createElement("polyline", { points: data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" "), fill: "none", stroke: "url(#lineGradient)", strokeWidth: 2 }),
+            data.map((point, i) => {
+                const color = point.result === "pass" ? "#4caf50" :
+                    point.result === "fail" ? "#ff9800" :
+                        "#f44336";
+                return (window.SP_REACT.createElement("g", { key: i },
+                    window.SP_REACT.createElement("circle", { cx: xScale(point.offset), cy: yScale(point.temp), r: hoveredPoint === i ? 6 : 4, fill: color, stroke: "#fff", strokeWidth: hoveredPoint === i ? 2 : 1, style: { cursor: "pointer", transition: "all 0.2s" }, onMouseEnter: (e) => handlePointHover(i, e), onMouseLeave: () => setHoveredPoint(null) })));
+            }),
+            window.SP_REACT.createElement("text", { x: width / 2, y: height - 5, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold" }, "Voltage Offset (mV)"),
+            window.SP_REACT.createElement("text", { x: 15, y: height / 2, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold", transform: `rotate(-90, 15, ${height / 2})` }, "Temperature (\u00B0C)"),
+            window.SP_REACT.createElement("g", { transform: `translate(${width - 100}, 15)` },
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 0, r: 3, fill: "#4caf50" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 3, fontSize: "9", fill: "#8b929a" }, "Pass"),
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 12, r: 3, fill: "#ff9800" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 15, fontSize: "9", fill: "#8b929a" }, "Fail"),
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 24, r: 3, fill: "#f44336" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 27, fontSize: "9", fill: "#8b929a" }, "Crash"))),
+        hoveredPoint !== null && (window.SP_REACT.createElement("div", { style: {
+                position: "absolute",
+                left: tooltipPos.x + 10,
+                top: tooltipPos.y - 40,
+                backgroundColor: "#1a1d24",
+                border: "1px solid #3d4450",
+                borderRadius: "4px",
+                padding: "6px 10px",
+                fontSize: "10px",
+                color: "#fff",
+                pointerEvents: "none",
+                zIndex: 1000,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+            } },
+            window.SP_REACT.createElement("div", null,
+                window.SP_REACT.createElement("strong", null,
+                    data[hoveredPoint].offset,
+                    "mV")),
+            window.SP_REACT.createElement("div", null,
+                "Temp: ",
+                data[hoveredPoint].temp,
+                "\u00B0C"),
+            window.SP_REACT.createElement("div", { style: {
+                    color: data[hoveredPoint].result === "pass" ? "#4caf50" :
+                        data[hoveredPoint].result === "fail" ? "#ff9800" : "#f44336"
+                } }, data[hoveredPoint].result.toUpperCase())))));
 };
 // ==================== Results Screen ====================
 const ResultsScreen = ({ result, onApply, onStartOver }) => {
     const cpuOffset = result?.offsets?.cpu || 0;
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+    const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(false);
+    const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(false);
+    const handleApply = async () => {
+        setIsApplying(true);
+        try {
+            await onApply(applyOnStartup, gameOnlyMode);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(ChipGradeBadge, { grade: result?.chipGrade || "Bronze" })),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
@@ -2043,7 +2159,7 @@ const ResultsScreen = ({ result, onApply, onStartOver }) => {
                 window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Recommended Undervolt"))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "center" } },
-                window.SP_REACT.createElement(SimpleCurveChart, { data: result?.curveData || [] }))),
+                window.SP_REACT.createElement(EnhancedCurveChart, { data: result?.curveData || [] }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: {
                     fontSize: "10px",
@@ -2060,15 +2176,142 @@ const ResultsScreen = ({ result, onApply, onStartOver }) => {
                     "Iterations: ",
                     result?.iterations || 0))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onApply },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" } },
-                    window.SP_REACT.createElement(FaCheck, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, "Apply & Save")))),
+            window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", description: "Automatically apply this preset when DeckTune starts", checked: applyOnStartup, onChange: setApplyOnStartup })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", description: "Only apply when a game is running", checked: gameOnlyMode, onChange: setGameOnlyMode })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleApply, disabled: isApplying },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: isApplying ? "#8b929a" : "#4caf50" } },
+                    isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 12 }) : window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, isApplying ? "Applying..." : "Apply & Save as Wizard Preset")))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
                 window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
                     window.SP_REACT.createElement(FaHistory, { size: 12 }),
                     window.SP_REACT.createElement("span", null, "Start Over"))))));
+};
+// ==================== Wizard History View (Inline) ====================
+const WizardHistoryView = ({ onClose }) => {
+    const [presets, setPresets] = SP_REACT.useState([]);
+    const [selectedPreset, setSelectedPreset] = SP_REACT.useState(null);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    const loadPresets = async () => {
+        setIsLoading(true);
+        try {
+            const result = await call("get_wizard_presets");
+            setPresets(result || []);
+        }
+        catch (err) {
+            console.error("Failed to load wizard presets:", err);
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    SP_REACT.useEffect(() => {
+        loadPresets();
+    }, []);
+    const handleApply = async (preset) => {
+        try {
+            await call("apply_wizard_result", preset.id, true, preset.apply_on_startup, preset.game_only_mode);
+            console.log("Applied wizard preset:", preset.id);
+        }
+        catch (err) {
+            console.error("Failed to apply preset:", err);
+        }
+    };
+    const handleDelete = async (presetId) => {
+        try {
+            await call("delete_wizard_preset", presetId);
+            console.log("Deleted wizard preset:", presetId);
+            setSelectedPreset(null);
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to delete preset:", err);
+        }
+    };
+    const handleUpdateOptions = async (presetId, applyOnStartup, gameOnlyMode) => {
+        try {
+            await call("update_wizard_preset_options", presetId, applyOnStartup, gameOnlyMode);
+            console.log("Updated wizard preset options:", presetId);
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to update preset options:", err);
+        }
+    };
+    if (isLoading) {
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px" } },
+                    window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { fontSize: "24px", color: "#1a9fff" } }),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginTop: "10px" } }, "Loading presets...")))));
+    }
+    if (selectedPreset) {
+        const cpuOffset = selectedPreset.offsets?.cpu || 0;
+        const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(selectedPreset.apply_on_startup);
+        const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(selectedPreset.game_only_mode);
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(null) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "5px" } },
+                        window.SP_REACT.createElement(FaHistory, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Back to List")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(ChipGradeBadge, { grade: selectedPreset.chip_grade })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
+                    window.SP_REACT.createElement("div", { style: { fontSize: "24px", fontWeight: "bold", color: "#1a9fff" } },
+                        cpuOffset,
+                        "mV"),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, new Date(selectedPreset.timestamp).toLocaleString()))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", checked: applyOnStartup, onChange: (val) => {
+                        setApplyOnStartup(val);
+                        handleUpdateOptions(selectedPreset.id, val, gameOnlyMode);
+                    } })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", checked: gameOnlyMode, onChange: (val) => {
+                        setGameOnlyMode(val);
+                        handleUpdateOptions(selectedPreset.id, applyOnStartup, val);
+                    } })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleApply(selectedPreset) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" } },
+                        window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                        window.SP_REACT.createElement("span", null, "Apply Preset")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleDelete(selectedPreset.id) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
+                        window.SP_REACT.createElement(FaTimes, { size: 12 }),
+                        window.SP_REACT.createElement("span", null, "Delete Preset"))))));
+    }
+    if (presets.length === 0) {
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#8b929a", fontSize: "12px" } }, "No wizard presets found. Run the wizard to create your first preset."))));
+    }
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } }, presets.map((preset) => {
+        const cpuOffset = preset.offsets?.cpu || 0;
+        const date = new Date(preset.timestamp).toLocaleDateString();
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.id },
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(preset) },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "16px" } },
+                            preset.chip_grade === "Platinum" && window.SP_REACT.createElement(FaTrophy, { style: { color: "#e5e4e2" } }),
+                            preset.chip_grade === "Gold" && window.SP_REACT.createElement(FaMedal, { style: { color: "#ffd700" } }),
+                            preset.chip_grade === "Silver" && window.SP_REACT.createElement(FaAward, { style: { color: "#c0c0c0" } }),
+                            preset.chip_grade === "Bronze" && window.SP_REACT.createElement(FaCertificate, { style: { color: "#cd7f32" } })),
+                        window.SP_REACT.createElement("div", null,
+                            window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold" } },
+                                preset.chip_grade,
+                                " \u2022 ",
+                                cpuOffset,
+                                "mV"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, date)))))));
+    })));
 };
 // ==================== Main Component ====================
 const WizardMode = () => {
@@ -2076,6 +2319,7 @@ const WizardMode = () => {
     const { isRunning, progress, result, dirtyExit, startWizard, cancelWizard, applyResult, } = useWizard();
     const [showCrashModal, setShowCrashModal] = SP_REACT.useState(false);
     const [localResult, setLocalResult] = SP_REACT.useState(null);
+    const [showHistory, setShowHistory] = SP_REACT.useState(false);
     SP_REACT.useEffect(() => {
         if (dirtyExit?.detected && !showCrashModal) {
             setShowCrashModal(true);
@@ -2103,11 +2347,12 @@ const WizardMode = () => {
             console.error("Failed to cancel wizard:", err);
         }
     };
-    const handleApply = async () => {
+    const handleApply = async (applyOnStartup, gameOnlyMode) => {
         if (!localResult)
             return;
         try {
-            await applyResult(localResult.id, true);
+            await applyResult(localResult.id, true, applyOnStartup, gameOnlyMode);
+            console.log(`Applied wizard result with options: startup=${applyOnStartup}, gameOnly=${gameOnlyMode}`);
         }
         catch (err) {
             console.error("Failed to apply result:", err);
@@ -2118,8 +2363,14 @@ const WizardMode = () => {
     };
     return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Wizard Mode" },
         window.SP_REACT.createElement(PanicDisableButton$1, null),
+        !isRunning && !localResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowHistory(!showHistory) },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, showHistory ? "Back to Wizard" : "View History"))))),
         showCrashModal && dirtyExit?.crashInfo && (window.SP_REACT.createElement(CrashRecoveryModal, { crashInfo: dirtyExit.crashInfo, onDismiss: () => setShowCrashModal(false) })),
-        !isRunning && !localResult && (window.SP_REACT.createElement(ConfigurationScreen, { onStart: handleStart, platformInfo: platformInfo })),
+        !isRunning && !localResult && !showHistory && (window.SP_REACT.createElement(ConfigurationScreen, { onStart: handleStart, platformInfo: platformInfo })),
+        !isRunning && !localResult && showHistory && (window.SP_REACT.createElement(WizardHistoryView, { onClose: () => setShowHistory(false) })),
         isRunning && progress && (window.SP_REACT.createElement(ProgressScreen, { progress: progress, onCancel: handleCancel })),
         !isRunning && localResult && (window.SP_REACT.createElement(ResultsScreen, { result: localResult, onApply: handleApply, onStartOver: handleStartOver }))));
 };
@@ -2134,6 +2385,10 @@ const WizardMode = () => {
 
 const FocusableButton = ({ children, onClick, onActivate, style = {}, focusColor = "#1a9fff", disabled = false, className = "", }) => {
     const [isFocused, setIsFocused] = SP_REACT.useState(false);
+    const handleClick = () => {
+        if (!disabled && onClick)
+            onClick();
+    };
     const handleActivate = () => {
         if (!disabled) {
             if (onActivate) {
@@ -2145,7 +2400,7 @@ const FocusableButton = ({ children, onClick, onActivate, style = {}, focusColor
             }
         }
     };
-    return (window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleActivate, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), className: className, style: {
+    return (window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleActivate, onClick: handleClick, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), className: className, style: {
             ...style,
             // Use border instead of outline for rounded corners
             border: isFocused && !disabled ? `3px solid ${focusColor}` : "3px solid transparent",
@@ -4993,6 +5248,7 @@ const HeaderBar = ({ onFanControlClick, onSettingsClick, }) => {
  *
  * Provides centralized settings management interface:
  * - Expert Mode toggle with confirmation dialog
+ * - Binning Settings (test duration, step size, start value)
  * - Modal overlay with backdrop dismiss
  * - Gamepad navigation support
  * - Accessibility compliant (WCAG AA)
@@ -5092,6 +5348,7 @@ const ExpertWarningDialog = ({ isOpen, onConfirm, onCancel, }) => {
  * Features:
  * - Modal overlay with backdrop dismiss
  * - Expert Mode toggle with confirmation
+ * - Binning Settings (test duration, step size, start value)
  * - Auto-save on changes (Requirement 9.4)
  * - Gamepad navigation support
  * - WCAG AA compliant
@@ -5099,6 +5356,45 @@ const ExpertWarningDialog = ({ isOpen, onConfirm, onCancel, }) => {
 const SettingsMenu = ({ isOpen, onClose }) => {
     const { settings, setExpertMode } = useSettings();
     const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+    // Binning config state
+    const [binningConfig, setBinningConfig] = SP_REACT.useState({
+        test_duration: 60,
+        step_size: 5,
+        start_value: -10,
+    });
+    const [binningLoaded, setBinningLoaded] = SP_REACT.useState(false);
+    // Load binning config on mount
+    SP_REACT.useEffect(() => {
+        if (isOpen && !binningLoaded) {
+            loadBinningConfig();
+        }
+    }, [isOpen]);
+    const loadBinningConfig = async () => {
+        try {
+            const response = await call("get_binning_config");
+            if (response.success && response.config) {
+                setBinningConfig({
+                    test_duration: response.config.test_duration || 60,
+                    step_size: response.config.step_size || 5,
+                    start_value: response.config.start_value || -10,
+                });
+                setBinningLoaded(true);
+            }
+        }
+        catch (err) {
+            console.error("Failed to load binning config:", err);
+        }
+    };
+    const updateBinningConfig = async (updates) => {
+        const newConfig = { ...binningConfig, ...updates };
+        setBinningConfig(newConfig);
+        try {
+            await call("update_binning_config", newConfig);
+        }
+        catch (err) {
+            console.error("Failed to update binning config:", err);
+        }
+    };
     if (!isOpen)
         return null;
     /**
@@ -5220,6 +5516,39 @@ const SettingsMenu = ({ isOpen, onClose }) => {
                                     }, role: "switch", "aria-checked": settings.expertMode, "aria-label": "Expert Mode toggle" },
                                     window.SP_REACT.createElement("span", null, settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"),
                                     window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.expertMode ? "ON" : "OFF"))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Wizard Settings"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "12px",
+                                    lineHeight: "1.4",
+                                } }, "Advanced configuration for Wizard Mode testing algorithm."),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "12px" } },
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Test Duration: ",
+                                        binningConfig.test_duration,
+                                        "s"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 30, max: 300, step: 10, value: binningConfig.test_duration, onChange: (e) => updateBinningConfig({ test_duration: parseInt(e.target.value) }), style: { width: "100%" } })),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Step Size: ",
+                                        binningConfig.step_size,
+                                        "mV"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 1, max: 10, step: 1, value: binningConfig.step_size, onChange: (e) => updateBinningConfig({ step_size: parseInt(e.target.value) }), style: { width: "100%" } })),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Start Value: ",
+                                        binningConfig.start_value,
+                                        "mV"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 5, max: 20, step: 5, value: Math.abs(binningConfig.start_value), onChange: (e) => updateBinningConfig({ start_value: -parseInt(e.target.value) }), style: { width: "100%" } }))))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement("div", { style: {
                                 fontSize: "9px",

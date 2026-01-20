@@ -379,6 +379,7 @@ class Plugin:
         
         # 14. Initialize Wizard Mode Session
         # Feature: Wizard Mode Refactoring
+        # CRITICAL FIX #1: Pass dynamic_controller for gymdeck3 integration
         from backend.tuning.wizard_session import WizardSession
         
         self.wizard_session = WizardSession(
@@ -386,7 +387,8 @@ class Plugin:
             runner=self.test_runner,
             safety=self.safety,
             event_emitter=self.event_emitter,
-            settings_dir=SETTINGS_DIR
+            settings_dir=SETTINGS_DIR,
+            dynamic_controller=self.dynamic_controller
         )
         
         # Set in RPC
@@ -652,22 +654,46 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """Get history of wizard results."""
         return await self.rpc.get_wizard_results_history()
     
-    async def apply_wizard_result(self, result_id, save_as_preset=True):
+    async def apply_wizard_result(self, result_id, save_as_preset=True, apply_on_startup=False, game_only_mode=False):
         """Apply a wizard result.
+        
+        CRITICAL FIX #2 & #3: Support apply_on_startup and game_only_mode options.
         
         Args:
             result_id: UUID of the wizard result
-            save_as_preset: Whether to save as a preset
+            save_as_preset: Whether to save as a wizard preset
+            apply_on_startup: Whether to apply on startup
+            game_only_mode: Whether to enable only during games
         """
-        return await self.rpc.apply_wizard_result(result_id, save_as_preset)
+        return await self.rpc.apply_wizard_result(result_id, save_as_preset, apply_on_startup, game_only_mode)
     
     async def run_wizard_benchmark(self, duration=10):
         """Run performance benchmark for wizard mode.
+        
+        CRITICAL FIX #6: Real-time progress updates via event emission.
         
         Args:
             duration: Benchmark duration in seconds
         """
         return await self.rpc.run_wizard_benchmark(duration)
+    
+    # ==================== CRITICAL FIX #2: Wizard Preset Management ====================
+    
+    async def get_wizard_presets(self):
+        """Get all wizard presets with full metadata."""
+        return await self.rpc.get_wizard_presets()
+    
+    async def get_wizard_preset(self, preset_id):
+        """Get a specific wizard preset by ID."""
+        return await self.rpc.get_wizard_preset(preset_id)
+    
+    async def delete_wizard_preset(self, preset_id):
+        """Delete a wizard preset."""
+        return await self.rpc.delete_wizard_preset(preset_id)
+    
+    async def update_wizard_preset_options(self, preset_id, apply_on_startup=None, game_only_mode=None):
+        """Update wizard preset options (apply on startup, game only mode)."""
+        return await self.rpc.update_wizard_preset_options(preset_id, apply_on_startup, game_only_mode)
 
     # ==================== Preset Management (delegated to RPC) ====================
 
