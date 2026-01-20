@@ -8,6 +8,7 @@
 import {
   PanelSection,
   PanelSectionRow,
+  Focusable,
 } from "@decky/ui";
 import { addEventListener, removeEventListener } from "@decky/api";
 import { useState, useEffect, FC } from "react";
@@ -260,20 +261,22 @@ const DeckTuneContent: FC = () => {
         {/* Mode switcher with animations - Requirements: 8.1, 8.2 */}
         {/* Large Fan Control button removed per Requirements 8.1, 8.2 */}
         <PanelSectionRow>
-          <div className="fade-in">
-            <div style={{ 
-              minHeight: "40px", 
-              padding: "8px 12px",
-              backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-              marginBottom: "6px",
-              borderRadius: "8px",
-              border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-              position: "relative",
-              overflow: "hidden",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              cursor: "pointer",
-            }}
-            onClick={() => setMode("wizard")}
+          <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <Focusable
+              className="fade-in"
+              style={{ 
+                minHeight: "40px", 
+                padding: "8px 12px",
+                backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                borderRadius: "8px",
+                border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+                position: "relative",
+                overflow: "hidden",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                cursor: "pointer",
+              }}
+              onActivate={() => setMode("wizard")}
+              onClick={() => setMode("wizard")}
             >
               <div style={{ 
                 display: "flex", 
@@ -303,25 +306,24 @@ const DeckTuneContent: FC = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </PanelSectionRow>
-        
-        <PanelSectionRow>
-          <div className="fade-in" style={{ animationDelay: "0.1s" }}>
-            <div style={{ 
-              minHeight: "40px", 
-              padding: "8px 12px",
-              backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-              marginBottom: "6px",
-              borderRadius: "8px",
-              border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-              position: "relative",
-              overflow: "hidden",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              cursor: "pointer",
-            }}
-            onClick={() => setMode("expert")}
+            </Focusable>
+            
+            <Focusable
+              className="fade-in"
+              style={{ 
+                minHeight: "40px", 
+                padding: "8px 12px",
+                backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
+                borderRadius: "8px",
+                border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
+                position: "relative",
+                overflow: "hidden",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                cursor: "pointer",
+                animationDelay: "0.1s"
+              }}
+              onActivate={() => setMode("expert")}
+              onClick={() => setMode("expert")}
             >
               <div style={{ 
                 display: "flex", 
@@ -352,8 +354,8 @@ const DeckTuneContent: FC = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </Focusable>
+          </Focusable>
         </PanelSectionRow>
       </PanelSection>
 

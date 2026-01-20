@@ -100,13 +100,22 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Set Expert Mode setting.
    * 
-   * Retries once on failure and displays user-friendly error message.
+   * Calls enable_expert_mode or disable_expert_mode RPC methods
+   * with proper confirmation handling.
    * 
    * Validates: Requirements 2.3, 2.4, 3.1, 3.5, 10.3
    */
   const setExpertMode = useCallback(async (value: boolean) => {
     try {
-      const response = await call("save_setting", "expert_mode", value) as { success: boolean; error?: string };
+      let response;
+      
+      if (value) {
+        // Enabling - requires confirmation
+        response = await call("enable_expert_mode", true) as { success: boolean; error?: string; expert_mode?: boolean };
+      } else {
+        // Disabling - no confirmation needed
+        response = await call("disable_expert_mode") as { success: boolean; error?: string; expert_mode?: boolean };
+      }
 
       if (response.success) {
         setSettings((prev) => ({ ...prev, expertMode: value }));

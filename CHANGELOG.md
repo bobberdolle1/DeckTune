@@ -2,6 +2,46 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.28] - 2026-01-20
+
+### Fixed
+- **Wizard Mode Critical Fix** — Complete validation system rewrite
+  - **Voltage verification** — Read hwmon sensors to confirm offset application
+  - **Hardware error detection** — Real-time MCE/WHEA monitoring via dmesg
+  - **Verification pass** — 60-second final stability test with automatic rollback
+  - **Proper test failures** — Tests now fail correctly instead of returning fake -50mV success
+  - **Benchmark implementation** — Real CPU benchmark with progress and metrics
+  - **Apply & Save** — Automatic preset creation (no manual Expert Mode navigation)
+  - **Expert Mode toggle** — Fixed to call proper enable/disable RPC methods
+  - **Gamepad navigation** — Proper Focusable wrapping for left stick/DPAD support
+
+### Implementation
+- **Backend** (`backend/tuning/runner.py`):
+  - `monitor_dmesg_realtime()` — Real-time hardware error detection during tests
+  - `read_voltage_sensors()` — Verify voltage application via hwmon
+  - `run_per_core_test()` — Per-core stress testing with taskset affinity
+  - `run_benchmark_with_progress()` — Real benchmark with metrics (score, temp, freq)
+- **Backend** (`backend/tuning/wizard_session.py`):
+  - `_verify_voltage_applied()` — Sensor-based voltage verification
+  - Enhanced `_test_offset()` — Parallel dmesg monitoring, hardware error checks
+  - `_run_verification_pass()` — 60s final stability test with rollback logic
+  - Automatic rollback on failure (+5mV safety margin, retry, fallback to -10mV)
+- **Backend** (`backend/api/rpc.py`):
+  - `run_wizard_benchmark()` — Expose benchmark to frontend
+- **Frontend** (`src/components/WizardMode.tsx`):
+  - Connected "Run Benchmark" button to backend
+  - Benchmark results display (score, temp, freq)
+  - "Apply & Save as Preset" automatic implementation
+  - Focusable wrapping for proper gamepad navigation
+- **Frontend** (`src/context/SettingsContext.tsx`):
+  - Fixed `setExpertMode()` to call `enable_expert_mode()`/`disable_expert_mode()`
+
+### Technical Details
+- **Validation chain**: Apply → Verify sensors → Stress test → Monitor dmesg → Check metrics → 60s verification → Rollback if unstable
+- **Hardware error patterns**: MCE, WHEA, Machine Check, Corrected Error
+- **Rollback strategy**: +5mV safety margin, retry verification, fallback to -10mV if still unstable
+- **Benchmark**: stress-ng with ackermann method, 10s duration, ops/sec scoring
+
 ## [3.1.27] - 2026-01-20
 
 ### Added

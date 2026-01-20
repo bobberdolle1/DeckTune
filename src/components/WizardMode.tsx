@@ -22,6 +22,7 @@ import {
   ToggleField,
   Dropdown,
 } from "@decky/ui";
+import { call } from "@decky/api";
 import {
   FaExclamationTriangle,
   FaSpinner,
@@ -172,7 +173,8 @@ const ConfigurationScreen: FC<{
 }> = ({ onStart, platformInfo }) => {
   const [aggressiveness, setAggressiveness] = useState<"safe" | "balanced" | "aggressive">("balanced");
   const [testDuration, setTestDuration] = useState<"short" | "long">("short");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
+  const [benchmarkResult, setBenchmarkResult] = useState<any>(null);
 
   const handleStart = () => {
     const config: WizardConfig = {
@@ -186,6 +188,21 @@ const ConfigurationScreen: FC<{
     onStart(config);
   };
 
+  const handleRunBenchmark = async () => {
+    setIsBenchmarking(true);
+    setBenchmarkResult(null);
+    try {
+      const result = await call("run_wizard_benchmark", 10);
+      if (result?.success) {
+        setBenchmarkResult(result);
+      }
+    } catch (err) {
+      console.error("Benchmark failed:", err);
+    } finally {
+      setIsBenchmarking(false);
+    }
+  };
+
   const getEstimatedTime = () => {
     const base = testDuration === "short" ? 5 : 15;
     const multiplier = aggressiveness === "safe" ? 2 : aggressiveness === "aggressive" ? 0.5 : 1;
@@ -193,7 +210,7 @@ const ConfigurationScreen: FC<{
   };
 
   return (
-    <>
+    <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <PanelSectionRow>
         <div style={{ fontSize: "13px", color: "#ccc", marginBottom: "10px" }}>
           Automatically find the optimal undervolt for your chip through systematic testing.
@@ -242,6 +259,25 @@ const ConfigurationScreen: FC<{
       </PanelSectionRow>
 
       <PanelSectionRow>
+        <ButtonItem layout="below" onClick={handleRunBenchmark} disabled={isBenchmarking}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
+            {isBenchmarking ? <FaSpinner className="spin" size={12} /> : <FaChartLine size={12} />}
+            <span>{isBenchmarking ? "Running..." : "Run Benchmark"}</span>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {benchmarkResult && (
+        <PanelSectionRow>
+          <div style={{ fontSize: "10px", color: "#4caf50", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
+            <div>Score: {benchmarkResult.score} ops/sec</div>
+            <div>Max Temp: {benchmarkResult.max_temp}°C</div>
+            <div>Max Freq: {benchmarkResult.max_freq} MHz</div>
+          </div>
+        </PanelSectionRow>
+      )}
+
+      <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleStart}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
             <FaPlay size={12} />
@@ -249,7 +285,7 @@ const ConfigurationScreen: FC<{
           </div>
         </ButtonItem>
       </PanelSectionRow>
-    </>
+    </Focusable>
   );
 };
 
@@ -272,7 +308,7 @@ const ProgressScreen: FC<{
   };
 
   return (
-    <>
+    <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <PanelSectionRow>
         <div style={{ textAlign: "center", marginBottom: "15px" }}>
           <FaSpinner
@@ -325,7 +361,7 @@ const ProgressScreen: FC<{
           </div>
         </ButtonItem>
       </PanelSectionRow>
-    </>
+    </Focusable>
   );
 };
 
@@ -444,9 +480,19 @@ const ResultsScreen: FC<{
   onStartOver: () => void;
 }> = ({ result, onApply, onStartOver }) => {
   const cpuOffset = result?.offsets?.cpu || 0;
+  const [isApplying, setIsApplying] = useState(false);
+
+  const handleApply = async () => {
+    setIsApplying(true);
+    try {
+      await onApply();
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   return (
-    <>
+    <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <PanelSectionRow>
         <ChipGradeBadge grade={result?.chipGrade || "Bronze"} />
       </PanelSectionRow>
@@ -482,10 +528,10 @@ const ResultsScreen: FC<{
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <ButtonItem layout="below" onClick={onApply}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" }}>
-            <FaCheck size={12} />
-            <span>Apply & Save</span>
+        <ButtonItem layout="below" onClick={handleApply} disabled={isApplying}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: isApplying ? "#8b929a" : "#4caf50" }}>
+            {isApplying ? <FaSpinner className="spin" size={12} /> : <FaCheck size={12} />}
+            <span>{isApplying ? "Applying..." : "Apply & Save as Preset"}</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -498,7 +544,7 @@ const ResultsScreen: FC<{
           </div>
         </ButtonItem>
       </PanelSectionRow>
-    </>
+    </Focusable>
   );
 };
 
@@ -517,6 +563,7 @@ export const WizardMode: FC = () => {
   } = useWizard();
 
   const [showCrashModal, setShowCrashModal] = useState(false);
+  const [localResult, setLocalResult] = useState<any>(null);
 
   useEffect(() => {
     if (dirtyExit?.detected && !showCrashModal) {
@@ -524,8 +571,15 @@ export const WizardMode: FC = () => {
     }
   }, [dirtyExit]);
 
+  useEffect(() => {
+    if (result) {
+      setLocalResult(result);
+    }
+  }, [result]);
+
   const handleStart = async (config: WizardConfig) => {
     try {
+      setLocalResult(null);
       await startWizard(config);
     } catch (err) {
       console.error("Failed to start wizard:", err);
@@ -541,17 +595,16 @@ export const WizardMode: FC = () => {
   };
 
   const handleApply = async () => {
-    if (!result) return;
+    if (!localResult) return;
     try {
-      await applyResult(result.id, true);
+      await applyResult(localResult.id, true);
     } catch (err) {
       console.error("Failed to apply result:", err);
     }
   };
 
   const handleStartOver = () => {
-    // Reset to configuration screen
-    window.location.reload();
+    setLocalResult(null);
   };
 
   return (
@@ -565,7 +618,7 @@ export const WizardMode: FC = () => {
         />
       )}
 
-      {!isRunning && !result && (
+      {!isRunning && !localResult && (
         <ConfigurationScreen onStart={handleStart} platformInfo={platformInfo} />
       )}
 
@@ -573,9 +626,9 @@ export const WizardMode: FC = () => {
         <ProgressScreen progress={progress} onCancel={handleCancel} />
       )}
 
-      {!isRunning && result && (
+      {!isRunning && localResult && (
         <ResultsScreen
-          result={result}
+          result={localResult}
           onApply={handleApply}
           onStartOver={handleStartOver}
         />

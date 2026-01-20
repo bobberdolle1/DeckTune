@@ -3488,3 +3488,41 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to apply wizard result: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
+    
+    async def run_wizard_benchmark(self, duration: int = 10) -> Dict[str, Any]:
+        """Run performance benchmark for wizard mode.
+        
+        Executes a CPU-intensive benchmark and returns performance metrics.
+        
+        Args:
+            duration: Benchmark duration in seconds (default 10)
+            
+        Returns:
+            Dictionary with score, max_temp, max_freq, and duration
+        """
+        if not self.test_runner:
+            return {"success": False, "error": "Test runner not initialized"}
+        
+        try:
+            logger.info(f"Running wizard benchmark for {duration}s")
+            
+            # Run benchmark with progress callback
+            result = await self.test_runner.run_benchmark_with_progress(
+                duration=duration,
+                progress_callback=None  # Could emit progress events here
+            )
+            
+            if "error" in result:
+                return {"success": False, "error": result["error"]}
+            
+            logger.info(f"Benchmark completed: score={result['score']}, "
+                       f"max_temp={result['max_temp']}°C")
+            
+            return {
+                "success": True,
+                **result
+            }
+            
+        except Exception as e:
+            logger.error(f"Benchmark failed: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}

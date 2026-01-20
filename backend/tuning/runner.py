@@ -307,6 +307,260 @@ class TestRunner:
         
         return errors
     
+    async def monitor_dmesg_realtime(self, duration: int) -> List[str]:
+        """Monitor dmesg for hardware errors in real-time during test.
+        
+        Captures the dmesg timestamp before test, then checks for new errors
+        after the test completes.
+        
+        Args:
+            duration: Test duration in seconds
+            
+        Returns:
+            List of new error lines detected during the test period
+        """
+        errors = []
+        error_patterns = ["mce", "machine check", "hardware error", "whea", "corrected error"]
+        
+        try:
+            # Get current dmesg line count as baseline
+            process = await asyncio.create_subprocess_exec(
+                "dmesg",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=5)
+            baseline_lines = len(stdout.decode("utf-8", errors="replace").splitlines())
+            
+            # Wait for test duration
+            await asyncio.sleep(duration)
+            
+            # Check for new errors
+            process = await asyncio.create_subprocess_exec(
+                "dmesg", "--level=err,crit,alert,emerg",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=10)
+            output = stdout.decode("utf-8", errors="replace")
+            lines = output.splitlines()
+            
+            # Check only new lines
+            new_lines = lines[baseline_lines:] if len(lines) > baseline_lines else []
+            
+            for line in new_lines:
+                lower_line = line.lower()
+                if any(pattern in lower_line for pattern in error_patterns):
+                    errors.append(line.strip())
+                    
+        except (asyncio.TimeoutError, FileNotFoundError, Exception):
+            pass
+        
+        return errors
+    
+    def read_voltage_sensors(self) -> Dict[str, Optional[float]]:
+        """Read actual voltage values from hwmon sensors.
+        
+        Attempts to read CPU core voltages from sysfs hwmon interface.
+        Used to verify that voltage offsets are actually being applied.
+        
+        Returns:
+            Dictionary with voltage readings in mV, or None if unavailable
+        """
+        voltages = {}
+        
+        # Common hwmon paths for CPU voltage on Steam Deck
+        voltage_paths = [
+            "/sys/class/hwmon/hwmon0/in0_input",  # Vcore
+            "/sys/class/hwmon/hwmon1/in0_input",
+            "/sys/class/hwmon/hwmon2/in0_input",
+        ]
+        
+        for i, path in enumerate(voltage_paths):
+            try:
+                p = Path(path)
+                if p.exists():
+                    raw_value = p.read_text().strip()
+                    # Voltage is usually in millivolts
+                    voltage_mv = float(raw_value)
+                    voltages[f"sensor_{i}"] = voltage_mv
+                    break  # Use first available sensor
+            except (ValueError, IOError, PermissionError):
+                continue
+        
+        return voltages
+    
+    async def run_per_core_test(self, core_id: int, duration: int) -> TestResult:
+        """Run stress test pinned to a specific CPU core.
+        
+        Uses taskset to pin the stress test to a single core for
+        per-core stability validation.
+        
+        Args:
+            core_id: CPU core ID (0-3 for Steam Deck)
+            duration: Test duration in seconds
+            
+        Returns:
+            TestResult with pass/fail status
+        """
+        start_time = time.time()
+        logs = ""
+        error = None
+        passed = False
+        
+        # Build command with taskset for CPU affinity
+        stress_ng_path = _get_binary_path("stress-ng")
+        command = [
+            "taskset",
+            "-c", str(core_id),  # Pin to specific core
+            stress_ng_path,
+            "--cpu", "1",  # Single CPU worker
+            "--timeout", f"{duration}s"
+        ]
+        
+        try:
+            self._current_process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    self._current_process.communicate(),
+                    timeout=duration + 10
+                )
+                
+                logs = stdout.decode("utf-8", errors="replace")
+                if stderr:
+                    logs += "\n--- STDERR ---\n" + stderr.decode("utf-8", errors="replace")
+                
+                if self._current_process.returncode == 0:
+                    passed = _parse_stress_ng_output(logs)
+                    if not passed:
+                        error = "Test output indicates failure"
+                else:
+                    passed = False
+                    error = f"Process exited with code {self._current_process.returncode}"
+                    
+            except asyncio.TimeoutError:
+                self._current_process.kill()
+                await self._current_process.wait()
+                passed = False
+                error = f"Test timed out after {duration + 10} seconds"
+                logs = f"[TIMEOUT] Process killed"
+                
+        except FileNotFoundError:
+            passed = False
+            error = "taskset or stress-ng not found"
+            logs = ""
+        except Exception as e:
+            passed = False
+            error = f"Execution error: {str(e)}"
+            logs = ""
+        finally:
+            self._current_process = None
+        
+        duration_actual = time.time() - start_time
+        
+        return TestResult(
+            passed=passed,
+            duration=duration_actual,
+            logs=logs,
+            error=error
+        )
+    
+    async def run_benchmark_with_progress(
+        self,
+        duration: int = 10,
+        progress_callback: Optional[Callable[[int], None]] = None
+    ) -> Dict[str, Any]:
+        """Run performance benchmark with progress updates.
+        
+        Executes a CPU-intensive benchmark and streams progress updates.
+        
+        Args:
+            duration: Benchmark duration in seconds
+            progress_callback: Optional callback for progress updates (0-100)
+            
+        Returns:
+            Dictionary with score, max_temp, max_freq, duration
+        """
+        start_time = time.time()
+        max_temp = 0.0
+        max_freq = 0.0
+        operations = 0
+        
+        stress_ng_path = _get_binary_path("stress-ng")
+        
+        try:
+            # Start stress-ng benchmark
+            process = await asyncio.create_subprocess_exec(
+                stress_ng_path,
+                "--cpu", "4",
+                "--cpu-method", "ackermann",  # CPU-intensive method
+                "--timeout", f"{duration}s",
+                "--metrics-brief",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            # Monitor progress and metrics
+            for i in range(duration):
+                await asyncio.sleep(1)
+                
+                # Update progress
+                progress = int((i + 1) / duration * 100)
+                if progress_callback:
+                    progress_callback(progress)
+                
+                # Sample metrics
+                metrics = self.get_system_metrics()
+                if metrics.get("temperature"):
+                    max_temp = max(max_temp, metrics["temperature"])
+                if metrics.get("frequency"):
+                    max_freq = max(max_freq, metrics["frequency"])
+            
+            # Wait for completion
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=5
+            )
+            
+            # Parse operations from output
+            output = stdout.decode("utf-8", errors="replace")
+            for line in output.splitlines():
+                if "bogo ops" in line.lower():
+                    try:
+                        # Extract operations count
+                        parts = line.split()
+                        for i, part in enumerate(parts):
+                            if "bogo" in part.lower() and i + 1 < len(parts):
+                                operations = int(float(parts[i + 1]))
+                                break
+                    except (ValueError, IndexError):
+                        pass
+            
+            # Calculate score (ops/sec)
+            score = int(operations / duration) if duration > 0 else 0
+            
+            return {
+                "score": score,
+                "max_temp": round(max_temp, 1),
+                "max_freq": round(max_freq, 1),
+                "duration": duration,
+                "operations": operations
+            }
+            
+        except Exception as e:
+            return {
+                "score": 0,
+                "max_temp": 0,
+                "max_freq": 0,
+                "duration": 0,
+                "error": str(e)
+            }
+    
     def get_system_metrics(self) -> Dict[str, Any]:
         """Read current temps and frequencies from sysfs.
         

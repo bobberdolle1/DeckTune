@@ -660,6 +660,14 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             save_as_preset: Whether to save as a preset
         """
         return await self.rpc.apply_wizard_result(result_id, save_as_preset)
+    
+    async def run_wizard_benchmark(self, duration=10):
+        """Run performance benchmark for wizard mode.
+        
+        Args:
+            duration: Benchmark duration in seconds
+        """
+        return await self.rpc.run_wizard_benchmark(duration)
 
     # ==================== Preset Management (delegated to RPC) ====================
 
@@ -730,21 +738,44 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         return await self.rpc.get_system_info()
 
     # ==================== Settings Management ====================
+    # Feature: ui-refactor-settings
+    # Requirements: 3.1, 3.2, 10.3, 10.4
 
     async def save_settings(self, new_settings):
-        """Save settings object."""
+        """Save settings object (legacy method for compatibility)."""
         decky.logger.info(f"Saving settings: {new_settings}")
         settings.setSetting("settings", new_settings)
 
     async def save_setting(self, key, value):
-        """Save a single setting."""
-        decky.logger.info(f"Saving setting: {key} with value: {value}")
-        settings.setSetting(key, value)
+        """Save a single setting to persistent storage.
+        
+        Proxies to RPC handler which uses the new SettingsManager.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.1, 10.3
+        """
+        return await self.rpc.save_setting(key, value)
 
-    async def get_setting(self, key):
-        """Get a single setting."""
-        decky.logger.info(f"Getting setting: {key}")
-        return settings.getSetting(key)
+    async def get_setting(self, key, default=None):
+        """Get a single setting from persistent storage.
+        
+        Proxies to RPC handler which uses the new SettingsManager.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.2, 10.3
+        """
+        return await self.rpc.get_setting(key, default)
+    
+    async def load_all_settings(self):
+        """Load all settings from persistent storage.
+        
+        Returns all persisted settings including Expert Mode,
+        Apply on Startup, Game Only Mode, and last active profile.
+        
+        Feature: ui-refactor-settings
+        Validates: Requirements 3.2, 10.4
+        """
+        return await self.rpc.load_all_settings()
 
     async def reset_config(self):
         """Reset all settings to defaults."""

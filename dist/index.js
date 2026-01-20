@@ -91,6 +91,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M257.5 445.1l-22.2 22.2c-9.4 9.4-24.6 9.4-33.9 0L7 273c-9.4-9.4-9.4-24.6 0-33.9L201.4 44.7c9.4-9.4 24.6-9.4 33.9 0l22.2 22.2c9.5 9.5 9.3 25-.4 34.3L136.6 216H424c13.3 0 24 10.7 24 24v32c0 13.3-10.7 24-24 24H136.6l120.5 114.8c9.8 9.3 10 24.8.4 34.3z"},"child":[]}]})(props);
 }function FaArrowRight (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z"},"child":[]}]})(props);
+}function FaAward (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 384 512"},"child":[{"tag":"path","attr":{"d":"M97.12 362.63c-8.69-8.69-4.16-6.24-25.12-11.85-9.51-2.55-17.87-7.45-25.43-13.32L1.2 448.7c-4.39 10.77 3.81 22.47 15.43 22.03l52.69-2.01L105.56 507c8 8.44 22.04 5.81 26.43-4.96l52.05-127.62c-10.84 6.04-22.87 9.58-35.31 9.58-19.5 0-37.82-7.59-51.61-21.37zM382.8 448.7l-45.37-111.24c-7.56 5.88-15.92 10.77-25.43 13.32-21.07 5.64-16.45 3.18-25.12 11.85-13.79 13.78-32.12 21.37-51.62 21.37-12.44 0-24.47-3.55-35.31-9.58L252 502.04c4.39 10.77 18.44 13.4 26.43 4.96l36.25-38.28 52.69 2.01c11.62.44 19.82-11.27 15.43-22.03zM263 340c15.28-15.55 17.03-14.21 38.79-20.14 13.89-3.79 24.75-14.84 28.47-28.98 7.48-28.4 5.54-24.97 25.95-45.75 10.17-10.35 14.14-25.44 10.42-39.58-7.47-28.38-7.48-24.42 0-52.83 3.72-14.14-.25-29.23-10.42-39.58-20.41-20.78-18.47-17.36-25.95-45.75-3.72-14.14-14.58-25.19-28.47-28.98-27.88-7.61-24.52-5.62-44.95-26.41-10.17-10.35-25-14.4-38.89-10.61-27.87 7.6-23.98 7.61-51.9 0-13.89-3.79-28.72.25-38.89 10.61-20.41 20.78-17.05 18.8-44.94 26.41-13.89 3.79-24.75 14.84-28.47 28.98-7.47 28.39-5.54 24.97-25.95 45.75-10.17 10.35-14.15 25.44-10.42 39.58 7.47 28.36 7.48 24.4 0 52.82-3.72 14.14.25 29.23 10.42 39.59 20.41 20.78 18.47 17.35 25.95 45.75 3.72 14.14 14.58 25.19 28.47 28.98C104.6 325.96 106.27 325 121 340c13.23 13.47 33.84 15.88 49.74 5.82a39.676 39.676 0 0 1 42.53 0c15.89 10.06 36.5 7.65 49.73-5.82zM97.66 175.96c0-53.03 42.24-96.02 94.34-96.02s94.34 42.99 94.34 96.02-42.24 96.02-94.34 96.02-94.34-42.99-94.34-96.02z"},"child":[]}]})(props);
 }function FaBalanceScale (props) {
   return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M256 336h-.02c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0C-2.06 328.75.02 320.33.02 336H0c0 44.18 57.31 80 128 80s128-35.82 128-80zM128 176l72 144H56l72-144zm511.98 160c0-16.18 1.34-8.73-85.05-181.51-17.65-35.29-68.19-35.36-85.87 0-87.12 174.26-85.04 165.84-85.04 181.51H384c0 44.18 57.31 80 128 80s128-35.82 128-80h-.02zM440 320l72-144 72 144H440zm88 128H352V153.25c23.51-10.29 41.16-31.48 46.39-57.25H528c8.84 0 16-7.16 16-16V48c0-8.84-7.16-16-16-16H383.64C369.04 12.68 346.09 0 320 0s-49.04 12.68-63.64 32H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h129.61c5.23 25.76 22.87 46.96 46.39 57.25V448H112c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h416c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z"},"child":[]}]})(props);
 }function FaBan (props) {
@@ -99,6 +101,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 640 512"},"child":[{"tag":"path","attr":{"d":"M544 160v64h32v64h-32v64H64V160h480m16-64H48c-26.51 0-48 21.49-48 48v224c0 26.51 21.49 48 48 48h512c26.51 0 48-21.49 48-48v-16h8c13.255 0 24-10.745 24-24V184c0-13.255-10.745-24-24-24h-8v-16c0-26.51-21.49-48-48-48zm-48 96H96v128h416V192z"},"child":[]}]})(props);
 }function FaBolt (props) {
   return GenIcon({"attr":{"viewBox":"0 0 320 512"},"child":[{"tag":"path","attr":{"d":"M296 160H180.6l42.6-129.8C227.2 15 215.7 0 200 0H56C44 0 33.8 8.9 32.2 20.8l-32 240C-1.7 275.2 9.5 288 24 288h118.7L96.6 482.5c-3.6 15.2 8 29.5 23.3 29.5 8.4 0 16.4-4.4 20.8-12l176-304c9.3-15.9-2.2-36-20.7-36z"},"child":[]}]})(props);
+}function FaCertificate (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M458.622 255.92l45.985-45.005c13.708-12.977 7.316-36.039-10.664-40.339l-62.65-15.99 17.661-62.015c4.991-17.838-11.829-34.663-29.661-29.671l-61.994 17.667-15.984-62.671C337.085.197 313.765-6.276 300.99 7.228L256 53.57 211.011 7.229c-12.63-13.351-36.047-7.234-40.325 10.668l-15.984 62.671-61.995-17.667C74.87 57.907 58.056 74.738 63.046 92.572l17.661 62.015-62.65 15.99C.069 174.878-6.31 197.944 7.392 210.915l45.985 45.005-45.985 45.004c-13.708 12.977-7.316 36.039 10.664 40.339l62.65 15.99-17.661 62.015c-4.991 17.838 11.829 34.663 29.661 29.671l61.994-17.667 15.984 62.671c4.439 18.575 27.696 24.018 40.325 10.668L256 458.61l44.989 46.001c12.5 13.488 35.987 7.486 40.325-10.668l15.984-62.671 61.994 17.667c17.836 4.994 34.651-11.837 29.661-29.671l-17.661-62.015 62.65-15.99c17.987-4.302 24.366-27.367 10.664-40.339l-45.984-45.004z"},"child":[]}]})(props);
 }function FaCheck (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"},"child":[]}]})(props);
 }function FaCog (props) {
@@ -125,8 +129,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M80 368H16a16 16 0 0 0-16 16v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16v-64a16 16 0 0 0-16-16zm0-320H16A16 16 0 0 0 0 64v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16zm0 160H16a16 16 0 0 0-16 16v64a16 16 0 0 0 16 16h64a16 16 0 0 0 16-16v-64a16 16 0 0 0-16-16zm416 176H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16zm0-320H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm0 160H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16z"},"child":[]}]})(props);
 }function FaMagic (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M224 96l16-32 32-16-32-16-16-32-16 32-32 16 32 16 16 32zM80 160l26.66-53.33L160 80l-53.34-26.67L80 0 53.34 53.33 0 80l53.34 26.67L80 160zm352 128l-26.66 53.33L352 368l53.34 26.67L432 448l26.66-53.33L512 368l-53.34-26.67L432 288zm70.62-193.77L417.77 9.38C411.53 3.12 403.34 0 395.15 0c-8.19 0-16.38 3.12-22.63 9.38L9.38 372.52c-12.5 12.5-12.5 32.76 0 45.25l84.85 84.85c6.25 6.25 14.44 9.37 22.62 9.37 8.19 0 16.38-3.12 22.63-9.37l363.14-363.15c12.5-12.48 12.5-32.75 0-45.24zM359.45 203.46l-50.91-50.91 86.6-86.6 50.91 50.91-86.6 86.6z"},"child":[]}]})(props);
-}function FaMicrochip (props) {
-  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M416 48v416c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V48c0-26.51 21.49-48 48-48h224c26.51 0 48 21.49 48 48zm96 58v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42V88h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zm0 96v12a6 6 0 0 1-6 6h-18v6a6 6 0 0 1-6 6h-42v-48h42a6 6 0 0 1 6 6v6h18a6 6 0 0 1 6 6zM30 376h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6zm0-96h42v48H30a6 6 0 0 1-6-6v-6H6a6 6 0 0 1-6-6v-12a6 6 0 0 1 6-6h18v-6a6 6 0 0 1 6-6z"},"child":[]}]})(props);
+}function FaMedal (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M223.75 130.75L154.62 15.54A31.997 31.997 0 0 0 127.18 0H16.03C3.08 0-4.5 14.57 2.92 25.18l111.27 158.96c29.72-27.77 67.52-46.83 109.56-53.39zM495.97 0H384.82c-11.24 0-21.66 5.9-27.44 15.54l-69.13 115.21c42.04 6.56 79.84 25.62 109.56 53.38L509.08 25.18C516.5 14.57 508.92 0 495.97 0zM256 160c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176zm92.52 157.26l-37.93 36.96 8.97 52.22c1.6 9.36-8.26 16.51-16.65 12.09L256 393.88l-46.9 24.65c-8.4 4.45-18.25-2.74-16.65-12.09l8.97-52.22-37.93-36.96c-6.82-6.64-3.05-18.23 6.35-19.59l52.43-7.64 23.43-47.52c2.11-4.28 6.19-6.39 10.28-6.39 4.11 0 8.22 2.14 10.33 6.39l23.43 47.52 52.43 7.64c9.4 1.36 13.17 12.95 6.35 19.59z"},"child":[]}]})(props);
 }function FaPlay (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"},"child":[]}]})(props);
 }function FaPlus (props) {
@@ -139,12 +143,16 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M496 384H160v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h80v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h336c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160h-80v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h336v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h80c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160H288V48c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16C7.2 64 0 71.2 0 80v32c0 8.8 7.2 16 16 16h208v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h208c8.8 0 16-7.2 16-16V80c0-8.8-7.2-16-16-16z"},"child":[]}]})(props);
 }function FaSpinner (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M304 48c0 26.51-21.49 48-48 48s-48-21.49-48-48 21.49-48 48-48 48 21.49 48 48zm-48 368c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zm208-208c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zM96 256c0-26.51-21.49-48-48-48S0 229.49 0 256s21.49 48 48 48 48-21.49 48-48zm12.922 99.078c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.491-48-48-48zm294.156 0c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.49-48-48-48zM108.922 60.922c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.491-48-48-48z"},"child":[]}]})(props);
+}function FaStop (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48z"},"child":[]}]})(props);
 }function FaThermometerHalf (props) {
   return GenIcon({"attr":{"viewBox":"0 0 256 512"},"child":[{"tag":"path","attr":{"d":"M192 384c0 35.346-28.654 64-64 64s-64-28.654-64-64c0-23.685 12.876-44.349 32-55.417V224c0-17.673 14.327-32 32-32s32 14.327 32 32v104.583c19.124 11.068 32 31.732 32 55.417zm32-84.653c19.912 22.563 32 52.194 32 84.653 0 70.696-57.303 128-128 128-.299 0-.609-.001-.909-.003C56.789 511.509-.357 453.636.002 383.333.166 351.135 12.225 321.755 32 299.347V96c0-53.019 42.981-96 96-96s96 42.981 96 96v203.347zM208 384c0-34.339-19.37-52.19-32-66.502V96c0-26.467-21.533-48-48-48S80 69.533 80 96v221.498c-12.732 14.428-31.825 32.1-31.999 66.08-.224 43.876 35.563 80.116 79.423 80.42L128 464c44.112 0 80-35.888 80-80z"},"child":[]}]})(props);
 }function FaTimes (props) {
   return GenIcon({"attr":{"viewBox":"0 0 352 512"},"child":[{"tag":"path","attr":{"d":"M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"},"child":[]}]})(props);
 }function FaTrash (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"},"child":[]}]})(props);
+}function FaTrophy (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 576 512"},"child":[{"tag":"path","attr":{"d":"M552 64H448V24c0-13.3-10.7-24-24-24H152c-13.3 0-24 10.7-24 24v40H24C10.7 64 0 74.7 0 88v56c0 35.7 22.5 72.4 61.9 100.7 31.5 22.7 69.8 37.1 110 41.7C203.3 338.5 240 360 240 360v72h-48c-35.3 0-64 20.7-64 56v12c0 6.6 5.4 12 12 12h296c6.6 0 12-5.4 12-12v-12c0-35.3-28.7-56-64-56h-48v-72s36.7-21.5 68.1-73.6c40.3-4.6 78.6-19 110-41.7 39.3-28.3 61.9-65 61.9-100.7V88c0-13.3-10.7-24-24-24zM99.3 192.8C74.9 175.2 64 155.6 64 144v-16h64.2c1 32.6 5.8 61.2 12.8 86.2-15.1-5.2-29.2-12.4-41.7-21.4zM512 144c0 16.1-17.7 36.1-35.3 48.8-12.5 9-26.7 16.2-41.8 21.4 7-25 11.8-53.6 12.8-86.2H512v16z"},"child":[]}]})(props);
 }function FaUndo (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M212.333 224.333H12c-6.627 0-12-5.373-12-12V12C0 5.373 5.373 0 12 0h48c6.627 0 12 5.373 12 12v78.112C117.773 39.279 184.26 7.47 258.175 8.007c136.906.994 246.448 111.623 246.157 248.532C504.041 393.258 393.12 504 256.333 504c-64.089 0-122.496-24.313-166.51-64.215-5.099-4.622-5.334-12.554-.467-17.42l33.967-33.967c4.474-4.474 11.662-4.717 16.401-.525C170.76 415.336 211.58 432 256.333 432c97.268 0 176-78.716 176-176 0-97.267-78.716-176-176-176-58.496 0-110.28 28.476-142.274 72.333h98.274c6.627 0 12 5.373 12 12v48c0 6.627-5.373 12-12 12z"},"child":[]}]})(props);
 }function FaVial (props) {
@@ -1317,19 +1325,6 @@ const useDeckTune = () => {
     return context;
 };
 /**
- * Hook to access autotune state.
- */
-const useAutotune = () => {
-    const { autotuneProgress, autotuneResult, isAutotuning, api } = useDeckTune();
-    return {
-        progress: autotuneProgress,
-        result: autotuneResult,
-        isRunning: isAutotuning,
-        start: (mode) => api.startAutotune(mode),
-        stop: () => api.stopAutotune(),
-    };
-};
-/**
  * Hook to access test state.
  */
 const useTests = () => {
@@ -1369,23 +1364,6 @@ const useBinaries = () => {
         missing: state.missingBinaries,
         hasMissing: state.missingBinaries.length > 0,
         check: checkBinaries,
-    };
-};
-/**
- * Hook to access binning state.
- * Requirements: 8.1, 8.2, 8.3, 8.4
- */
-const useBinning = () => {
-    const { state, api } = useDeckTune();
-    return {
-        progress: state.binningProgress,
-        result: state.binningResult,
-        isRunning: state.isBinning,
-        config: state.binningConfig,
-        start: (config) => api.startBinning(config),
-        stop: () => api.stopBinning(),
-        getConfig: () => api.getBinningConfig(),
-        updateConfig: (config) => api.updateBinningConfig(config),
     };
 };
 /**
@@ -1625,56 +1603,184 @@ const useSettings = () => {
 };
 
 /**
- * WizardMode component for DeckTune.
+ * Wizard Mode Context for DeckTune.
  *
- * Feature: decktune, Frontend UI Components - Wizard Mode
- * Requirements: 4.5, 6.1, 6.2, 6.3, 6.4, 6.5
+ * Feature: Wizard Mode Refactoring
  *
- * Provides a 3-step wizard interface for beginner users:
- * - Step 1: Goal selection (Quiet/Cool, Balanced, Max Battery, Max Performance)
- * - Step 2: Autotune progress with phase, core, ETA
- * - Step 3: Results display with per-core values and Apply & Save
- * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
+ * Provides state management and API integration for the wizard workflow:
+ * - Configuration and session management
+ * - Real-time progress tracking
+ * - Results history and visualization
+ * - Crash recovery detection
  */
 
-const GOAL_OPTIONS = [
-    {
-        id: "quiet_cool",
-        label: "Quiet/Cool",
-        description: "Lower temperatures and fan noise",
-        icon: FaLeaf,
-        mode: "quick",
-    },
-    {
-        id: "balanced",
-        label: "Balanced",
-        description: "Good balance of performance and efficiency",
-        icon: FaBalanceScale,
-        mode: "quick",
-    },
-    {
-        id: "max_battery",
-        label: "Max Battery",
-        description: "Maximize battery life",
-        icon: FaBatteryFull,
-        mode: "thorough",
-    },
-    {
-        id: "max_performance",
-        label: "Max Performance",
-        description: "Find the most aggressive stable undervolt",
-        icon: FaRocket,
-        mode: "thorough",
-    },
-];
+const WizardContext = SP_REACT.createContext(undefined);
+// ==================== Provider ====================
+const WizardProvider = ({ children }) => {
+    const [isRunning, setIsRunning] = SP_REACT.useState(false);
+    const [progress, setProgress] = SP_REACT.useState(null);
+    const [result, setResult] = SP_REACT.useState(null);
+    const [resultsHistory, setResultsHistory] = SP_REACT.useState([]);
+    const [dirtyExit, setDirtyExit] = SP_REACT.useState(null);
+    const [error, setError] = SP_REACT.useState(null);
+    // ==================== Server Event Listener ====================
+    SP_REACT.useEffect(() => {
+        const handleServerEvent = (data) => {
+            if (!data || !data.type)
+                return;
+            switch (data.type) {
+                case "wizard_progress":
+                    setProgress(data.data);
+                    setIsRunning(true);
+                    setError(null);
+                    break;
+                case "wizard_complete":
+                    setResult(data.data);
+                    setIsRunning(false);
+                    setProgress(null);
+                    loadResultsHistory();
+                    break;
+                case "wizard_error":
+                    setError(data.data?.error || "Unknown wizard error");
+                    setIsRunning(false);
+                    setProgress(null);
+                    break;
+            }
+        };
+        addEventListener("server_event", handleServerEvent);
+        return () => removeEventListener("server_event", handleServerEvent);
+    }, []);
+    // ==================== Actions ====================
+    const startWizard = SP_REACT.useCallback(async (config) => {
+        try {
+            setError(null);
+            setResult(null);
+            const response = await call("start_wizard", config);
+            if (response?.success) {
+                setIsRunning(true);
+            }
+            else {
+                const errorMsg = response?.error || "Failed to start wizard";
+                setError(errorMsg);
+                throw new Error(errorMsg);
+            }
+        }
+        catch (err) {
+            const errorMsg = err instanceof Error ? err.message : "Failed to start wizard";
+            setError(errorMsg);
+            throw err;
+        }
+    }, []);
+    const cancelWizard = SP_REACT.useCallback(async () => {
+        try {
+            const response = await call("cancel_wizard");
+            if (response?.success) {
+                setIsRunning(false);
+                setProgress(null);
+            }
+            else {
+                const errorMsg = response?.error || "Failed to cancel wizard";
+                setError(errorMsg);
+            }
+        }
+        catch (err) {
+            const errorMsg = err instanceof Error ? err.message : "Failed to cancel wizard";
+            setError(errorMsg);
+        }
+    }, []);
+    const applyResult = SP_REACT.useCallback(async (resultId, saveAsPreset) => {
+        try {
+            setError(null);
+            const response = await call("apply_wizard_result", resultId, saveAsPreset);
+            if (!response?.success) {
+                const errorMsg = response?.error || "Failed to apply wizard result";
+                setError(errorMsg);
+                throw new Error(errorMsg);
+            }
+        }
+        catch (err) {
+            const errorMsg = err instanceof Error ? err.message : "Failed to apply wizard result";
+            setError(errorMsg);
+            throw err;
+        }
+    }, []);
+    const checkDirtyExit = SP_REACT.useCallback(async () => {
+        try {
+            const response = await call("check_wizard_dirty_exit");
+            if (response?.dirty_exit) {
+                setDirtyExit({
+                    detected: true,
+                    crashInfo: response.crash_info || null
+                });
+            }
+            else {
+                setDirtyExit({ detected: false, crashInfo: null });
+            }
+        }
+        catch (err) {
+            console.error("Failed to check wizard dirty exit:", err);
+            setDirtyExit({ detected: false, crashInfo: null });
+        }
+    }, []);
+    const loadResultsHistory = SP_REACT.useCallback(async () => {
+        try {
+            const response = await call("get_wizard_results_history");
+            if (Array.isArray(response)) {
+                setResultsHistory(response);
+            }
+        }
+        catch (err) {
+            console.error("Failed to load wizard results history:", err);
+        }
+    }, []);
+    const clearError = SP_REACT.useCallback(() => {
+        setError(null);
+    }, []);
+    // ==================== Initialization ====================
+    SP_REACT.useEffect(() => {
+        checkDirtyExit();
+        loadResultsHistory();
+    }, [checkDirtyExit, loadResultsHistory]);
+    // ==================== Context Value ====================
+    const value = {
+        isRunning,
+        progress,
+        result,
+        resultsHistory,
+        dirtyExit,
+        error,
+        startWizard,
+        cancelWizard,
+        applyResult,
+        checkDirtyExit,
+        loadResultsHistory,
+        clearError
+    };
+    return (window.SP_REACT.createElement(WizardContext.Provider, { value: value }, children));
+};
+// ==================== Hook ====================
+const useWizard = () => {
+    const context = SP_REACT.useContext(WizardContext);
+    if (!context) {
+        throw new Error("useWizard must be used within WizardProvider");
+    }
+    return context;
+};
+
 /**
- * Panic Disable Button component - always visible emergency reset.
- * Requirements: 4.5
+ * Refactored WizardMode component for DeckTune.
  *
- * Features:
- * - Always visible red button
- * - Immediate reset to 0 on click
+ * Feature: Wizard Mode Refactoring
+ *
+ * Complete redesign with:
+ * - Configuration screen with aggressiveness/duration settings
+ * - Real-time progress with ETA/OTA/heartbeat
+ * - Results screen with curve visualization and chip grading
+ * - Crash recovery modal
+ * - Results history browser
  */
+
+// ==================== Panic Disable Button ====================
 const PanicDisableButton$1 = () => {
     const { api } = useDeckTune();
     const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
@@ -1717,732 +1823,305 @@ const PanicDisableButton$1 = () => {
           }
         `)));
 };
-/**
- * WizardMode component - 3-step wizard for beginner users.
- * Requirements: 4.5, 5.4, 6.1, 8.1
- */
-const WizardMode = ({ onComplete, onCancel }) => {
-    const [step, setStep] = SP_REACT.useState(1);
-    const [selectedGoal, setSelectedGoal] = SP_REACT.useState(null);
-    const { progress, result, isRunning, start, stop } = useAutotune();
-    const { progress: binningProgress, result: binningResult, isRunning: isBinningRunning, start: startBinning, stop: stopBinning } = useBinning();
-    const { info: platformInfo } = usePlatformInfo();
-    const { api, state } = useDeckTune();
-    const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
-    // Check binaries on mount
-    SP_REACT.useEffect(() => {
-        checkBinaries();
-    }, []);
-    // Handle autotune completion - move to step 3
-    SP_REACT.useEffect(() => {
-        if (result && step === 2) {
-            setStep(3);
-        }
-    }, [result, step]);
-    // Handle binning completion - move to step 3
-    SP_REACT.useEffect(() => {
-        if (binningResult && step === 2) {
-            setStep(3);
-        }
-    }, [binningResult, step]);
-    /**
-     * Handle goal selection and start autotune.
-     * Requirements: 6.2, 6.3
-     */
-    const handleGoalSelect = async (goal) => {
-        setSelectedGoal(goal);
-        const goalOption = GOAL_OPTIONS.find((g) => g.id === goal);
-        if (goalOption) {
-            setStep(2);
-            await start(goalOption.mode);
-        }
-    };
-    /**
-     * Handle binning button click.
-     * Requirements: 8.1
-     */
-    const handleBinningClick = async () => {
-        setSelectedGoal(null);
-        setStep(2);
-        await startBinning();
-    };
-    /**
-     * Handle benchmark button click.
-     * Requirements: 7.1, 7.4
-     */
-    const handleBenchmarkClick = async () => {
-        await api.runBenchmark();
-    };
-    /**
-     * Handle cancel button click.
-     * Requirements: 6.3, 8.1
-     */
-    const handleCancel = async () => {
-        if (isRunning) {
-            await stop();
-        }
-        if (isBinningRunning) {
-            await stopBinning();
-        }
-        setStep(1);
-        setSelectedGoal(null);
-        onCancel?.();
-    };
-    /**
-     * Handle Apply & Save button click.
-     * Requirements: 5.4, 6.4
-     *
-     * If a game is running, saves the result as a game-specific preset.
-     */
-    const handleApplyAndSave = async () => {
-        if (result) {
-            // Check if a game is running - save as game preset (Requirement 5.4)
-            if (state.runningAppId && state.runningAppName) {
-                const preset = {
-                    app_id: state.runningAppId,
-                    label: state.runningAppName,
-                    value: result.cores,
-                    timeout: 0,
-                    use_timeout: false,
-                    created_at: new Date().toISOString(),
-                    tested: true,
-                };
-                await api.saveAndApply(result.cores, true, preset);
-            }
-            else {
-                // No game running - apply as global values
-                await api.applyUndervolt(result.cores);
-            }
-            onComplete?.(result);
-        }
-    };
-    /**
-     * Handle Apply Recommended button click for binning results.
-     * Requirements: 8.4
-     */
-    const handleApplyBinningResult = async () => {
-        if (binningResult) {
-            // Apply the recommended value (max_stable + 5mV safety margin)
-            const cores = [binningResult.recommended, binningResult.recommended, binningResult.recommended, binningResult.recommended];
-            // Check if a game is running - save as game preset
-            if (state.runningAppId && state.runningAppName) {
-                const preset = {
-                    app_id: state.runningAppId,
-                    label: state.runningAppName,
-                    value: cores,
-                    timeout: 0,
-                    use_timeout: false,
-                    created_at: new Date().toISOString(),
-                    tested: true,
-                };
-                await api.saveAndApply(cores, true, preset);
-            }
-            else {
-                // No game running - apply as global values
-                await api.applyUndervolt(cores);
-            }
-        }
-    };
-    /**
-     * Reset wizard to start over.
-     */
-    const handleStartOver = () => {
-        setStep(1);
-        setSelectedGoal(null);
-    };
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "DeckTune Wizard" },
-        window.SP_REACT.createElement(PanicDisableButton$1, null),
-        hasMissing && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                    padding: "12px",
-                    backgroundColor: "#5c4813",
-                    borderRadius: "8px",
-                    marginBottom: "12px",
-                    border: "1px solid #ff9800",
-                } },
-                window.SP_REACT.createElement(FaExclamationCircle, { style: { color: "#ff9800", fontSize: "18px", flexShrink: 0, marginTop: "2px" } }),
-                window.SP_REACT.createElement("div", null,
-                    window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#ffb74d", marginBottom: "4px" } }, "Missing Components"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#ffe0b2" } },
-                        "Required tools not found: ",
-                        window.SP_REACT.createElement("strong", null, missingBinaries.join(", "))),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#ffcc80", marginTop: "4px" } }, "Autotune and stress tests are unavailable. Please reinstall the plugin or add missing binaries to bin/ folder."))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(StepIndicator$1, { currentStep: step })),
-        step === 1 && (window.SP_REACT.createElement(GoalSelectionStep, { onSelect: handleGoalSelect, onBinningClick: handleBinningClick, onBenchmarkClick: handleBenchmarkClick, platformInfo: platformInfo, disabled: hasMissing, isBinningRunning: isBinningRunning })),
-        step === 2 && !isBinningRunning && (window.SP_REACT.createElement(AutotuneProgressStep, { progress: progress, isRunning: isRunning, onCancel: handleCancel, selectedGoal: selectedGoal })),
-        step === 2 && isBinningRunning && (window.SP_REACT.createElement(BinningProgressStep, { progress: binningProgress, isRunning: isBinningRunning, onCancel: handleCancel })),
-        step === 3 && result && !binningResult && (window.SP_REACT.createElement(ResultsStep, { result: result, platformInfo: platformInfo, onApplyAndSave: handleApplyAndSave, onStartOver: handleStartOver })),
-        step === 3 && binningResult && (window.SP_REACT.createElement(BinningResultsStep, { result: binningResult, platformInfo: platformInfo, onApplyRecommended: handleApplyBinningResult, onStartOver: handleStartOver }))));
-};
-const StepIndicator$1 = ({ currentStep }) => {
-    const steps = [
-        { num: 1, label: "Goal" },
-        { num: 2, label: "Tuning" },
-        { num: 3, label: "Results" },
-    ];
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px", padding: "2px 0" } }, steps.map((s, index) => (window.SP_REACT.createElement("div", { key: s.num, style: {
+// ==================== Crash Recovery Modal ====================
+const CrashRecoveryModal = ({ crashInfo, onDismiss }) => {
+    return (window.SP_REACT.createElement("div", { style: {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
             display: "flex",
             alignItems: "center",
-            gap: "4px",
+            justifyContent: "center",
+            zIndex: 9999,
         } },
         window.SP_REACT.createElement("div", { style: {
-                width: "22px",
-                height: "22px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: currentStep >= s.num ? "#1a9fff" : "#3d4450",
-                color: currentStep >= s.num ? "#fff" : "#8b929a",
-                fontWeight: "bold",
-                fontSize: "11px",
-            } }, currentStep > s.num ? window.SP_REACT.createElement(FaCheck, { size: 9 }) : s.num),
-        window.SP_REACT.createElement("span", { style: {
-                color: currentStep >= s.num ? "#fff" : "#8b929a",
-                fontSize: "10px",
-            } }, s.label),
-        index < steps.length - 1 && (window.SP_REACT.createElement("div", { style: {
-                width: "16px",
-                height: "2px",
-                backgroundColor: currentStep > s.num ? "#1a9fff" : "#3d4450",
-                marginLeft: "4px",
-            } })))))));
+                backgroundColor: "#1a1d24",
+                borderRadius: "8px",
+                padding: "20px",
+                maxWidth: "400px",
+                border: "2px solid #ff9800",
+            } },
+            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" } },
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800", fontSize: "24px" } }),
+                window.SP_REACT.createElement("h3", { style: { margin: 0, color: "#fff" } }, "Crash Detected")),
+            window.SP_REACT.createElement("p", { style: { fontSize: "13px", color: "#ccc", marginBottom: "15px" } }, "The system crashed during wizard testing. This is normal when pushing limits."),
+            window.SP_REACT.createElement("div", { style: { backgroundColor: "#2a2d34", padding: "10px", borderRadius: "4px", marginBottom: "15px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "5px" } }, "Crash Details:"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#fff" } },
+                    "Testing: ",
+                    window.SP_REACT.createElement("strong", null,
+                        crashInfo?.currentOffset,
+                        "mV")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#4caf50" } },
+                    "Last Stable: ",
+                    window.SP_REACT.createElement("strong", null,
+                        crashInfo?.lastStable,
+                        "mV"))),
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onDismiss },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, "Continue"))))));
 };
-const BinningConfigPanel = ({ config, onSave, isExpanded, onToggle }) => {
-    const [testDuration, setTestDuration] = SP_REACT.useState(config?.test_duration || 60);
-    const [stepSize, setStepSize] = SP_REACT.useState(config?.step_size || 5);
-    const [startValue, setStartValue] = SP_REACT.useState(config?.start_value || -10);
-    // Default values
-    const DEFAULT_TEST_DURATION = 60;
-    const DEFAULT_STEP_SIZE = 5;
-    const DEFAULT_START_VALUE = -10;
-    // Update local state when config changes
-    SP_REACT.useEffect(() => {
-        if (config) {
-            setTestDuration(config.test_duration || DEFAULT_TEST_DURATION);
-            setStepSize(config.step_size || DEFAULT_STEP_SIZE);
-            setStartValue(config.start_value || DEFAULT_START_VALUE);
-        }
-    }, [config]);
-    const handleSave = async () => {
-        await onSave({
-            test_duration: testDuration,
-            step_size: stepSize,
-            start_value: startValue,
-        });
+// ==================== Configuration Screen ====================
+const ConfigurationScreen = ({ onStart, platformInfo }) => {
+    const [aggressiveness, setAggressiveness] = SP_REACT.useState("balanced");
+    const [testDuration, setTestDuration] = SP_REACT.useState("short");
+    const [showAdvanced, setShowAdvanced] = SP_REACT.useState(false);
+    const handleStart = () => {
+        const config = {
+            targetDomains: ["cpu"],
+            aggressiveness,
+            testDuration,
+            safetyLimits: {
+                cpu: platformInfo?.safe_limit || -100,
+            },
+        };
+        onStart(config);
     };
-    const handleReset = () => {
-        setTestDuration(DEFAULT_TEST_DURATION);
-        setStepSize(DEFAULT_STEP_SIZE);
-        setStartValue(DEFAULT_START_VALUE);
-    };
-    if (!isExpanded)
-        return null;
-    return (window.SP_REACT.createElement("div", { style: {
-            padding: "4px",
-            backgroundColor: "#1a1d24",
-            borderRadius: "4px",
-            marginTop: "4px",
-            border: "1px solid #3d4450",
-            maxWidth: "100%",
-            overflow: "hidden",
-        } },
-        window.SP_REACT.createElement("div", { style: { fontSize: "9px", fontWeight: "bold", marginBottom: "4px", color: "#8b929a" } }, "Advanced Settings"),
-        window.SP_REACT.createElement("div", { style: { maxWidth: "100%", paddingRight: "2px" } },
-            window.SP_REACT.createElement("div", { style: { marginBottom: "2px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginBottom: "1px" } },
-                    "Test Duration: ",
-                    testDuration,
-                    "s"),
-                window.SP_REACT.createElement(DFL.SliderField, { label: "", description: "", value: testDuration, min: 30, max: 300, step: 10, onChange: (value) => setTestDuration(value), showValue: false, bottomSeparator: "none" })),
-            window.SP_REACT.createElement("div", { style: { marginBottom: "2px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginBottom: "1px" } },
-                    "Step Size: ",
-                    stepSize,
-                    "mV"),
-                window.SP_REACT.createElement(DFL.SliderField, { label: "", description: "", value: stepSize, min: 1, max: 10, step: 1, onChange: (value) => setStepSize(value), showValue: false, bottomSeparator: "none" })),
-            window.SP_REACT.createElement("div", { style: { marginBottom: "2px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginBottom: "1px" } },
-                    "Start Value: ",
-                    startValue,
-                    "mV"),
-                window.SP_REACT.createElement(DFL.SliderField, { label: "", description: "", value: startValue, min: -20, max: 0, step: 1, onChange: (value) => setStartValue(value), showValue: false, bottomSeparator: "none" }))),
-        window.SP_REACT.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" } },
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, style: { minHeight: "24px", padding: "2px 4px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "3px", color: "#4caf50", fontSize: "9px" } },
-                    window.SP_REACT.createElement(FaCheck, { style: { fontSize: "8px" } }),
-                    window.SP_REACT.createElement("span", null, "Save"))),
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleReset, style: { minHeight: "24px", padding: "2px 4px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "3px", color: "#ff9800", fontSize: "9px" } },
-                    window.SP_REACT.createElement(FaTimes, { style: { fontSize: "8px" } }),
-                    window.SP_REACT.createElement("span", null, "Reset"))))));
-};
-const GoalSelectionStep = ({ onSelect, onBinningClick, onBenchmarkClick, platformInfo, disabled = false, isBinningRunning = false }) => {
-    const { state } = useDeckTune();
-    const { config, getConfig, updateConfig } = useBinning();
-    const [showConfig, setShowConfig] = SP_REACT.useState(false);
-    const isGameRunning = state.runningAppId !== null && state.runningAppName !== null;
-    // Load config on mount
-    SP_REACT.useEffect(() => {
-        getConfig();
-    }, []);
-    const handleConfigToggle = () => {
-        setShowConfig(!showConfig);
-    };
-    const handleConfigSave = async (newConfig) => {
-        await updateConfig(newConfig);
-        setShowConfig(false);
+    const getEstimatedTime = () => {
+        const base = testDuration === "short" ? 5 : 15;
+        const multiplier = aggressiveness === "safe" ? 2 : aggressiveness === "aggressive" ? 0.5 : 1;
+        return Math.round(base * multiplier);
     };
     return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "13px", color: "#ccc", marginBottom: "10px" } }, "Automatically find the optimal undervolt for your chip through systematic testing.")),
         platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", padding: "2px 0" } },
+            window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
                 platformInfo.variant,
                 " (",
                 platformInfo.model,
-                ") \u2022 Limit: ",
+                ") \u2022 Safety Limit: ",
                 platformInfo.safe_limit,
                 "mV"))),
-        isGameRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "4px 6px",
-                    backgroundColor: "#1a3a5c",
-                    borderRadius: "4px",
-                    marginBottom: "6px",
-                    fontSize: "10px",
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement(FaRocket, { style: { color: "#1a9fff", fontSize: "9px" } }),
-                    window.SP_REACT.createElement("span", null,
-                        "Running: ",
-                        window.SP_REACT.createElement("strong", null, state.runningAppName))),
-                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } }, "Tuning will be saved as preset for this game")))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBinningClick, disabled: disabled || isBinningRunning, description: "Auto-discover max stable undervolt", style: { minHeight: "32px", padding: "4px 6px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", opacity: (disabled || isBinningRunning) ? 0.5 : 1, fontSize: "11px" } },
-                    window.SP_REACT.createElement(FaMicrochip, { style: { color: "#ff9800", fontSize: "10px" } }),
-                    window.SP_REACT.createElement("span", null, "Find Max Undervolt"),
-                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a", marginLeft: "auto" } }, "~5-15m")))),
+            window.SP_REACT.createElement(DFL.Field, { label: "Aggressiveness" },
+                window.SP_REACT.createElement(DFL.Dropdown, { rgOptions: [
+                        { label: "Safe (2mV steps, +10mV margin)", data: "safe" },
+                        { label: "Balanced (5mV steps, +5mV margin)", data: "balanced" },
+                        { label: "Aggressive (10mV steps, +2mV margin)", data: "aggressive" },
+                    ], selectedOption: aggressiveness, onChange: (option) => setAggressiveness(option.data) }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleConfigToggle, disabled: disabled || isBinningRunning, style: { marginTop: "4px", minHeight: "28px", padding: "2px 4px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", opacity: (disabled || isBinningRunning) ? 0.5 : 1, fontSize: "10px", color: "#8b929a" } },
-                    window.SP_REACT.createElement(FaCog, { style: { fontSize: "9px" } }),
-                    window.SP_REACT.createElement("span", null, showConfig ? "Hide Settings" : "Binning Settings")))),
+            window.SP_REACT.createElement(DFL.Field, { label: "Test Duration" },
+                window.SP_REACT.createElement(DFL.Dropdown, { rgOptions: [
+                        { label: "Short (30s per test)", data: "short" },
+                        { label: "Long (120s per test)", data: "long" },
+                    ], selectedOption: testDuration, onChange: (option) => setTestDuration(option.data) }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(BinningConfigPanel, { config: config, onSave: handleConfigSave, isExpanded: showConfig, onToggle: handleConfigToggle })),
+            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", textAlign: "center", padding: "5px" } },
+                "Estimated time: ~",
+                getEstimatedTime(),
+                " minutes")),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBenchmarkClick, disabled: disabled || isBinningRunning || state.isBenchmarkRunning, description: "Run 10-sec performance benchmark", style: { marginTop: "4px", minHeight: "32px", padding: "4px 6px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", opacity: (disabled || isBinningRunning || state.isBenchmarkRunning) ? 0.5 : 1, fontSize: "11px" } },
-                    state.isBenchmarkRunning ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#4caf50", fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", null, "Running..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaVial, { style: { color: "#4caf50", fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", null, "Run Benchmark"))),
-                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a", marginLeft: "auto" } }, "10s")))),
-        state.isBenchmarkRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "6px",
-                    backgroundColor: "#1b5e20",
-                    borderRadius: "4px",
-                    marginTop: "4px",
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px", fontSize: "10px" } },
-                    window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#4caf50", fontSize: "9px" } }),
-                    window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, "Running benchmark...")),
-                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#a5d6a7", textAlign: "center" } }, "Testing performance (~10 seconds)")))),
-        state.lastBenchmarkResult && !state.isBenchmarkRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "6px",
-                    backgroundColor: "#1b5e20",
-                    borderRadius: "4px",
-                    marginTop: "4px",
-                    borderLeft: "3px solid #4caf50",
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", fontSize: "10px" } },
-                    window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, "Benchmark Complete"),
-                    window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "9px" } })),
-                window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#a5d6a7" } }, "Score"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", color: "#4caf50" } },
-                        state.lastBenchmarkResult.score.toFixed(2),
-                        " bogo ops/s")),
-                state.benchmarkHistory && state.benchmarkHistory.length > 1 && (() => {
-                    const current = state.benchmarkHistory[0];
-                    const previous = state.benchmarkHistory[1];
-                    const scoreDiff = current.score - previous.score;
-                    const percentChange = ((scoreDiff / previous.score) * 100);
-                    const improvement = scoreDiff > 0;
-                    return (window.SP_REACT.createElement("div", { style: { marginTop: "4px", paddingTop: "4px", borderTop: "1px solid #2e7d32" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#a5d6a7", marginBottom: "2px" } }, "vs Previous"),
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                            improvement ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "9px" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#ff6b6b", fontSize: "9px" } })),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: improvement ? "#4caf50" : "#ff6b6b", fontWeight: "bold" } },
-                                improvement ? "+" : "",
-                                percentChange.toFixed(2),
-                                "%"),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#a5d6a7" } }, improvement ? "improvement" : "degradation"))));
-                })()))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "11px", marginBottom: "6px", marginTop: "6px" } }, "Or select your tuning goal:")),
-        GOAL_OPTIONS.map((goal) => {
-            const Icon = goal.icon;
-            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: goal.id },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelect(goal.id), description: goal.description, disabled: disabled || isBinningRunning, style: { minHeight: "32px", padding: "4px 6px" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", opacity: (disabled || isBinningRunning) ? 0.5 : 1, fontSize: "11px" } },
-                        window.SP_REACT.createElement(Icon, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, goal.label),
-                        window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a", marginLeft: "auto" } }, goal.mode === "thorough" ? "~10m" : "~3m")))));
-        })));
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaPlay, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, "Start Wizard"))))));
 };
-const AutotuneProgressStep = ({ progress, isRunning, onCancel, selectedGoal, }) => {
-    const goalLabel = GOAL_OPTIONS.find((g) => g.id === selectedGoal)?.label || "Unknown";
-    // Calculate progress percentage
-    const calculateProgress = () => {
-        if (!progress)
-            return 0;
-        // Phase A: cores 0-3 (0-50%), Phase B: cores 0-3 (50-100%)
-        const phaseOffset = progress.phase === "B" ? 50 : 0;
-        const coreProgress = (progress.core / 4) * 50;
-        return Math.min(phaseOffset + coreProgress, 100);
-    };
-    // Format ETA
-    const formatEta = (seconds) => {
-        if (seconds <= 0)
-            return "Almost done...";
+// ==================== Progress Screen ====================
+const ProgressScreen = ({ progress, onCancel }) => {
+    const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        if (mins > 0) {
-            return `${mins}m ${secs}s remaining`;
-        }
-        return `${secs}s remaining`;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    };
+    const formatOTA = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
     return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "16px" } },
+            window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "15px" } },
                 window.SP_REACT.createElement(FaSpinner, { style: {
                         animation: "spin 1s linear infinite",
-                        fontSize: "24px",
+                        fontSize: "32px",
                         color: "#1a9fff",
-                    } }),
-                window.SP_REACT.createElement("style", null, `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`))),
+                    } }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } },
-                "Tuning for: ",
-                goalLabel)),
-        progress && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: `Phase ${progress.phase} - Core ${progress.core}`, description: `Testing value: ${progress.value}`, nProgress: calculateProgress(), sOperationText: formatEta(progress.eta) })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "12px",
-                        color: "#8b929a",
-                        marginTop: "8px",
-                    } },
-                    window.SP_REACT.createElement("span", null,
-                        "Phase: ",
-                        progress.phase === "A" ? "Coarse Search" : "Fine Tuning"),
-                    window.SP_REACT.createElement("span", null,
-                        "Core: ",
-                        progress.core + 1,
-                        "/4"))))),
-        !progress && isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "Initializing autotune..."))),
+            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: progress?.currentStage || "Initializing...", description: `Testing ${progress?.currentOffset}mV`, nProgress: progress?.progressPercent || 0, sOperationText: `ETA: ${formatTime(progress?.etaSeconds || 0)}` })),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, style: { marginTop: "16px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
-                    window.SP_REACT.createElement(FaTimes, null),
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    padding: "8px",
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "4px",
+                } },
+                window.SP_REACT.createElement("div", null,
+                    window.SP_REACT.createElement("div", null,
+                        "Elapsed: ",
+                        formatOTA(progress?.otaSeconds || 0)),
+                    window.SP_REACT.createElement("div", null,
+                        "Iterations: ",
+                        progress?.liveMetrics?.iterations || 0)),
+                window.SP_REACT.createElement("div", { style: { textAlign: "right" } },
+                    window.SP_REACT.createElement("div", null,
+                        "Last Stable: ",
+                        progress?.liveMetrics?.last_stable || 0,
+                        "mV"),
+                    window.SP_REACT.createElement("div", { style: { color: "#4caf50" } }, "\u25CF Active")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
+                    window.SP_REACT.createElement(FaStop, { size: 12 }),
                     window.SP_REACT.createElement("span", null, "Cancel"))))));
 };
-const ResultsStep = ({ result, platformInfo, onApplyAndSave, onStartOver, }) => {
-    /**
-     * Get color indicator based on value and stability.
-     * Requirements: 6.5
-     * - Green: stable/applied
-     * - Yellow: moderate undervolt
-     * - Red: aggressive undervolt near limit
-     */
-    const getValueColor = (value) => {
-        if (!platformInfo)
-            return "#8b929a";
-        const limit = platformInfo.safe_limit;
-        const ratio = Math.abs(value) / Math.abs(limit);
-        if (ratio < 0.5)
-            return "#4caf50"; // Green - conservative
-        if (ratio < 0.8)
-            return "#ff9800"; // Yellow - moderate
-        return "#f44336"; // Red - aggressive
+// ==================== Chip Grade Badge ====================
+const ChipGradeBadge = ({ grade }) => {
+    const getGradeConfig = () => {
+        switch (grade) {
+            case "Platinum":
+                return { icon: FaTrophy, color: "#e5e4e2", glow: "#e5e4e2" };
+            case "Gold":
+                return { icon: FaMedal, color: "#ffd700", glow: "#ffd700" };
+            case "Silver":
+                return { icon: FaAward, color: "#c0c0c0", glow: "#c0c0c0" };
+            default:
+                return { icon: FaCertificate, color: "#cd7f32", glow: "#cd7f32" };
+        }
     };
-    /**
-     * Get status label for value.
-     */
-    const getValueStatus = (value) => {
-        if (!platformInfo)
-            return "";
-        const limit = platformInfo.safe_limit;
-        const ratio = Math.abs(value) / Math.abs(limit);
-        if (ratio < 0.5)
-            return "Conservative";
-        if (ratio < 0.8)
-            return "Moderate";
-        return "Aggressive";
-    };
-    // Format duration
-    const formatDuration = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        return `${mins}m ${secs}s`;
-    };
+    const config = getGradeConfig();
+    const Icon = config.icon;
+    return (window.SP_REACT.createElement("div", { style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            padding: "15px",
+            backgroundColor: "#1a1d24",
+            borderRadius: "8px",
+            border: `2px solid ${config.color}`,
+            boxShadow: `0 0 15px ${config.glow}`,
+        } },
+        window.SP_REACT.createElement(Icon, { style: { fontSize: "32px", color: config.color } }),
+        window.SP_REACT.createElement("div", null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "18px", fontWeight: "bold", color: config.color } }, grade),
+            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Chip Quality"))));
+};
+// ==================== Simple Curve Chart ====================
+const SimpleCurveChart = ({ data }) => {
+    if (!data || data.length === 0)
+        return null;
+    const width = 280;
+    const height = 120;
+    const padding = 25;
+    const offsets = data.map((d) => d.offset);
+    const temps = data.map((d) => d.temp);
+    const xMin = Math.min(...offsets);
+    const xMax = Math.max(...offsets);
+    const yMin = 0;
+    const yMax = Math.max(...temps, 100);
+    const xScale = (x) => padding + ((x - xMin) / (xMax - xMin)) * (width - 2 * padding);
+    const yScale = (y) => height - padding - ((y - yMin) / (yMax - yMin)) * (height - 2 * padding);
+    return (window.SP_REACT.createElement("svg", { width: width, height: height, style: { backgroundColor: "#0d0f12", borderRadius: "4px" } },
+        window.SP_REACT.createElement("line", { x1: padding, y1: padding, x2: padding, y2: height - padding, stroke: "#3d4450", strokeWidth: 1 }),
+        window.SP_REACT.createElement("line", { x1: padding, y1: height - padding, x2: width - padding, y2: height - padding, stroke: "#3d4450", strokeWidth: 1 }),
+        window.SP_REACT.createElement("polyline", { points: data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" "), fill: "none", stroke: "#1a9fff", strokeWidth: 2 }),
+        data.map((point, i) => (window.SP_REACT.createElement("circle", { key: i, cx: xScale(point.offset), cy: yScale(point.temp), r: 3, fill: point.result === "pass" ? "#4caf50" :
+                point.result === "fail" ? "#f44336" :
+                    "#ff9800" }))),
+        window.SP_REACT.createElement("text", { x: width / 2, y: height - 5, fontSize: "9", fill: "#8b929a", textAnchor: "middle" }, "Offset (mV)"),
+        window.SP_REACT.createElement("text", { x: 10, y: height / 2, fontSize: "9", fill: "#8b929a", textAnchor: "middle", transform: `rotate(-90, 10, ${height / 2})` }, "Temp (\u00B0C)")));
+};
+// ==================== Results Screen ====================
+const ResultsScreen = ({ result, onApply, onStartOver }) => {
+    const cpuOffset = result?.offsets?.cpu || 0;
     return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    padding: "12px",
-                    backgroundColor: result.stable ? "#1b5e20" : "#b71c1c",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                } },
-                result.stable ? window.SP_REACT.createElement(FaCheck, null) : window.SP_REACT.createElement(FaTimes, null),
-                window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, result.stable ? "Tuning Complete!" : "Tuning Incomplete"))),
+            window.SP_REACT.createElement(ChipGradeBadge, { grade: result?.chipGrade || "Bronze" })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "32px", fontWeight: "bold", color: "#1a9fff" } },
+                    cpuOffset,
+                    "mV"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Recommended Undervolt"))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "center" } },
+                window.SP_REACT.createElement(SimpleCurveChart, { data: result?.curveData || [] }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "space-around",
-                    fontSize: "12px",
-                    color: "#8b929a",
-                    marginBottom: "16px",
-                } },
-                window.SP_REACT.createElement("span", null,
-                    "Duration: ",
-                    formatDuration(result.duration)),
-                window.SP_REACT.createElement("span", null,
-                    "Tests: ",
-                    result.tests_run))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Optimal Values Found:")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: {
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "8px",
-                } }, result.cores.map((value, index) => (window.SP_REACT.createElement("div", { key: index, style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                    borderLeft: `4px solid ${getValueColor(value)}`,
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } },
-                    "Core ",
-                    index),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "20px",
-                        fontWeight: "bold",
-                        color: getValueColor(value),
-                    } }, value),
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, getValueStatus(value))))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "16px",
                     fontSize: "10px",
                     color: "#8b929a",
-                    marginTop: "8px",
+                    padding: "8px",
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "4px",
                 } },
-                window.SP_REACT.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#4caf50" } }),
-                    "Conservative"),
-                window.SP_REACT.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ff9800" } }),
-                    "Moderate"),
-                window.SP_REACT.createElement("span", { style: { display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement("div", { style: { width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f44336" } }),
-                    "Aggressive"))),
+                window.SP_REACT.createElement("div", null,
+                    "Duration: ",
+                    Math.round(result?.duration || 0),
+                    "s"),
+                window.SP_REACT.createElement("div", null,
+                    "Iterations: ",
+                    result?.iterations || 0))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onApplyAndSave, style: { marginTop: "16px" } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        color: "#4caf50",
-                    } },
-                    window.SP_REACT.createElement(FaCheck, null),
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onApply },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" } },
+                    window.SP_REACT.createElement(FaCheck, { size: 12 }),
                     window.SP_REACT.createElement("span", null, "Apply & Save")))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
                     window.SP_REACT.createElement("span", null, "Start Over"))))));
 };
-const BinningProgressStep = ({ progress, isRunning, onCancel, }) => {
-    // Format ETA
-    const formatEta = (seconds) => {
-        if (seconds <= 0)
-            return "Finishing...";
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        if (mins > 0) {
-            return `~${mins}m ${secs}s`;
+// ==================== Main Component ====================
+const WizardMode = () => {
+    const { info: platformInfo } = usePlatformInfo();
+    const { isRunning, progress, result, dirtyExit, startWizard, cancelWizard, applyResult, } = useWizard();
+    const [showCrashModal, setShowCrashModal] = SP_REACT.useState(false);
+    const [localResult, setLocalResult] = SP_REACT.useState(null);
+    SP_REACT.useEffect(() => {
+        if (dirtyExit?.detected && !showCrashModal) {
+            setShowCrashModal(true);
         }
-        return `~${secs}s`;
-    };
-    // Calculate progress percentage using max_iterations if available
-    const calculateProgress = () => {
-        if (!progress)
-            return 0;
-        if (progress.percent_complete !== undefined) {
-            return progress.percent_complete;
+    }, [dirtyExit]);
+    SP_REACT.useEffect(() => {
+        if (result) {
+            setLocalResult(result);
         }
-        // Fallback to old calculation
-        const maxIterations = progress.max_iterations || 20;
-        return Math.min((progress.iteration / maxIterations) * 100, 100);
+    }, [result]);
+    const handleStart = async (config) => {
+        try {
+            setLocalResult(null);
+            await startWizard(config);
+        }
+        catch (err) {
+            console.error("Failed to start wizard:", err);
+        }
     };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "16px" } },
-                window.SP_REACT.createElement(FaSpinner, { style: {
-                        animation: "spin 1s linear infinite",
-                        fontSize: "24px",
-                        color: "#ff9800",
-                    } }),
-                window.SP_REACT.createElement("style", null, `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Finding Maximum Undervolt")),
-        progress && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: `Iteration ${progress.iteration}/${progress.max_iterations || 20}`, description: `Testing: ${progress.current_value}mV`, nProgress: calculateProgress() / 100, sOperationText: formatEta(progress.eta) })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                        fontSize: "12px",
-                        marginTop: "8px",
-                        padding: "8px",
-                        backgroundColor: "rgba(0, 0, 0, 0.2)",
-                        borderRadius: "4px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Current Value:"),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } },
-                            progress.current_value,
-                            "mV")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Last Stable:"),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", color: "#4caf50" } },
-                            progress.last_stable,
-                            "mV")),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Remaining:"),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, formatEta(progress.eta))),
-                    window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a" } }, "Progress:"),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } },
-                            calculateProgress().toFixed(1),
-                            "%")))))),
-        !progress && isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", color: "#8b929a" } }, "Initializing binning..."))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, style: { marginTop: "16px" } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#ff6b6b" } },
-                    window.SP_REACT.createElement(FaTimes, null),
-                    window.SP_REACT.createElement("span", null, "Stop"))))));
-};
-const BinningResultsStep = ({ result, platformInfo, onApplyRecommended, onStartOver, }) => {
-    // Format duration
-    const formatDuration = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        return `${mins}m ${secs}s`;
+    const handleCancel = async () => {
+        try {
+            await cancelWizard();
+        }
+        catch (err) {
+            console.error("Failed to cancel wizard:", err);
+        }
     };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    padding: "12px",
-                    backgroundColor: result.aborted ? "#b71c1c" : "#1b5e20",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                } },
-                result.aborted ? window.SP_REACT.createElement(FaTimes, null) : window.SP_REACT.createElement(FaCheck, null),
-                window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, result.aborted ? "Binning Incomplete" : "Binning Complete!"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "space-around",
-                    fontSize: "12px",
-                    color: "#8b929a",
-                    marginBottom: "16px",
-                } },
-                window.SP_REACT.createElement("span", null,
-                    "Duration: ",
-                    formatDuration(result.duration)),
-                window.SP_REACT.createElement("span", null,
-                    "Iterations: ",
-                    result.iterations))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "Discovered Values:")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: {
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "16px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        borderLeft: `4px solid #ff9800`,
-                    } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, "Maximum Stable"),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "24px",
-                            fontWeight: "bold",
-                            color: "#ff9800",
-                        } },
-                        result.max_stable,
-                        "mV"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, "Most aggressive stable value found")),
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "16px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        borderLeft: `4px solid #4caf50`,
-                    } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a" } }, "Recommended (with 5mV safety margin)"),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "24px",
-                            fontWeight: "bold",
-                            color: "#4caf50",
-                        } },
-                        result.recommended,
-                        "mV"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, "Conservative value for daily use")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onApplyRecommended, style: { marginTop: "16px" } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        color: "#4caf50",
-                    } },
-                    window.SP_REACT.createElement(FaCheck, null),
-                    window.SP_REACT.createElement("span", null, "Apply Recommended")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
-                    window.SP_REACT.createElement("span", null, "Start Over"))))));
+    const handleApply = async () => {
+        if (!localResult)
+            return;
+        try {
+            await applyResult(localResult.id, true);
+        }
+        catch (err) {
+            console.error("Failed to apply result:", err);
+        }
+    };
+    const handleStartOver = () => {
+        setLocalResult(null);
+    };
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Wizard Mode" },
+        window.SP_REACT.createElement(PanicDisableButton$1, null),
+        showCrashModal && dirtyExit?.crashInfo && (window.SP_REACT.createElement(CrashRecoveryModal, { crashInfo: dirtyExit.crashInfo, onDismiss: () => setShowCrashModal(false) })),
+        !isRunning && !localResult && (window.SP_REACT.createElement(ConfigurationScreen, { onStart: handleStart, platformInfo: platformInfo })),
+        isRunning && progress && (window.SP_REACT.createElement(ProgressScreen, { progress: progress, onCancel: handleCancel })),
+        !isRunning && localResult && (window.SP_REACT.createElement(ResultsScreen, { result: localResult, onApply: handleApply, onStartOver: handleStartOver }))));
 };
 
 /**
@@ -5760,19 +5439,18 @@ const DeckTuneContent = () => {
         window.SP_REACT.createElement(SettingsMenu, { isOpen: showSettingsMenu, onClose: () => setShowSettingsMenu(false) }),
         window.SP_REACT.createElement(DFL.PanelSection, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { className: "fade-in" },
-                    window.SP_REACT.createElement("div", { style: {
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px" } },
+                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in", style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "wizard" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                            marginBottom: "6px",
                             borderRadius: "8px",
                             border: mode === "wizard" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
                             position: "relative",
                             overflow: "hidden",
                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             cursor: "pointer",
-                        }, onClick: () => setMode("wizard") },
+                        }, onActivate: () => setMode("wizard"), onClick: () => setMode("wizard") },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
@@ -5794,21 +5472,19 @@ const DeckTuneContent = () => {
                                     borderRadius: "4px",
                                     fontWeight: "bold",
                                     boxShadow: `0 0 10px ${getStatusColor()}`,
-                                } }, getStatusText())))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.1s" } },
-                    window.SP_REACT.createElement("div", { style: {
+                                } }, getStatusText())))),
+                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in", style: {
                             minHeight: "40px",
                             padding: "8px 12px",
                             backgroundColor: mode === "expert" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                            marginBottom: "6px",
                             borderRadius: "8px",
                             border: mode === "expert" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
                             position: "relative",
                             overflow: "hidden",
                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             cursor: "pointer",
-                        }, onClick: () => setMode("expert") },
+                            animationDelay: "0.1s"
+                        }, onActivate: () => setMode("expert"), onClick: () => setMode("expert") },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
                                 alignItems: "center",
@@ -6065,11 +5741,13 @@ var index = definePlugin(() => {
         name: "DeckTune",
         titleView: (window.SP_REACT.createElement(DeckTuneErrorBoundary, null,
             window.SP_REACT.createElement(DeckTuneProvider, null,
-                window.SP_REACT.createElement(DeckTuneTitleView, null)))),
+                window.SP_REACT.createElement(WizardProvider, null,
+                    window.SP_REACT.createElement(DeckTuneTitleView, null))))),
         content: (window.SP_REACT.createElement(DeckTuneErrorBoundary, null,
             window.SP_REACT.createElement(DeckTuneProvider, null,
-                window.SP_REACT.createElement("div", { className: "decktune-plugin" },
-                    window.SP_REACT.createElement(DeckTuneApp, null))))),
+                window.SP_REACT.createElement(WizardProvider, null,
+                    window.SP_REACT.createElement("div", { className: "decktune-plugin" },
+                        window.SP_REACT.createElement(DeckTuneApp, null)))))),
         icon: window.SP_REACT.createElement(FaMagic, null),
         onDismount() {
             console.log("DeckTune unloaded");
