@@ -208,28 +208,28 @@ const ConfigurationScreen: FC<{
   };
 
   return (
-    <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "400px", overflowY: "auto" }}>
       <PanelSectionRow>
-        <div style={{ fontSize: "13px", color: "#ccc", marginBottom: "10px" }}>
-          Automatically find the optimal undervolt for your chip through systematic testing.
+        <div style={{ fontSize: "11px", color: "#ccc", marginBottom: "6px" }}>
+          Find optimal undervolt through systematic testing.
         </div>
       </PanelSectionRow>
 
       {platformInfo && (
         <PanelSectionRow>
-          <div style={{ fontSize: "10px", color: "#8b929a", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
-            {platformInfo.variant} ({platformInfo.model}) • Safety Limit: {platformInfo.safe_limit}mV
+          <div style={{ fontSize: "9px", color: "#8b929a", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
+            {platformInfo.variant} • Limit: {platformInfo.safe_limit}mV
           </div>
         </PanelSectionRow>
       )}
 
-      {/* CRITICAL FIX: Replace Dropdown with Button Grid for gamepad control */}
+      {/* CRITICAL FIX: Compact Button Grid */}
       <PanelSectionRow>
-        <div style={{ marginBottom: "8px" }}>
-          <div style={{ fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" }}>
+        <div style={{ marginBottom: "4px" }}>
+          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" }}>
             Aggressiveness
           </div>
-          <Focusable style={{ display: "flex", gap: "6px" }}>
+          <Focusable style={{ display: "flex", gap: "4px" }}>
             <ButtonItem
               layout="below"
               onClick={() => setAggressiveness("safe")}
@@ -237,12 +237,13 @@ const ConfigurationScreen: FC<{
                 flex: 1,
                 backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
-                minHeight: "36px",
+                minHeight: "32px",
+                padding: "4px",
               }}
             >
-              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" }}>
+              <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" }}>
                 <div style={{ fontWeight: "bold" }}>Safe</div>
-                <div style={{ fontSize: "8px" }}>2mV steps</div>
+                <div style={{ fontSize: "7px" }}>2mV</div>
               </div>
             </ButtonItem>
             <ButtonItem
@@ -252,12 +253,13 @@ const ConfigurationScreen: FC<{
                 flex: 1,
                 backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
-                minHeight: "36px",
+                minHeight: "32px",
+                padding: "4px",
               }}
             >
-              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" }}>
+              <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" }}>
                 <div style={{ fontWeight: "bold" }}>Balanced</div>
-                <div style={{ fontSize: "8px" }}>5mV steps</div>
+                <div style={{ fontSize: "7px" }}>5mV</div>
               </div>
             </ButtonItem>
             <ButtonItem
@@ -267,12 +269,13 @@ const ConfigurationScreen: FC<{
                 flex: 1,
                 backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
-                minHeight: "36px",
+                minHeight: "32px",
+                padding: "4px",
               }}
             >
-              <div style={{ fontSize: "10px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" }}>
+              <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" }}>
                 <div style={{ fontWeight: "bold" }}>Aggressive</div>
-                <div style={{ fontSize: "8px" }}>10mV steps</div>
+                <div style={{ fontSize: "7px" }}>10mV</div>
               </div>
             </ButtonItem>
           </Focusable>
@@ -280,11 +283,11 @@ const ConfigurationScreen: FC<{
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div style={{ marginBottom: "8px" }}>
-          <div style={{ fontSize: "11px", color: "#8b929a", marginBottom: "6px", fontWeight: "bold" }}>
+        <div style={{ marginBottom: "4px" }}>
+          <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" }}>
             Test Duration
           </div>
-          <Focusable style={{ display: "flex", gap: "6px" }}>
+          <Focusable style={{ display: "flex", gap: "4px" }}>
             <ButtonItem
               layout="below"
               onClick={() => setTestDuration("short")}
@@ -292,12 +295,13 @@ const ConfigurationScreen: FC<{
                 flex: 1,
                 backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
                 border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
-                minHeight: "36px",
+                minHeight: "32px",
+                padding: "4px",
               }}
             >
-              <div style={{ fontSize: "10px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" }}>
+              <div style={{ fontSize: "9px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" }}>
                 <div style={{ fontWeight: "bold" }}>Short</div>
-                <div style={{ fontSize: "8px" }}>30s per test</div>
+                <div style={{ fontSize: "7px" }}>30s</div>
               </div>
             </ButtonItem>
             <ButtonItem
@@ -307,12 +311,13 @@ const ConfigurationScreen: FC<{
                 flex: 1,
                 backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
                 border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
-                minHeight: "36px",
+                minHeight: "32px",
+                padding: "4px",
               }}
             >
-              <div style={{ fontSize: "10px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" }}>
+              <div style={{ fontSize: "9px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" }}>
                 <div style={{ fontWeight: "bold" }}>Long</div>
-                <div style={{ fontSize: "8px" }}>120s per test</div>
+                <div style={{ fontSize: "7px" }}>120s</div>
               </div>
             </ButtonItem>
           </Focusable>
@@ -320,16 +325,16 @@ const ConfigurationScreen: FC<{
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div style={{ fontSize: "11px", color: "#8b929a", textAlign: "center", padding: "5px" }}>
-          Estimated time: ~{getEstimatedTime()} minutes
+        <div style={{ fontSize: "9px", color: "#8b929a", textAlign: "center", padding: "3px" }}>
+          Est. time: ~{getEstimatedTime()} min
         </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleRunBenchmark} disabled={isBenchmarking}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
-            {isBenchmarking ? <FaSpinner className="spin" size={12} /> : <FaChartLine size={12} />}
-            <span>{isBenchmarking ? "Running..." : "Run Benchmark"}</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "10px" }}>
+            {isBenchmarking ? <FaSpinner className="spin" size={10} /> : <FaChartLine size={10} />}
+            <span>{isBenchmarking ? "Running..." : "Benchmark"}</span>
           </div>
         </ButtonItem>
       </PanelSectionRow>
@@ -337,28 +342,27 @@ const ConfigurationScreen: FC<{
       {isBenchmarking && (
         <PanelSectionRow>
           <ProgressBarWithInfo
-            label="Running Benchmark"
-            description="Testing CPU performance..."
+            label="Benchmark"
+            description="Testing..."
             nProgress={50}
-            sOperationText="Please wait..."
+            sOperationText="Wait..."
           />
         </PanelSectionRow>
       )}
 
       {benchmarkResult && (
         <PanelSectionRow>
-          <div style={{ fontSize: "10px", color: "#4caf50", padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
+          <div style={{ fontSize: "9px", color: "#4caf50", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" }}>
             <div>Score: {benchmarkResult.score} ops/sec</div>
-            <div>Max Temp: {benchmarkResult.max_temp}°C</div>
-            <div>Max Freq: {benchmarkResult.max_freq} MHz</div>
+            <div>Temp: {benchmarkResult.max_temp}°C • Freq: {benchmarkResult.max_freq} MHz</div>
           </div>
         </PanelSectionRow>
       )}
 
       <PanelSectionRow>
         <ButtonItem layout="below" onClick={handleStart}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
-            <FaPlay size={12} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "11px" }}>
+            <FaPlay size={10} />
             <span>Start Wizard</span>
           </div>
         </ButtonItem>

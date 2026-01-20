@@ -1,77 +1,76 @@
 #!/usr/bin/env python3
-"""Build proper zip archive for Decky Loader with Unix-style paths."""
+"""Build proper Decky Loader zip with Unix paths"""
 
-import zipfile
 import os
+import zipfile
+import shutil
 from pathlib import Path
 
-def create_release_zip():
-    project_dir = Path(__file__).parent.parent
-    release_dir = project_dir / "release"
-    source_dir = release_dir / "DeckTune"
-    output_zip = release_dir / "DeckTune.zip"
-    
-    if not source_dir.exists():
-        print(f"Error: {source_dir} does not exist")
-        return False
-    
-    # Remove old zip if exists
-    if output_zip.exists():
-        output_zip.unlink()
-    
-    print(f"Creating {output_zip}...")
-    
-    # Required files per Decky documentation
-    required_files = ['plugin.json', 'main.py', 'LICENSE', 'package.json', 'dist/index.js']
-    
-    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for root, dirs, files in os.walk(source_dir):
-            # Skip __pycache__ directories
-            dirs[:] = [d for d in dirs if d != '__pycache__']
-            
-            for file in files:
-                # Skip .pyc files
-                if file.endswith('.pyc'):
-                    continue
-                
-                file_path = Path(root) / file
-                # Create archive path relative to release_dir with forward slashes
-                arcname = file_path.relative_to(release_dir).as_posix()
-                
-                # Fix line endings for shell scripts BEFORE adding to zip
-                if file.endswith('.sh'):
-                    with open(file_path, 'rb') as f:
-                        content = f.read()
-                    if b'\r\n' in content:
-                        print(f"  Fixing line endings: {arcname}")
-                        content = content.replace(b'\r\n', b'\n')
-                        # Write to temp location with fixed line endings
-                        import tempfile
-                        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                            tmp.write(content)
-                            tmp_path = tmp.name
-                        
-                        print(f"  Adding: {arcname}")
-                        zf.write(tmp_path, arcname)
-                        os.unlink(tmp_path)
-                        
-                        # Set executable permissions
-                        info = zf.getinfo(arcname)
-                        info.external_attr = 0o755 << 16
-                        continue
-                
-                print(f"  Adding: {arcname}")
-                zf.write(file_path, arcname)
-                
-                # Set executable permissions for specific files
-                if file in ['stress-ng', 'memtester', 'gymdeck3', 'ryzenadj']:
-                    info = zf.getinfo(arcname)
-                    info.external_attr = 0o755 << 16  # Unix executable permissions
-    
-    size_mb = output_zip.stat().st_size / (1024 * 1024)
-    print(f"\nCreated: {output_zip} ({size_mb:.2f} MB)")
-    return True
+PROJECT_DIR = Path(__file__).parent.parent
+RELEASE_DIR = PROJECT_DIR / "release"
+TEMP_DIR = RELEASE_DIR / "temp"
 
-if __name__ == "__main__":
-    success = create_release_zip()
-    exit(0 if success else 1)
+print("=== DeckTune Decky Zip Builder ===")
+
+# Clean
+if TEMP_DIR.exists():
+    shutil.rmtree(TEMP_DIR)
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+# Copy files
+print("Copying files...")
+files_to_copy = [
+    "plugin.json", "main.py", "LICENSE", "package.json",
+    "README.md", "CHANGELOG.md", "install.sh", "setup-sudo.sh"
+]
+
+for file in files_to_copy:
+    src = PROJECT_DIR / file
+    if src.exists():
+        shutil.copy2(src, TEMP_DIR / file)
+
+# Copy directories
+for dir_name in ["dist", "backend", "bin"]:
+    src_dir = PROJECT_DIR / dir_name
+    dst_dir = TEMP_DIR / dir_name
+    if src_dir.exists():
+        shutil.copytree(src_dir, dst_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+# Get version
+import json
+with open(TEMP_DIR / "plugin.json") as f:
+    version = json.load(f)["version"]
+
+# Create zip with DeckTune/ folder and Unix paths
+zip_path = RELEASE_DIR / f"DeckTune-v{version}.zip"
+print(f"Creating {zip_path.name}...")
+
+with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    for root, dirs, files in os.walk(TEMP_DIR):
+        # Remove __pycache__ from dirs to prevent traversal
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        
+        for file in files:
+            if file.endswith('.pyc'):
+                continue
+                
+            file_path = Path(root) / file
+            # Create Unix-style relative path with DeckTune/ prefix
+            rel_path = file_path.relative_to(TEMP_DIR)
+            arcname = f"DeckTune/{str(rel_path).replace(chr(92), '/')}"
+            zf.write(file_path, arcname)
+            print(f"  + {arcname}")
+
+# Cleanup
+shutil.rmtree(TEMP_DIR)
+
+# Copy to root
+root_zip = PROJECT_DIR / f"DeckTune-v{version}.zip"
+shutil.copy2(zip_path, root_zip)
+
+size_mb = zip_path.stat().st_size / (1024 * 1024)
+print(f"\n=== Build Complete ===")
+print(f"Version: v{version}")
+print(f"Output: {zip_path}")
+print(f"Size: {size_mb:.2f} MB")
+print(f"\nInstall: Decky Loader > Settings > Developer > Install from ZIP")

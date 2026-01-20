@@ -26,13 +26,9 @@ mkdir -p release/DeckTune
 # Build frontend
 echo ""
 echo "Building frontend..."
-if ! command -v pnpm >/dev/null 2>&1; then
-    echo "Error: pnpm not found. Install with: npm install -g pnpm"
-    exit 1
-fi
 
-pnpm install
-pnpm run build
+npm install
+npm run build
 
 # Check if dist/index.js was created
 if [ ! -f "dist/index.js" ]; then
@@ -64,8 +60,10 @@ cp -r backend release/DeckTune/
 # Copy bin directory (binaries)
 cp -r bin release/DeckTune/
 
-# Copy defaults directory
-cp -r defaults release/DeckTune/
+# Copy defaults directory if exists
+if [ -d "defaults" ]; then
+    cp -r defaults release/DeckTune/
+fi
 
 # Copy shell scripts
 cp install.sh release/DeckTune/
