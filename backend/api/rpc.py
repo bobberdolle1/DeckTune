@@ -11,6 +11,7 @@ and diagnostics methods.
 import asyncio
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
@@ -285,6 +286,9 @@ class DeckTuneRPC:
         
         if success:
             self.settings.setSetting("cores", clamped_cores)
+            # CRITICAL FIX: Save to lkg_cores so values persist after plugin closes
+            self.settings.setSetting("lkg_cores", clamped_cores)
+            self.settings.setSetting("lkg_timestamp", datetime.now().isoformat())
             self.settings.setSetting("status", "enabled")
             await self.event_emitter.emit_status("enabled")
             logger.info(f"Undervolt applied successfully: {clamped_cores}")
@@ -3294,14 +3298,20 @@ class DeckTuneRPC:
         Returns:
             Dictionary with success status and session_id
         """
+        logger.info(f"[RPC] start_wizard called with config: {config}")
+        
         if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            logger.error("[RPC] Wizard not initialized")
             return {"success": False, "error": "Wizard not initialized"}
         
         if self._wizard_session.is_running():
+            logger.warning("[RPC] Wizard is already running")
             return {"success": False, "error": "Wizard is already running"}
         
         try:
             from ..tuning.wizard_session import WizardConfig, AggressivenessLevel, TestDuration
+            
+            logger.info("[RPC] Parsing wizard config...")
             
             # Parse config
             wizard_config = WizardConfig(
@@ -3311,12 +3321,14 @@ class DeckTuneRPC:
                 safety_limits=config.get("safety_limits", {"cpu": self.platform.safe_limit})
             )
             
+            logger.info(f"[RPC] Starting wizard with config: {wizard_config}")
+            
             # Start wizard in background task
             self._wizard_task = asyncio.create_task(
                 self._wizard_session.start(wizard_config)
             )
             
-            logger.info(f"Wizard started with session_id: {self._wizard_session._session_id}")
+            logger.info(f"[RPC] Wizard started with session_id: {self._wizard_session._session_id}")
             
             return {
                 "success": True,
@@ -3324,10 +3336,10 @@ class DeckTuneRPC:
             }
             
         except ValueError as e:
-            logger.error(f"Invalid wizard config: {e}")
+            logger.error(f"[RPC] Invalid wizard config: {e}", exc_info=True)
             return {"success": False, "error": f"Invalid configuration: {str(e)}"}
         except Exception as e:
-            logger.error(f"Failed to start wizard: {e}", exc_info=True)
+            logger.error(f"[RPC] Failed to start wizard: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
     
     async def cancel_wizard(self) -> Dict[str, Any]:

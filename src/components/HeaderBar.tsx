@@ -21,6 +21,7 @@ import { FocusableButton } from "./FocusableButton";
 export interface HeaderBarProps {
   onFanControlClick: () => void;
   onSettingsClick: () => void;
+  version?: string;
 }
 
 /**
@@ -38,12 +39,13 @@ export interface HeaderBarProps {
 export const HeaderBar: FC<HeaderBarProps> = ({
   onFanControlClick,
   onSettingsClick,
+  version,
 }) => {
   return (
     <div
       style={{
         display: "flex",
-        justifyContent: "flex-end",
+        justifyContent: "space-between",
         alignItems: "center",
         gap: "8px",
         padding: "8px 12px",
@@ -54,6 +56,20 @@ export const HeaderBar: FC<HeaderBarProps> = ({
       role="navigation"
       aria-label="Quick navigation"
     >
+      {/* Version Display */}
+      {version && (
+        <div
+          style={{
+            fontSize: "10px",
+            color: "#5a5d64",
+            fontFamily: "monospace",
+          }}
+        >
+          v{version}
+        </div>
+      )}
+      
+      <div style={{ display: "flex", gap: "8px" }}>
       {/* Fan Control Icon Button - Requirements: 1.2 */}
       <FocusableButton
         onClick={onFanControlClick}
@@ -109,6 +125,7 @@ export const HeaderBar: FC<HeaderBarProps> = ({
           />
         </div>
       </FocusableButton>
+      </div>
     </div>
   );
 };

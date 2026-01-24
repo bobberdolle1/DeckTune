@@ -145,7 +145,7 @@ const CrashRecoveryModal: FC<{ crashInfo: any; onDismiss: () => void }> = ({ cra
         <div style={{ backgroundColor: "#2a2d34", padding: "10px", borderRadius: "4px", marginBottom: "15px" }}>
           <div style={{ fontSize: "11px", color: "#8b929a", marginBottom: "5px" }}>Crash Details:</div>
           <div style={{ fontSize: "12px", color: "#fff" }}>
-            Testing: <strong>{crashInfo?.currentOffset}mV</strong>
+            Testing: <strong>{crashInfo?.currentOffset ?? 0}mV</strong>
           </div>
           <div style={{ fontSize: "12px", color: "#4caf50" }}>
             Last Stable: <strong>{crashInfo?.lastStable}mV</strong>
@@ -406,7 +406,7 @@ const ProgressScreen: FC<{
       <PanelSectionRow>
         <ProgressBarWithInfo
           label={progress?.currentStage || "Initializing..."}
-          description={`Testing ${progress?.currentOffset}mV`}
+          description={`Testing ${progress?.currentOffset ?? 0}mV`}
           nProgress={progress?.progressPercent || 0}
           sOperationText={`ETA: ${formatTime(progress?.etaSeconds || 0)}`}
         />
@@ -429,7 +429,7 @@ const ProgressScreen: FC<{
             <div>Iterations: {progress?.liveMetrics?.iterations || 0}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div>Last Stable: {progress?.liveMetrics?.last_stable || 0}mV</div>
+            <div>Last Stable: {progress?.liveMetrics?.last_stable ?? 0}mV</div>
             <div style={{ color: "#4caf50" }}>● Active</div>
           </div>
         </div>

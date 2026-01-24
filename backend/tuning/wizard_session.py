@@ -370,6 +370,29 @@ class WizardSession:
     
     # ==================== Progress Tracking ====================
     
+    async def _emit_progress_during_test(self, duration: int, stage: str) -> None:
+        """Emit progress updates during long-running test.
+        
+        Updates UI every second to show test is still running.
+        
+        Args:
+            duration: Test duration in seconds
+            stage: Stage description
+        """
+        try:
+            for i in range(duration):
+                if self._cancelled:
+                    break
+                try:
+                    await self._emit_progress(f"{stage} ({i+1}/{duration}s)")
+                except Exception as e:
+                    logger.error(f"[WIZARD] Failed to emit progress: {e}")
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"[WIZARD] Progress update loop failed: {e}", exc_info=True)
+    
     async def _emit_progress(self, stage: str) -> None:
         """Emit progress update to frontend.
         
@@ -481,13 +504,29 @@ class WizardSession:
         # STEP 2: Run per-core stress test
         test_duration = self._config.get_test_duration_seconds()
         
+        logger.info(f"[WIZARD] Starting {test_duration}s stress test on core {core_id}")
+        
         # Start dmesg monitoring in parallel
         dmesg_task = asyncio.create_task(
             self.runner.monitor_dmesg_realtime(test_duration)
         )
         
+        # CRITICAL FIX: Start progress update task to keep UI alive during test
+        progress_task = asyncio.create_task(
+            self._emit_progress_during_test(test_duration, f"Testing core {core_id} at {offset}mV")
+        )
+        
         try:
             result = await self.runner.run_per_core_test(core_id, test_duration)
+            logger.info(f"[WIZARD] Core {core_id} test result: passed={result.passed}, error={result.error}")
+            
+            # Stop progress updates
+            progress_task.cancel()
+            try:
+                await progress_task
+            except asyncio.CancelledError:
+                pass
+            
             passed = result.passed
             
             # STEP 3: Check for hardware errors during test
@@ -695,10 +734,18 @@ class WizardSession:
         step_size = self._config.get_step_size()
         safety_limit = self._config.safety_limits.get(domain, -100)
         
+        logger.info(f"[WIZARD] Starting step-down search for {domain}: step_size={step_size}mV, safety_limit={safety_limit}mV")
+        
         # Start at -10mV
         self._current_offset = -10
         self._last_stable_offset = 0
         self._consecutive_failures = 0
+        
+        logger.info(f"[WIZARD] Initial offset set to: {self._current_offset}mV")
+        
+        # CRITICAL FIX: Emit progress immediately after initialization
+        await self._emit_progress(f"Starting search at {self._current_offset}mV")
+        await asyncio.sleep(0.1)  # Give event loop time to process
         
         while not self._cancelled:
             # Check safety limit
@@ -717,28 +764,49 @@ class WizardSession:
             # Test each core individually for CPU domain
             if domain == "cpu":
                 all_cores_passed = True
+                per_core_test_failed = False
+                
                 for core_id in range(4):  # Steam Deck has 4 cores
                     # CRITICAL FIX: Check cancellation inside core loop
                     if self._cancelled:
-                        logger.info(f"Wizard cancelled during core {core_id} test")
+                        logger.info(f"[WIZARD] Wizard cancelled during core {core_id} test")
                         break
                     
-                    logger.info(f"Testing core {core_id} at {self._current_offset}mV")
-                    passed = await self._test_offset_per_core(self._current_offset, core_id)
+                    logger.info(f"[WIZARD] Testing core {core_id} at {self._current_offset}mV")
+                    
+                    try:
+                        passed = await self._test_offset_per_core(self._current_offset, core_id)
+                    except Exception as e:
+                        logger.error(f"[WIZARD] Per-core test exception on core {core_id}: {e}", exc_info=True)
+                        per_core_test_failed = True
+                        break
                     
                     if not passed:
                         all_cores_passed = False
-                        logger.warning(f"Core {core_id} failed at {self._current_offset}mV")
+                        logger.warning(f"[WIZARD] Core {core_id} failed at {self._current_offset}mV")
                         break  # Stop testing other cores if one fails
                 
                 # If cancelled during core loop, exit main loop
                 if self._cancelled:
                     break
                 
-                passed = all_cores_passed
+                # CRITICAL FIX: Fallback to regular stress test if per-core testing fails
+                if per_core_test_failed:
+                    logger.warning(f"[WIZARD] Per-core testing failed, falling back to regular stress test")
+                    try:
+                        passed = await self._test_offset(self._current_offset, domain)
+                    except Exception as e:
+                        logger.error(f"[WIZARD] Fallback test also failed: {e}", exc_info=True)
+                        passed = False
+                else:
+                    passed = all_cores_passed
             else:
                 # For GPU/SOC, use full test
-                passed = await self._test_offset(self._current_offset, domain)
+                try:
+                    passed = await self._test_offset(self._current_offset, domain)
+                except Exception as e:
+                    logger.error(f"[WIZARD] Test failed for {domain}: {e}", exc_info=True)
+                    passed = False
             
             self._iterations += 1
             self._persist_state()
@@ -753,13 +821,14 @@ class WizardSession:
                 self._current_offset -= step_size
                 
             else:
-                # Failure - increment counter
+                # Failure - increment counter but KEEP SEARCHING
                 self._consecutive_failures += 1
                 logger.info(f"✗ {self._current_offset}mV failed (consecutive: {self._consecutive_failures})")
                 
-                # Stop after 3 consecutive failures
-                if self._consecutive_failures >= 3:
-                    logger.info("3 consecutive failures, stopping search")
+                # CRITICAL FIX: Don't stop at 3 failures, continue searching
+                # Only stop if we've tested 10+ offsets without finding anything stable
+                if self._iterations > 10 and self._last_stable_offset == 0:
+                    logger.info("[WIZARD] Tested 10+ offsets with no stable result, stopping search")
                     break
                 
                 # Try one more step down
@@ -873,10 +942,10 @@ class WizardSession:
                 
                 # Apply safety margin
                 safety_margin = config.get_safety_margin()
-                recommended = max_stable + safety_margin
+                recommended = max_stable - safety_margin  # CRITICAL FIX: subtract margin (more negative)
                 final_offsets[domain] = recommended
                 
-                logger.info(f"{domain}: max_stable={max_stable}mV, recommended={recommended}mV")
+                logger.info(f"[WIZARD] {domain}: max_stable={max_stable}mV, safety_margin={safety_margin}mV, recommended={recommended}mV")
             
             # CRITICAL: Run verification pass before accepting results
             if final_offsets and not self._cancelled:

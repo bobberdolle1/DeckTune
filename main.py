@@ -380,24 +380,30 @@ class Plugin:
         # 14. Initialize Wizard Mode Session
         # Feature: Wizard Mode Refactoring
         # CRITICAL FIX #1: Pass dynamic_controller for gymdeck3 integration
-        from backend.tuning.wizard_session import WizardSession
-        
-        self.wizard_session = WizardSession(
-            ryzenadj=self.ryzenadj,
-            runner=self.test_runner,
-            safety=self.safety,
-            event_emitter=self.event_emitter,
-            settings_dir=SETTINGS_DIR,
-            dynamic_controller=self.dynamic_controller
-        )
-        
-        # Set in RPC
-        self.rpc.set_wizard_session(self.wizard_session)
-        
-        # Check for dirty exit on startup
-        crash_info = self.wizard_session.check_dirty_exit()
-        if crash_info:
-            decky.logger.warning(f"Wizard dirty exit detected: {crash_info}")
+        try:
+            from backend.tuning.wizard_session import WizardSession
+            
+            self.wizard_session = WizardSession(
+                ryzenadj=self.ryzenadj,
+                runner=self.test_runner,
+                safety=self.safety,
+                event_emitter=self.event_emitter,
+                settings_dir=SETTINGS_DIR,
+                dynamic_controller=self.dynamic_controller
+            )
+            
+            # Set in RPC
+            self.rpc.set_wizard_session(self.wizard_session)
+            
+            # Check for dirty exit on startup
+            crash_info = self.wizard_session.check_dirty_exit()
+            if crash_info:
+                decky.logger.warning(f"Wizard dirty exit detected: {crash_info}")
+                
+            decky.logger.info("Wizard session initialized successfully")
+        except Exception as e:
+            decky.logger.error(f"Failed to initialize wizard session: {e}", exc_info=True)
+            self.wizard_session = None
             await self.event_emitter.emit_wizard_error(
                 f"Previous wizard session crashed at {crash_info['current_offset']}mV. "
                 f"Last stable: {crash_info['last_stable']}mV"

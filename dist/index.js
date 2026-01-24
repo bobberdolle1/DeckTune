@@ -1864,7 +1864,7 @@ const CrashRecoveryModal = ({ crashInfo, onDismiss }) => {
                 window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#fff" } },
                     "Testing: ",
                     window.SP_REACT.createElement("strong", null,
-                        crashInfo?.currentOffset,
+                        crashInfo?.currentOffset ?? 0,
                         "mV")),
                 window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#4caf50" } },
                     "Last Stable: ",
@@ -2032,7 +2032,7 @@ const ProgressScreen = ({ progress, onCancel }) => {
                         color: "#1a9fff",
                     } }))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: progress?.currentStage || "Initializing...", description: `Testing ${progress?.currentOffset}mV`, nProgress: progress?.progressPercent || 0, sOperationText: `ETA: ${formatTime(progress?.etaSeconds || 0)}` })),
+            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: progress?.currentStage || "Initializing...", description: `Testing ${progress?.currentOffset ?? 0}mV`, nProgress: progress?.progressPercent || 0, sOperationText: `ETA: ${formatTime(progress?.etaSeconds || 0)}` })),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: {
                     display: "flex",
@@ -2053,7 +2053,7 @@ const ProgressScreen = ({ progress, onCancel }) => {
                 window.SP_REACT.createElement("div", { style: { textAlign: "right" } },
                     window.SP_REACT.createElement("div", null,
                         "Last Stable: ",
-                        progress?.liveMetrics?.last_stable || 0,
+                        progress?.liveMetrics?.last_stable ?? 0,
                         "mV"),
                     window.SP_REACT.createElement("div", { style: { color: "#4caf50" } }, "\u25CF Active")))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
@@ -5242,10 +5242,10 @@ const FanControl = ({ onBack }) => {
  * - Gamepad navigation support via FocusableButton
  * - Hover and focus states for accessibility
  */
-const HeaderBar = ({ onFanControlClick, onSettingsClick, }) => {
+const HeaderBar = ({ onFanControlClick, onSettingsClick, version, }) => {
     return (window.SP_REACT.createElement("div", { style: {
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             alignItems: "center",
             gap: "8px",
             padding: "8px 12px",
@@ -5253,32 +5253,40 @@ const HeaderBar = ({ onFanControlClick, onSettingsClick, }) => {
             borderRadius: "8px",
             marginBottom: "12px",
         }, role: "navigation", "aria-label": "Quick navigation" },
-        window.SP_REACT.createElement(FocusableButton, { onClick: onFanControlClick, style: { padding: 0 }, "aria-label": "Open Fan Control" },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    backgroundColor: "rgba(61, 68, 80, 0.5)",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                } },
-                window.SP_REACT.createElement(FaFan, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))),
-        window.SP_REACT.createElement(FocusableButton, { onClick: onSettingsClick, style: { padding: 0 }, "aria-label": "Open Settings" },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    backgroundColor: "rgba(61, 68, 80, 0.5)",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                } },
-                window.SP_REACT.createElement(FaCog, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } })))));
+        version && (window.SP_REACT.createElement("div", { style: {
+                fontSize: "10px",
+                color: "#5a5d64",
+                fontFamily: "monospace",
+            } },
+            "v",
+            version)),
+        window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
+            window.SP_REACT.createElement(FocusableButton, { onClick: onFanControlClick, style: { padding: 0 }, "aria-label": "Open Fan Control" },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "36px",
+                        height: "36px",
+                        backgroundColor: "rgba(61, 68, 80, 0.5)",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                    } },
+                    window.SP_REACT.createElement(FaFan, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))),
+            window.SP_REACT.createElement(FocusableButton, { onClick: onSettingsClick, style: { padding: 0 }, "aria-label": "Open Settings" },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "36px",
+                        height: "36px",
+                        backgroundColor: "rgba(61, 68, 80, 0.5)",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                    } },
+                    window.SP_REACT.createElement(FaCog, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))))));
 };
 
 /**
@@ -5869,7 +5877,7 @@ const DeckTuneContent = () => {
             box-shadow: 0 0 15px rgba(26, 159, 255, 0.6) !important;
           }
         `),
-        window.SP_REACT.createElement(HeaderBar, { onFanControlClick: handleFanControlClick, onSettingsClick: handleSettingsClick }),
+        window.SP_REACT.createElement(HeaderBar, { onFanControlClick: handleFanControlClick, onSettingsClick: handleSettingsClick, version: "3.1.30" }),
         window.SP_REACT.createElement(SettingsMenu, { isOpen: showSettingsMenu, onClose: () => setShowSettingsMenu(false) }),
         window.SP_REACT.createElement(DFL.PanelSection, null,
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,

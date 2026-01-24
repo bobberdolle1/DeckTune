@@ -410,13 +410,17 @@ class TestRunner:
         
         # Build command with taskset for CPU affinity
         stress_ng_path = _get_binary_path("stress-ng")
+        
+        # CRITICAL FIX: Use stress-ng built-in --taskset instead of external taskset
         command = [
-            "taskset",
-            "-c", str(core_id),  # Pin to specific core
             stress_ng_path,
             "--cpu", "1",  # Single CPU worker
-            "--timeout", f"{duration}s"
+            "--taskset", str(core_id),  # Pin to specific core (stress-ng built-in)
+            "--timeout", f"{duration}s",
+            "--metrics-brief"  # Brief metrics output
         ]
+        
+        logger.info(f"[RUNNER] Per-core test: core={core_id}, duration={duration}s")
         
         try:
             self._current_process = await asyncio.create_subprocess_exec(
@@ -435,6 +439,8 @@ class TestRunner:
                 if stderr:
                     logs += "\n--- STDERR ---\n" + stderr.decode("utf-8", errors="replace")
                 
+                logger.info(f"[RUNNER] Core {core_id} completed: returncode={self._current_process.returncode}")
+                
                 if self._current_process.returncode == 0:
                     passed = _parse_stress_ng_output(logs)
                     if not passed:
@@ -450,14 +456,16 @@ class TestRunner:
                 error = f"Test timed out after {duration + 10} seconds"
                 logs = f"[TIMEOUT] Process killed"
                 
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             passed = False
-            error = "taskset or stress-ng not found"
+            error = f"stress-ng not found: {e}"
             logs = ""
+            logger.error(f"[RUNNER] FileNotFoundError: {e}")
         except Exception as e:
             passed = False
             error = f"Execution error: {str(e)}"
             logs = ""
+            logger.error(f"[RUNNER] Exception: {e}", exc_info=True)
         finally:
             self._current_process = None
         

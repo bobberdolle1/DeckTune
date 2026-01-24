@@ -279,6 +279,7 @@ const DeckTuneContent: FC = () => {
       <HeaderBar
         onFanControlClick={handleFanControlClick}
         onSettingsClick={handleSettingsClick}
+        version="3.1.30"
       />
 
       {/* Settings Menu - Requirements: 1.3, 2.1 */}
