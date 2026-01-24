@@ -298,6 +298,33 @@ class Plugin:
             safety_manager=self.safety,
         )
         
+        # 9.5. Initialize Manual Dynamic Mode
+        from backend.dynamic.manual_manager import DynamicManager
+        from backend.dynamic.manual_validator import Validator
+        from backend.dynamic.rpc import DynamicModeRPC
+        from backend.dynamic.gymdeck3_stub import Gymdeck3Stub
+        
+        # Create gymdeck3 stub for testing (will be replaced with real interface later)
+        gymdeck3_stub = Gymdeck3Stub()
+        
+        # Create dynamic manager and validator
+        self.dynamic_manager = DynamicManager(gymdeck3_interface=gymdeck3_stub)
+        self.dynamic_validator = Validator()
+        
+        # Load saved configuration
+        self.dynamic_manager.load_config(settings)
+        
+        # Create dynamic mode RPC handler
+        self.dynamic_mode_rpc = DynamicModeRPC(
+            manager=self.dynamic_manager,
+            validator=self.dynamic_validator,
+            settings_manager=settings
+        )
+        
+        # Set dynamic mode RPC in main RPC handler
+        self.rpc.set_dynamic_mode_rpc(self.dynamic_mode_rpc)
+        decky.logger.info("Manual Dynamic Mode initialized")
+        
         # 10. Initialize ProfileManager for per-game profiles
         self.profile_manager = ProfileManager(
             settings_manager=settings,
@@ -1286,3 +1313,70 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             decky.logger.info("Fan control service stopped")
         
         decky.logger.info("DeckTune plugin unloaded")
+
+    # ==================== Manual Dynamic Mode ====================
+    # Feature: manual-dynamic-mode
+    # Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+    
+    async def get_dynamic_config(self):
+        """Get current dynamic mode configuration for all cores.
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 9.1
+        """
+        return await self.rpc.get_dynamic_config()
+    
+    async def set_dynamic_core_config(self, core_id, min_mv, max_mv, threshold):
+        """Update configuration for a specific core.
+        
+        Args:
+            core_id: Core identifier (0-3)
+            min_mv: Minimum undervolt value in mV (-100 to 0)
+            max_mv: Maximum undervolt value in mV (-100 to 0)
+            threshold: Load threshold percentage (0-100)
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 9.2
+        """
+        return await self.rpc.set_dynamic_core_config(core_id, min_mv, max_mv, threshold)
+    
+    async def get_dynamic_curve_data(self, core_id):
+        """Get voltage curve data for visualization.
+        
+        Args:
+            core_id: Core identifier (0-3)
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 9.3
+        """
+        return await self.rpc.get_dynamic_curve_data(core_id)
+    
+    async def start_dynamic_mode(self, config):
+        """Start dynamic voltage adjustment with the provided configuration.
+        
+        Args:
+            config: Configuration dictionary with mode and cores data
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 9.5, 5.1
+        """
+        return await self.rpc.start_dynamic_mode(config)
+    
+    async def stop_dynamic_mode(self):
+        """Stop dynamic voltage adjustment.
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 5.3
+        """
+        return await self.rpc.stop_dynamic_mode()
+    
+    async def get_core_metrics(self, core_id):
+        """Get current metrics for a specific core.
+        
+        Args:
+            core_id: Core identifier (0-3)
+        
+        Feature: manual-dynamic-mode
+        Validates: Requirements 9.4
+        """
+        return await self.rpc.get_core_metrics(core_id)

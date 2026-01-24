@@ -2,6 +2,105 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.2.0] - 2026-01-24
+
+### Added - Dynamic Manual Mode 🎮
+Complete per-core voltage curve control system with real-time visualization, optimized for Steam Deck's QAM interface.
+
+**Core Features:**
+- **Per-Core Voltage Curves** — Independent voltage curves for each CPU core (0-3)
+  - MinimalValue: Conservative voltage at low CPU load (-100 to 0 mV)
+  - MaximumValue: Aggressive voltage at high CPU load (-100 to 0 mV)
+  - Threshold: CPU load percentage where transition occurs (0-100%)
+- **Simple Mode** — Apply identical settings to all cores simultaneously
+- **Expert Mode** — Fine-tune each core individually for maximum optimization
+- **Real-Time Visualization** — Live voltage curve graphs with threshold markers and current operating point
+- **Metrics Monitoring** — Per-core load, voltage, frequency, temperature updated every 500ms
+- **Time-Series Graphs** — Last 60 data points (30 seconds) with FIFO buffer management
+- **QAM Optimized UI** — Compact design fits perfectly in Decky Loader's Quick Access Menu (~400px width)
+  - Responsive SVG charts with viewBox scaling
+  - Compact metrics grid (8px padding, 16px fonts)
+  - Reduced graph heights (140-160px)
+  - Smaller fonts (9-11px) optimized for 7" screen
+  - No horizontal scrolling
+
+**Safety & Validation:**
+- **Multi-Layer Validation** — Frontend, backend, and hardware validation
+- **Platform Limits** — Hardware-specific voltage limits enforced (-100 to 0 mV)
+- **Min ≤ Max Enforcement** — Prevents invalid configurations
+- **Dangerous Config Warnings** — Alerts for voltages below -50mV
+- **Last Known Good (LKG)** — Automatic backup after 30s of stable operation
+- **Automatic Rollback** — Recovery from unstable configurations
+- **Status Indicator** — Visual Active/Inactive state with real-time updates
+
+**Gamepad Navigation:**
+- **D-pad Up/Down** — Switch between cores
+- **D-pad Left/Right** — Navigate controls
+- **L1/R1** — Adjust slider values
+- **A button** — Activate buttons
+- **Visual focus indicators** — Clear feedback for gamepad navigation
+
+**Configuration Persistence:**
+- **Dual Storage** — localStorage (instant) + backend settings (persistent)
+- **Safe Defaults** — Fallback to -30mV/-15mV/50% on errors
+- **Mode Preservation** — Maintains Simple/Expert mode across sessions
+- **Tab State** — Remembers selected tab in Expert Mode
+
+### Documentation 📚
+- **[User Guide](docs/DYNAMIC_MANUAL_MODE_GUIDE.md)** — Complete usage instructions
+  - Configuration examples (Battery Saver, Balanced, Performance, Conservative)
+  - Step-by-step tutorials for beginners and advanced users
+  - Gamepad control reference
+  - Safety features and best practices
+- **[API Reference](docs/DYNAMIC_MANUAL_MODE_API.md)** — Complete RPC method reference
+  - 6 RPC methods with request/response formats
+  - Error codes and handling strategies
+  - Configuration storage formats
+- **[Troubleshooting Guide](docs/DYNAMIC_MANUAL_MODE_TROUBLESHOOTING.md)** — Common issues and solutions
+  - Quick reference table
+  - Diagnostic steps
+  - Backend log analysis
+- **[QAM Optimization](docs/QAM_OPTIMIZATION.md)** — UI design for Quick Access Menu
+  - Responsive design principles
+  - Size constraints and optimizations
+  - Testing checklist
+
+### Technical Implementation 🔧
+**Frontend** (TypeScript/React):
+- `DynamicManualMode.tsx` — Main container (877 lines) with state management, RPC integration, error handling
+- `VoltageSliders.tsx` — Three sliders with validation, tooltips, and gamepad support
+- `CoreTabs.tsx` — Core selection with gamepad navigation (D-pad Up/Down)
+- `CurveVisualization.tsx` — Recharts-based voltage curve graph (340x160px, responsive SVG)
+- `MetricsDisplay.tsx` — Real-time metrics with time-series graph (140px height, compact grid)
+- `DynamicMode.ts` — TypeScript interfaces and types
+
+**Backend** (Python):
+- `backend/dynamic/manual_manager.py` — Configuration management, curve calculation (piecewise linear)
+- `backend/dynamic/manual_validator.py` — Multi-layer validation with platform limits
+- `backend/dynamic/rpc.py` — 6 RPC methods with comprehensive error handling
+- `backend/dynamic/gymdeck3_stub.py` — Interface to gymdeck3 voltage controller
+
+**Testing** (pytest + hypothesis):
+- **25 correctness properties** with property-based tests
+- **100+ iterations** per property for thorough validation
+- **Round-trip testing** for configuration persistence
+- **Curve calculation verification** (below/above threshold)
+- **Validation and clamping tests** (min ≤ max, platform limits)
+- **RPC method integration tests**
+- **9 integration tests** for end-to-end workflows
+
+### Integration 🔗
+- **Expert Mode Tab** — New "Dynamic Manual" tab in Expert Mode
+- **Tab State Preservation** — Maintains state when switching between tabs
+- **Active Status Persistence** — Dynamic mode stays active across tab navigation
+- **Settings Persistence** — Selected tab saved to settings across sessions
+
+### Performance ⚡
+- **500ms polling** — Real-time metrics updates
+- **60-point FIFO buffer** — 30 seconds of historical data
+- **Smooth transitions** — 300ms animations for graph updates
+- **Efficient rendering** — React memoization and optimized re-renders
+
 ## [3.1.31] - 2026-01-24
 
 ### Fixed

@@ -4,23 +4,123 @@ This guide covers all major features in DeckTune, including the new reliability 
 
 ## Table of Contents
 
-1. [What's New in v3.1](#whats-new-in-v31)
-2. [Setup Wizard](#setup-wizard)
-3. [Real-Time Telemetry](#real-time-telemetry)
-4. [Session History](#session-history)
-5. [Crash Recovery Metrics](#crash-recovery-metrics)
-6. [Context-Aware Profiles](#context-aware-profiles)
-7. [Progressive Recovery](#progressive-recovery)
-8. [BlackBox Recorder](#blackbox-recorder)
-9. [Fan Control with Custom Curves](#fan-control-with-custom-curves)
-10. [Acoustic Fan Profiles](#acoustic-fan-profiles)
-11. [PWM Smoothing](#pwm-smoothing)
-12. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
-13. [Automated Silicon Binning](#automated-silicon-binning)
-14. [Per-Game Profiles](#per-game-profiles)
-15. [Benchmarking](#benchmarking)
-16. [Best Practices](#best-practices)
-17. [Troubleshooting](#troubleshooting)
+1. [What's New in v3.2](#whats-new-in-v32)
+2. [Dynamic Manual Mode](#dynamic-manual-mode)
+3. [Setup Wizard](#setup-wizard)
+4. [Real-Time Telemetry](#real-time-telemetry)
+5. [Session History](#session-history)
+6. [Crash Recovery Metrics](#crash-recovery-metrics)
+7. [Context-Aware Profiles](#context-aware-profiles)
+8. [Progressive Recovery](#progressive-recovery)
+9. [BlackBox Recorder](#blackbox-recorder)
+10. [Fan Control with Custom Curves](#fan-control-with-custom-curves)
+11. [Acoustic Fan Profiles](#acoustic-fan-profiles)
+12. [PWM Smoothing](#pwm-smoothing)
+13. [Iron Seeker — Per-Core Curve Optimizer](#iron-seeker--per-core-curve-optimizer)
+14. [Automated Silicon Binning](#automated-silicon-binning)
+15. [Per-Game Profiles](#per-game-profiles)
+16. [Benchmarking](#benchmarking)
+17. [Best Practices](#best-practices)
+18. [Troubleshooting](#troubleshooting)
+
+---
+
+## What's New in v3.2
+
+DeckTune 3.2 introduces Dynamic Manual Mode with per-core voltage curve control:
+
+- **Dynamic Manual Mode** — Configure custom voltage curves for each CPU core
+- **Simple Mode** — Apply identical settings to all cores for quick configuration
+- **Expert Mode** — Fine-tune each core individually for maximum optimization
+- **Real-Time Visualization** — Live voltage curve graphs and metrics
+- **Gamepad Navigation** — Full Steam Deck controller support
+- **Safety Validation** — Multi-layer validation prevents dangerous configurations
+
+**📖 For detailed Dynamic Manual Mode documentation, see [Dynamic Manual Mode Guide](DYNAMIC_MANUAL_MODE_GUIDE.md)**
+
+---
+
+## Dynamic Manual Mode
+
+Dynamic Manual Mode provides granular per-core voltage curve control, allowing you to define custom voltage curves that automatically adjust based on CPU load.
+
+### Quick Start
+
+**For Beginners (Simple Mode):**
+1. Open **Expert Mode** → **Dynamic Manual** tab
+2. Enable **Simple Mode** toggle
+3. Use safe defaults: **-30mV / -15mV / 50%**
+4. Click **Apply** to save
+5. Click **Start Dynamic Mode**
+6. Monitor metrics for stability
+
+**For Advanced Users (Expert Mode):**
+1. Open **Expert Mode** → **Dynamic Manual** tab
+2. Disable **Simple Mode** toggle
+3. Select a core using tabs (Core 0-3)
+4. Configure each core independently
+5. Click **Apply** to save all
+6. Click **Start Dynamic Mode**
+7. Monitor per-core metrics
+
+### Key Features
+
+**Voltage Curves:**
+- **Minimal Value** (-100 to 0 mV): Voltage at low CPU load
+- **Maximum Value** (-100 to 0 mV): Voltage at high CPU load
+- **Threshold** (0-100%): Load percentage where transition occurs
+
+**Real-Time Monitoring:**
+- Live voltage curve visualization
+- Per-core metrics (load, voltage, frequency, temperature)
+- Time-series graphs (last 30 seconds)
+- Current operating point marker
+
+**Safety Features:**
+- Validation prevents dangerous configurations
+- Platform limit enforcement
+- Reset to Safe Defaults button
+- Last Known Good configuration recovery
+- Panic Disable for instant shutdown
+
+### Configuration Examples
+
+**Battery Saver:**
+```
+Minimal: -35mV  (aggressive at idle)
+Maximum: -10mV  (safe under load)
+Threshold: 40%  (early transition)
+```
+
+**Balanced:**
+```
+Minimal: -30mV  (moderate at idle)
+Maximum: -15mV  (moderate under load)
+Threshold: 50%  (balanced transition)
+```
+
+**Performance:**
+```
+Minimal: -25mV  (conservative at idle)
+Maximum: -20mV  (aggressive under load)
+Threshold: 60%  (late transition)
+```
+
+### Gamepad Controls
+
+- **D-pad Up/Down**: Switch cores (Expert Mode)
+- **D-pad Left/Right**: Navigate controls
+- **L1/R1**: Adjust slider values
+- **A Button**: Activate buttons
+- **B Button**: Cancel/Back
+
+### Documentation
+
+For comprehensive documentation:
+- **User Guide**: [Dynamic Manual Mode Guide](DYNAMIC_MANUAL_MODE_GUIDE.md)
+- **API Reference**: [Dynamic Manual Mode API](DYNAMIC_MANUAL_MODE_API.md)
+- **Configuration Examples**: See guide for detailed examples
+- **Troubleshooting**: See guide for common issues
 
 ---
 

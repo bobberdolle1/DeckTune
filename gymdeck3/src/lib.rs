@@ -58,6 +58,7 @@ mod watchdog;
 mod safety;
 pub mod strategy;
 pub mod fan;
+pub mod dynamic;
 
 pub use config::{
     Args,
@@ -171,4 +172,14 @@ pub use fan::{
     HIGH_TEMP_C,
     ZERO_RPM_MAX_TEMP_C,
     AcousticProfile,
+};
+
+// Dynamic voltage control module re-exports
+pub use dynamic::{
+    VoltageController,
+    CoreConfig as DynamicCoreConfig,
+    VoltageControllerError,
+    MetricsMonitor,
+    CoreMetrics,
+    MetricsError,
 };

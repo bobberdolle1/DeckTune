@@ -1,236 +1,307 @@
-"""Property tests for Simple Mode value propagation.
+"""Property test for Simple Mode value propagation.
 
-Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation
-Validates: Requirements 14.3
+Feature: manual-dynamic-mode, Property 6: Simple mode value propagation
+Validates: Requirements 4.2
 
-Property 14: Simple Mode Value Propagation
-For any single slider value V in Simple Mode, all 4 cores SHALL receive exactly value V.
+Tests that for any control adjustment in SimpleMode, all cores SHALL have
+identical values for the adjusted parameter.
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings
+from hypothesis import given, strategies as st, settings as hyp_settings
 
-from backend.dynamic.config import (
-    CoreConfig,
-    DynamicConfig,
-    SAFE_UNDERVOLT_MIN,
-    SAFE_UNDERVOLT_MAX,
-    EXPERT_UNDERVOLT_MIN,
-)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from backend.dynamic.manual_manager import DynamicManager, DynamicManualConfig, CoreConfig
 
 
-# Strategy for valid safe mode undervolt values
-safe_undervolt_value = st.integers(min_value=SAFE_UNDERVOLT_MIN, max_value=SAFE_UNDERVOLT_MAX)
+# Strategy for generating valid voltage values (-100 to 0 mV)
+voltage_strategy = st.integers(min_value=-100, max_value=0)
 
-# Strategy for valid expert mode undervolt values
-expert_undervolt_value = st.integers(min_value=EXPERT_UNDERVOLT_MIN, max_value=SAFE_UNDERVOLT_MAX)
+# Strategy for generating valid threshold values (0 to 100%)
+threshold_strategy = st.floats(min_value=0.0, max_value=100.0, allow_nan=False, allow_infinity=False)
 
 
-class TestSimpleModeValuePropagation:
-    """Property 14: Simple Mode Value Propagation
+def core_config_strategy(core_id: int) -> st.SearchStrategy[CoreConfig]:
+    """Generate a valid CoreConfig for a specific core ID.
     
-    For any single slider value V in Simple Mode, all 4 cores SHALL receive
-    exactly value V.
-    
-    Validates: Requirements 14.3
+    Args:
+        core_id: The core ID to use
+        
+    Returns:
+        Strategy that generates CoreConfig instances
     """
-
-    @given(simple_value=safe_undervolt_value)
-    @settings(max_examples=100)
-    def test_simple_mode_propagates_value_to_all_cores(self, simple_value: int):
-        """In simple mode, get_effective_core_values returns same value for all cores.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.3**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=simple_value,
-        )
-        
-        effective_values = config.get_effective_core_values()
-        
-        # All 4 cores should have exactly the simple_value
-        assert len(effective_values) == 4, f"Expected 4 values, got {len(effective_values)}"
-        for i, value in enumerate(effective_values):
-            assert value == simple_value, (
-                f"Core {i} has value {value}, expected {simple_value}"
-            )
-
-    @given(simple_value=expert_undervolt_value)
-    @settings(max_examples=100)
-    def test_simple_mode_expert_range_propagates_to_all_cores(self, simple_value: int):
-        """In expert simple mode, extended range values propagate to all cores.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.3**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=simple_value,
-            expert_mode=True,
-        )
-        
-        effective_values = config.get_effective_core_values()
-        
-        # All 4 cores should have exactly the simple_value
-        assert len(effective_values) == 4
-        assert all(v == simple_value for v in effective_values), (
-            f"Not all cores have value {simple_value}: {effective_values}"
-        )
-
-    @given(
-        core0_mv=safe_undervolt_value,
-        core1_mv=safe_undervolt_value,
-        core2_mv=safe_undervolt_value,
-        core3_mv=safe_undervolt_value,
+    return st.builds(
+        CoreConfig,
+        core_id=st.just(core_id),
+        min_mv=voltage_strategy,
+        max_mv=voltage_strategy,
+        threshold=threshold_strategy
     )
-    @settings(max_examples=100)
-    def test_per_core_mode_returns_individual_values(
-        self, core0_mv: int, core1_mv: int, core2_mv: int, core3_mv: int
-    ):
-        """When simple_mode is False, each core returns its own max_mv.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.3**
-        """
-        cores = [
-            CoreConfig(min_mv=0, max_mv=core0_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core1_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core2_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core3_mv, threshold=50.0),
-        ]
-        
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=False,
-            cores=cores,
-        )
-        
-        effective_values = config.get_effective_core_values()
-        
-        assert effective_values[0] == core0_mv
-        assert effective_values[1] == core1_mv
-        assert effective_values[2] == core2_mv
-        assert effective_values[3] == core3_mv
 
-    @given(simple_value=safe_undervolt_value)
-    @settings(max_examples=100)
-    def test_apply_simple_value_to_cores_sets_all_cores(self, simple_value: int):
-        """apply_simple_value_to_cores sets all cores to simple_value.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.5**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=simple_value,
-        )
-        
-        config.apply_simple_value_to_cores()
-        
-        # All cores should now have min_mv and max_mv set to simple_value
-        for i, core in enumerate(config.cores):
-            assert core.min_mv == simple_value, (
-                f"Core {i} min_mv is {core.min_mv}, expected {simple_value}"
-            )
-            assert core.max_mv == simple_value, (
-                f"Core {i} max_mv is {core.max_mv}, expected {simple_value}"
-            )
 
-    @given(
-        core0_mv=safe_undervolt_value,
-        core1_mv=safe_undervolt_value,
-        core2_mv=safe_undervolt_value,
-        core3_mv=safe_undervolt_value,
+@st.composite
+def simple_mode_config_strategy(draw):
+    """Generate a valid DynamicManualConfig in Simple Mode.
+    
+    Ensures that we have exactly 4 cores (0-3) with potentially different
+    initial configurations (to test propagation).
+    """
+    # Generate configs for all 4 cores (can have different values initially)
+    cores = [
+        draw(core_config_strategy(0)),
+        draw(core_config_strategy(1)),
+        draw(core_config_strategy(2)),
+        draw(core_config_strategy(3))
+    ]
+    
+    return DynamicManualConfig(
+        mode="simple",
+        cores=cores,
+        version=1
     )
-    @settings(max_examples=100)
-    def test_calculate_simple_value_from_cores_averages(
-        self, core0_mv: int, core1_mv: int, core2_mv: int, core3_mv: int
-    ):
-        """calculate_simple_value_from_cores returns average of core values.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.4**
-        """
-        cores = [
-            CoreConfig(min_mv=0, max_mv=core0_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core1_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core2_mv, threshold=50.0),
-            CoreConfig(min_mv=0, max_mv=core3_mv, threshold=50.0),
-        ]
-        
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=False,
-            cores=cores,
-        )
-        
-        calculated = config.calculate_simple_value_from_cores()
-        expected = round((core0_mv + core1_mv + core2_mv + core3_mv) / 4)
-        
-        assert calculated == expected, (
-            f"Calculated {calculated}, expected average {expected}"
-        )
 
-    @given(simple_value=safe_undervolt_value)
-    @settings(max_examples=100)
-    def test_simple_mode_validation_accepts_valid_values(self, simple_value: int):
-        """Simple mode with valid values passes validation.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.6**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=simple_value,
-            expert_mode=False,
-        )
-        
-        errors = config.validate()
-        simple_errors = [e for e in errors if "simple_value" in e]
-        
-        assert len(simple_errors) == 0, f"Valid simple_value rejected: {simple_errors}"
 
-    @given(value=st.integers(min_value=1, max_value=50))
-    @settings(max_examples=100)
-    def test_simple_mode_rejects_positive_values(self, value: int):
-        """Simple mode rejects positive undervolt values.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.6**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=value,
-        )
-        
-        errors = config.validate()
-        simple_errors = [e for e in errors if "simple_value" in e]
-        
-        assert len(simple_errors) > 0, f"Positive simple_value {value} accepted"
+@given(
+    config=simple_mode_config_strategy(),
+    new_min=voltage_strategy
+)
+@hyp_settings(max_examples=100)
+def test_property_6_simple_mode_min_mv_propagation(config, new_min):
+    """**Feature: manual-dynamic-mode, Property 6: Simple mode value propagation**
+    
+    For any control adjustment in SimpleMode, all cores SHALL have
+    identical values for the adjusted parameter.
+    
+    This test verifies that when min_mv is updated in Simple Mode,
+    all cores receive the same value.
+    
+    Validates: Requirements 4.2
+    """
+    manager = DynamicManager()
+    manager.config = config
+    
+    # Ensure we're in simple mode
+    assert manager.config.mode == "simple"
+    
+    # Update all cores with new min_mv value
+    manager.set_all_cores_config(
+        min_mv=new_min,
+        max_mv=manager.config.cores[0].max_mv,
+        threshold=manager.config.cores[0].threshold
+    )
+    
+    # Verify all cores have identical min_mv
+    for i in range(4):
+        assert manager.config.cores[i].min_mv == new_min, \
+            f"Core {i} min_mv ({manager.config.cores[i].min_mv}) != {new_min}"
+    
+    # Verify all cores have the same min_mv as each other
+    first_core_min = manager.config.cores[0].min_mv
+    for i in range(1, 4):
+        assert manager.config.cores[i].min_mv == first_core_min, \
+            f"Core {i} min_mv ({manager.config.cores[i].min_mv}) != Core 0 min_mv ({first_core_min})"
 
-    @given(value=st.integers(min_value=-150, max_value=SAFE_UNDERVOLT_MIN - 1))
-    @settings(max_examples=100)
-    def test_simple_mode_safe_rejects_expert_values(self, value: int):
-        """In safe mode, simple_value below platform limit is rejected.
-        
-        **Feature: dynamic-mode-refactor, Property 14: Simple Mode Value Propagation**
-        **Validates: Requirements 14.6**
-        """
-        config = DynamicConfig(
-            strategy="balanced",
-            simple_mode=True,
-            simple_value=value,
-            expert_mode=False,
+
+@given(
+    config=simple_mode_config_strategy(),
+    new_max=voltage_strategy
+)
+@hyp_settings(max_examples=100)
+def test_property_6_simple_mode_max_mv_propagation(config, new_max):
+    """**Feature: manual-dynamic-mode, Property 6: Simple mode value propagation**
+    
+    For any control adjustment in SimpleMode, all cores SHALL have
+    identical values for the adjusted parameter.
+    
+    This test verifies that when max_mv is updated in Simple Mode,
+    all cores receive the same value.
+    
+    Validates: Requirements 4.2
+    """
+    manager = DynamicManager()
+    manager.config = config
+    
+    # Ensure we're in simple mode
+    assert manager.config.mode == "simple"
+    
+    # Update all cores with new max_mv value
+    manager.set_all_cores_config(
+        min_mv=manager.config.cores[0].min_mv,
+        max_mv=new_max,
+        threshold=manager.config.cores[0].threshold
+    )
+    
+    # Verify all cores have identical max_mv
+    for i in range(4):
+        assert manager.config.cores[i].max_mv == new_max, \
+            f"Core {i} max_mv ({manager.config.cores[i].max_mv}) != {new_max}"
+    
+    # Verify all cores have the same max_mv as each other
+    first_core_max = manager.config.cores[0].max_mv
+    for i in range(1, 4):
+        assert manager.config.cores[i].max_mv == first_core_max, \
+            f"Core {i} max_mv ({manager.config.cores[i].max_mv}) != Core 0 max_mv ({first_core_max})"
+
+
+@given(
+    config=simple_mode_config_strategy(),
+    new_threshold=threshold_strategy
+)
+@hyp_settings(max_examples=100)
+def test_property_6_simple_mode_threshold_propagation(config, new_threshold):
+    """**Feature: manual-dynamic-mode, Property 6: Simple mode value propagation**
+    
+    For any control adjustment in SimpleMode, all cores SHALL have
+    identical values for the adjusted parameter.
+    
+    This test verifies that when threshold is updated in Simple Mode,
+    all cores receive the same value.
+    
+    Validates: Requirements 4.2
+    """
+    manager = DynamicManager()
+    manager.config = config
+    
+    # Ensure we're in simple mode
+    assert manager.config.mode == "simple"
+    
+    # Update all cores with new threshold value
+    manager.set_all_cores_config(
+        min_mv=manager.config.cores[0].min_mv,
+        max_mv=manager.config.cores[0].max_mv,
+        threshold=new_threshold
+    )
+    
+    # Verify all cores have identical threshold
+    for i in range(4):
+        assert abs(manager.config.cores[i].threshold - new_threshold) < 1e-9, \
+            f"Core {i} threshold ({manager.config.cores[i].threshold}) != {new_threshold}"
+    
+    # Verify all cores have the same threshold as each other
+    first_core_threshold = manager.config.cores[0].threshold
+    for i in range(1, 4):
+        assert abs(manager.config.cores[i].threshold - first_core_threshold) < 1e-9, \
+            f"Core {i} threshold ({manager.config.cores[i].threshold}) != Core 0 threshold ({first_core_threshold})"
+
+
+@given(
+    config=simple_mode_config_strategy(),
+    new_min=voltage_strategy,
+    new_max=voltage_strategy,
+    new_threshold=threshold_strategy
+)
+@hyp_settings(max_examples=100)
+def test_property_6_simple_mode_all_parameters_propagation(config, new_min, new_max, new_threshold):
+    """**Feature: manual-dynamic-mode, Property 6: Simple mode value propagation**
+    
+    For any control adjustment in SimpleMode, all cores SHALL have
+    identical values for the adjusted parameter.
+    
+    This test verifies that when all parameters are updated in Simple Mode,
+    all cores receive identical values.
+    
+    Validates: Requirements 4.2
+    """
+    manager = DynamicManager()
+    manager.config = config
+    
+    # Ensure we're in simple mode
+    assert manager.config.mode == "simple"
+    
+    # Update all cores with new values
+    manager.set_all_cores_config(
+        min_mv=new_min,
+        max_mv=new_max,
+        threshold=new_threshold
+    )
+    
+    # Verify all cores have identical configuration
+    for i in range(4):
+        assert manager.config.cores[i].min_mv == new_min, \
+            f"Core {i} min_mv ({manager.config.cores[i].min_mv}) != {new_min}"
+        assert manager.config.cores[i].max_mv == new_max, \
+            f"Core {i} max_mv ({manager.config.cores[i].max_mv}) != {new_max}"
+        assert abs(manager.config.cores[i].threshold - new_threshold) < 1e-9, \
+            f"Core {i} threshold ({manager.config.cores[i].threshold}) != {new_threshold}"
+    
+    # Verify all cores match Core 0
+    for i in range(1, 4):
+        assert manager.config.cores[i].min_mv == manager.config.cores[0].min_mv, \
+            f"Core {i} min_mv != Core 0 min_mv"
+        assert manager.config.cores[i].max_mv == manager.config.cores[0].max_mv, \
+            f"Core {i} max_mv != Core 0 max_mv"
+        assert abs(manager.config.cores[i].threshold - manager.config.cores[0].threshold) < 1e-9, \
+            f"Core {i} threshold != Core 0 threshold"
+
+
+@given(
+    config=simple_mode_config_strategy(),
+    updates=st.lists(
+        st.tuples(voltage_strategy, voltage_strategy, threshold_strategy),
+        min_size=1,
+        max_size=10
+    )
+)
+@hyp_settings(max_examples=100)
+def test_property_6_simple_mode_multiple_updates_propagation(config, updates):
+    """**Feature: manual-dynamic-mode, Property 6: Simple mode value propagation**
+    
+    For any sequence of control adjustments in SimpleMode, all cores SHALL
+    maintain identical values after each update.
+    
+    Validates: Requirements 4.2
+    """
+    manager = DynamicManager()
+    manager.config = config
+    
+    # Ensure we're in simple mode
+    assert manager.config.mode == "simple"
+    
+    # Apply multiple updates
+    for new_min, new_max, new_threshold in updates:
+        manager.set_all_cores_config(
+            min_mv=new_min,
+            max_mv=new_max,
+            threshold=new_threshold
         )
         
-        errors = config.validate()
-        simple_errors = [e for e in errors if "simple_value" in e]
-        
-        assert len(simple_errors) > 0, f"Expert-only simple_value {value} accepted in safe mode"
+        # After each update, verify all cores are identical
+        for i in range(1, 4):
+            assert manager.config.cores[i].min_mv == manager.config.cores[0].min_mv, \
+                f"After update, Core {i} min_mv != Core 0 min_mv"
+            assert manager.config.cores[i].max_mv == manager.config.cores[0].max_mv, \
+                f"After update, Core {i} max_mv != Core 0 max_mv"
+            assert abs(manager.config.cores[i].threshold - manager.config.cores[0].threshold) < 1e-9, \
+                f"After update, Core {i} threshold != Core 0 threshold"
+
+
+def test_simple_mode_propagation_specific_case():
+    """Test specific case: Simple Mode propagates values to all cores."""
+    manager = DynamicManager()
+    
+    # Set up simple mode with different initial values per core
+    manager.config = DynamicManualConfig(
+        mode="simple",
+        cores=[
+            CoreConfig(core_id=0, min_mv=-50, max_mv=-25, threshold=60.0),
+            CoreConfig(core_id=1, min_mv=-40, max_mv=-20, threshold=55.0),
+            CoreConfig(core_id=2, min_mv=-35, max_mv=-18, threshold=52.0),
+            CoreConfig(core_id=3, min_mv=-45, max_mv=-22, threshold=58.0)
+        ],
+        version=1
+    )
+    
+    # Update all cores with new values
+    manager.set_all_cores_config(min_mv=-60, max_mv=-30, threshold=70.0)
+    
+    # Verify all cores now have identical values
+    for i in range(4):
+        assert manager.config.cores[i].min_mv == -60, \
+            f"Core {i} min_mv should be -60"
+        assert manager.config.cores[i].max_mv == -30, \
+            f"Core {i} max_mv should be -30"
+        assert manager.config.cores[i].threshold == 70.0, \
+            f"Core {i} threshold should be 70.0"

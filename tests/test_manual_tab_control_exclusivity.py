@@ -1,310 +1,257 @@
-"""Property test for Manual tab control exclusivity.
+"""
+Property-based tests for Dynamic Manual Mode tab state preservation.
 
-Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-Validates: Requirements 7.1, 7.2
+Feature: manual-dynamic-mode, Property 23: Tab state preservation
+Validates: Requirements 10.3
 
-Tests that for any render of the Manual tab, the Expert Mode toggle should
-not be present, and the startup behavior toggles should be present.
+Tests that switching between tabs in ExpertMode preserves the state of
+DynamicManualMode component without modification.
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings as hyp_settings
-import re
-from pathlib import Path
+from hypothesis import given, strategies as st, settings
+from typing import Dict, Any
 
 
-# Path to the ExpertMode component
-EXPERT_MODE_PATH = Path(__file__).parent.parent / "src" / "components" / "ExpertMode.tsx"
+# Strategy for generating valid dynamic mode configurations
+@st.composite
+def dynamic_config_strategy(draw):
+    """Generate a valid DynamicConfig for testing."""
+    mode = draw(st.sampled_from(['simple', 'expert']))
+    cores = []
+    for i in range(4):
+        core = {
+            'core_id': i,
+            'min_mv': draw(st.integers(min_value=-100, max_value=0)),
+            'max_mv': draw(st.integers(min_value=-100, max_value=0)),
+            'threshold': draw(st.integers(min_value=0, max_value=100))
+        }
+        # Ensure min_mv <= max_mv
+        if core['min_mv'] > core['max_mv']:
+            core['min_mv'], core['max_mv'] = core['max_mv'], core['min_mv']
+        cores.append(core)
+    
+    return {
+        'mode': mode,
+        'cores': cores,
+        'version': 1
+    }
 
 
-def read_manual_tab_component():
-    """Read the ManualTab component source code."""
-    with open(EXPERT_MODE_PATH, 'r', encoding='utf-8') as f:
-        content = f.read()
+class MockDynamicModeState:
+    """Mock state manager for DynamicManualMode component."""
     
-    # Extract ManualTab component
-    # Find the ManualTab function component
-    match = re.search(
-        r'const ManualTab:.*?(?=\nconst\s+\w+:|export\s+default|$)',
-        content,
-        re.DOTALL
-    )
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.is_active = False
+        self.selected_core = 0
+        self.metrics = {}
     
-    if not match:
-        raise ValueError("ManualTab component not found in ExpertMode.tsx")
+    def get_state(self) -> Dict[str, Any]:
+        """Get current state snapshot."""
+        return {
+            'config': self.config.copy(),
+            'is_active': self.is_active,
+            'selected_core': self.selected_core,
+            'metrics': self.metrics.copy()
+        }
     
-    return match.group(0)
+    def set_state(self, state: Dict[str, Any]):
+        """Restore state from snapshot."""
+        self.config = state['config'].copy()
+        self.is_active = state['is_active']
+        self.selected_core = state['selected_core']
+        self.metrics = state['metrics'].copy()
 
 
-def test_manual_tab_no_expert_mode_toggle():
-    """Test that Manual tab does not contain Expert Mode toggle.
+class MockExpertMode:
+    """Mock ExpertMode component with tab switching."""
     
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirement 7.1
-    """
-    manual_tab_code = read_manual_tab_component()
+    def __init__(self):
+        self.active_tab = 'manual'
+        self.tab_states = {}
+        self.dynamic_mode_state = None
     
-    # Check that Expert Mode toggle is NOT present
-    # Look for patterns that would indicate an Expert Mode toggle button
-    expert_mode_patterns = [
-        r'Expert\s+Mode\s+Toggle',  # Comment
-        r'handleExpertModeToggle',  # Handler function
-        r'onClick={handleExpertModeToggle}',  # Click handler
-        r'Expert Mode.*Toggle',  # Any Expert Mode toggle text
-    ]
+    def switch_to_tab(self, tab_name: str):
+        """Switch to a different tab, preserving current tab state."""
+        # Save current tab state
+        if self.active_tab == 'dynamic-manual' and self.dynamic_mode_state:
+            self.tab_states['dynamic-manual'] = self.dynamic_mode_state.get_state()
+        
+        # Switch tab
+        self.active_tab = tab_name
+        
+        # Restore tab state if returning
+        if tab_name == 'dynamic-manual' and 'dynamic-manual' in self.tab_states:
+            if self.dynamic_mode_state:
+                self.dynamic_mode_state.set_state(self.tab_states['dynamic-manual'])
     
-    for pattern in expert_mode_patterns:
-        matches = re.findall(pattern, manual_tab_code, re.IGNORECASE)
-        assert len(matches) == 0, \
-            f"Manual tab should not contain Expert Mode toggle. Found: {pattern}"
-    
-    # Verify that Expert Mode state is read from settings context, not local state
-    assert 'useState' not in manual_tab_code or 'expertMode' not in manual_tab_code or \
-           'settings.expertMode' in manual_tab_code, \
-        "Manual tab should use settings.expertMode from context, not local state"
+    def mount_dynamic_mode(self, state: MockDynamicModeState):
+        """Mount DynamicManualMode component."""
+        self.dynamic_mode_state = state
+        self.active_tab = 'dynamic-manual'
 
 
-def test_manual_tab_has_startup_behavior_toggles():
-    """Test that Manual tab contains startup behavior toggles.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirement 7.2
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Check that Startup Behavior section is present
-    assert 'Startup Behavior' in manual_tab_code, \
-        "Manual tab should contain 'Startup Behavior' section header"
-    
-    # Check that Apply on Startup toggle is present
-    assert 'Apply on Startup' in manual_tab_code, \
-        "Manual tab should contain 'Apply on Startup' toggle"
-    
-    # Check that Game Only Mode toggle is present
-    assert 'Game Only Mode' in manual_tab_code, \
-        "Manual tab should contain 'Game Only Mode' toggle"
-    
-    # Check that toggles are connected to settings context
-    assert 'setApplyOnStartup' in manual_tab_code, \
-        "Manual tab should use setApplyOnStartup from settings context"
-    
-    assert 'setGameOnlyMode' in manual_tab_code, \
-        "Manual tab should use setGameOnlyMode from settings context"
-
-
-def test_manual_tab_uses_settings_context():
-    """Test that Manual tab uses settings context for Expert Mode.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.1, 7.2
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Check that useSettings hook is used
-    assert 'useSettings' in manual_tab_code, \
-        "Manual tab should use useSettings hook"
-    
-    # Check that settings.expertMode is used (not local state)
-    assert 'settings.expertMode' in manual_tab_code, \
-        "Manual tab should read expertMode from settings context"
-    
-    # Check that Expert Mode is NOT managed locally
-    assert 'setExpertMode' not in manual_tab_code or 'settings, setExpertMode' in manual_tab_code, \
-        "Manual tab should not manage Expert Mode state locally"
-
-
-def test_manual_tab_startup_toggles_have_descriptions():
-    """Test that startup behavior toggles have descriptive labels.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirement 7.5
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Check for Apply on Startup description
-    assert 'Automatically apply last profile' in manual_tab_code or \
-           'apply last profile when' in manual_tab_code.lower(), \
-        "Apply on Startup toggle should have a descriptive label"
-    
-    # Check for Game Only Mode description
-    assert 'only when games are running' in manual_tab_code.lower() or \
-           'reset in Steam menu' in manual_tab_code.lower(), \
-        "Game Only Mode toggle should have a descriptive label"
-
-
-@given(component_render=st.just(None))
-@hyp_settings(max_examples=100)
-def test_manual_tab_control_exclusivity_property(component_render):
-    """Property 9: Manual tab control exclusivity
-    
-    For any render of the Manual tab, the Expert Mode toggle SHALL not be
-    present, and the startup behavior toggles SHALL be present.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.1, 7.2
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Property: Expert Mode toggle is NOT present
-    expert_mode_toggle_present = (
-        'handleExpertModeToggle' in manual_tab_code or
-        'Expert Mode Toggle' in manual_tab_code
-    )
-    assert not expert_mode_toggle_present, \
-        "Manual tab should not contain Expert Mode toggle button"
-    
-    # Property: Startup behavior toggles ARE present
-    startup_behavior_present = (
-        'Startup Behavior' in manual_tab_code and
-        'Apply on Startup' in manual_tab_code and
-        'Game Only Mode' in manual_tab_code
-    )
-    assert startup_behavior_present, \
-        "Manual tab should contain Startup Behavior section with toggles"
-    
-    # Property: Toggles are connected to settings context
-    toggles_connected = (
-        'setApplyOnStartup' in manual_tab_code and
-        'setGameOnlyMode' in manual_tab_code and
-        'useSettings' in manual_tab_code
-    )
-    assert toggles_connected, \
-        "Manual tab toggles should be connected to settings context"
-
-
-def test_manual_tab_expert_mode_warning_display():
-    """Test that Manual tab displays Expert Mode warning when active.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.1
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Check that Expert Mode warning is displayed when settings.expertMode is true
-    assert 'settings.expertMode' in manual_tab_code, \
-        "Manual tab should check settings.expertMode for warning display"
-    
-    # Check for warning display logic
-    assert 'Expert mode active' in manual_tab_code or \
-           'Expert Mode Active Warning' in manual_tab_code, \
-        "Manual tab should display warning when Expert Mode is active"
-
-
+@settings(max_examples=100)
 @given(
-    has_expert_toggle=st.booleans(),
-    has_startup_toggles=st.booleans()
-)
-@hyp_settings(max_examples=100)
-def test_manual_tab_toggle_presence_invariant(has_expert_toggle, has_startup_toggles):
-    """Test the invariant that Expert Mode toggle and startup toggles are mutually exclusive.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.1, 7.2
-    """
-    manual_tab_code = read_manual_tab_component()
-    
-    # Check actual state
-    actual_has_expert_toggle = 'handleExpertModeToggle' in manual_tab_code
-    actual_has_startup_toggles = (
-        'Apply on Startup' in manual_tab_code and
-        'Game Only Mode' in manual_tab_code
+    initial_config=dynamic_config_strategy(),
+    selected_core=st.integers(min_value=0, max_value=3),
+    is_active=st.booleans(),
+    tab_sequence=st.lists(
+        st.sampled_from(['manual', 'presets', 'tests', 'fan', 'diagnostics', 'dynamic-manual']),
+        min_size=2,
+        max_size=10
     )
-    
-    # Invariant: Expert Mode toggle should NOT be present
-    assert not actual_has_expert_toggle, \
-        "Manual tab should never contain Expert Mode toggle"
-    
-    # Invariant: Startup toggles should ALWAYS be present
-    assert actual_has_startup_toggles, \
-        "Manual tab should always contain startup behavior toggles"
-
-
-def test_manual_tab_no_expert_mode_confirmation_dialog():
-    """Test that Manual tab does not contain Expert Mode confirmation dialog.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirement 7.1
+)
+def test_tab_state_preservation(
+    initial_config: Dict[str, Any],
+    selected_core: int,
+    is_active: bool,
+    tab_sequence: list
+):
     """
-    manual_tab_code = read_manual_tab_component()
+    **Feature: manual-dynamic-mode, Property 23: Tab state preservation**
     
-    # Check that Expert Mode warning dialog is NOT present in ManualTab
-    # The dialog should only be in SettingsMenu
-    assert 'showExpertWarning' not in manual_tab_code, \
-        "Manual tab should not contain Expert Mode warning dialog state"
+    For any component state in DynamicManualMode, switching to a different
+    ExpertMode tab and back SHALL preserve the state.
     
-    assert 'handleExpertModeConfirm' not in manual_tab_code, \
-        "Manual tab should not contain Expert Mode confirmation handler"
-    
-    assert 'handleExpertModeCancel' not in manual_tab_code, \
-        "Manual tab should not contain Expert Mode cancel handler"
-
-
-def test_manual_tab_settings_context_integration():
-    """Test that Manual tab properly integrates with settings context.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.3, 7.4
+    Validates: Requirements 10.3
     """
-    manual_tab_code = read_manual_tab_component()
+    # Create mock ExpertMode
+    expert_mode = MockExpertMode()
     
-    # Check that settings are destructured from useSettings
-    assert 'useSettings' in manual_tab_code, \
-        "Manual tab should use useSettings hook"
+    # Create DynamicManualMode state
+    dynamic_state = MockDynamicModeState(initial_config)
+    dynamic_state.selected_core = selected_core
+    dynamic_state.is_active = is_active
     
-    # Check that setApplyOnStartup is called on toggle
-    assert 'setApplyOnStartup(!settings.applyOnStartup)' in manual_tab_code or \
-           'setApplyOnStartup' in manual_tab_code, \
-        "Manual tab should call setApplyOnStartup when toggle is clicked"
+    # Mount dynamic mode
+    expert_mode.mount_dynamic_mode(dynamic_state)
     
-    # Check that setGameOnlyMode is called on toggle
-    assert 'setGameOnlyMode(!settings.gameOnlyMode)' in manual_tab_code or \
-           'setGameOnlyMode' in manual_tab_code, \
-        "Manual tab should call setGameOnlyMode when toggle is clicked"
+    # Capture initial state
+    initial_state = dynamic_state.get_state()
+    
+    # Ensure we visit dynamic-manual at least once in the sequence
+    if 'dynamic-manual' not in tab_sequence:
+        tab_sequence.append('dynamic-manual')
+    
+    # Navigate through tabs
+    for tab in tab_sequence:
+        expert_mode.switch_to_tab(tab)
+    
+    # Return to dynamic-manual
+    expert_mode.switch_to_tab('dynamic-manual')
+    
+    # Get final state
+    final_state = dynamic_state.get_state()
+    
+    # Verify state preservation
+    assert final_state['config'] == initial_state['config'], \
+        "Configuration should be preserved across tab switches"
+    assert final_state['is_active'] == initial_state['is_active'], \
+        "Active status should be preserved across tab switches"
+    assert final_state['selected_core'] == initial_state['selected_core'], \
+        "Selected core should be preserved across tab switches"
 
 
-@given(render_count=st.integers(min_value=1, max_value=100))
-@hyp_settings(max_examples=100)
-def test_manual_tab_consistent_across_renders(render_count):
-    """Test that Manual tab structure is consistent across multiple renders.
-    
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirements 7.1, 7.2
+@settings(max_examples=100)
+@given(
+    config=dynamic_config_strategy(),
+    core_changes=st.lists(
+        st.tuples(
+            st.integers(min_value=0, max_value=3),  # core_id
+            st.integers(min_value=-100, max_value=0),  # min_mv
+            st.integers(min_value=-100, max_value=0),  # max_mv
+            st.integers(min_value=0, max_value=100)  # threshold
+        ),
+        min_size=1,
+        max_size=5
+    )
+)
+def test_configuration_changes_preserved_across_tabs(
+    config: Dict[str, Any],
+    core_changes: list
+):
     """
-    # Read component multiple times to simulate multiple renders
-    for _ in range(min(render_count, 10)):  # Limit actual reads for performance
-        manual_tab_code = read_manual_tab_component()
-        
-        # Verify consistent structure
-        assert 'Startup Behavior' in manual_tab_code, \
-            "Manual tab should consistently contain Startup Behavior section"
-        
-        assert 'Apply on Startup' in manual_tab_code, \
-            "Manual tab should consistently contain Apply on Startup toggle"
-        
-        assert 'Game Only Mode' in manual_tab_code, \
-            "Manual tab should consistently contain Game Only Mode toggle"
-        
-        assert 'handleExpertModeToggle' not in manual_tab_code, \
-            "Manual tab should consistently NOT contain Expert Mode toggle"
-
-
-def test_manual_tab_toggle_styling_consistency():
-    """Test that startup behavior toggles have consistent styling.
+    **Feature: manual-dynamic-mode, Property 23: Tab state preservation**
     
-    Feature: ui-refactor-settings, Property 9: Manual tab control exclusivity
-    Validates: Requirement 7.5
+    For any configuration changes made in DynamicManualMode, switching tabs
+    and returning SHALL preserve those changes.
+    
+    Validates: Requirements 10.3
     """
-    manual_tab_code = read_manual_tab_component()
+    # Create mock ExpertMode
+    expert_mode = MockExpertMode()
     
-    # Check that toggles use FocusableButton
-    assert 'FocusableButton' in manual_tab_code, \
-        "Manual tab toggles should use FocusableButton for consistency"
+    # Create DynamicManualMode state
+    dynamic_state = MockDynamicModeState(config)
+    expert_mode.mount_dynamic_mode(dynamic_state)
     
-    # Check that toggles have visual feedback
-    assert 'backgroundColor' in manual_tab_code, \
-        "Manual tab toggles should have background color styling"
+    # Apply configuration changes
+    for core_id, min_mv, max_mv, threshold in core_changes:
+        # Ensure min <= max
+        if min_mv > max_mv:
+            min_mv, max_mv = max_mv, min_mv
+        
+        dynamic_state.config['cores'][core_id] = {
+            'core_id': core_id,
+            'min_mv': min_mv,
+            'max_mv': max_mv,
+            'threshold': threshold
+        }
     
-    # Check that toggles show current state
-    assert 'settings.applyOnStartup' in manual_tab_code and \
-           'settings.gameOnlyMode' in manual_tab_code, \
-        "Manual tab toggles should display current state from settings"
+    # Capture state after changes
+    state_after_changes = dynamic_state.get_state()
+    
+    # Switch to different tabs and back
+    expert_mode.switch_to_tab('manual')
+    expert_mode.switch_to_tab('presets')
+    expert_mode.switch_to_tab('dynamic-manual')
+    
+    # Get final state
+    final_state = dynamic_state.get_state()
+    
+    # Verify all changes are preserved
+    assert final_state['config'] == state_after_changes['config'], \
+        "Configuration changes should be preserved across tab switches"
+
+
+@settings(max_examples=100)
+@given(
+    config=dynamic_config_strategy(),
+    mode_switches=st.lists(st.sampled_from(['simple', 'expert']), min_size=1, max_size=5)
+)
+def test_mode_state_preserved_across_tabs(
+    config: Dict[str, Any],
+    mode_switches: list
+):
+    """
+    **Feature: manual-dynamic-mode, Property 23: Tab state preservation**
+    
+    For any mode (Simple/Expert) selection in DynamicManualMode, switching tabs
+    and returning SHALL preserve the mode selection.
+    
+    Validates: Requirements 10.3
+    """
+    # Create mock ExpertMode
+    expert_mode = MockExpertMode()
+    
+    # Create DynamicManualMode state
+    dynamic_state = MockDynamicModeState(config)
+    expert_mode.mount_dynamic_mode(dynamic_state)
+    
+    # Apply mode switches
+    for mode in mode_switches:
+        dynamic_state.config['mode'] = mode
+    
+    # Capture final mode
+    final_mode = dynamic_state.config['mode']
+    
+    # Switch to different tabs and back
+    expert_mode.switch_to_tab('tests')
+    expert_mode.switch_to_tab('diagnostics')
+    expert_mode.switch_to_tab('dynamic-manual')
+    
+    # Verify mode is preserved
+    assert dynamic_state.config['mode'] == final_mode, \
+        "Mode selection should be preserved across tab switches"

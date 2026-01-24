@@ -32,3 +32,5 @@ export { SessionComparisonView } from "./SessionComparison";
 export { SessionHistoryContainer } from "./SessionHistoryContainer";
 
 export { DeckTuneApp } from "./DeckTuneApp";
+
+export { DynamicManualMode } from "./DynamicManualMode";

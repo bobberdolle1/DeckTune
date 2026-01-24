@@ -17,7 +17,7 @@
  * v3.1.19: Complete focus system refactor with FocusableButton
  */
 
-import { useState, useEffect, FC } from "react";
+import { useState, useEffect, FC, useCallback } from "react";
 import {
   ButtonItem,
   PanelSection,
@@ -25,6 +25,7 @@ import {
   SliderField,
   Focusable,
 } from "@decky/ui";
+import { call } from "@decky/api";
 import {
   FaSlidersH,
   FaList,
@@ -37,6 +38,7 @@ import {
   FaSpinner,
   FaExclamationTriangle,
   FaFan,
+  FaChartLine,
 } from "react-icons/fa";
 import { useDeckTune, usePlatformInfo } from "../context";
 import { useSettings } from "../context/SettingsContext";
@@ -44,12 +46,13 @@ import { PresetsTabNew } from "./PresetsTabNew";
 import { TestsTabNew } from "./TestsTabNew";
 import { FanTab } from "./FanTab";
 import { FocusableButton } from "./FocusableButton";
+import { DynamicManualMode } from "./DynamicManualMode";
 
 /**
  * Tab type for Expert Mode navigation.
- * Requirements: 7.1
+ * Requirements: 7.1, 10.1
  */
-export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics";
+export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics" | "dynamic-manual";
 
 interface TabConfig {
   id: ExpertTab;
@@ -59,6 +62,7 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { id: "manual", label: "Manual", icon: FaSlidersH },
+  { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
   { id: "presets", label: "Presets", icon: FaList },
   { id: "tests", label: "Tests", icon: FaVial },
   { id: "fan", label: "Fan", icon: FaFan },
@@ -145,7 +149,7 @@ const PanicDisableButton: FC = () => {
 
 /**
  * ExpertMode component - detailed controls for power users.
- * Requirements: 4.5, 7.1
+ * Requirements: 4.5, 7.1, 10.1, 10.2, 10.3, 10.4, 10.5
  */
 export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
   const [activeTab, setActiveTab] = useState<ExpertTab>(initialTab);
@@ -158,6 +162,39 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
     (window as any).__DECKTUNE_EXPERT_MODE_VERSION__ = "FOCUSABLE_BUTTON_V1";
   }, []);
 
+  /**
+   * Handle tab change with persistence.
+   * Requirements: 10.5
+   */
+  const handleTabChange = useCallback(async (tab: ExpertTab) => {
+    setActiveTab(tab);
+    
+    // Persist selected tab to settings
+    try {
+      await call("save_setting", "expert_mode_selected_tab", tab);
+      console.log("[ExpertMode] Selected tab persisted:", tab);
+    } catch (error) {
+      console.error("[ExpertMode] Failed to persist selected tab:", error);
+    }
+  }, []);
+
+  // Load persisted tab on mount
+  useEffect(() => {
+    const loadPersistedTab = async () => {
+      try {
+        const response = await call("load_setting", "expert_mode_selected_tab") as { success: boolean; value?: string };
+        if (response.success && response.value) {
+          setActiveTab(response.value as ExpertTab);
+          console.log("[ExpertMode] Loaded persisted tab:", response.value);
+        }
+      } catch (error) {
+        console.error("[ExpertMode] Failed to load persisted tab:", error);
+      }
+    };
+    
+    loadPersistedTab();
+  }, []);
+
   return (
     <PanelSection title="Expert Mode">
       {/* Panic Disable Button - Always visible at top (Requirement 4.5) */}
@@ -165,12 +202,13 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
 
       {/* Tab Navigation - always first in focus order */}
       <PanelSectionRow>
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       </PanelSectionRow>
 
       {/* Tab Content - key forces remount on tab change to reset focus */}
       <div key={activeTab}>
         {activeTab === "manual" && <ManualTab />}
+        {activeTab === "dynamic-manual" && <DynamicManualMode />}
         {activeTab === "presets" && <PresetsTabNew />}
         {activeTab === "tests" && <TestsTabNew />}
         {activeTab === "fan" && <FanTab />}

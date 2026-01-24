@@ -88,6 +88,169 @@ Dynamic Mode automatically adjusts undervolt values based on real-time CPU load,
 - Performance (fast adaptation)
 - Custom (user-defined load curves)
 
+#### Dynamic Manual Mode (NEW in v3.2.0)
+
+Dynamic Manual Mode provides granular per-core voltage curve control with real-time visualization, optimized for Steam Deck's QAM interface.
+
+**Features:**
+- **Per-Core Voltage Curves**: Configure independent voltage curves for each CPU core (0-3)
+  - MinimalValue: Conservative voltage at low CPU load (-100 to 0 mV)
+  - MaximumValue: Aggressive voltage at high CPU load (-100 to 0 mV)
+  - Threshold: CPU load percentage where transition occurs (0-100%)
+- **Simple Mode**: Apply identical settings to all cores simultaneously for quick configuration
+- **Expert Mode**: Fine-tune each core individually for maximum optimization
+- **Real-Time Visualization**: 
+  - Live voltage curve graphs with threshold markers
+  - Real-time metrics display (load, voltage, frequency, temperature)
+  - Time-series graphs with 60-point FIFO buffer
+  - Updates every 500ms when active
+- **QAM Optimized**: Compact UI designed to fit perfectly in Decky Loader's Quick Access Menu
+- **Gamepad Navigation**: Full Steam Deck controller support
+  - D-pad Up/Down: Switch between cores
+  - D-pad Left/Right: Navigate controls
+  - L1/R1: Adjust slider values
+  - A button: Activate buttons
+- **Safety Features**:
+  - Validation with min ≤ max enforcement
+  - Platform limit clamping (-100 to 0 mV)
+  - Dangerous configuration warnings
+  - Last Known Good (LKG) configuration backup
+  - Automatic rollback on errors
+- **Configuration Persistence**: 
+  - localStorage for instant loading
+  - Backend storage for cross-session persistence
+  - Safe defaults fallback
+
+**How to Use:**
+1. Open DeckTune → Expert Mode → Dynamic Manual tab
+2. Choose Simple Mode (all cores) or Expert Mode (per-core)
+3. Adjust voltage curve parameters with sliders
+4. View real-time curve visualization
+5. Click Apply to save configuration
+6. Click Start to activate dynamic voltage control
+7. Monitor real-time metrics and graphs
+
+**Documentation:**
+- [User Guide](docs/DYNAMIC_MANUAL_MODE_GUIDE.md) - Complete usage instructions
+- [API Reference](docs/DYNAMIC_MANUAL_MODE_API.md) - RPC methods and data structures
+- [Troubleshooting](docs/DYNAMIC_MANUAL_MODE_TROUBLESHOOTING.md) - Common issues and solutions
+- [QAM Optimization](docs/QAM_OPTIMIZATION.md) - UI design for Quick Access Menu
+- **Safety Validation**: Multi-layer validation prevents dangerous configurations
+- **Persistent Storage**: Configurations saved to localStorage and backend settings
+
+**How it works:**
+1. Define a voltage curve for each core using three parameters:
+   - **Minimal Value** (-100 to 0 mV): Voltage offset at low CPU load
+   - **Maximum Value** (-100 to 0 mV): Voltage offset at high CPU load
+   - **Threshold** (0-100%): CPU load percentage where transition occurs
+2. Below threshold: Applies Minimal Value (more aggressive undervolt)
+3. Above threshold: Linear interpolation from Minimal to Maximum Value
+4. System monitors CPU load every 500ms and applies appropriate voltage
+
+**Usage (Expert Mode → Dynamic Manual Tab):**
+
+**Simple Mode (Recommended for beginners):**
+1. Enable Simple Mode toggle
+2. Adjust three sliders:
+   - Minimal Value: Voltage at low load (e.g., -30mV)
+   - Maximum Value: Voltage at high load (e.g., -15mV)
+   - Threshold: Load transition point (e.g., 50%)
+3. Click "Apply" to save configuration
+4. Click "Start Dynamic Mode" to activate
+5. Monitor real-time metrics and voltage curve graph
+
+**Expert Mode (Per-core control):**
+1. Disable Simple Mode toggle
+2. Select a core using tabs (Core 0, Core 1, Core 2, Core 3)
+3. Adjust sliders for selected core
+4. Repeat for each core you want to configure
+5. Click "Apply" to save all configurations
+6. Click "Start Dynamic Mode" to activate
+7. Switch between cores to monitor individual metrics
+
+**Example Configuration:**
+
+*Balanced Profile (Simple Mode):*
+```
+Minimal Value: -30mV  (aggressive at idle)
+Maximum Value: -15mV  (safe under load)
+Threshold: 50%        (transition at medium load)
+```
+
+*Performance Profile (Expert Mode):*
+```
+Core 0: -35mV → -20mV @ 60%  (primary core, aggressive)
+Core 1: -30mV → -15mV @ 50%  (balanced)
+Core 2: -25mV → -10mV @ 40%  (conservative)
+Core 3: -25mV → -10mV @ 40%  (conservative)
+```
+
+**Gamepad Controls:**
+- **D-pad Up/Down**: Switch between cores (Expert Mode)
+- **D-pad Left/Right**: Navigate between sliders and buttons
+- **L1/R1**: Adjust slider values (±1mV or ±1%)
+- **A Button**: Activate focused button (Apply, Start, Stop)
+- **B Button**: Cancel/Go back
+
+**Safety Features:**
+- **Validation**: Prevents min > max configurations
+- **Clamping**: Enforces -100mV to 0mV voltage range
+- **Platform Limits**: Respects hardware-specific safety limits
+- **Warning Dialogs**: Alerts for potentially dangerous settings
+- **Reset to Safe Defaults**: One-click restore to -30mV/-15mV/50%
+- **Last Known Good**: Automatic recovery from unstable configurations
+
+**Real-Time Monitoring:**
+- **Voltage Curve Graph**: Visual representation of voltage vs. CPU load
+- **Current Operating Point**: Live marker showing current load and voltage
+- **Metrics Display**: 
+  - CPU Load (0-100%)
+  - Voltage Offset (mV)
+  - Frequency (MHz)
+  - Temperature (°C)
+- **Time-Series Graph**: Last 60 data points (30 seconds of history)
+- **Status Indicator**: Active/Inactive state with visual feedback
+
+**Configuration Persistence:**
+- Saved to localStorage for immediate access
+- Backed up to backend settings for cross-session persistence
+- Survives plugin reloads and system reboots
+- Separate storage for Simple Mode and Expert Mode configurations
+
+**Troubleshooting:**
+
+*Dynamic mode won't start:*
+- Verify all voltage values are between -100mV and 0mV
+- Ensure Minimal Value ≤ Maximum Value for all cores
+- Check that gymdeck3 daemon is running
+- Review backend logs for RPC errors
+
+*System becomes unstable:*
+- Click "Stop Dynamic Mode" immediately
+- Click "Reset to Safe Defaults" to restore conservative values
+- Reduce voltage aggressiveness (increase Minimal/Maximum values toward 0)
+- Increase Threshold to transition earlier under load
+
+*Metrics not updating:*
+- Verify Dynamic Mode status shows "Active"
+- Check that polling interval is 500ms (automatic)
+- Ensure gymdeck3 has permissions to read `/proc/stat` and hwmon
+- Restart plugin if metrics remain frozen
+
+*Configuration not persisting:*
+- Check browser localStorage is enabled
+- Verify backend settings file permissions: `~/homebrew/settings/decktune/settings.json`
+- Review backend logs for write errors
+- Try "Apply" button again to force save
+
+**Best Practices:**
+- Start with Simple Mode and safe defaults (-30mV/-15mV/50%)
+- Test stability with stress tests before aggressive values
+- Use Expert Mode only if you understand per-core behavior
+- Monitor temperature and frequency during initial testing
+- Create separate configurations for different workloads
+- Keep Maximum Value more conservative (closer to 0) for stability under load
+
 #### Panic Disable Button
 
 The red "Panic Disable" button is always available — instantly resets all values to 0.

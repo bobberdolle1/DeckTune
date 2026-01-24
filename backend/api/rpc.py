@@ -3097,6 +3097,21 @@ class DeckTuneRPC:
             logger.error(f"Failed to get setting '{key}': {e}")
             return {"success": False, "error": str(e)}
     
+    async def load_setting(self, key: str, default: Any = None) -> Dict[str, Any]:
+        """Alias for get_setting for consistency with frontend naming.
+        
+        Args:
+            key: Setting key
+            default: Default value if key doesn't exist
+            
+        Returns:
+            Dictionary with success status and value
+            
+        Feature: manual-dynamic-mode
+        Validates: Requirements 10.5
+        """
+        return await self.get_setting(key, default)
+    
     async def load_all_settings(self) -> Dict[str, Any]:
         """Load all settings from storage.
         
@@ -3704,3 +3719,151 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to update wizard preset options: {e}")
             return {"success": False, "error": str(e)}
+
+    # ==================== Manual Dynamic Mode ====================
+    # Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+    
+    def set_dynamic_mode_rpc(self, dynamic_rpc: "DynamicModeRPC") -> None:
+        """Set the dynamic mode RPC handler.
+        
+        Args:
+            dynamic_rpc: DynamicModeRPC instance
+        """
+        self.dynamic_mode_rpc = dynamic_rpc
+    
+    async def get_dynamic_config(self) -> Dict[str, Any]:
+        """Get current dynamic mode configuration for all cores.
+        
+        Returns:
+            Dictionary with success status and configuration data
+            
+        Validates: Requirements 9.1
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.get_dynamic_config()
+    
+    async def set_dynamic_core_config(
+        self,
+        core_id: int,
+        min_mv: int,
+        max_mv: int,
+        threshold: float
+    ) -> Dict[str, Any]:
+        """Update configuration for a specific core.
+        
+        Args:
+            core_id: Core identifier (0-3)
+            min_mv: Minimum undervolt value in mV (-100 to 0)
+            max_mv: Maximum undervolt value in mV (-100 to 0)
+            threshold: Load threshold percentage (0-100)
+            
+        Returns:
+            Dictionary with success status and any validation errors
+            
+        Validates: Requirements 9.2
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.set_dynamic_core_config(
+            core_id, min_mv, max_mv, threshold
+        )
+    
+    async def get_dynamic_curve_data(self, core_id: int) -> Dict[str, Any]:
+        """Get voltage curve data for visualization.
+        
+        Args:
+            core_id: Core identifier (0-3)
+            
+        Returns:
+            Dictionary with success status and curve points
+            
+        Validates: Requirements 9.3
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.get_dynamic_curve_data(core_id)
+    
+    async def start_dynamic_mode(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start dynamic voltage adjustment with the provided configuration.
+        
+        Args:
+            config: Configuration dictionary with mode and cores data
+            
+        Returns:
+            Dictionary with success status
+            
+        Validates: Requirements 9.5, 5.1
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.start_dynamic_mode(config)
+    
+    async def stop_dynamic_mode(self) -> Dict[str, Any]:
+        """Stop dynamic voltage adjustment.
+        
+        Returns:
+            Dictionary with success status
+            
+        Validates: Requirements 5.3
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.stop_dynamic_mode()
+    
+    async def get_core_metrics(self, core_id: int) -> Dict[str, Any]:
+        """Get current metrics for a specific core.
+        
+        Args:
+            core_id: Core identifier (0-3)
+            
+        Returns:
+            Dictionary with success status and metrics
+            
+        Validates: Requirements 9.4
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.get_core_metrics(core_id)
+    
+    async def set_all_cores_config(
+        self,
+        min_mv: int,
+        max_mv: int,
+        threshold: float
+    ) -> Dict[str, Any]:
+        """Update configuration for all cores (Simple Mode).
+        
+        Args:
+            min_mv: Minimum undervolt value in mV
+            max_mv: Maximum undervolt value in mV
+            threshold: Load threshold percentage
+            
+        Returns:
+            Dictionary with success status
+            
+        Validates: Requirements 4.2, 4.3, 7.1
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.set_all_cores_config(min_mv, max_mv, threshold)
+    
+    async def get_platform_limits(self) -> Dict[str, Any]:
+        """Get platform-specific voltage limits.
+        
+        Returns:
+            Dictionary with success status and limits
+            
+        Validates: Requirements 7.2, 7.3
+        """
+        if not hasattr(self, 'dynamic_mode_rpc') or not self.dynamic_mode_rpc:
+            return {"success": False, "error": "Dynamic mode not initialized"}
+        
+        return await self.dynamic_mode_rpc.get_platform_limits()

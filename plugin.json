@@ -1,7 +1,7 @@
 {
   "name": "DeckTune",
   "author": "bobberdolle1",
-  "version": "3.1.31",
+  "version": "3.2.0",
   "api_version": 1,
   "flags": ["root"],
   "publish": {
@@ -17,11 +17,16 @@
       "safety",
       "stress-test",
       "dynamic-mode",
+      "dynamic-manual-mode",
+      "per-core-control",
+      "voltage-curves",
+      "real-time-monitoring",
       "rust",
       "fan-control",
-      "wizard-mode"
+      "wizard-mode",
+      "qam-optimized"
     ],
-    "description": "Automated undervolting and tuning solution for Steam Deck with safety features, wizard mode, autotune, dynamic mode (gymdeck3), fan control with custom curves, and stress testing.",
+    "description": "Advanced undervolting and tuning solution for Steam Deck with per-core voltage curves, real-time visualization, wizard mode, autotune, dynamic mode (gymdeck3), fan control, and comprehensive safety features. QAM-optimized UI with full gamepad support.",
     "image": "https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"
   }
 }
