@@ -2,6 +2,38 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.1.31] - 2026-01-24
+
+### Fixed
+- **Wizard Mode Critical Fixes** — Resolved low undervolt values and persistence issues
+  - **Starting point increased** — Now starts at -30mV instead of -10mV for more aggressive initial testing
+  - **Search algorithm fixed** — After failure, stops searching instead of continuing to more aggressive values
+  - **Safety margin corrected** — Now adds margin to make values more conservative (was subtracting, making them more aggressive)
+  - **Automatic persistence** — Wizard results now auto-enable apply_on_startup to prevent values from resetting on plugin close
+  - **Failure recovery** — After initial failure, steps back to less aggressive values instead of continuing down
+- **Expert Mode Game Only Mode Integration** — Fixed Expert Mode to respect Game Only Mode setting
+  - **Game state awareness** — apply_undervolt now checks if game is running before applying values
+  - **Deferred application** — When Game Only Mode enabled and no game running, values are saved but not applied
+  - **Automatic application** — Values automatically apply when game starts via GameOnlyModeController
+  - **Status feedback** — Returns deferred status and reason when values saved but not applied
+
+### Technical Details
+- **Backend** (`backend/tuning/wizard_session.py`):
+  - Line 697: Changed initial offset from -10mV to -30mV
+  - Line 815-837: Fixed failure handling to stop or step back instead of continuing down
+  - Line 835: Fixed safety margin calculation: `recommended = max_stable + safety_margin` (was subtracting)
+- **Backend** (`backend/api/rpc.py`):
+  - `apply_wizard_result()`: Auto-persist apply_on_startup setting when enabled
+  - `apply_undervolt()`: Check game_only_mode setting and game state before applying
+  - Deferred application when Game Only Mode enabled and no game running
+  - Prevents values from resetting when plugin closes/restarts
+
+### Algorithm Changes
+- **Old behavior**: Start at -10mV → if fail, try -15mV, -20mV... → find nothing stable → return 0mV
+- **New behavior**: Start at -30mV → if pass, try -35mV, -40mV... → if fail, stop and use last stable value
+- **Safety margin**: -50mV stable + 5mV margin = -45mV recommended (more conservative)
+- **Game Only Mode**: Values saved to settings but only applied when game is running
+
 ## [3.1.28] - 2026-01-20
 
 ### Fixed

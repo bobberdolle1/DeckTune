@@ -229,6 +229,9 @@ class DeckTuneRPC:
     ) -> Dict[str, Any]:
         """Apply undervolt values with optional delay and detailed diagnostics.
         
+        Respects Game Only Mode setting - if enabled, values are saved but only
+        applied when a game is running.
+        
         Args:
             cores: List of 4 undervolt values (positive values will be negated)
             timeout: Delay in seconds before applying (0 for immediate)
@@ -237,7 +240,7 @@ class DeckTuneRPC:
             Dictionary with success status, applied cores, and diagnostics on error
             
         Feature: decktune-critical-fixes
-        Validates: Requirements 1.2, 1.5
+        Validates: Requirements 1.2, 1.5, 5.1, 5.2
         """
         logger.info(f"Applying undervolt with values: {cores}, timeout: {timeout}")
         
@@ -282,31 +285,76 @@ class DeckTuneRPC:
         
         logger.debug(f"Applying clamped values: {clamped_cores} (original: {cores})")
         
-        success, error = await self.ryzenadj.apply_values_async(clamped_cores)
+        # CRITICAL FIX: Check if Game Only Mode is enabled
+        game_only_mode_enabled = False
+        game_is_running = False
         
-        if success:
-            self.settings.setSetting("cores", clamped_cores)
-            # CRITICAL FIX: Save to lkg_cores so values persist after plugin closes
-            self.settings.setSetting("lkg_cores", clamped_cores)
-            self.settings.setSetting("lkg_timestamp", datetime.now().isoformat())
-            self.settings.setSetting("status", "enabled")
-            await self.event_emitter.emit_status("enabled")
-            logger.info(f"Undervolt applied successfully: {clamped_cores}")
+        if hasattr(self, '_settings_manager') and self._settings_manager:
+            game_only_mode_enabled = self._settings_manager.get_setting("game_only_mode", False)
+            logger.debug(f"Game Only Mode enabled: {game_only_mode_enabled}")
+        
+        if game_only_mode_enabled and hasattr(self, '_game_only_mode_controller'):
+            status = self._game_only_mode_controller.get_status()
+            game_is_running = status.get("game_running", False)
+            logger.debug(f"Game running: {game_is_running}")
+        
+        # Save values to settings first (always save, regardless of game state)
+        self.settings.setSetting("cores", clamped_cores)
+        self.settings.setSetting("lkg_cores", clamped_cores)
+        self.settings.setSetting("lkg_timestamp", datetime.now().isoformat())
+        
+        # Determine if we should apply now or defer to GameOnlyModeController
+        should_apply_now = True
+        deferred_reason = None
+        
+        if game_only_mode_enabled:
+            if game_is_running:
+                # Game is running, apply immediately
+                logger.info("Game Only Mode enabled and game is running - applying immediately")
+                should_apply_now = True
+            else:
+                # No game running, defer application
+                logger.info("Game Only Mode enabled but no game running - values saved, will apply on next game start")
+                should_apply_now = False
+                deferred_reason = "Game Only Mode enabled - values will apply when game starts"
+        
+        if should_apply_now:
+            # Apply values via ryzenadj
+            success, error = await self.ryzenadj.apply_values_async(clamped_cores)
+            
+            if success:
+                self.settings.setSetting("status", "enabled")
+                await self.event_emitter.emit_status("enabled")
+                logger.info(f"Undervolt applied successfully: {clamped_cores}")
+                return {
+                    "success": True,
+                    "cores": clamped_cores,
+                    "commands_executed": self.ryzenadj.get_last_commands(),
+                    "game_only_mode": game_only_mode_enabled,
+                    "applied_immediately": True
+                }
+            else:
+                await self.event_emitter.emit_status("error")
+                logger.error(f"Failed to apply undervolt: {error}")
+                
+                # Return detailed diagnostics on failure
+                return {
+                    "success": False,
+                    "error": error,
+                    "diagnostics": diagnostics,
+                    "commands_executed": self.ryzenadj.get_last_commands()
+                }
+        else:
+            # Values saved but not applied (deferred to game start)
+            self.settings.setSetting("status", "deferred")
+            await self.event_emitter.emit_status("deferred")
+            logger.info(f"Undervolt values saved but not applied: {clamped_cores}")
             return {
                 "success": True,
                 "cores": clamped_cores,
-                "commands_executed": self.ryzenadj.get_last_commands()
-            }
-        else:
-            await self.event_emitter.emit_status("error")
-            logger.error(f"Failed to apply undervolt: {error}")
-            
-            # Return detailed diagnostics on failure
-            return {
-                "success": False,
-                "error": error,
-                "diagnostics": diagnostics,
-                "commands_executed": self.ryzenadj.get_last_commands()
+                "game_only_mode": True,
+                "applied_immediately": False,
+                "deferred_reason": deferred_reason
             }
     
     async def disable_undervolt(self) -> Dict[str, Any]:
@@ -3502,6 +3550,12 @@ class DeckTuneRPC:
                     game_only_mode=game_only_mode
                 )
                 logger.info(f"Saved wizard preset: {preset_id}")
+            
+            # CRITICAL FIX: Auto-persist apply_on_startup setting to prevent values from resetting on plugin close
+            if apply_on_startup and hasattr(self, 'settings_manager') and self.settings_manager:
+                self.settings_manager.save_setting("apply_on_startup", True)
+                self.settings_manager.save_setting("last_active_profile", preset_id)
+                logger.info(f"Enabled apply_on_startup and set last_active_profile to {preset_id}")
             
             return {
                 "success": True,

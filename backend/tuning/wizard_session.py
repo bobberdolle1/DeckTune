@@ -736,8 +736,9 @@ class WizardSession:
         
         logger.info(f"[WIZARD] Starting step-down search for {domain}: step_size={step_size}mV, safety_limit={safety_limit}mV")
         
-        # Start at -10mV
-        self._current_offset = -10
+        # CRITICAL FIX: Start at -30mV instead of -10mV for more aggressive initial testing
+        # Most Steam Decks can handle -30mV easily, starting too conservative wastes time
+        self._current_offset = -30
         self._last_stable_offset = 0
         self._consecutive_failures = 0
         
@@ -817,22 +818,28 @@ class WizardSession:
                 self._consecutive_failures = 0
                 logger.info(f"✓ {self._current_offset}mV stable on all cores")
                 
-                # Step down (more negative)
+                # Step down (more negative) to find the limit
                 self._current_offset -= step_size
                 
             else:
-                # Failure - increment counter but KEEP SEARCHING
+                # Failure - stop searching, we found the limit
                 self._consecutive_failures += 1
                 logger.info(f"✗ {self._current_offset}mV failed (consecutive: {self._consecutive_failures})")
                 
-                # CRITICAL FIX: Don't stop at 3 failures, continue searching
-                # Only stop if we've tested 10+ offsets without finding anything stable
-                if self._iterations > 10 and self._last_stable_offset == 0:
-                    logger.info("[WIZARD] Tested 10+ offsets with no stable result, stopping search")
+                # CRITICAL FIX: Stop after first failure instead of continuing down
+                # The last stable value is already recorded, no need to keep testing more aggressive values
+                if self._last_stable_offset != 0:
+                    logger.info(f"[WIZARD] Found stability limit, last stable: {self._last_stable_offset}mV")
                     break
                 
-                # Try one more step down
-                self._current_offset -= step_size
+                # If no stable value found yet, try stepping UP (less negative) to find a stable point
+                if self._iterations > 5:
+                    logger.info("[WIZARD] No stable values found after 5 iterations, stopping search")
+                    break
+                
+                # Try less aggressive value (step up by half the step size)
+                self._current_offset += (step_size // 2)
+                logger.info(f"[WIZARD] Stepping back to less aggressive value: {self._current_offset}mV")
         
         return self._last_stable_offset
     
@@ -940,9 +947,10 @@ class WizardSession:
                 logger.info(f"Starting search for domain: {domain}")
                 max_stable = await self._run_step_down_search(domain)
                 
-                # Apply safety margin
+                # CRITICAL FIX: Apply safety margin in correct direction (ADD to make less aggressive)
+                # Example: max_stable = -50mV, safety_margin = 5mV → recommended = -45mV (safer)
                 safety_margin = config.get_safety_margin()
-                recommended = max_stable - safety_margin  # CRITICAL FIX: subtract margin (more negative)
+                recommended = max_stable + safety_margin  # Add margin to make it less negative (more conservative)
                 final_offsets[domain] = recommended
                 
                 logger.info(f"[WIZARD] {domain}: max_stable={max_stable}mV, safety_margin={safety_margin}mV, recommended={recommended}mV")
