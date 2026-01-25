@@ -1,0 +1,32 @@
+{
+  "name": "DeckTune",
+  "author": "bobberdolle1",
+  "version": "3.3.0",
+  "api_version": 1,
+  "flags": ["root"],
+  "publish": {
+    "tags": [
+      "root",
+      "undervolt",
+      "autotune",
+      "performance",
+      "temperature",
+      "ryzenadj",
+      "curve optimizer",
+      "battery-saving",
+      "safety",
+      "stress-test",
+      "dynamic-mode",
+      "dynamic-manual-mode",
+      "per-core-control",
+      "voltage-curves",
+      "real-time-monitoring",
+      "rust",
+      "fan-control",
+      "wizard-mode",
+      "qam-optimized"
+    ],
+    "description": "Advanced undervolting and tuning solution for Steam Deck with per-core voltage curves, real-time visualization, wizard mode, autotune, dynamic mode (gymdeck3), fan control, and comprehensive safety features. QAM-optimized UI with full gamepad support.",
+    "image": "https://raw.githubusercontent.com/bobberdolle1/DeckTune/main/assets/preview.jpg"
+  }
+}
