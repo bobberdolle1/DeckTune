@@ -185,6 +185,12 @@ export interface State {
   
   // Binary availability (for SteamOS compatibility warnings)
   missingBinaries: string[];
+  
+  // Frequency wizard state (new in v3.2)
+  frequencyModeEnabled: boolean;
+  frequencyCurves: Record<number, FrequencyCurve>; // Keyed by core_id
+  frequencyWizardProgress: FrequencyWizardProgress | null;
+  isFrequencyWizardRunning: boolean;
 }
 
 /**
@@ -397,4 +403,55 @@ export interface SessionComparison {
     avg_power_w: number;
     estimated_battery_saved_wh: number;
   };
+}
+
+/**
+ * Frequency point in a frequency-voltage curve.
+ * Requirements: 1.3
+ */
+export interface FrequencyPoint {
+  frequency_mhz: number;    // CPU frequency in MHz
+  voltage_mv: number;       // Voltage offset in mV (negative)
+  stable: boolean;          // Whether this point passed stability test
+  test_duration: number;    // Duration tested in seconds
+  timestamp: number;        // Unix timestamp when tested
+}
+
+/**
+ * Frequency-voltage curve for a CPU core.
+ * Requirements: 1.3, 1.5, 2.2
+ */
+export interface FrequencyCurve {
+  core_id: number;          // CPU core ID
+  points: FrequencyPoint[]; // Frequency-voltage points
+  created_at: number;       // Unix timestamp
+  wizard_config: FrequencyWizardConfig; // Configuration used to generate
+}
+
+/**
+ * Frequency wizard configuration.
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
+ */
+export interface FrequencyWizardConfig {
+  freq_start: number;       // Starting frequency in MHz (400-3500)
+  freq_end: number;         // Ending frequency in MHz (> freq_start)
+  freq_step: number;        // Frequency step in MHz (50-500)
+  test_duration: number;    // Test duration per frequency in seconds (10-120)
+  voltage_start: number;    // Starting voltage offset in mV (-100 to 0)
+  voltage_step: number;     // Voltage step in mV (1-10)
+  safety_margin: number;    // Safety margin in mV (0-20)
+}
+
+/**
+ * Frequency wizard progress data.
+ * Requirements: 4.1, 4.2, 4.3, 4.4
+ */
+export interface FrequencyWizardProgress {
+  running: boolean;         // Is wizard currently running?
+  current_frequency: number; // Current frequency being tested (MHz)
+  current_voltage: number;  // Current voltage being tested (mV)
+  progress_percent: number; // Progress percentage (0-100)
+  estimated_remaining: number; // Estimated time remaining in seconds
+  completed_points: number; // Number of frequency points completed
+  total_points: number;     // Total number of frequency points to test
 }

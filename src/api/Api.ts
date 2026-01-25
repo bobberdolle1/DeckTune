@@ -30,6 +30,9 @@ import {
   BenchmarkResult,
   Session,
   SessionComparison,
+  FrequencyWizardConfig,
+  FrequencyWizardProgress,
+  FrequencyCurve,
 } from "./types";
 
 // Simple EventEmitter implementation
@@ -156,6 +159,8 @@ export class Api extends SimpleEventEmitter {
     addEventListener("binning_error", this.onBinningError.bind(this));
     addEventListener("profile_changed", this.onProfileChanged.bind(this));
     addEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
+    addEventListener("frequency_wizard_progress", this.onFrequencyWizardProgress.bind(this));
+    addEventListener("frequency_wizard_complete", this.onFrequencyWizardComplete.bind(this));
 
     if (this.state.settings.isRunAutomatically && DFL.Router.MainRunningApp) {
       return await this.handleMainRunningApp();
@@ -334,6 +339,40 @@ export class Api extends SimpleEventEmitter {
     const newSamples = [...filteredSamples, sample].slice(-MAX_SAMPLES);
     
     this.setState({ telemetrySamples: newSamples });
+  }
+
+  /**
+   * Handle frequency wizard progress events from backend.
+   * Requirements: 4.1, 4.2, 4.3, 4.4
+   */
+  private onFrequencyWizardProgress(progress: FrequencyWizardProgress): void {
+    this.setState({ 
+      frequencyWizardProgress: progress,
+      isFrequencyWizardRunning: progress.running,
+    });
+  }
+
+  /**
+   * Handle frequency wizard complete events from backend.
+   * Requirements: 1.4
+   */
+  private onFrequencyWizardComplete(result: { 
+    success: boolean; 
+    curves?: Record<number, FrequencyCurve>;
+    error?: string;
+  }): void {
+    if (result.success && result.curves) {
+      this.setState({
+        frequencyCurves: result.curves,
+        isFrequencyWizardRunning: false,
+        frequencyWizardProgress: null,
+      });
+    } else {
+      this.setState({
+        isFrequencyWizardRunning: false,
+        frequencyWizardProgress: null,
+      });
+    }
   }
 
   /**
@@ -1279,6 +1318,187 @@ export class Api extends SimpleEventEmitter {
     return await call("compare_sessions", id1, id2) as SessionComparison | null;
   }
 
+  // ==================== Frequency Wizard Methods ====================
+  // Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7
+
+  /**
+   * Start frequency wizard to generate voltage curve.
+   * Requirements: 11.1
+   * 
+   * @param config - Wizard configuration parameters
+   * @returns Promise with success status and session info
+   */
+  async startFrequencyWizard(config: FrequencyWizardConfig): Promise<{
+    success: boolean;
+    session_id?: string;
+    estimated_duration?: number;
+    error?: string;
+  }> {
+    const result = await call("start_frequency_wizard", config) as {
+      success: boolean;
+      session_id?: string;
+      estimated_duration?: number;
+      error?: string;
+    };
+    
+    if (result.success) {
+      this.setState({
+        isFrequencyWizardRunning: true,
+        frequencyWizardProgress: null,
+      });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get current frequency wizard progress.
+   * Requirements: 11.2
+   * 
+   * Should be polled at 1-second intervals while wizard is running.
+   * 
+   * @returns Current wizard progress or null if not running
+   */
+  async getFrequencyWizardProgress(): Promise<FrequencyWizardProgress | null> {
+    const progress = await call("get_frequency_wizard_progress") as FrequencyWizardProgress | null;
+    
+    if (progress) {
+      this.setState({ frequencyWizardProgress: progress });
+      
+      // Update running state based on progress
+      if (!progress.running && this.state.isFrequencyWizardRunning) {
+        this.setState({ isFrequencyWizardRunning: false });
+      }
+    } else {
+      this.setState({ 
+        frequencyWizardProgress: null,
+        isFrequencyWizardRunning: false,
+      });
+    }
+    
+    return progress;
+  }
+
+  /**
+   * Cancel running frequency wizard.
+   * Requirements: 11.3
+   * 
+   * Restores original CPU governor and voltage settings.
+   * 
+   * @returns Promise with success status
+   */
+  async cancelFrequencyWizard(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const result = await call("cancel_frequency_wizard") as {
+      success: boolean;
+      error?: string;
+    };
+    
+    if (result.success) {
+      this.setState({
+        isFrequencyWizardRunning: false,
+        frequencyWizardProgress: null,
+      });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get frequency curve for a specific core.
+   * Requirements: 11.4
+   * 
+   * @param coreId - CPU core ID (0-based)
+   * @returns Frequency curve or null if not found
+   */
+  async getFrequencyCurve(coreId: number): Promise<FrequencyCurve | null> {
+    const curve = await call("get_frequency_curve", coreId) as FrequencyCurve | null;
+    
+    if (curve) {
+      // Update local state
+      const curves = { ...this.state.frequencyCurves };
+      curves[coreId] = curve;
+      this.setState({ frequencyCurves: curves });
+    }
+    
+    return curve;
+  }
+
+  /**
+   * Apply frequency curves to cores.
+   * Requirements: 11.5
+   * 
+   * Validates curves before application.
+   * 
+   * @param curves - Map of core_id to FrequencyCurve
+   * @returns Promise with success status
+   */
+  async applyFrequencyCurve(curves: Record<number, FrequencyCurve>): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const result = await call("apply_frequency_curve", curves) as {
+      success: boolean;
+      error?: string;
+    };
+    
+    if (result.success) {
+      this.setState({ frequencyCurves: curves });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Enable frequency-based voltage control mode.
+   * Requirements: 11.6
+   * 
+   * Activates the frequency voltage controller in gymdeck3.
+   * 
+   * @returns Promise with success status
+   */
+  async enableFrequencyMode(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const result = await call("enable_frequency_mode") as {
+      success: boolean;
+      error?: string;
+    };
+    
+    if (result.success) {
+      this.setState({ frequencyModeEnabled: true });
+    }
+    
+    return result;
+  }
+
+  /**
+   * Disable frequency-based voltage control mode.
+   * Requirements: 11.7
+   * 
+   * Returns to load-based voltage control.
+   * 
+   * @returns Promise with success status
+   */
+  async disableFrequencyMode(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    const result = await call("disable_frequency_mode") as {
+      success: boolean;
+      error?: string;
+    };
+    
+    if (result.success) {
+      this.setState({ frequencyModeEnabled: false });
+    }
+    
+    return result;
+  }
+
   // ==================== Fan Control Methods ====================
 
   /**
@@ -1362,6 +1582,8 @@ export class Api extends SimpleEventEmitter {
     removeEventListener("binning_error", this.onBinningError.bind(this));
     removeEventListener("profile_changed", this.onProfileChanged.bind(this));
     removeEventListener("telemetry_sample", this.onTelemetrySample.bind(this));
+    removeEventListener("frequency_wizard_progress", this.onFrequencyWizardProgress.bind(this));
+    removeEventListener("frequency_wizard_complete", this.onFrequencyWizardComplete.bind(this));
   }
 }
 

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeckTune Plugin Preview</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #root {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .preview-header {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .preview-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .preview-header p {
+            margin: 0;
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="preview-header">
+            <h1>DeckTune Plugin Preview</h1>
+            <p>Frontend build verification - Check console for errors</p>
+        </div>
+        <div id="plugin-container"></div>
+    </div>
+
+    <script>
+        // Mock Decky globals
+        window.SP_REACT = React;
+        window.SP_REACTDOM = ReactDOM;
+        
+        // Mock Decky Frontend Library (DFL)
+        window.DFL = {
+            PanelSection: ({ title, children }) => {
+                return React.createElement('div', { 
+                    style: { 
+                        background: '#2a2a2a', 
+                        padding: '15px', 
+                        borderRadius: '8px',
+                        marginBottom: '10px'
+                    }
+                }, [
+                    title && React.createElement('h3', { 
+                        key: 'title',
+                        style: { margin: '0 0 10px 0', fontSize: '18px' }
+                    }, title),
+                    React.createElement('div', { key: 'content' }, children)
+                ]);
+            },
+            PanelSectionRow: ({ children }) => {
+                return React.createElement('div', { 
+                    style: { padding: '8px 0' }
+                }, children);
+            },
+            ButtonItem: ({ children, onClick }) => {
+                return React.createElement('button', {
+                    onClick,
+                    style: {
+                        background: '#0066cc',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        width: '100%'
+                    }
+                }, children);
+            },
+            SliderField: ({ label, value, min, max, onChange }) => {
+                return React.createElement('div', {
+                    style: { marginBottom: '15px' }
+                }, [
+                    React.createElement('label', { 
+                        key: 'label',
+                        style: { display: 'block', marginBottom: '5px', fontSize: '14px' }
+                    }, `${label}: ${value}`),
+                    React.createElement('input', {
+                        key: 'slider',
+                        type: 'range',
+                        min,
+                        max,
+                        value,
+                        onChange: (e) => onChange(parseInt(e.target.value)),
+                        style: { width: '100%' }
+                    })
+                ]);
+            },
+            ToggleField: ({ label, checked, onChange }) => {
+                return React.createElement('div', {
+                    style: { 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 0'
+                    }
+                }, [
+                    React.createElement('span', { key: 'label' }, label),
+                    React.createElement('input', {
+                        key: 'toggle',
+                        type: 'checkbox',
+                        checked,
+                        onChange: (e) => onChange(e.target.checked),
+                        style: { width: '40px', height: '20px' }
+                    })
+                ]);
+            }
+        };
+
+        console.log('[Preview] Decky mocks initialized');
+        console.log('[Preview] Build verification ready');
+    </script>
+
+    <script type="module" src="dist/index.js"></script>
+</body>
+</html>

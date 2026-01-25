@@ -76,11 +76,12 @@ await manager.on_power_mode_change("battery")  # Unplugged from AC
 
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable, TYPE_CHECKING
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
 from .context import ContextCondition, SystemContext, ContextMatcher
+from ..tuning.frequency_curve import FrequencyCurve
 
 if TYPE_CHECKING:
     from ..core.ryzenadj import RyzenadjWrapper
@@ -100,16 +101,18 @@ class GameProfile:
         cores: Undervolt values for each core [core0, core1, core2, core3] in mV
         dynamic_enabled: Whether dynamic mode is enabled for this profile
         dynamic_config: Dynamic mode configuration (if dynamic_enabled is True)
+        frequency_curves: Optional frequency curves for each core (dict mapping core_id to FrequencyCurve)
         created_at: ISO timestamp when profile was created
         last_used: ISO timestamp when profile was last applied (None if never used)
     
-    Requirements: 3.1
+    Requirements: 3.1, 8.1
     """
     app_id: int
     name: str
     cores: List[int]
     dynamic_enabled: bool = False
     dynamic_config: Optional[Dict[str, Any]] = None
+    frequency_curves: Optional[Dict[int, Dict[str, Any]]] = None  # Serialized FrequencyCurve data
     created_at: str = ""
     last_used: Optional[str] = None
     
@@ -126,6 +129,7 @@ class GameProfile:
             "cores": self.cores,
             "dynamic_enabled": self.dynamic_enabled,
             "dynamic_config": self.dynamic_config,
+            "frequency_curves": self.frequency_curves,
             "created_at": self.created_at,
             "last_used": self.last_used,
         }
@@ -146,6 +150,7 @@ class GameProfile:
             cores=data.get("cores", [0, 0, 0, 0]),
             dynamic_enabled=data.get("dynamic_enabled", False),
             dynamic_config=data.get("dynamic_config"),
+            frequency_curves=data.get("frequency_curves"),
             created_at=data.get("created_at", ""),
             last_used=data.get("last_used"),
         )
@@ -185,6 +190,32 @@ class GameProfile:
         if self.dynamic_enabled and self.dynamic_config is None:
             errors.append("dynamic_config is required when dynamic_enabled is True")
         
+        # Validate frequency_curves if present
+        if self.frequency_curves is not None:
+            if not isinstance(self.frequency_curves, dict):
+                errors.append("frequency_curves must be a dictionary")
+            else:
+                for core_id, curve_data in self.frequency_curves.items():
+                    try:
+                        # Validate that core_id is an integer
+                        core_id_int = int(core_id)
+                        if core_id_int < 0 or core_id_int > 3:
+                            errors.append(f"Invalid core_id {core_id_int} in frequency_curves")
+                        
+                        # Validate curve data structure
+                        if not isinstance(curve_data, dict):
+                            errors.append(f"Curve data for core {core_id} must be a dictionary")
+                            continue
+                        
+                        # Try to deserialize and validate the curve
+                        try:
+                            curve = FrequencyCurve.from_dict(curve_data)
+                            curve.validate()
+                        except (KeyError, ValueError) as e:
+                            errors.append(f"Invalid frequency curve for core {core_id}: {str(e)}")
+                    except (ValueError, TypeError) as e:
+                        errors.append(f"Invalid core_id '{core_id}' in frequency_curves: {str(e)}")
+        
         return errors
     
     def is_valid(self) -> bool:
@@ -202,8 +233,9 @@ class ContextualGameProfile(GameProfile):
     
     Attributes:
         conditions: Context conditions for activation (battery, power mode, temperature)
+        frequency_curves: Optional frequency curves for each core (inherited from GameProfile)
     
-    Requirements: 1.1
+    Requirements: 1.1, 8.1
     """
     conditions: ContextCondition = field(default_factory=ContextCondition)
     
@@ -273,6 +305,7 @@ class ContextualGameProfile(GameProfile):
             cores=data.get("cores", [0, 0, 0, 0]),
             dynamic_enabled=data.get("dynamic_enabled", False),
             dynamic_config=data.get("dynamic_config"),
+            frequency_curves=data.get("frequency_curves"),
             created_at=data.get("created_at", ""),
             last_used=data.get("last_used"),
             conditions=conditions,
@@ -295,6 +328,7 @@ class ContextualGameProfile(GameProfile):
             cores=profile.cores,
             dynamic_enabled=profile.dynamic_enabled,
             dynamic_config=profile.dynamic_config,
+            frequency_curves=profile.frequency_curves,
             created_at=profile.created_at,
             last_used=profile.last_used,
             conditions=conditions or ContextCondition(),
@@ -422,7 +456,8 @@ class ProfileManager:
         name: str,
         cores: List[int],
         dynamic_enabled: bool = False,
-        dynamic_config: Optional[Dict[str, Any]] = None
+        dynamic_config: Optional[Dict[str, Any]] = None,
+        frequency_curves: Optional[Dict[int, Dict[str, Any]]] = None
     ) -> Optional[GameProfile]:
         """Create a new game profile.
         
@@ -432,11 +467,12 @@ class ProfileManager:
             cores: Undervolt values for each core [core0, core1, core2, core3]
             dynamic_enabled: Whether dynamic mode is enabled
             dynamic_config: Dynamic mode configuration (required if dynamic_enabled is True)
+            frequency_curves: Optional frequency curves for each core
             
         Returns:
             Created GameProfile if successful, None otherwise
             
-        Requirements: 3.1, 3.5, 5.2
+        Requirements: 3.1, 3.5, 5.2, 8.1
         """
         # Check if profile already exists
         if app_id in self._profiles:
@@ -449,7 +485,8 @@ class ProfileManager:
             name=name,
             cores=cores,
             dynamic_enabled=dynamic_enabled,
-            dynamic_config=dynamic_config
+            dynamic_config=dynamic_config,
+            frequency_curves=frequency_curves
         )
         
         # Validate profile
@@ -517,7 +554,8 @@ class ProfileManager:
         cores: List[int],
         conditions: ContextCondition,
         dynamic_enabled: bool = False,
-        dynamic_config: Optional[Dict[str, Any]] = None
+        dynamic_config: Optional[Dict[str, Any]] = None,
+        frequency_curves: Optional[Dict[int, Dict[str, Any]]] = None
     ) -> Optional[ContextualGameProfile]:
         """Create a new contextual game profile.
         
@@ -531,11 +569,12 @@ class ProfileManager:
             conditions: Context conditions for activation
             dynamic_enabled: Whether dynamic mode is enabled
             dynamic_config: Dynamic mode configuration (required if dynamic_enabled is True)
+            frequency_curves: Optional frequency curves for each core
             
         Returns:
             Created ContextualGameProfile if successful, None otherwise
             
-        Requirements: 1.1
+        Requirements: 1.1, 8.1
         """
         # Create profile
         profile = ContextualGameProfile(
@@ -544,6 +583,7 @@ class ProfileManager:
             cores=cores,
             dynamic_enabled=dynamic_enabled,
             dynamic_config=dynamic_config,
+            frequency_curves=frequency_curves,
             conditions=conditions
         )
         
@@ -709,12 +749,12 @@ class ProfileManager:
         
         Args:
             app_id: Steam AppID of profile to update
-            **kwargs: Fields to update (name, cores, dynamic_enabled, dynamic_config)
+            **kwargs: Fields to update (name, cores, dynamic_enabled, dynamic_config, frequency_curves)
             
         Returns:
             True if updated successfully, False otherwise
             
-        Requirements: 3.3
+        Requirements: 3.3, 8.1
         """
         profile = self._profiles.get(app_id)
         if not profile:
@@ -730,6 +770,8 @@ class ProfileManager:
             profile.dynamic_enabled = kwargs["dynamic_enabled"]
         if "dynamic_config" in kwargs:
             profile.dynamic_config = kwargs["dynamic_config"]
+        if "frequency_curves" in kwargs:
+            profile.frequency_curves = kwargs["frequency_curves"]
         
         # Validate updated profile
         errors = profile.validate()
@@ -784,7 +826,7 @@ class ProfileManager:
     async def apply_profile(self, app_id: int) -> bool:
         """Apply a profile's settings.
         
-        Applies the undervolt values and starts/stops dynamic mode as needed.
+        Applies the undervolt values, frequency curves, and starts/stops dynamic mode as needed.
         Emits an event to the frontend with the active profile name.
         
         Args:
@@ -793,7 +835,7 @@ class ProfileManager:
         Returns:
             True if applied successfully, False otherwise
             
-        Requirements: 4.2, 4.4
+        Requirements: 4.2, 4.4, 8.2
         """
         profile = self._profiles.get(app_id)
         if not profile:
@@ -810,6 +852,10 @@ class ProfileManager:
             if not success:
                 logger.error(f"Failed to apply undervolt values: {error}")
                 return False
+            
+            # Apply frequency curves if present
+            if profile.frequency_curves:
+                await self._apply_frequency_curves(profile.frequency_curves)
             
             # Handle dynamic mode
             if self.dynamic_controller:
@@ -1230,7 +1276,7 @@ class ProfileManager:
         Returns:
             True if applied successfully, False otherwise
             
-        Requirements: 1.1, 4.2, 4.4
+        Requirements: 1.1, 4.2, 4.4, 8.2
         """
         try:
             # Apply undervolt values
@@ -1238,6 +1284,13 @@ class ProfileManager:
             if not success:
                 logger.error(f"Failed to apply undervolt values: {error}")
                 return False
+            
+            # Apply frequency curves if present (find the corresponding ContextualGameProfile)
+            for p in self._contextual_profiles:
+                if p.name == profile.name and p.app_id == profile.app_id:
+                    if p.frequency_curves:
+                        await self._apply_frequency_curves(p.frequency_curves)
+                    break
             
             # Handle dynamic mode
             if self.dynamic_controller:
@@ -1276,18 +1329,66 @@ class ProfileManager:
             logger.error(f"Failed to apply contextual profile: {e}")
             return False
     
+    async def _apply_frequency_curves(self, frequency_curves: Dict[int, Dict[str, Any]]) -> None:
+        """Apply frequency curves to the frequency controller.
+        
+        Args:
+            frequency_curves: Dictionary mapping core_id to serialized FrequencyCurve data
+            
+        Requirements: 8.2
+        """
+        try:
+            # Use the core_settings manager if available
+            if not hasattr(self, 'core_settings') or not self.core_settings:
+                logger.debug("No core settings manager available, skipping curve application")
+                return
+            
+            settings_mgr = self.core_settings
+            
+            # Check if frequency mode is enabled
+            frequency_mode_enabled = settings_mgr.load_setting("frequency_mode_enabled", False)
+            
+            if not frequency_mode_enabled:
+                logger.debug("Frequency mode not enabled, skipping curve application")
+                return
+            
+            # Deserialize and validate curves
+            curves = {}
+            for core_id_str, curve_data in frequency_curves.items():
+                try:
+                    core_id = int(core_id_str)
+                    curve = FrequencyCurve.from_dict(curve_data)
+                    curve.validate()
+                    curves[core_id] = curve
+                    logger.debug(f"Loaded frequency curve for core {core_id}")
+                except (ValueError, KeyError) as e:
+                    logger.warning(f"Failed to load frequency curve for core {core_id_str}: {e}")
+                    continue
+            
+            # Apply curves through the frequency controller (via Rust)
+            # This would typically be done through an RPC call or direct controller access
+            # For now, we'll save them to settings so the Rust controller can pick them up
+            settings_mgr.save_setting("frequency_curves", {
+                str(core_id): curve.to_dict() for core_id, curve in curves.items()
+            })
+            
+            logger.info(f"Applied {len(curves)} frequency curves from profile")
+            
+        except Exception as e:
+            logger.error(f"Failed to apply frequency curves: {e}")
+    
     # ==================== Import/Export ====================
     
     def export_profiles(self) -> str:
         """Export all profiles as JSON string.
         
-        Includes version metadata and all profiles formatted with indentation
-        for readability.
+        Includes version metadata, frequency curves, and all profiles formatted 
+        with indentation for readability.
         
         Returns:
             JSON string containing all profiles
             
-        Requirements: 9.1
+        Requirements: 9.1, 8.3
         """
         # Convert profiles to list
         profiles_list = [profile.to_dict() for profile in self._profiles.values()]
@@ -1313,8 +1414,8 @@ class ProfileManager:
     ) -> Dict[str, Any]:
         """Import profiles from JSON string.
         
-        Validates JSON structure and required fields. Supports merge strategies
-        for handling conflicts with existing profiles.
+        Validates JSON structure, required fields, and frequency curves. Supports 
+        merge strategies for handling conflicts with existing profiles.
         
         Args:
             json_data: JSON string containing profiles to import
@@ -1330,7 +1431,7 @@ class ProfileManager:
                 "errors": List[str]
             }
             
-        Requirements: 9.2, 9.3, 9.4
+        Requirements: 9.2, 9.3, 9.4, 8.4
         """
         result = {
             "success": False,
@@ -1413,7 +1514,7 @@ class ProfileManager:
                 try:
                     profile = GameProfile.from_dict(profile_data)
                     
-                    # Validate profile
+                    # Validate profile (this will also validate frequency curves)
                     errors = profile.validate()
                     if errors:
                         result["errors"].append(f"Invalid profile for app_id {app_id}: {', '.join(errors)}")

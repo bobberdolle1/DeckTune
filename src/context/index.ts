@@ -16,6 +16,7 @@ export {
   useBinning,
   useProfiles,
   useTelemetry,
+  useFrequencyWizard,
   initialState,
 } from "./DeckTuneContext";
 

@@ -109,6 +109,12 @@ export const initialState: State = {
   
   // Binary availability
   missingBinaries: [],
+  
+  // Frequency wizard state (new in v3.2)
+  frequencyModeEnabled: false,
+  frequencyCurves: {},
+  frequencyWizardProgress: null,
+  isFrequencyWizardRunning: false,
 };
 
 // Create context with null default
@@ -284,6 +290,27 @@ export const useTelemetry = () => {
   return {
     samples: state.telemetrySamples || [],
     hasData: (state.telemetrySamples || []).length > 0,
+  };
+};
+
+/**
+ * Hook to access frequency wizard state and methods.
+ * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7
+ */
+export const useFrequencyWizard = () => {
+  const { state, api } = useDeckTune();
+  return {
+    isRunning: state.isFrequencyWizardRunning,
+    progress: state.frequencyWizardProgress,
+    curves: state.frequencyCurves,
+    modeEnabled: state.frequencyModeEnabled,
+    startWizard: (config: any) => api.startFrequencyWizard(config),
+    getProgress: () => api.getFrequencyWizardProgress(),
+    cancelWizard: () => api.cancelFrequencyWizard(),
+    getCurve: (coreId: number) => api.getFrequencyCurve(coreId),
+    applyCurves: (curves: Record<number, any>) => api.applyFrequencyCurve(curves),
+    enableMode: () => api.enableFrequencyMode(),
+    disableMode: () => api.disableFrequencyMode(),
   };
 };
 

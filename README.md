@@ -15,6 +15,7 @@
 - **Auto Platform Detection** — LCD (Jupiter) or OLED (Galileo) with appropriate limits
 - **Autotune** — automatic discovery of optimal values for your specific chip
 - **Automated Silicon Binning** — discover your chip's maximum stable undervolt automatically
+- **Frequency-Based Voltage Wizard** — create frequency-dependent voltage curves for optimal efficiency across all CPU frequencies
 - **Per-Game Profiles** — automatic profile switching based on running game
 - **Settings Management** — centralized settings with persistent storage and Game Only Mode
 - **Low-Level Fan Control** — custom fan curves with visual editor and safety overrides
@@ -32,6 +33,7 @@
 - Steam Deck (LCD or OLED)
 - [Decky Loader](https://decky.xyz/)
 - SteamOS
+- Root access (for frequency-based mode and fan control)
 
 #### Quick Install
 
@@ -250,6 +252,138 @@ Core 3: -25mV → -10mV @ 40%  (conservative)
 - Monitor temperature and frequency during initial testing
 - Create separate configurations for different workloads
 - Keep Maximum Value more conservative (closer to 0) for stability under load
+
+#### Frequency-Based Voltage Wizard (NEW in v3.2.0)
+
+The Frequency-Based Voltage Wizard creates frequency-dependent voltage curves that map specific CPU frequencies to optimal voltage offsets. Unlike load-based approaches that use CPU utilization percentage, frequency-based mode provides more precise voltage control across the entire frequency spectrum.
+
+**Features:**
+- **Automated Curve Generation**: Wizard tests each frequency point to find optimal voltage
+- **Binary Search Algorithm**: Efficiently discovers maximum stable voltage offset at each frequency
+- **Linear Interpolation**: Smooth voltage transitions between tested frequency points
+- **Real-Time Visualization**: Interactive charts showing frequency-voltage relationship
+- **Profile Integration**: Save frequency curves in game profiles for automatic switching
+- **Safety Features**: Temperature monitoring, timeout detection, consecutive failure handling
+- **Quick Presets**: Conservative, Balanced, and Aggressive configurations for fast testing
+- **Verification Tests**: Automatic validation of generated curves at random frequencies
+
+**How it works:**
+1. Wizard locks CPU to specific frequency using cpufreq userspace governor
+2. Binary search finds maximum stable voltage offset at that frequency
+3. Stability test runs for configured duration (10-120 seconds)
+4. Process repeats for frequency range (400-3500 MHz) with configurable step size
+5. Generated curve interpolates voltage for frequencies between tested points
+6. Runtime controller monitors CPU frequency and applies appropriate voltage
+
+**When to use Frequency-Based vs Load-Based:**
+- **Frequency-Based**: Best for workloads with varying CPU frequencies (gaming, mixed usage)
+  - More precise voltage control at specific frequencies
+  - Better efficiency across full frequency spectrum
+  - Ideal for per-game optimization
+- **Load-Based**: Best for consistent workloads with predictable utilization patterns
+  - Simpler configuration
+  - Faster to set up
+  - Good for general-purpose usage
+
+**Usage (Expert Mode → Frequency Wizard):**
+
+1. **Configure Wizard Parameters:**
+   - Frequency Range: Start (400 MHz), End (3500 MHz), Step (50-500 MHz)
+   - Test Duration: 10-120 seconds per frequency point
+   - Voltage Parameters: Start (-100 to 0 mV), Step (1-10 mV)
+   - Safety Margin: 0-20 mV added to stable voltage
+   - Quick Presets: Conservative (200 MHz step, 20s), Balanced (100 MHz, 30s), Aggressive (50 MHz, 60s)
+
+2. **Run Wizard:**
+   - Click "Start Wizard" to begin automated testing
+   - Monitor real-time progress: current frequency, voltage, percentage complete
+   - Estimated time: 10-30 minutes depending on configuration
+   - Cancel anytime to restore original settings
+
+3. **Review Results:**
+   - View frequency-voltage curve on interactive chart
+   - Stable points shown as markers, failed points in distinct color
+   - Interpolated curve displayed as continuous line
+   - Hover over points for exact frequency and voltage values
+
+4. **Apply Curve:**
+   - Click "Apply Curve" to activate frequency-based voltage control
+   - System monitors CPU frequency every 10-50ms
+   - Voltage automatically adjusted based on current frequency
+   - Switch back to load-based mode anytime
+
+**Configuration Examples:**
+
+*Quick Test (Conservative):*
+```
+Frequency Range: 400-3500 MHz, Step: 200 MHz
+Test Duration: 20 seconds
+Voltage: Start -30 mV, Step 2 mV, Safety Margin 5 mV
+Estimated Time: ~10 minutes
+```
+
+*Balanced (Recommended):*
+```
+Frequency Range: 400-3500 MHz, Step: 100 MHz
+Test Duration: 30 seconds
+Voltage: Start -30 mV, Step 2 mV, Safety Margin 5 mV
+Estimated Time: ~15 minutes
+```
+
+*Thorough (Maximum Precision):*
+```
+Frequency Range: 400-3500 MHz, Step: 50 MHz
+Test Duration: 60 seconds
+Voltage: Start -30 mV, Step 1 mV, Safety Margin 3 mV
+Estimated Time: ~30 minutes
+```
+
+**Safety Features:**
+- **Temperature Monitoring**: Aborts test if CPU exceeds 85°C
+- **Timeout Detection**: Detects frozen tests (duration + 30s)
+- **Consecutive Failure Skip**: Skips frequency after 3 consecutive failures
+- **Verification Tests**: Validates curve at 3-5 random frequencies after generation
+- **State Restoration**: Cancellation restores original governor and voltage settings
+- **Boundary Clamping**: Frequencies outside tested range use nearest boundary voltage
+
+**Optimization Features:**
+- **Adaptive Step Size**: Increases step in stable voltage regions to skip redundant tests
+- **Frequency Cache**: 10ms TTL cache reduces sysfs access overhead
+- **Intermediate Persistence**: Saves partial results to allow resumption after interruption
+- **Smart Binary Search**: Starts from previous frequency's voltage for faster convergence
+
+**Profile Integration:**
+- Save frequency curves in game profiles
+- Automatic curve application when profile activates
+- Export/import profiles with curve data
+- Fallback to load-based mode for profiles without curves
+
+**Troubleshooting:**
+
+*Permission errors accessing cpufreq:*
+- Frequency locking requires root access
+- Run DeckTune with sudo or configure appropriate permissions
+- Check that userspace governor is available: `cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors`
+
+*Wizard takes too long:*
+- Use Quick preset (200 MHz step, 20s duration)
+- Enable adaptive step size for automatic optimization
+- Reduce frequency range (e.g., 800-3000 MHz for gaming)
+
+*System becomes unstable:*
+- Increase safety margin (10-15 mV)
+- Use longer test duration (60s) for better stability detection
+- Reduce voltage aggressiveness (start at -20 mV instead of -30 mV)
+
+*Curve doesn't improve efficiency:*
+- Verify frequency-based mode is enabled
+- Check that CPU frequency varies during workload
+- Compare with load-based mode using benchmarks
+- Some workloads may benefit more from load-based approach
+
+**Documentation:**
+- [Frequency Wizard Guide](docs/FREQUENCY_WIZARD_GUIDE.md) - Complete user guide with screenshots
+- [Frequency Wizard API](docs/FREQUENCY_WIZARD_API.md) - RPC methods and data structures for developers
 
 #### Panic Disable Button
 
@@ -570,6 +704,70 @@ DeckTune includes multi-level protection:
 - Use Thorough autotune mode for maximum accuracy
 - If freezing occurs, reduce values
 
+### FAQ (Frequently Asked Questions)
+
+#### General Questions
+
+**Q: What's the difference between load-based and frequency-based voltage control?**
+A: Load-based mode adjusts voltage based on CPU utilization percentage (0-100%), while frequency-based mode adjusts voltage based on actual CPU frequency (400-3500 MHz). Frequency-based provides more precise control and better efficiency across the full frequency spectrum, but requires initial wizard setup.
+
+**Q: Which mode should I use?**
+A: For gaming and mixed workloads with varying CPU frequencies, use frequency-based mode. For consistent workloads or if you want simpler setup, use load-based mode. You can switch between modes anytime.
+
+**Q: Is undervolting safe?**
+A: Yes, when done properly. DeckTune includes multiple safety features: watchdog monitoring, automatic rollback on freeze, temperature limits, and the Panic Disable button. Start with conservative values and test stability before going aggressive.
+
+**Q: Will undervolting void my warranty?**
+A: Undervolting is a software-level change that doesn't physically modify hardware. It's reversible and doesn't void warranty. However, always use at your own risk.
+
+#### Frequency-Based Mode Questions
+
+**Q: How long does the frequency wizard take?**
+A: Depends on configuration. Quick preset: ~10 minutes, Balanced: ~15 minutes, Thorough: ~30 minutes. Use adaptive step size for automatic optimization.
+
+**Q: Do I need to run the wizard for each game?**
+A: No. Run the wizard once to generate a curve, then save it in game profiles. You can create different curves for different use cases (battery life vs performance).
+
+**Q: Why does the wizard require root access?**
+A: Frequency locking uses the cpufreq userspace governor, which requires root permissions to modify CPU frequency scaling settings.
+
+**Q: Can I edit the frequency curve manually?**
+A: Currently, curves are generated by the wizard. Manual editing may be added in future versions. You can adjust wizard parameters and regenerate the curve.
+
+**Q: What if my CPU doesn't support certain frequencies?**
+A: The wizard automatically detects available frequencies from cpufreq. It only tests frequencies your CPU actually supports.
+
+**Q: Why are some frequency points marked as failed?**
+A: Failed points indicate the wizard couldn't find a stable voltage at that frequency within the configured parameters. The curve interpolates around failed points using nearby stable values.
+
+#### Dynamic Mode Questions
+
+**Q: What's the difference between Dynamic Mode and Frequency-Based Mode?**
+A: Dynamic Mode (gymdeck3) adjusts voltage based on CPU load percentage with configurable curves. Frequency-Based Mode adjusts voltage based on actual CPU frequency. Both can be used together or separately.
+
+**Q: Can I use Dynamic Manual Mode and Frequency-Based Mode together?**
+A: They are separate voltage control methods. Enable one at a time. Dynamic Manual Mode provides load-based curves, while Frequency-Based Mode provides frequency-based curves.
+
+**Q: How do I know which mode is active?**
+A: Check the status indicator in the UI. Only one voltage control mode can be active at a time.
+
+#### Troubleshooting Questions
+
+**Q: My system freezes after applying undervolt. What should I do?**
+A: Press the red "Panic Disable" button to instantly reset all values to 0. Then reduce your undervolt values and test again with shorter durations.
+
+**Q: The wizard keeps failing at certain frequencies. Is this normal?**
+A: Yes, some frequencies may be less stable than others. The wizard will skip frequencies after 3 consecutive failures and interpolate voltage from nearby stable points.
+
+**Q: My frequency curve doesn't seem to improve battery life. Why?**
+A: Ensure frequency-based mode is enabled and your workload actually varies CPU frequency. Some workloads run at constant frequency and may benefit more from load-based mode. Use benchmarks to compare.
+
+**Q: Can I share my frequency curve with others?**
+A: Frequency curves are chip-specific due to silicon lottery. What works on your device may not work on others. However, you can export profiles (which include curves) for backup purposes.
+
+**Q: The wizard shows "Permission denied" errors. How do I fix this?**
+A: Frequency locking requires root access. Ensure DeckTune has appropriate permissions or run with sudo. Check that the userspace governor is available on your system.
+
 ### Contributing
 
 Pull requests are welcome! For major changes, please open an issue first.
@@ -590,6 +788,7 @@ GPL-3.0 License — see [LICENSE](LICENSE)
 - **Автоматическое определение модели** — LCD (Jupiter) или OLED (Galileo) с соответствующими лимитами
 - **Autotune** — автоматический поиск оптимальных значений для вашего конкретного чипа
 - **Автоматический Silicon Binning** — автоматическое определение максимального стабильного андервольта
+- **Мастер частотно-зависимого напряжения** — создание частотно-зависимых кривых напряжения для оптимальной эффективности на всех частотах CPU
 - **Профили для игр** — автоматическое переключение профилей в зависимости от запущенной игры
 - **Низкоуровневое управление кулером** — кастомные кривые с визуальным редактором и защитой от перегрева
 - **Система безопасности** — watchdog, автоматический откат при зависании, LKG (Last Known Good)
@@ -606,6 +805,7 @@ GPL-3.0 License — see [LICENSE](LICENSE)
 - Steam Deck (LCD или OLED)
 - [Decky Loader](https://decky.xyz/)
 - SteamOS
+- Root доступ (для частотного режима и управления кулером)
 
 #### Быстрая установка
 
@@ -661,6 +861,44 @@ curl -L https://github.com/bobberdolle1/DeckTune/releases/latest/download/instal
 - Balanced (умеренная отзывчивость)
 - Performance (быстрая адаптация)
 - Custom (пользовательские кривые нагрузки)
+
+#### Мастер частотно-зависимого напряжения (НОВОЕ в v3.2.0)
+
+Мастер частотно-зависимого напряжения создаёт частотно-зависимые кривые напряжения, которые сопоставляют конкретные частоты CPU с оптимальными смещениями напряжения. В отличие от подхода на основе нагрузки, который использует процент загрузки CPU, частотный режим обеспечивает более точный контроль напряжения во всём спектре частот.
+
+**Основные возможности:**
+- **Автоматическая генерация кривых**: Мастер тестирует каждую точку частоты для поиска оптимального напряжения
+- **Алгоритм бинарного поиска**: Эффективно находит максимальное стабильное смещение напряжения на каждой частоте
+- **Линейная интерполяция**: Плавные переходы напряжения между протестированными точками частоты
+- **Визуализация в реальном времени**: Интерактивные графики, показывающие зависимость частоты от напряжения
+- **Интеграция с профилями**: Сохранение частотных кривых в игровых профилях для автоматического переключения
+- **Функции безопасности**: Мониторинг температуры, обнаружение таймаутов, обработка последовательных сбоев
+- **Быстрые пресеты**: Конфигурации Conservative, Balanced и Aggressive для быстрого тестирования
+
+**Когда использовать частотный режим vs режим на основе нагрузки:**
+- **Частотный режим**: Лучше для нагрузок с изменяющимися частотами CPU (игры, смешанное использование)
+  - Более точный контроль напряжения на конкретных частотах
+  - Лучшая эффективность во всём спектре частот
+  - Идеально для оптимизации под конкретные игры
+- **Режим на основе нагрузки**: Лучше для постоянных нагрузок с предсказуемыми паттернами использования
+  - Более простая конфигурация
+  - Быстрее настраивается
+  - Хорошо для общего использования
+
+**Использование (Expert Mode → Frequency Wizard):**
+1. Настройте параметры мастера (диапазон частот, длительность теста, параметры напряжения)
+2. Запустите мастер и следите за прогрессом в реальном времени
+3. Просмотрите результаты на интерактивном графике
+4. Примените кривую для активации частотного контроля напряжения
+
+**Время выполнения:**
+- Быстрый тест: ~10 минут
+- Сбалансированный: ~15 минут
+- Тщательный: ~30 минут
+
+**Подробная документация:**
+- [Руководство по частотному мастеру](docs/FREQUENCY_WIZARD_GUIDE.md) - Полное руководство пользователя (на английском)
+- [API частотного мастера](docs/FREQUENCY_WIZARD_API.md) - RPC методы и структуры данных для разработчиков (на английском)
 
 #### Кнопка Panic Disable
 
@@ -887,6 +1125,58 @@ DeckTune включает многоуровневую систему защит
 - Настраивайте андервольт индивидуально для каждой игры
 - Используйте Thorough режим autotune для максимальной точности
 - При зависаниях уменьшайте значения
+
+### Часто задаваемые вопросы (FAQ)
+
+#### Общие вопросы
+
+**В: В чём разница между контролем напряжения на основе нагрузки и на основе частоты?**
+О: Режим на основе нагрузки регулирует напряжение на основе процента загрузки CPU (0-100%), в то время как режим на основе частоты регулирует напряжение на основе фактической частоты CPU (400-3500 МГц). Частотный режим обеспечивает более точный контроль и лучшую эффективность во всём спектре частот, но требует начальной настройки через мастер.
+
+**В: Какой режим мне использовать?**
+О: Для игр и смешанных нагрузок с изменяющимися частотами CPU используйте частотный режим. Для постоянных нагрузок или если вы хотите более простую настройку, используйте режим на основе нагрузки. Вы можете переключаться между режимами в любое время.
+
+**В: Безопасен ли андервольтинг?**
+О: Да, при правильном выполнении. DeckTune включает множество функций безопасности: мониторинг watchdog, автоматический откат при зависании, ограничения температуры и кнопку Panic Disable. Начните с консервативных значений и проверьте стабильность перед использованием агрессивных настроек.
+
+**В: Аннулирует ли андервольтинг гарантию?**
+О: Андервольтинг — это программное изменение, которое не модифицирует аппаратное обеспечение физически. Это обратимо и не аннулирует гарантию. Однако всегда используйте на свой риск.
+
+#### Вопросы о частотном режиме
+
+**В: Сколько времени занимает работа частотного мастера?**
+О: Зависит от конфигурации. Быстрый пресет: ~10 минут, Сбалансированный: ~15 минут, Тщательный: ~30 минут. Используйте адаптивный размер шага для автоматической оптимизации.
+
+**В: Нужно ли запускать мастер для каждой игры?**
+О: Нет. Запустите мастер один раз для генерации кривой, затем сохраните её в игровых профилях. Вы можете создать разные кривые для разных случаев использования (время работы от батареи vs производительность).
+
+**В: Почему мастер требует root доступ?**
+О: Блокировка частоты использует userspace governor cpufreq, который требует root прав для изменения настроек масштабирования частоты CPU.
+
+**В: Могу ли я редактировать частотную кривую вручную?**
+О: В настоящее время кривые генерируются мастером. Ручное редактирование может быть добавлено в будущих версиях. Вы можете настроить параметры мастера и перегенерировать кривую.
+
+#### Вопросы о динамическом режиме
+
+**В: В чём разница между динамическим режимом и частотным режимом?**
+О: Динамический режим (gymdeck3) регулирует напряжение на основе процента загрузки CPU с настраиваемыми кривыми. Частотный режим регулирует напряжение на основе фактической частоты CPU. Оба могут использоваться вместе или по отдельности.
+
+**В: Могу ли я использовать динамический ручной режим и частотный режим вместе?**
+О: Это отдельные методы контроля напряжения. Включайте один за раз. Динамический ручной режим предоставляет кривые на основе нагрузки, в то время как частотный режим предоставляет кривые на основе частоты.
+
+#### Вопросы по устранению неполадок
+
+**В: Моя система зависает после применения андервольта. Что делать?**
+О: Нажмите красную кнопку "Panic Disable", чтобы мгновенно сбросить все значения в 0. Затем уменьшите значения андервольта и протестируйте снова с более короткими длительностями.
+
+**В: Мастер продолжает терпеть неудачу на определённых частотах. Это нормально?**
+О: Да, некоторые частоты могут быть менее стабильными, чем другие. Мастер пропустит частоты после 3 последовательных сбоев и интерполирует напряжение из близлежащих стабильных точек.
+
+**В: Моя частотная кривая, похоже, не улучшает время работы от батареи. Почему?**
+О: Убедитесь, что частотный режим включён и ваша нагрузка действительно изменяет частоту CPU. Некоторые нагрузки работают на постоянной частоте и могут больше выиграть от режима на основе нагрузки. Используйте бенчмарки для сравнения.
+
+**В: Мастер показывает ошибки "Permission denied". Как это исправить?**
+О: Блокировка частоты требует root доступа. Убедитесь, что DeckTune имеет соответствующие разрешения или запустите с sudo. Проверьте, что userspace governor доступен в вашей системе.
 
 ### Contributing
 

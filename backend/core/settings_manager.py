@@ -1,10 +1,11 @@
 """Settings Manager for persistent configuration storage.
 
-Feature: ui-refactor-settings
-Validates: Requirements 3.1, 3.2, 3.3, 10.3, 10.4
+Feature: ui-refactor-settings, frequency-based-wizard
+Validates: Requirements 3.1, 3.2, 3.3, 10.3, 10.4, 7.2, 10.4, 10.5
 
 This module provides persistent storage for critical plugin settings
-including Expert Mode, Apply on Startup, Game Only Mode, and last active profile.
+including Expert Mode, Apply on Startup, Game Only Mode, last active profile,
+and frequency-based voltage curves.
 """
 
 import json
@@ -16,6 +17,9 @@ from typing import Any, Dict, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Settings version for migration tracking
+SETTINGS_VERSION = 4  # v4 adds frequency-based mode support
 
 
 class SettingsManager:
@@ -51,6 +55,9 @@ class SettingsManager:
         # In-memory cache of settings
         self._cache: Dict[str, Any] = {}
         self._loaded = False
+        
+        # Perform version migration if needed
+        self._check_and_migrate_version()
     
     def _ensure_directory_exists(self) -> None:
         """Create storage directory if it doesn't exist."""
@@ -93,6 +100,11 @@ class SettingsManager:
                     # Continue with empty cache
                     self._cache = {}
                     self._loaded = True
+            
+            # If this is a new settings file (no version), mark it with current version
+            if "_settings_version" not in self._cache:
+                self._cache["_settings_version"] = SETTINGS_VERSION
+                logger.debug(f"Marking new settings file with version {SETTINGS_VERSION}")
             
             # Update cache first (so we have the value even if write fails)
             self._cache[key] = value
@@ -369,6 +381,9 @@ class SettingsManager:
             logger.debug("No legacy settings manager provided, skipping migration")
             # Mark migration as completed even if no legacy manager
             self._cache["_migration_completed"] = True
+            # Mark with current version to prevent version migration
+            if "_settings_version" not in self._cache:
+                self._cache["_settings_version"] = SETTINGS_VERSION
             self._write_to_disk_with_retry()
             return
         
@@ -396,6 +411,14 @@ class SettingsManager:
             # Mark migration as completed
             self._cache["_migration_completed"] = True
             
+            # Mark as v3 if we migrated data (will be upgraded to v4 by version migration)
+            # or v4 if no data was migrated (new installation)
+            if "_settings_version" not in self._cache:
+                if migrated_count > 0:
+                    self._cache["_settings_version"] = 3  # Will trigger v3->v4 migration
+                else:
+                    self._cache["_settings_version"] = SETTINGS_VERSION  # New installation
+            
             # Persist migrated settings
             if migrated_count > 0:
                 success = self._write_to_disk_with_retry()
@@ -412,7 +435,278 @@ class SettingsManager:
             logger.error(f"Error during migration: {e}", exc_info=True)
             # Mark migration as completed anyway to prevent repeated attempts
             self._cache["_migration_completed"] = True
+            # Mark with current version
+            if "_settings_version" not in self._cache:
+                self._cache["_settings_version"] = SETTINGS_VERSION
             try:
                 self._write_to_disk_with_retry()
             except Exception:
                 pass  # Best effort
+    
+    def _check_and_migrate_version(self) -> None:
+        """Check settings version and perform migration if needed.
+        
+        Migrates settings from older versions to current version.
+        Supports migration from v3 to v4 (frequency-based mode).
+        Only runs migration if an existing settings file is found.
+        
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2, 10.4, 10.5
+        """
+        # Load settings if not already loaded
+        if not self._loaded:
+            try:
+                self._load_from_disk()
+            except Exception as e:
+                logger.error(f"Failed to load settings for version check: {e}")
+                self._cache = {}
+                self._loaded = True
+        
+        # Only perform migration if we loaded actual settings from disk
+        # (not a new/empty installation)
+        if not self._cache:
+            logger.debug("No existing settings loaded, skipping version migration")
+            return
+        
+        # Check if this is a settings file that needs migration
+        # If _settings_version is not present, it's a v3 file
+        if "_settings_version" not in self._cache:
+            current_version = 3
+        else:
+            current_version = self._cache.get("_settings_version", 3)
+        
+        if current_version < SETTINGS_VERSION:
+            logger.info(f"Migrating settings from v{current_version} to v{SETTINGS_VERSION}")
+            
+            # Perform version-specific migrations
+            if current_version < 4:
+                self._migrate_v3_to_v4()
+            
+            # Update version number
+            self._cache["_settings_version"] = SETTINGS_VERSION
+            
+            # Persist migrated settings
+            success = self._write_to_disk_with_retry()
+            if success:
+                logger.info(f"Settings migration to v{SETTINGS_VERSION} completed successfully")
+            else:
+                logger.error(f"Settings migration to v{SETTINGS_VERSION} completed but failed to persist")
+        elif current_version == SETTINGS_VERSION:
+            logger.debug(f"Settings already at current version v{SETTINGS_VERSION}")
+        else:
+            logger.warning(f"Settings version v{current_version} is newer than expected v{SETTINGS_VERSION}")
+    
+    def _migrate_v3_to_v4(self) -> None:
+        """Migrate settings from v3 to v4 (add frequency-based mode support).
+        
+        Adds:
+        - frequency_mode_enabled: bool (default False)
+        - frequency_curves: dict (per-core curves)
+        - last_wizard_config: dict (last used wizard configuration)
+        
+        Only adds fields if they don't already exist (idempotent).
+        
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2, 10.4, 10.5
+        """
+        logger.info("Performing v3 to v4 migration: adding frequency-based mode fields")
+        
+        # Add frequency mode enabled flag (default to load-based mode)
+        # Only add if not present (idempotent)
+        if "frequency_mode_enabled" not in self._cache:
+            self._cache["frequency_mode_enabled"] = False
+            logger.debug("Added frequency_mode_enabled: False")
+        
+        # Add frequency curves storage (empty by default)
+        # Only add if not present (idempotent)
+        if "frequency_curves" not in self._cache:
+            self._cache["frequency_curves"] = {}
+            logger.debug("Added frequency_curves: {}")
+        
+        # Add last wizard config (default configuration)
+        # Only add if not present (idempotent)
+        if "last_wizard_config" not in self._cache:
+            self._cache["last_wizard_config"] = self._get_default_wizard_config()
+            logger.debug("Added last_wizard_config with defaults")
+        
+        logger.info("v3 to v4 migration completed")
+    
+    def _get_default_wizard_config(self) -> Dict[str, Any]:
+        """Get default wizard configuration.
+        
+        Returns:
+            Dictionary with default wizard parameters
+        """
+        return {
+            "freq_start": 400,
+            "freq_end": 3500,
+            "freq_step": 100,
+            "test_duration": 30,
+            "voltage_start": -30,
+            "voltage_step": 2,
+            "safety_margin": 5,
+            "parallel_cores": False,
+            "adaptive_step": True
+        }
+    
+    def save_frequency_curve(self, core_id: int, curve_data: Dict[str, Any]) -> bool:
+        """Save a frequency curve for a specific core.
+        
+        Args:
+            core_id: CPU core identifier
+            curve_data: Frequency curve data (from FrequencyCurve.to_dict())
+            
+        Returns:
+            True if save succeeded, False otherwise
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2
+        """
+        try:
+            # Load settings if not already loaded
+            if not self._loaded:
+                try:
+                    self._load_from_disk()
+                except Exception as load_error:
+                    logger.error(f"Failed to load settings before saving curve: {load_error}")
+                    self._cache = {}
+                    self._loaded = True
+            
+            # Ensure frequency_curves dict exists
+            if "frequency_curves" not in self._cache:
+                self._cache["frequency_curves"] = {}
+            
+            # Save curve for this core
+            core_key = str(core_id)
+            self._cache["frequency_curves"][core_key] = curve_data
+            
+            # Persist to disk
+            success = self._write_to_disk_with_retry()
+            if success:
+                logger.info(f"Saved frequency curve for core {core_id}")
+            else:
+                logger.error(f"Failed to persist frequency curve for core {core_id}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Failed to save frequency curve for core {core_id}: {e}", exc_info=True)
+            return False
+    
+    def get_frequency_curve(self, core_id: int) -> Optional[Dict[str, Any]]:
+        """Retrieve frequency curve for a specific core.
+        
+        Args:
+            core_id: CPU core identifier
+            
+        Returns:
+            Frequency curve data dict, or None if not found
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2
+        """
+        try:
+            # Load settings if not already loaded
+            if not self._loaded:
+                try:
+                    self._load_from_disk()
+                except Exception as load_error:
+                    logger.error(f"Failed to load settings for get_frequency_curve: {load_error}")
+                    self._cache = {}
+                    self._loaded = True
+            
+            # Ensure frequency_curves dict exists (lazy initialization)
+            if "frequency_curves" not in self._cache:
+                self._cache["frequency_curves"] = {}
+            
+            # Get frequency curves dict
+            frequency_curves = self._cache.get("frequency_curves", {})
+            
+            # Return curve for this core
+            core_key = str(core_id)
+            curve_data = frequency_curves.get(core_key)
+            
+            if curve_data:
+                logger.debug(f"Retrieved frequency curve for core {core_id}")
+            else:
+                logger.debug(f"No frequency curve found for core {core_id}")
+            
+            return curve_data
+            
+        except Exception as e:
+            logger.error(f"Failed to get frequency curve for core {core_id}: {e}", exc_info=True)
+            return None
+    
+    def get_all_frequency_curves(self) -> Dict[str, Dict[str, Any]]:
+        """Retrieve all frequency curves.
+        
+        Returns:
+            Dictionary mapping core IDs (as strings) to curve data
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2
+        """
+        try:
+            # Load settings if not already loaded
+            if not self._loaded:
+                try:
+                    self._load_from_disk()
+                except Exception as load_error:
+                    logger.error(f"Failed to load settings for get_all_frequency_curves: {load_error}")
+                    self._cache = {}
+                    self._loaded = True
+            
+            # Return copy to prevent external modification
+            frequency_curves = self._cache.get("frequency_curves", {})
+            return dict(frequency_curves)
+            
+        except Exception as e:
+            logger.error(f"Failed to get all frequency curves: {e}", exc_info=True)
+            return {}
+    
+    def delete_frequency_curve(self, core_id: int) -> bool:
+        """Delete frequency curve for a specific core.
+        
+        Args:
+            core_id: CPU core identifier
+            
+        Returns:
+            True if deletion succeeded, False otherwise
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 7.2
+        """
+        try:
+            # Load settings if not already loaded
+            if not self._loaded:
+                try:
+                    self._load_from_disk()
+                except Exception as load_error:
+                    logger.error(f"Failed to load settings before deleting curve: {load_error}")
+                    self._cache = {}
+                    self._loaded = True
+            
+            # Get frequency curves dict
+            frequency_curves = self._cache.get("frequency_curves", {})
+            
+            # Delete curve for this core if it exists
+            core_key = str(core_id)
+            if core_key in frequency_curves:
+                del frequency_curves[core_key]
+                self._cache["frequency_curves"] = frequency_curves
+                
+                # Persist to disk
+                success = self._write_to_disk_with_retry()
+                if success:
+                    logger.info(f"Deleted frequency curve for core {core_id}")
+                else:
+                    logger.error(f"Failed to persist after deleting curve for core {core_id}")
+                
+                return success
+            else:
+                logger.debug(f"No frequency curve to delete for core {core_id}")
+                return True  # Nothing to delete is success
+            
+        except Exception as e:
+            logger.error(f"Failed to delete frequency curve for core {core_id}: {e}", exc_info=True)
+            return False

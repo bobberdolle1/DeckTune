@@ -152,9 +152,16 @@ class TestRunner:
         "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
     ]
     
-    def __init__(self):
-        """Initialize the test runner."""
+    def __init__(self, cpufreq_controller=None, ryzenadj_wrapper=None):
+        """Initialize the test runner.
+        
+        Args:
+            cpufreq_controller: Optional CPUFreqController instance for frequency locking
+            ryzenadj_wrapper: Optional RyzenadjWrapper instance for voltage application
+        """
         self._current_process: Optional[asyncio.subprocess.Process] = None
+        self._cpufreq_controller = cpufreq_controller
+        self._ryzenadj_wrapper = ryzenadj_wrapper
     
     def check_binaries(self) -> Dict[str, bool]:
         """Check availability of required binaries.
@@ -612,3 +619,169 @@ class TestRunner:
                 continue
         
         return metrics
+    
+    async def run_frequency_locked_test(
+        self,
+        core_id: int,
+        freq_mhz: int,
+        voltage_mv: int,
+        duration: int
+    ) -> TestResult:
+        """Run stress test with CPU locked to specific frequency and voltage.
+        
+        This method is used by the frequency wizard to test stability at
+        specific frequency-voltage combinations. It:
+        1. Locks the CPU to the specified frequency
+        2. Applies the voltage offset
+        3. Runs a stress test for the specified duration
+        4. Monitors for crashes and instability
+        5. Restores original frequency and voltage settings
+        
+        Args:
+            core_id: CPU core ID to test
+            freq_mhz: Frequency to lock to in MHz
+            voltage_mv: Voltage offset to apply in mV (negative value)
+            duration: Test duration in seconds
+            
+        Returns:
+            TestResult with pass/fail status, duration, logs, and any error
+            
+        Raises:
+            RuntimeError: If cpufreq_controller or ryzenadj_wrapper not provided
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 1.2, 6.1
+        """
+        if self._cpufreq_controller is None:
+            raise RuntimeError(
+                "CPUFreqController required for frequency-locked tests. "
+                "Pass cpufreq_controller to TestRunner.__init__()"
+            )
+        
+        if self._ryzenadj_wrapper is None:
+            raise RuntimeError(
+                "RyzenadjWrapper required for frequency-locked tests. "
+                "Pass ryzenadj_wrapper to TestRunner.__init__()"
+            )
+        
+        start_time = time.time()
+        logs = ""
+        error = None
+        passed = False
+        
+        # Store original state for restoration
+        original_governor = None
+        original_voltage = [0, 0, 0, 0]  # Will be restored to 0 (no offset)
+        
+        logger.info(
+            f"[FREQ-TEST] Starting frequency-locked test: "
+            f"core={core_id}, freq={freq_mhz}MHz, voltage={voltage_mv}mV, duration={duration}s"
+        )
+        
+        try:
+            # Step 1: Lock frequency
+            try:
+                original_governor = self._cpufreq_controller.get_current_governor(core_id)
+                self._cpufreq_controller.lock_frequency(core_id, freq_mhz)
+                logger.info(f"[FREQ-TEST] Locked core {core_id} to {freq_mhz} MHz")
+            except Exception as e:
+                error = f"Failed to lock frequency: {str(e)}"
+                logger.error(f"[FREQ-TEST] {error}")
+                return TestResult(
+                    passed=False,
+                    duration=time.time() - start_time,
+                    logs="",
+                    error=error
+                )
+            
+            # Step 2: Apply voltage offset
+            try:
+                # Build voltage array (apply offset to all cores for simplicity)
+                voltage_array = [voltage_mv, voltage_mv, voltage_mv, voltage_mv]
+                success, voltage_error = await self._ryzenadj_wrapper.apply_values_async(voltage_array)
+                
+                if not success:
+                    error = f"Failed to apply voltage: {voltage_error}"
+                    logger.error(f"[FREQ-TEST] {error}")
+                    # Restore frequency before returning
+                    self._cpufreq_controller.unlock_frequency(core_id, original_governor)
+                    return TestResult(
+                        passed=False,
+                        duration=time.time() - start_time,
+                        logs="",
+                        error=error
+                    )
+                
+                logger.info(f"[FREQ-TEST] Applied voltage offset: {voltage_mv}mV")
+            except Exception as e:
+                error = f"Failed to apply voltage: {str(e)}"
+                logger.error(f"[FREQ-TEST] {error}")
+                # Restore frequency before returning
+                self._cpufreq_controller.unlock_frequency(core_id, original_governor)
+                return TestResult(
+                    passed=False,
+                    duration=time.time() - start_time,
+                    logs="",
+                    error=error
+                )
+            
+            # Step 3: Run stress test
+            try:
+                test_result = await self.run_per_core_test(core_id, duration)
+                passed = test_result.passed
+                logs = test_result.logs
+                error = test_result.error
+                
+                logger.info(
+                    f"[FREQ-TEST] Test completed: passed={passed}, "
+                    f"duration={test_result.duration:.1f}s"
+                )
+            except Exception as e:
+                error = f"Test execution failed: {str(e)}"
+                logger.error(f"[FREQ-TEST] {error}")
+                passed = False
+            
+            # Step 4: Check for system errors (crashes, MCE, etc.)
+            try:
+                dmesg_errors = await self.check_dmesg_errors()
+                if dmesg_errors:
+                    error = f"System errors detected: {'; '.join(dmesg_errors[:3])}"
+                    logger.warning(f"[FREQ-TEST] {error}")
+                    passed = False
+                    logs += f"\n\n--- DMESG ERRORS ---\n" + "\n".join(dmesg_errors)
+            except Exception as e:
+                logger.warning(f"[FREQ-TEST] Failed to check dmesg: {e}")
+            
+        finally:
+            # Step 5: Restore original settings (ALWAYS execute)
+            try:
+                # Restore voltage to 0 (no offset)
+                logger.info("[FREQ-TEST] Restoring voltage to 0mV")
+                await self._ryzenadj_wrapper.apply_values_async([0, 0, 0, 0])
+            except Exception as e:
+                logger.error(f"[FREQ-TEST] Failed to restore voltage: {e}")
+                if error is None:
+                    error = f"Failed to restore voltage: {str(e)}"
+            
+            try:
+                # Restore frequency governor
+                logger.info(f"[FREQ-TEST] Restoring governor to '{original_governor}'")
+                self._cpufreq_controller.unlock_frequency(core_id, original_governor)
+            except Exception as e:
+                logger.error(f"[FREQ-TEST] Failed to restore frequency: {e}")
+                if error is None:
+                    error = f"Failed to restore frequency: {str(e)}"
+        
+        duration_actual = time.time() - start_time
+        
+        logger.info(
+            f"[FREQ-TEST] Frequency-locked test complete: "
+            f"passed={passed}, duration={duration_actual:.1f}s"
+        )
+        
+        return TestResult(
+            passed=passed,
+            duration=duration_actual,
+            logs=logs,
+            error=error
+        )

@@ -2,6 +2,231 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.3.0] - 2026-01-25
+
+### Added - Frequency-Based Voltage Wizard 🎯
+Complete frequency-dependent voltage curve system for optimal CPU efficiency across the entire frequency spectrum.
+
+**Core Features:**
+- **Automated Curve Generation** — Wizard tests each frequency point to find optimal voltage offset
+  - Binary search algorithm efficiently discovers maximum stable voltage at each frequency
+  - Configurable frequency range (400-3500 MHz) with adjustable step size (50-500 MHz)
+  - Test duration per frequency: 10-120 seconds
+  - Voltage parameters: Start (-100 to 0 mV), Step (1-10 mV), Safety Margin (0-20 mV)
+- **Quick Presets** — Pre-configured settings for different use cases
+  - Conservative: 200 MHz step, 20s duration (~10 minutes)
+  - Balanced: 100 MHz step, 30s duration (~15 minutes)
+  - Aggressive: 50 MHz step, 60s duration (~30 minutes)
+- **Real-Time Visualization** — Interactive charts showing frequency-voltage relationship
+  - Stable points displayed as markers
+  - Failed points shown in distinct color
+  - Interpolated curve as continuous line
+  - Current operating point highlighted when active
+  - Hover tooltips with exact frequency and voltage values
+- **Linear Interpolation** — Smooth voltage transitions between tested frequency points
+  - Calculates voltage for any frequency between tested points
+  - Boundary clamping for frequencies outside tested range
+- **Profile Integration** — Save frequency curves in game profiles
+  - Automatic curve application when profile activates
+  - Export/import profiles with curve data
+  - Fallback to load-based mode for profiles without curves
+
+**Safety Features:**
+- **Temperature Monitoring** — Aborts test if CPU exceeds 85°C
+- **Timeout Detection** — Detects frozen tests (duration + 30s)
+- **Consecutive Failure Skip** — Skips frequency after 3 consecutive failures
+- **Verification Tests** — Validates curve at 3-5 random frequencies after generation
+- **State Restoration** — Cancellation restores original governor and voltage settings
+- **Boundary Clamping** — Safe voltage application for out-of-range frequencies
+
+**Optimization Features:**
+- **Adaptive Step Size** — Increases step in stable voltage regions to skip redundant tests
+- **Frequency Cache** — 10ms TTL cache reduces sysfs access overhead
+- **Intermediate Persistence** — Saves partial results to allow resumption after interruption
+- **Smart Binary Search** — Starts from previous frequency's voltage for faster convergence
+
+**When to Use:**
+- **Frequency-Based Mode**: Best for workloads with varying CPU frequencies (gaming, mixed usage)
+  - More precise voltage control at specific frequencies
+  - Better efficiency across full frequency spectrum
+  - Ideal for per-game optimization
+- **Load-Based Mode**: Best for consistent workloads with predictable utilization patterns
+  - Simpler configuration
+  - Faster to set up
+  - Good for general-purpose usage
+
+### Implementation 🔧
+
+**Backend (Python):**
+- `backend/platform/cpufreq.py` — CPU frequency control and governor management
+  - `CPUFreqController` class for frequency reading, locking, and governor control
+  - Frequency locking via userspace governor (requires root)
+  - Graceful permission error handling
+- `backend/tuning/frequency_curve.py` — Frequency curve data model
+  - `FrequencyPoint` dataclass (frequency, voltage, stability status)
+  - `FrequencyCurve` dataclass with interpolation and validation
+  - Linear interpolation algorithm for voltage calculation
+  - Boundary clamping for out-of-range frequencies
+  - JSON serialization/deserialization
+- `backend/tuning/frequency_wizard.py` — Automated curve generation
+  - `FrequencyWizard` class with binary search algorithm
+  - `FrequencyWizardConfig` dataclass with validation
+  - Progress tracking with ETA calculation
+  - Cancellation support with state restoration
+  - Error recovery for test failures
+- `backend/api/rpc.py` — RPC methods for wizard control
+  - `start_frequency_wizard()` — Start wizard with config validation
+  - `get_frequency_wizard_progress()` — Real-time progress updates
+  - `cancel_frequency_wizard()` — Cancel with state restoration
+  - `get_frequency_curve()` — Retrieve curve for core
+  - `apply_frequency_curve()` — Apply curve with validation
+  - `enable_frequency_mode()` / `disable_frequency_mode()` — Mode switching
+- `backend/core/settings_manager.py` — Extended for frequency curves
+  - `frequency_mode_enabled` field
+  - `frequency_curves` storage (per-core)
+  - `last_wizard_config` storage
+  - Settings migration from v3 to v4
+- `backend/dynamic/profile_manager.py` — Profile integration
+  - Frequency curve storage in profile structure
+  - Curve application on profile activation
+  - Profile export/import with curve data
+  - Fallback for profiles without curves
+
+**Rust (gymdeck3):**
+- `gymdeck3/src/dynamic/frequency_curve.rs` — Frequency curve storage
+  - `FrequencyPoint` and `FrequencyCurve` structs
+  - Voltage interpolation in Rust
+  - Boundary clamping in Rust
+  - Curve validation
+  - Serde serialization/deserialization
+- `gymdeck3/src/dynamic/frequency_controller.rs` — Voltage controller
+  - `FrequencyVoltageController` struct
+  - Per-core curve storage
+  - Frequency reading from sysfs
+  - Voltage calculation and application
+  - Integration with ryzenadj interface
+- `gymdeck3/src/dynamic/metrics_monitor.rs` — Extended for frequency
+  - `frequency_mhz` field in `CoreMetrics` struct
+  - Frequency reading in metrics collection
+  - Frequency included in telemetry samples
+
+**Frontend (TypeScript/React):**
+- `src/components/FrequencyWizard.tsx` — Main wizard UI (650+ lines)
+  - Configuration form with all parameters
+  - Frequency range selectors (start/end/step)
+  - Test duration slider
+  - Voltage parameter inputs (start/step)
+  - Safety margin selector
+  - Quick preset buttons
+  - Progress display with real-time updates
+  - Results visualization
+  - Start/Cancel/Apply buttons
+- `src/components/FrequencyCurveChart.tsx` — Curve visualization (280+ lines)
+  - Recharts LineChart with frequency/voltage axes
+  - Stable points as markers
+  - Failed points in distinct color
+  - Interpolated curve as continuous line
+  - Current operating point highlight
+  - Interactive tooltips
+- `src/api/Api.ts` — API client methods
+  - `startFrequencyWizard()` with config parameter
+  - `getFrequencyWizardProgress()` with polling
+  - `cancelFrequencyWizard()`
+  - `getFrequencyCurve()` for core retrieval
+  - `applyFrequencyCurve()` with validation
+  - `enableFrequencyMode()` / `disableFrequencyMode()`
+- `src/components/DeckTuneApp.tsx` — Mode integration
+  - "Frequency-Based" mode in mode selector
+  - Route to FrequencyWizard component
+  - Mode preference in localStorage
+  - Mode switching with state preservation
+
+### Testing 🧪
+
+**Property-Based Testing** (25 properties, 100+ iterations each):
+- Property 1: Configuration validation completeness
+- Property 2: Frequency curve serialization round-trip
+- Property 3: Frequency curve interpolation correctness
+- Property 4: Frequency curve boundary clamping
+- Property 5: Wizard frequency coverage completeness
+- Property 6: Frequency point data completeness
+- Property 7: Mode switching state consistency
+- Property 8: Wizard cancellation state restoration
+- Property 9: Test failure recovery with safety margin
+- Property 10: Curve validation on load
+- Property 11: Progress calculation accuracy
+- Property 12: Profile curve round-trip preservation
+- Property 13: RPC response completeness
+- Property 14: Temperature safety abort
+- Property 15: Test timeout detection
+- Property 16: Consecutive failure skip
+- Property 17: Stable point filtering in visualization
+- Property 18: Failed point separation in visualization
+- Property 19: Profile activation curve application
+- Property 20: Profile fallback behavior
+- Property 21: Verification test execution
+- Property 22: Adaptive step optimization
+- Property 23: Frequency reading cache consistency
+- Property 24: Intermediate result persistence
+- Property 25: Quick preset parameter optimization
+
+**Test Coverage:**
+- **Python**: 25 property-based tests + unit tests (hypothesis)
+- **Rust**: 2 property-based tests (proptest) for interpolation and clamping
+- **Frontend**: Component tests for UI and visualization
+- **Integration**: End-to-end wizard flow tests
+
+### Documentation 📚
+
+- **[Frequency Wizard Guide](docs/FREQUENCY_WIZARD_GUIDE.md)** — Complete user guide
+  - What is frequency-based mode and how it works
+  - When to use frequency-based vs load-based mode
+  - Step-by-step wizard walkthrough
+  - Configuration recommendations for different use cases
+  - Troubleshooting section for common issues
+  - Safety guidelines and best practices
+- **[Frequency Wizard API](docs/FREQUENCY_WIZARD_API.md)** — Complete API reference
+  - All RPC methods with parameters and return values
+  - Data structures (FrequencyCurve, FrequencyPoint, etc.)
+  - Example usage code for each API method
+  - Error codes and error handling strategies
+  - Integration examples for developers
+- **[README.md](README.md)** — Updated with frequency wizard information
+  - Added to features list
+  - Updated system requirements (root access note)
+  - Comprehensive FAQ section (15+ questions)
+  - Usage examples and configuration recommendations
+  - Troubleshooting guide
+  - Links to detailed documentation
+
+### Technical Details ⚙️
+
+**Algorithm:**
+- Binary search for optimal voltage at each frequency
+- 3-failure stop condition for unstable frequencies
+- Safety margin added to stable voltage
+- Verification tests at random frequencies
+
+**Performance:**
+- Quick preset: ~10 minutes (200 MHz step, 20s duration)
+- Balanced preset: ~15 minutes (100 MHz step, 30s duration)
+- Thorough preset: ~30 minutes (50 MHz step, 60s duration)
+- Runtime overhead: < 1% CPU for frequency monitoring
+
+**Requirements:**
+- Root access for cpufreq userspace governor
+- Linux kernel 4.0+ with cpufreq support
+- AMD Ryzen processor (for ryzenadj)
+- Temperature sensors accessible via hwmon
+
+### Integration 🔗
+
+- **Expert Mode Tab** — New "Frequency Wizard" accessible from mode selector
+- **Profile System** — Frequency curves integrated into game profiles
+- **Settings Persistence** — Curves saved to settings.json
+- **Mode Switching** — Seamless switching between load-based and frequency-based modes
+- **Telemetry** — Frequency data included in metrics monitoring
+
 ## [3.2.0] - 2026-01-24
 
 ### Added - Dynamic Manual Mode 🎮

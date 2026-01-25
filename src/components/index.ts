@@ -34,3 +34,8 @@ export { SessionHistoryContainer } from "./SessionHistoryContainer";
 export { DeckTuneApp } from "./DeckTuneApp";
 
 export { DynamicManualMode } from "./DynamicManualMode";
+
+export { FrequencyWizard } from "./FrequencyWizard";
+
+export { FrequencyCurveChart } from "./FrequencyCurveChart";
+export type { FrequencyCurveChartProps } from "./FrequencyCurveChart";

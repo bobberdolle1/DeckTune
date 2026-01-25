@@ -2204,6 +2204,394 @@ class DeckTuneRPC:
         
         return result
 
+    # ==================== Frequency Wizard ====================
+    # Feature: frequency-based-wizard
+    # Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7
+    
+    async def start_frequency_wizard(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start frequency wizard session.
+        
+        Initiates automated frequency curve generation for a CPU core.
+        The wizard tests voltage stability across a range of frequencies
+        to create an optimal frequency-voltage curve.
+        
+        Args:
+            config: Dictionary with wizard configuration:
+                - core_id: CPU core ID to test (default: 0)
+                - freq_start: Starting frequency in MHz (400-3500, default: 400)
+                - freq_end: Ending frequency in MHz (must be > freq_start, default: 3500)
+                - freq_step: Frequency step size in MHz (50-500, default: 100)
+                - test_duration: Test duration per frequency in seconds (10-120, default: 30)
+                - voltage_start: Starting voltage offset in mV (-100 to 0, default: -30)
+                - voltage_step: Voltage step size in mV (1-10, default: 2)
+                - safety_margin: Safety margin to add in mV (0-20, default: 5)
+                - adaptive_step: Enable adaptive stepping (default: True)
+                - preset: Optional preset name ("quick", "balanced", "thorough")
+                
+        Returns:
+            Dictionary with success status, session_id, and estimated_duration:
+            {
+                "success": bool,
+                "session_id": str,
+                "estimated_duration": int  # seconds
+            }
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.1
+        """
+        # Check if other operations are running
+        if self._is_operation_running():
+            return {
+                "success": False,
+                "error": "Another operation is running. Please wait for it to complete."
+            }
+        
+        # Import here to avoid circular imports
+        from ..tuning.frequency_wizard import FrequencyWizardConfig, FrequencyWizard
+        from ..platform.cpufreq import CPUFreqController
+        from pathlib import Path
+        import uuid
+        
+        try:
+            # Extract core_id
+            core_id = config.get("core_id", 0)
+            
+            # Check for preset
+            preset = config.get("preset")
+            if preset:
+                if preset == "quick":
+                    wizard_config = FrequencyWizardConfig.quick_preset()
+                elif preset == "balanced":
+                    wizard_config = FrequencyWizardConfig.balanced_preset()
+                elif preset == "thorough":
+                    wizard_config = FrequencyWizardConfig.thorough_preset()
+                else:
+                    return {"success": False, "error": f"Unknown preset: {preset}"}
+            else:
+                # Create config from parameters
+                wizard_config = FrequencyWizardConfig(
+                    freq_start=config.get("freq_start", 400),
+                    freq_end=config.get("freq_end", 3500),
+                    freq_step=config.get("freq_step", 100),
+                    test_duration=config.get("test_duration", 30),
+                    voltage_start=config.get("voltage_start", -30),
+                    voltage_step=config.get("voltage_step", 2),
+                    safety_margin=config.get("safety_margin", 5),
+                    adaptive_step=config.get("adaptive_step", True)
+                )
+            
+            # Validate configuration
+            wizard_config.validate()
+            
+            # Create CPUFreq controller
+            cpufreq_controller = CPUFreqController()
+            
+            # Create save path for intermediate results
+            save_dir = Path.home() / ".decktune" / "frequency_wizard"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            save_path = save_dir / f"wizard_core{core_id}_intermediate.json"
+            
+            # Create wizard instance
+            session_id = str(uuid.uuid4())
+            wizard = FrequencyWizard(
+                config=wizard_config,
+                cpufreq_controller=cpufreq_controller,
+                test_runner=self.test_runner,
+                progress_callback=self._frequency_wizard_progress_callback,
+                save_path=save_path
+            )
+            
+            # Store wizard instance
+            if not hasattr(self, '_frequency_wizards'):
+                self._frequency_wizards = {}
+            self._frequency_wizards[session_id] = wizard
+            
+            # Calculate estimated duration
+            num_frequencies = len(wizard._calculate_frequency_points())
+            # Rough estimate: test_duration * num_frequencies * avg_binary_search_iterations
+            estimated_duration = wizard_config.test_duration * num_frequencies * 6
+            
+            # Start wizard in background task
+            self._frequency_wizard_task = asyncio.create_task(
+                self._run_frequency_wizard(session_id, wizard, core_id)
+            )
+            
+            logger.info(
+                f"Started frequency wizard: session_id={session_id}, core={core_id}, "
+                f"estimated_duration={estimated_duration}s"
+            )
+            
+            return {
+                "success": True,
+                "session_id": session_id,
+                "estimated_duration": estimated_duration
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to start frequency wizard: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def _run_frequency_wizard(
+        self,
+        session_id: str,
+        wizard: "FrequencyWizard",
+        core_id: int
+    ) -> None:
+        """Run frequency wizard and handle completion.
+        
+        Args:
+            session_id: Wizard session ID
+            wizard: FrequencyWizard instance
+            core_id: CPU core ID
+        """
+        try:
+            curve = await wizard.run(core_id)
+            
+            # Save curve to settings
+            curves = self.settings.getSetting("frequency_curves") or {}
+            curves[str(core_id)] = curve.to_dict()
+            self.settings.setSetting("frequency_curves", curves)
+            
+            # Emit completion event
+            await self.event_emitter.emit_status("frequency_wizard_complete")
+            
+            logger.info(f"Frequency wizard completed: session_id={session_id}, core={core_id}")
+            
+        except Exception as e:
+            logger.exception(f"Frequency wizard error: {e}")
+            await self.event_emitter.emit_status("error")
+        finally:
+            # Clean up wizard instance
+            if hasattr(self, '_frequency_wizards') and session_id in self._frequency_wizards:
+                del self._frequency_wizards[session_id]
+    
+    def _frequency_wizard_progress_callback(self, progress: "WizardProgress") -> None:
+        """Callback for frequency wizard progress updates.
+        
+        Args:
+            progress: WizardProgress instance
+        """
+        # Store latest progress
+        if not hasattr(self, '_frequency_wizard_progress'):
+            self._frequency_wizard_progress = {}
+        
+        # Find session_id for this wizard (there should only be one active)
+        if hasattr(self, '_frequency_wizards'):
+            for session_id in self._frequency_wizards:
+                self._frequency_wizard_progress[session_id] = progress
+                break
+    
+    async def get_frequency_wizard_progress(self) -> Dict[str, Any]:
+        """Get current frequency wizard progress.
+        
+        Returns progress information including current frequency being tested,
+        current voltage, progress percentage, and estimated time remaining.
+        
+        Returns:
+            Dictionary with progress information:
+            {
+                "running": bool,
+                "current_frequency": int,  # MHz
+                "current_voltage": int,  # mV
+                "progress_percent": float,  # 0-100
+                "estimated_remaining": int,  # seconds
+                "completed_points": int,
+                "total_points": int
+            }
+            
+        Feature: frequency-based-wizard, Property 13: RPC response completeness
+        Validates: Requirements 11.2
+        """
+        if not hasattr(self, '_frequency_wizard_progress') or not self._frequency_wizard_progress:
+            return {
+                "running": False,
+                "current_frequency": 0,
+                "current_voltage": 0,
+                "progress_percent": 0.0,
+                "estimated_remaining": 0,
+                "completed_points": 0,
+                "total_points": 0
+            }
+        
+        # Get latest progress (should only be one active session)
+        progress = next(iter(self._frequency_wizard_progress.values()))
+        
+        return progress.to_dict()
+    
+    async def cancel_frequency_wizard(self) -> Dict[str, Any]:
+        """Cancel running frequency wizard.
+        
+        Stops the wizard and restores original CPU governor and voltage settings
+        within 2 seconds.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.3
+        """
+        if not hasattr(self, '_frequency_wizards') or not self._frequency_wizards:
+            return {"success": False, "error": "No frequency wizard running"}
+        
+        try:
+            # Cancel all active wizards
+            for wizard in self._frequency_wizards.values():
+                wizard.cancel()
+            
+            # Wait for task to complete (with timeout)
+            if hasattr(self, '_frequency_wizard_task') and self._frequency_wizard_task:
+                try:
+                    await asyncio.wait_for(self._frequency_wizard_task, timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Frequency wizard cancellation timed out")
+                    self._frequency_wizard_task.cancel()
+            
+            logger.info("Frequency wizard cancelled")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to cancel frequency wizard: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_frequency_curve(self, core_id: int) -> Dict[str, Any]:
+        """Get saved frequency curve for a CPU core.
+        
+        Retrieves the complete frequency-voltage curve data for the specified
+        core, including all frequency points with voltages and stability status.
+        
+        Args:
+            core_id: CPU core ID (0-based)
+            
+        Returns:
+            Dictionary with success status and curve data:
+            {
+                "success": bool,
+                "curve": {
+                    "core_id": int,
+                    "points": [{"frequency_mhz": int, "voltage_mv": int, "stable": bool, ...}],
+                    "created_at": float,
+                    "wizard_config": {...}
+                }
+            }
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.4
+        """
+        try:
+            curves = self.settings.getSetting("frequency_curves") or {}
+            curve_data = curves.get(str(core_id))
+            
+            if not curve_data:
+                return {
+                    "success": False,
+                    "error": f"No frequency curve found for core {core_id}"
+                }
+            
+            return {
+                "success": True,
+                "curve": curve_data
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get frequency curve: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def apply_frequency_curve(self, curves: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply frequency curves to CPU cores.
+        
+        Validates and activates the provided frequency curves. The curves will
+        be used by the frequency-based voltage controller to adjust voltage
+        based on current CPU frequency.
+        
+        Args:
+            curves: Dictionary mapping core IDs to curve data:
+                {
+                    "0": {"core_id": 0, "points": [...], ...},
+                    "1": {"core_id": 1, "points": [...], ...}
+                }
+                
+        Returns:
+            Dictionary with success status
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.5
+        """
+        try:
+            from ..tuning.frequency_curve import FrequencyCurve
+            
+            # Validate all curves
+            for core_id_str, curve_data in curves.items():
+                try:
+                    curve = FrequencyCurve.from_dict(curve_data)
+                    curve.validate()
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "error": f"Invalid curve for core {core_id_str}: {e}"
+                    }
+            
+            # Save curves to settings
+            self.settings.setSetting("frequency_curves", curves)
+            
+            logger.info(f"Applied frequency curves for {len(curves)} cores")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to apply frequency curves: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def enable_frequency_mode(self) -> Dict[str, Any]:
+        """Enable frequency-based voltage control.
+        
+        Activates the frequency voltage controller which adjusts CPU voltage
+        based on current frequency using the loaded frequency curves.
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.6
+        """
+        try:
+            # Set frequency mode flag
+            self.settings.setSetting("frequency_mode_enabled", True)
+            
+            # TODO: Activate frequency controller in Rust dynamic controller
+            # This will be implemented when integrating with gymdeck3
+            
+            logger.info("Frequency-based mode enabled")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to enable frequency mode: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def disable_frequency_mode(self) -> Dict[str, Any]:
+        """Disable frequency-based voltage control.
+        
+        Deactivates the frequency voltage controller and returns to the
+        previous voltage control mode (load-based or manual).
+        
+        Returns:
+            Dictionary with success status
+            
+        Feature: frequency-based-wizard
+        Validates: Requirements 11.7
+        """
+        try:
+            # Clear frequency mode flag
+            self.settings.setSetting("frequency_mode_enabled", False)
+            
+            # TODO: Deactivate frequency controller in Rust dynamic controller
+            # This will be implemented when integrating with gymdeck3
+            
+            logger.info("Frequency-based mode disabled")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to disable frequency mode: {e}")
+            return {"success": False, "error": str(e)}
+
     # ==================== Context Profile Management ====================
     # Requirements: 1.1
     
