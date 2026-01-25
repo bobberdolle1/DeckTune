@@ -481,19 +481,16 @@ export const FrequencyWizard: FC = () => {
             {/* Cancel button with confirmation - Requirement: 6.5 */}
             <PanelSectionRow>
               {!showCancelConfirm ? (
-                <Focusable>
-                  <ButtonItem
-                    layout="below"
-                    onClick={handleCancelClick}
-                    onActivate={handleCancelClick}
-                    disabled={isCancelling}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                      <FaStop />
-                      <span>Cancel Wizard</span>
-                    </div>
-                  </ButtonItem>
-                </Focusable>
+                <ButtonItem
+                  layout="below"
+                  onClick={handleCancelClick}
+                  disabled={isCancelling}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <FaStop />
+                    <span>Cancel Wizard</span>
+                  </div>
+                </ButtonItem>
               ) : (
                 <>
                   <div style={{
@@ -723,28 +720,25 @@ export const FrequencyWizard: FC = () => {
 
             {/* Start button - Requirement: 6.3 */}
             <PanelSectionRow>
-              <Focusable>
-                <ButtonItem
-                  layout="below"
-                  onClick={handleStart}
-                  onActivate={handleStart}
-                  disabled={isStarting || hasErrors}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                    {isStarting ? (
-                      <>
-                        <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
-                        <span>Starting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaPlay />
-                        <span>Start Wizard</span>
-                      </>
-                    )}
-                  </div>
-                </ButtonItem>
-              </Focusable>
+              <ButtonItem
+                layout="below"
+                onClick={handleStart}
+                disabled={isStarting || hasErrors}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                  {isStarting ? (
+                    <>
+                      <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                      <span>Starting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaPlay />
+                      <span>Start Wizard</span>
+                    </>
+                  )}
+                </div>
+              </ButtonItem>
               
               {/* Validation error summary - Requirement: 3.7 */}
               {showErrors && hasErrors && (
@@ -827,23 +821,21 @@ export const FrequencyWizard: FC = () => {
             {/* Apply curve button - Requirement: 6.3 */}
             {!state.frequencyModeEnabled && (
               <PanelSectionRow>
-                <Focusable>
-                  <ButtonItem
-                    layout="below"
-                    onClick={handleApply}
-                    onActivate={handleApply}
-                    disabled={isApplying}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                      {isApplying ? (
-                        <>
-                          <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
-                          <span>Applying...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaBolt />
-                          <span>Apply Curve & Enable Frequency Mode</span>
+                <ButtonItem
+                  layout="below"
+                  onClick={handleApply}
+                  disabled={isApplying}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    {isApplying ? (
+                      <>
+                        <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                        <span>Applying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaBolt />
+                        <span>Apply Curve & Enable Frequency Mode</span>
                       </>
                     )}
                   </div>
