@@ -1327,6 +1327,13 @@ const useDeckTune = () => {
     return context;
 };
 /**
+ * Hook to access just the API instance.
+ */
+const useApi = () => {
+    const { api } = useDeckTune();
+    return api;
+};
+/**
  * Hook to access test state.
  */
 const useTests = () => {
@@ -3162,7 +3169,7 @@ const yToSpeed = (y) => {
 /**
  * Clamp value to range
  */
-const clamp = (value, min, max) => {
+const clamp$1 = (value, min, max) => {
     return Math.max(min, Math.min(max, value));
 };
 /**
@@ -3206,8 +3213,8 @@ const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = fa
         const rect = svg.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const newTemp = clamp(xToTemp(x), TEMP_MIN, TEMP_MAX);
-        const newSpeed = clamp(yToSpeed(y), SPEED_MIN, SPEED_MAX);
+        const newTemp = clamp$1(xToTemp(x), TEMP_MIN, TEMP_MAX);
+        const newSpeed = clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX);
         const newCurve = [...config.curve];
         newCurve[draggingIndex] = { temp_c: newTemp, speed_percent: newSpeed };
         onConfigChange({ ...config, curve: newCurve });
@@ -3238,8 +3245,8 @@ const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = fa
         if (isNearExisting)
             return;
         const newPoint = {
-            temp_c: clamp(clickTemp, TEMP_MIN, TEMP_MAX),
-            speed_percent: clamp(yToSpeed(y), SPEED_MIN, SPEED_MAX),
+            temp_c: clamp$1(clickTemp, TEMP_MIN, TEMP_MAX),
+            speed_percent: clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX),
         };
         const newCurve = [...config.curve, newPoint].sort((a, b) => a.temp_c - b.temp_c);
         onConfigChange({ ...config, curve: newCurve });
@@ -3525,6 +3532,1835 @@ const FanTab = () => {
 };
 
 /**
+ * Type definitions for Dynamic Manual Mode feature.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.1, 1.2, 1.3, 1.4
+ */
+/**
+ * Validation error codes for different failure types.
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.4
+ */
+var ValidationErrorCode;
+(function (ValidationErrorCode) {
+    /** Minimum voltage is greater than maximum voltage */
+    ValidationErrorCode["MIN_GREATER_THAN_MAX"] = "MIN_GREATER_THAN_MAX";
+    /** Voltage value is below platform minimum limit */
+    ValidationErrorCode["BELOW_PLATFORM_MIN"] = "BELOW_PLATFORM_MIN";
+    /** Voltage value is above 0mV */
+    ValidationErrorCode["ABOVE_ZERO"] = "ABOVE_ZERO";
+    /** Threshold is outside valid range (0-100) */
+    ValidationErrorCode["INVALID_THRESHOLD"] = "INVALID_THRESHOLD";
+    /** Configuration exceeds platform safety limits */
+    ValidationErrorCode["EXCEEDS_SAFETY_LIMIT"] = "EXCEEDS_SAFETY_LIMIT";
+    /** Invalid core ID */
+    ValidationErrorCode["INVALID_CORE_ID"] = "INVALID_CORE_ID";
+    /** Generic validation failure */
+    ValidationErrorCode["VALIDATION_FAILED"] = "VALIDATION_FAILED";
+})(ValidationErrorCode || (ValidationErrorCode = {}));
+/**
+ * Connection status for error banners.
+ *
+ * Requirements: Error banners for connection issues
+ */
+var ConnectionStatus;
+(function (ConnectionStatus) {
+    /** Connected and operational */
+    ConnectionStatus["CONNECTED"] = "CONNECTED";
+    /** Attempting to reconnect */
+    ConnectionStatus["RECONNECTING"] = "RECONNECTING";
+    /** Connection lost */
+    ConnectionStatus["DISCONNECTED"] = "DISCONNECTED";
+    /** Hardware error detected */
+    ConnectionStatus["HARDWARE_ERROR"] = "HARDWARE_ERROR";
+})(ConnectionStatus || (ConnectionStatus = {}));
+
+/**
+ * CoreTabs component for per-core navigation in Dynamic Manual Mode.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.1, 4.1
+ *
+ * Provides tab navigation for cores 0-3 with:
+ * - Tab selection handler
+ * - Active core indicator
+ * - Hidden in Simple Mode
+ * - Gamepad navigation support (D-pad Up/Down)
+ */
+
+/**
+ * CoreTabs component.
+ *
+ * Renders tabs for cores 0-3 with gamepad navigation support.
+ * Hidden in Simple Mode per Requirements 4.1.
+ *
+ * Property 15: Gamepad core navigation
+ * For any D-pad Up or Down input, the selected core index SHALL change by ±1
+ * (wrapping at boundaries 0 and 3).
+ *
+ * Requirements: 1.1, 4.1, 8.1
+ */
+const CoreTabs = ({ selectedCore, onCoreSelect, mode, }) => {
+    /**
+     * Handle gamepad navigation for core selection.
+     * Requirements: 8.1
+     *
+     * Property 15: Gamepad core navigation
+     * D-pad Up/Down changes selected core with wrapping.
+     */
+    SP_REACT.useEffect(() => {
+        const handleGamepadInput = (e) => {
+            // Only handle in expert mode
+            if (mode !== 'expert')
+                return;
+            // D-pad Up: Previous core (with wrapping)
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const newCore = selectedCore === 0 ? 3 : selectedCore - 1;
+                onCoreSelect(newCore);
+            }
+            // D-pad Down: Next core (with wrapping)
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const newCore = selectedCore === 3 ? 0 : selectedCore + 1;
+                onCoreSelect(newCore);
+            }
+        };
+        window.addEventListener('keydown', handleGamepadInput);
+        return () => {
+            window.removeEventListener('keydown', handleGamepadInput);
+        };
+    }, [selectedCore, onCoreSelect, mode]);
+    /**
+     * Hide tabs in Simple Mode.
+     * Requirements: 4.1
+     */
+    if (mode === 'simple') {
+        return null;
+    }
+    /**
+     * Render tabs for cores 0-3 - Compact for QAM.
+     * Requirements: 1.1
+     */
+    return (window.SP_REACT.createElement("div", { style: {
+            marginBottom: '8px',
+        } },
+        window.SP_REACT.createElement(DFL.Focusable, { style: {
+                display: 'flex',
+                gap: '4px',
+            }, "flow-children": "horizontal" }, [0, 1, 2, 3].map((coreId) => {
+            const isActive = coreId === selectedCore;
+            return (window.SP_REACT.createElement(FocusableButton, { key: coreId, onClick: () => onCoreSelect(coreId), style: {
+                    flex: 1,
+                }, focusColor: isActive ? '#4caf50' : '#1a9fff' },
+                window.SP_REACT.createElement("div", { style: {
+                        padding: '8px 6px',
+                        backgroundColor: isActive ? '#1b5e20' : '#3d4450',
+                        borderRadius: '4px',
+                        textAlign: 'center',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: isActive ? '#fff' : '#8b929a',
+                        transition: 'all 0.2s ease',
+                        position: 'relative',
+                    } },
+                    isActive && (window.SP_REACT.createElement("div", { style: {
+                            position: 'absolute',
+                            top: '3px',
+                            right: '3px',
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '50%',
+                            backgroundColor: '#4caf50',
+                            boxShadow: '0 0 4px #4caf50',
+                        } })),
+                    window.SP_REACT.createElement("div", null,
+                        "Core ",
+                        coreId))));
+        }))));
+};
+
+/**
+ * VoltageSliders component for dynamic voltage configuration.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.2, 1.3, 1.4, 5.2, 5.4
+ *
+ * Provides three sliders for configuring voltage curves:
+ * - MinimalValue: Voltage offset at low CPU load (-100 to 0 mV)
+ * - MaximumValue: Voltage offset at high CPU load (-100 to 0 mV)
+ * - Threshold: CPU load percentage where transition occurs (0 to 100%)
+ *
+ * Property 1: Slider value clamping
+ * All slider values are clamped to their valid ranges.
+ *
+ * UI Polish:
+ * - Tooltips for each control explaining their purpose
+ * - Smooth transitions for focus indicators
+ * - Responsive layout for different screen sizes
+ */
+
+/**
+ * Clamp a value to a specified range.
+ * Property 1: Slider value clamping
+ *
+ * @param value - Value to clamp
+ * @param min - Minimum allowed value
+ * @param max - Maximum allowed value
+ * @returns Clamped value within [min, max]
+ */
+const clamp = (value, min, max) => {
+    return Math.max(min, Math.min(max, value));
+};
+/**
+ * VoltageSliders component.
+ * Requirements: 1.2, 1.3, 1.4, 8.3, 8.5
+ * UI Polish: Tooltips, smooth transitions, responsive layout
+ */
+const VoltageSliders = ({ coreId, config, onChange, disabled = false, validationErrors = [], focusedSlider = null, onSliderFocus, }) => {
+    // Tooltip visibility state
+    const [showMinTooltip, setShowMinTooltip] = SP_REACT.useState(false);
+    const [showMaxTooltip, setShowMaxTooltip] = SP_REACT.useState(false);
+    const [showThresholdTooltip, setShowThresholdTooltip] = SP_REACT.useState(false);
+    /**
+     * Handle MinimalValue slider change.
+     * Requirements: 1.2
+     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
+     */
+    const handleMinChange = (value) => {
+        const clamped = clamp(Math.round(value), -100, 0);
+        onChange('min_mv', clamped);
+    };
+    /**
+     * Handle MaximumValue slider change.
+     * Requirements: 1.3
+     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
+     */
+    const handleMaxChange = (value) => {
+        const clamped = clamp(Math.round(value), -100, 0);
+        onChange('max_mv', clamped);
+    };
+    /**
+     * Handle Threshold slider change.
+     * Requirements: 1.4
+     * Property 1: Slider value clamping - values are clamped to 0 to 100%
+     */
+    const handleThresholdChange = (value) => {
+        const clamped = clamp(Math.round(value), 0, 100);
+        onChange('threshold', clamped);
+    };
+    /**
+     * Get validation errors for a specific field.
+     */
+    const getFieldErrors = (field) => {
+        return validationErrors
+            .filter(err => err.field === field && (err.core_id === undefined || err.core_id === coreId))
+            .map(err => err.message);
+    };
+    const minErrors = getFieldErrors('min_mv');
+    const maxErrors = getFieldErrors('max_mv');
+    const thresholdErrors = getFieldErrors('threshold');
+    /**
+     * Tooltip component for displaying help text.
+     */
+    const Tooltip = ({ text, visible }) => {
+        if (!visible)
+            return null;
+        return (window.SP_REACT.createElement("div", { style: {
+                position: 'absolute',
+                top: '-60px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: '#1a1f2c',
+                border: '2px solid #1a9fff',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                fontSize: '11px',
+                color: '#fff',
+                whiteSpace: 'nowrap',
+                zIndex: 1000,
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                animation: 'tooltipFadeIn 0.2s ease',
+            } },
+            text,
+            window.SP_REACT.createElement("div", { style: {
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid #1a9fff',
+                } })));
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('min'), onMouseEnter: () => setShowMinTooltip(true), onMouseLeave: () => setShowMinTooltip(false), style: {
+                        border: focusedSlider === 'min' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'min' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Minimal Value", description: `Voltage offset at low CPU load: ${config.min_mv} mV`, value: config.min_mv, min: -100, max: 0, step: 1, onChange: handleMinChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowMinTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowMinTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "Conservative voltage offset applied when CPU load is below threshold", visible: showMinTooltip })),
+            minErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, minErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('max'), onMouseEnter: () => setShowMaxTooltip(true), onMouseLeave: () => setShowMaxTooltip(false), style: {
+                        border: focusedSlider === 'max' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'max' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Maximum Value", description: `Voltage offset at high CPU load: ${config.max_mv} mV`, value: config.max_mv, min: -100, max: 0, step: 1, onChange: handleMaxChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowMaxTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowMaxTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "Aggressive voltage offset applied when CPU load is above threshold", visible: showMaxTooltip })),
+            maxErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, maxErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('threshold'), onMouseEnter: () => setShowThresholdTooltip(true), onMouseLeave: () => setShowThresholdTooltip(false), style: {
+                        border: focusedSlider === 'threshold' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'threshold' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", description: `CPU load transition point: ${config.threshold}%`, value: config.threshold, min: 0, max: 100, step: 1, onChange: handleThresholdChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowThresholdTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowThresholdTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "CPU load percentage where voltage transitions from minimal to maximum", visible: showThresholdTooltip })),
+            thresholdErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, thresholdErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement("style", null, `
+          @keyframes tooltipFadeIn {
+            from {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+          }
+          
+          @keyframes errorFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `)));
+};
+
+/**
+ * RPC retry utility with exponential backoff.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: Error handling with retry logic
+ *
+ * Provides automatic retry logic for RPC calls with exponential backoff
+ * to handle transient network errors and connection issues.
+ */
+/**
+ * Default retry configuration.
+ * - 3 retry attempts
+ * - 500ms initial delay
+ * - 2x backoff multiplier (500ms, 1000ms, 2000ms)
+ * - 5000ms maximum delay
+ */
+const DEFAULT_RETRY_CONFIG = {
+    maxRetries: 3,
+    initialDelay: 500,
+    backoffMultiplier: 2,
+    maxDelay: 5000,
+};
+/**
+ * Sleep for a specified duration.
+ *
+ * @param ms - Duration in milliseconds
+ */
+const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
+/**
+ * Calculate delay for a retry attempt using exponential backoff.
+ *
+ * @param attempt - Current attempt number (0-indexed)
+ * @param config - Retry configuration
+ * @returns Delay in milliseconds
+ */
+const calculateDelay = (attempt, config) => {
+    const delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
+    return Math.min(delay, config.maxDelay);
+};
+/**
+ * Determine if an error is retryable.
+ *
+ * Retryable errors include:
+ * - Network errors (connection lost, timeout)
+ * - Temporary server errors (503, 504)
+ * - RPC errors marked as recoverable
+ *
+ * Non-retryable errors include:
+ * - Validation errors (400)
+ * - Permission errors (403)
+ * - Not found errors (404)
+ * - Hardware errors
+ *
+ * @param error - Error object
+ * @returns True if error is retryable
+ */
+const isRetryableError = (error) => {
+    // Network errors
+    if (error.message?.includes('network') ||
+        error.message?.includes('timeout') ||
+        error.message?.includes('connection')) {
+        return true;
+    }
+    // RPC errors with recoverable flag
+    if (error.recoverable === true) {
+        return true;
+    }
+    // HTTP status codes
+    if (error.status) {
+        // Retry on 503 (Service Unavailable) and 504 (Gateway Timeout)
+        if (error.status === 503 || error.status === 504) {
+            return true;
+        }
+        // Don't retry on client errors (4xx) or hardware errors
+        if (error.status >= 400 && error.status < 500) {
+            return false;
+        }
+    }
+    // Hardware errors are not retryable
+    if (error.code === 'HARDWARE_ERROR' || error.message?.includes('hardware')) {
+        return false;
+    }
+    // Default to retryable for unknown errors
+    return true;
+};
+/**
+ * Execute an RPC call with automatic retry logic.
+ *
+ * Retries the operation up to maxRetries times with exponential backoff
+ * if the error is retryable. Logs retry attempts for debugging.
+ *
+ * @param operation - Async function to execute
+ * @param config - Retry configuration (optional, uses defaults)
+ * @param operationName - Name for logging (optional)
+ * @returns Promise resolving to operation result
+ * @throws Last error if all retries fail
+ *
+ * @example
+ * ```typescript
+ * const result = await withRetry(
+ *   () => api.callPluginMethod('get_dynamic_config', {}),
+ *   undefined,
+ *   'get_dynamic_config'
+ * );
+ * ```
+ */
+async function withRetry(operation, config = DEFAULT_RETRY_CONFIG, operationName = 'RPC call') {
+    let lastError;
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+        try {
+            // Execute the operation
+            const result = await operation();
+            // Log successful retry
+            if (attempt > 0) {
+                console.log(`[RPCRetry] ${operationName} succeeded on attempt ${attempt + 1}`);
+            }
+            return result;
+        }
+        catch (error) {
+            lastError = error;
+            // Check if we should retry
+            const shouldRetry = attempt < config.maxRetries && isRetryableError(error);
+            if (shouldRetry) {
+                const delay = calculateDelay(attempt, config);
+                console.warn(`[RPCRetry] ${operationName} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), ` +
+                    `retrying in ${delay}ms:`, error);
+                await sleep(delay);
+            }
+            else {
+                // No more retries or non-retryable error
+                if (attempt >= config.maxRetries) {
+                    console.error(`[RPCRetry] ${operationName} failed after ${config.maxRetries + 1} attempts:`, error);
+                }
+                else {
+                    console.error(`[RPCRetry] ${operationName} failed with non-retryable error:`, error);
+                }
+                throw error;
+            }
+        }
+    }
+    // Should never reach here, but TypeScript needs it
+    throw lastError;
+}
+
+/**
+ * Last Known Good (LKG) configuration storage utility.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 7.4 - LKG configuration storage and recovery
+ *
+ * Manages storage and retrieval of stable configurations for error recovery.
+ * A configuration is marked as "stable" after running successfully for 30 seconds.
+ */
+/**
+ * Storage key for LKG configuration in localStorage.
+ */
+const LKG_STORAGE_KEY = 'dynamicMode_lkg';
+/**
+ * Minimum duration (in seconds) a configuration must be stable before
+ * being marked as Last Known Good.
+ */
+const STABILITY_THRESHOLD_SECONDS = 30;
+/**
+ * Save a configuration as Last Known Good.
+ *
+ * Stores the configuration with timestamp and stability duration.
+ * This should be called after a configuration has been running
+ * successfully for at least STABILITY_THRESHOLD_SECONDS.
+ *
+ * @param config - Configuration to save as LKG
+ * @param stableDuration - Duration in seconds the config has been stable
+ * @returns True if saved successfully
+ *
+ * Requirements: 7.4
+ */
+function saveLKG(config, stableDuration) {
+    try {
+        const lkg = {
+            config,
+            timestamp: Date.now(),
+            stable_duration: stableDuration,
+        };
+        localStorage.setItem(LKG_STORAGE_KEY, JSON.stringify(lkg));
+        console.log(`[LKG] Saved Last Known Good config (stable for ${stableDuration}s)`);
+        return true;
+    }
+    catch (error) {
+        console.error('[LKG] Failed to save Last Known Good config:', error);
+        return false;
+    }
+}
+/**
+ * Load the Last Known Good configuration.
+ *
+ * Retrieves the most recently saved stable configuration.
+ * Returns null if no LKG configuration exists or if loading fails.
+ *
+ * @returns Last Known Good configuration or null
+ *
+ * Requirements: 7.4
+ */
+function loadLKG() {
+    try {
+        const stored = localStorage.getItem(LKG_STORAGE_KEY);
+        if (!stored) {
+            console.log('[LKG] No Last Known Good config found');
+            return null;
+        }
+        const lkg = JSON.parse(stored);
+        // Validate structure
+        if (!lkg.config || !lkg.timestamp || typeof lkg.stable_duration !== 'number') {
+            console.warn('[LKG] Invalid Last Known Good config structure');
+            return null;
+        }
+        console.log(`[LKG] Loaded Last Known Good config from ${new Date(lkg.timestamp).toLocaleString()} ` +
+            `(stable for ${lkg.stable_duration}s)`);
+        return lkg;
+    }
+    catch (error) {
+        console.error('[LKG] Failed to load Last Known Good config:', error);
+        return null;
+    }
+}
+/**
+ * Check if a configuration has been stable long enough to be marked as LKG.
+ *
+ * @param stableDuration - Duration in seconds the config has been stable
+ * @returns True if duration meets the stability threshold
+ */
+function isStableEnoughForLKG(stableDuration) {
+    return stableDuration >= STABILITY_THRESHOLD_SECONDS;
+}
+/**
+ * Stability tracker for monitoring configuration stability.
+ *
+ * Tracks how long a configuration has been running without errors
+ * and automatically saves it as LKG when it reaches the stability threshold.
+ */
+class StabilityTracker {
+    constructor() {
+        this.startTime = null;
+        this.config = null;
+        this.checkInterval = null;
+    }
+    /**
+     * Start tracking stability for a configuration.
+     *
+     * @param config - Configuration to track
+     */
+    start(config) {
+        this.stop(); // Stop any existing tracking
+        this.config = config;
+        this.startTime = Date.now();
+        console.log('[LKG] Started stability tracking');
+        // Check stability every 5 seconds
+        this.checkInterval = setInterval(() => {
+            this.checkStability();
+        }, 5000);
+    }
+    /**
+     * Stop tracking stability.
+     */
+    stop() {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
+        this.startTime = null;
+        this.config = null;
+        console.log('[LKG] Stopped stability tracking');
+    }
+    /**
+     * Check if configuration has been stable long enough and save as LKG.
+     */
+    checkStability() {
+        if (!this.startTime || !this.config) {
+            return;
+        }
+        const stableDuration = (Date.now() - this.startTime) / 1000;
+        if (isStableEnoughForLKG(stableDuration)) {
+            // Save as LKG
+            saveLKG(this.config, stableDuration);
+            // Stop tracking - we've saved it
+            this.stop();
+        }
+    }
+    /**
+     * Get current stability duration in seconds.
+     *
+     * @returns Duration in seconds, or 0 if not tracking
+     */
+    getStabilityDuration() {
+        if (!this.startTime) {
+            return 0;
+        }
+        return (Date.now() - this.startTime) / 1000;
+    }
+}
+
+/**
+ * DynamicManualMode component for per-core dynamic voltage control.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4
+ *
+ * Provides granular per-core dynamic voltage configuration with:
+ * - Simple Mode: Unified controls for all cores
+ * - Expert Mode: Per-core configuration
+ * - Real-time voltage curve visualization
+ * - Live metrics monitoring (500ms polling)
+ * - Configuration persistence (localStorage + backend)
+ * - Safety validation and error handling
+ */
+
+/**
+ * Safe default configuration values.
+ * Requirements: 7.5
+ */
+const SAFE_DEFAULTS = {
+    min_mv: -30,
+    max_mv: -15,
+    threshold: 50,
+};
+/**
+ * Create default configuration for all cores.
+ */
+const createDefaultConfig = () => ({
+    mode: 'simple',
+    cores: [0, 1, 2, 3].map(core_id => ({
+        core_id,
+        ...SAFE_DEFAULTS,
+    })),
+    version: 1,
+});
+/**
+ * DynamicManualMode error boundary wrapper.
+ * Requirements: Error handling
+ *
+ * Catches React errors and provides recovery options:
+ * - Retry: Attempt to re-render the component
+ * - Restore LKG: Load Last Known Good configuration
+ * - Reset: Reset to safe defaults
+ */
+class DynamicModeErrorBoundary extends SP_REACT.Component {
+    constructor(props) {
+        super(props);
+        this.handleRetry = () => {
+            this.setState({ hasError: false, error: null });
+        };
+        this.handleRestoreLKG = () => {
+            try {
+                const lkg = loadLKG();
+                if (lkg) {
+                    // Save LKG config to localStorage for component to load
+                    localStorage.setItem('dynamicMode', JSON.stringify(lkg.config));
+                    console.log('[DynamicManualMode] Restored Last Known Good config');
+                }
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to restore LKG:', e);
+            }
+            this.setState({ hasError: false, error: null });
+        };
+        this.handleReset = () => {
+            try {
+                // Clear localStorage to force safe defaults
+                localStorage.removeItem('dynamicMode');
+                console.log('[DynamicManualMode] Reset to safe defaults');
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to reset:', e);
+            }
+            this.setState({ hasError: false, error: null });
+        };
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error('[DynamicManualMode] Error caught by boundary:', error, errorInfo);
+        // Log to backend for diagnostics
+        try {
+            // TODO: Send error report to backend
+            console.error('[DynamicManualMode] Error details:', {
+                message: error.message,
+                stack: error.stack,
+                componentStack: errorInfo.componentStack,
+            });
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to log error:', e);
+        }
+    }
+    render() {
+        if (this.state.hasError) {
+            return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: '16px',
+                            backgroundColor: '#b71c1c',
+                            borderRadius: '8px',
+                            color: '#fff',
+                        } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontWeight: 'bold',
+                                marginBottom: '8px'
+                            } },
+                            window.SP_REACT.createElement(FaExclamationTriangle, null),
+                            window.SP_REACT.createElement("span", null, "Error Loading Dynamic Mode")),
+                        window.SP_REACT.createElement("div", { style: { fontSize: '12px', marginBottom: '12px' } }, this.state.error?.message || 'Unknown error'),
+                        window.SP_REACT.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRetry, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#1a9fff',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Retry")),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRestoreLKG, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#ff9800',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Restore Last Stable")),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleReset, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#3d4450',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Reset to Defaults")))))));
+        }
+        return this.props.children;
+    }
+}
+/**
+ * Main DynamicManualMode component.
+ * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4, 8.1, 8.2, 8.3, 8.4, 8.5
+ */
+const DynamicManualModeInternal = () => {
+    const api = useApi();
+    // Component state
+    const [config, setConfig] = SP_REACT.useState(createDefaultConfig());
+    const [selectedCore, setSelectedCore] = SP_REACT.useState(0);
+    const [isActive, setIsActive] = SP_REACT.useState(false);
+    const [isLoading, setIsLoading] = SP_REACT.useState(false);
+    const [error, setError] = SP_REACT.useState(null);
+    const [validationErrors, setValidationErrors] = SP_REACT.useState([]);
+    const [metrics, setMetrics] = SP_REACT.useState(new Map());
+    const [showDangerWarning, setShowDangerWarning] = SP_REACT.useState(false);
+    const [platformLimits, setPlatformLimits] = SP_REACT.useState({ min: -100, max: 0 });
+    // Connection status tracking
+    // Requirements: Error banners for connection issues
+    const [connectionStatus, setConnectionStatus] = SP_REACT.useState(ConnectionStatus.CONNECTED);
+    const [connectionError, setConnectionError] = SP_REACT.useState(null);
+    // LKG tracking
+    // Requirements: 7.4 - Last Known Good configuration
+    const stabilityTrackerRef = SP_REACT.useRef(new StabilityTracker());
+    const [hasLKG, setHasLKG] = SP_REACT.useState(false);
+    // Gamepad navigation state
+    // Requirements: 8.1, 8.2, 8.3, 8.5
+    const [focusedSlider, setFocusedSlider] = SP_REACT.useState(null);
+    // Polling interval ref
+    const pollingIntervalRef = SP_REACT.useRef(null);
+    /**
+     * Load configuration and platform limits on mount.
+     * Requirements: 6.1, 6.3, 6.4, 7.2, 7.3
+     *
+     * Property 10: Configuration persistence round-trip
+     * Loads configuration with fallback chain: localStorage → backend → safe defaults
+     *
+     * Enhanced with:
+     * - RPC retry logic for transient errors
+     * - Connection status tracking
+     * - LKG availability check
+     */
+    SP_REACT.useEffect(() => {
+        const loadConfig = async () => {
+            setIsLoading(true);
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+            try {
+                // Check if LKG is available
+                const lkg = loadLKG();
+                setHasLKG(lkg !== null);
+                // Load platform limits first with retry logic
+                // Requirements: 7.2, 7.3
+                try {
+                    const limitsResponse = await withRetry(() => api.callPluginMethod('get_platform_limits', {}), DEFAULT_RETRY_CONFIG, 'get_platform_limits');
+                    if (limitsResponse.success && limitsResponse.limits) {
+                        setPlatformLimits(limitsResponse.limits);
+                        console.log('[DynamicManualMode] Platform limits:', limitsResponse.limits);
+                    }
+                }
+                catch (limitsError) {
+                    console.warn('[DynamicManualMode] Failed to load platform limits, using defaults:', limitsError);
+                    // Don't fail the entire load - continue with defaults
+                }
+                // Try localStorage first
+                // Requirements: 6.3
+                try {
+                    const storedConfig = localStorage.getItem('dynamicMode');
+                    if (storedConfig) {
+                        const parsed = JSON.parse(storedConfig);
+                        // Validate the loaded config has required structure
+                        if (parsed.cores && Array.isArray(parsed.cores) && parsed.cores.length === 4) {
+                            setConfig(parsed);
+                            console.log('[DynamicManualMode] Loaded config from localStorage');
+                            setConnectionStatus(ConnectionStatus.CONNECTED);
+                            return;
+                        }
+                        else {
+                            console.warn('[DynamicManualMode] Invalid localStorage config structure, falling back');
+                        }
+                    }
+                }
+                catch (localStorageError) {
+                    // Handle localStorage errors gracefully
+                    // Requirements: 6.4
+                    console.warn('[DynamicManualMode] localStorage error:', localStorageError);
+                    // Continue to backend fallback
+                }
+                // Fallback to backend with retry logic
+                // Requirements: 6.4
+                try {
+                    const response = await withRetry(() => api.callPluginMethod('get_dynamic_config', {}), DEFAULT_RETRY_CONFIG, 'get_dynamic_config');
+                    if (response.success && response.config) {
+                        setConfig(response.config);
+                        console.log('[DynamicManualMode] Loaded config from backend');
+                        setConnectionStatus(ConnectionStatus.CONNECTED);
+                        return;
+                    }
+                }
+                catch (backendError) {
+                    console.warn('[DynamicManualMode] Backend load error:', backendError);
+                    // Update connection status based on error type
+                    if (backendError.message?.includes('network') ||
+                        backendError.message?.includes('connection')) {
+                        setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                        setConnectionError('Connection to backend lost');
+                    }
+                    else if (backendError.message?.includes('hardware')) {
+                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                        setConnectionError('Hardware error detected');
+                    }
+                    // Continue to safe defaults
+                }
+                // Use safe defaults if both localStorage and backend fail
+                // Requirements: 6.4
+                setConfig(createDefaultConfig());
+                console.log('[DynamicManualMode] Using safe defaults');
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to load config:', e);
+                setConfig(createDefaultConfig());
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError(e.message || 'Unknown error');
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        loadConfig();
+        // Cleanup stability tracker on unmount
+        return () => {
+            stabilityTrackerRef.current.stop();
+        };
+    }, [api]);
+    /**
+     * Start metrics polling when active.
+     * Requirements: 3.1, 3.5
+     *
+     * Enhanced with:
+     * - Connection error handling
+     * - Automatic reconnection attempts
+     */
+    SP_REACT.useEffect(() => {
+        if (isActive) {
+            // Start polling
+            pollingIntervalRef.current = setInterval(async () => {
+                try {
+                    const response = await api.callPluginMethod('get_core_metrics', { core_id: selectedCore });
+                    if (response.success && response.metrics) {
+                        setMetrics(prev => {
+                            const updated = new Map(prev);
+                            updated.set(selectedCore, response.metrics);
+                            return updated;
+                        });
+                        // Clear connection errors on successful poll
+                        if (connectionStatus !== ConnectionStatus.CONNECTED) {
+                            setConnectionStatus(ConnectionStatus.CONNECTED);
+                            setConnectionError(null);
+                            console.log('[DynamicManualMode] Connection restored');
+                        }
+                    }
+                    else {
+                        // Handle RPC error response
+                        if (response.error?.includes('hardware')) {
+                            setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                            setConnectionError(response.error);
+                        }
+                    }
+                }
+                catch (e) {
+                    console.error('[DynamicManualMode] Failed to poll metrics:', e);
+                    // Update connection status based on error
+                    if (e.message?.includes('network') || e.message?.includes('connection')) {
+                        if (connectionStatus === ConnectionStatus.CONNECTED) {
+                            setConnectionStatus(ConnectionStatus.RECONNECTING);
+                            setConnectionError('Connection lost, attempting to reconnect...');
+                        }
+                    }
+                    else if (e.message?.includes('hardware')) {
+                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                        setConnectionError('Hardware error detected');
+                        // Stop dynamic mode on hardware error
+                        handleStop();
+                    }
+                }
+            }, 500);
+        }
+        else {
+            // Stop polling
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        }
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+        };
+    }, [isActive, selectedCore, api, connectionStatus]);
+    /**
+     * Validate current configuration.
+     * Requirements: 7.1, 7.2, 7.3
+     *
+     * Returns validation errors if configuration is invalid.
+     */
+    const validateConfig = SP_REACT.useCallback(() => {
+        const errors = [];
+        const coresToValidate = config.mode === 'simple' ? [config.cores[0]] : config.cores;
+        for (const core of coresToValidate) {
+            // Check min <= max ordering
+            // Requirements: 7.1
+            // Property 12: Validation min-max ordering
+            if (core.min_mv > core.max_mv) {
+                errors.push({
+                    field: 'config',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) must be ≤ Maximum Value (${core.max_mv}mV)`,
+                    code: 'MIN_GREATER_THAN_MAX',
+                    core_id: core.core_id,
+                });
+            }
+            // Check platform limits
+            // Requirements: 7.2, 7.3
+            // Property 13: Voltage lower bound clamping
+            // Property 14: Voltage upper bound clamping
+            if (core.min_mv < platformLimits.min) {
+                errors.push({
+                    field: 'min_mv',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is below platform limit (${platformLimits.min}mV)`,
+                    code: 'BELOW_PLATFORM_MIN',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.max_mv < platformLimits.min) {
+                errors.push({
+                    field: 'max_mv',
+                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is below platform limit (${platformLimits.min}mV)`,
+                    code: 'BELOW_PLATFORM_MIN',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.min_mv > platformLimits.max) {
+                errors.push({
+                    field: 'min_mv',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is above 0mV`,
+                    code: 'ABOVE_ZERO',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.max_mv > platformLimits.max) {
+                errors.push({
+                    field: 'max_mv',
+                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is above 0mV`,
+                    code: 'ABOVE_ZERO',
+                    core_id: core.core_id,
+                });
+            }
+            // Check threshold range
+            if (core.threshold < 0 || core.threshold > 100) {
+                errors.push({
+                    field: 'threshold',
+                    message: `Core ${core.core_id}: Threshold (${core.threshold}%) must be between 0 and 100`,
+                    code: 'INVALID_THRESHOLD',
+                    core_id: core.core_id,
+                });
+            }
+        }
+        return errors;
+    }, [config, platformLimits]);
+    /**
+     * Check if configuration is dangerous.
+     * Requirements: 7.4
+     *
+     * A configuration is dangerous if any voltage is below -50mV.
+     */
+    const isDangerousConfig = SP_REACT.useCallback(() => {
+        const DANGER_THRESHOLD = -50;
+        const coresToCheck = config.mode === 'simple' ? [config.cores[0]] : config.cores;
+        return coresToCheck.some(core => core.min_mv < DANGER_THRESHOLD || core.max_mv < DANGER_THRESHOLD);
+    }, [config]);
+    /**
+     * Reset configuration to safe defaults.
+     * Requirements: 7.5
+     */
+    const handleResetToDefaults = SP_REACT.useCallback(() => {
+        setConfig(createDefaultConfig());
+        setValidationErrors([]);
+        setError(null);
+        setShowDangerWarning(false);
+        console.log('[DynamicManualMode] Reset to safe defaults');
+    }, []);
+    /**
+     * Restore Last Known Good configuration.
+     * Requirements: 7.4
+     *
+     * Loads the most recent stable configuration from LKG storage.
+     * This is used for error recovery when the current configuration
+     * causes issues.
+     */
+    const handleRestoreLKG = SP_REACT.useCallback(() => {
+        const lkg = loadLKG();
+        if (!lkg) {
+            setError('No Last Known Good configuration available');
+            return;
+        }
+        setConfig(lkg.config);
+        setValidationErrors([]);
+        setError(null);
+        setShowDangerWarning(false);
+        console.log(`[DynamicManualMode] Restored Last Known Good config from ` +
+            `${new Date(lkg.timestamp).toLocaleString()} (stable for ${lkg.stable_duration}s)`);
+    }, []);
+    /**
+     * Handle mode toggle (Simple/Expert).
+     * Requirements: 4.1, 4.4, 4.5
+     *
+     * Property 8: Mode switching configuration preservation
+     * When switching modes, all core configurations are preserved.
+     */
+    const handleModeToggle = SP_REACT.useCallback(() => {
+        setConfig(prev => {
+            const newMode = prev.mode === 'simple' ? 'expert' : 'simple';
+            // Configuration is always preserved when switching modes
+            // Requirements: 4.4
+            // In Simple Mode, we display Core 0's config but all cores retain their values
+            // Requirements: 4.5
+            return { ...prev, mode: newMode };
+        });
+    }, []);
+    /**
+     * Handle Apply button click.
+     * Requirements: 1.5, 6.1, 6.2, 4.3, 7.1, 7.4
+     */
+    const handleApply = SP_REACT.useCallback(async () => {
+        // Validate configuration first
+        // Requirements: 7.1
+        const errors = validateConfig();
+        if (errors.length > 0) {
+            setValidationErrors(errors);
+            setError('Configuration validation failed. Please fix the errors below.');
+            return;
+        }
+        // Check for dangerous configuration
+        // Requirements: 7.4
+        if (isDangerousConfig()) {
+            setShowDangerWarning(true);
+            return;
+        }
+        // Proceed with applying configuration
+        await applyConfiguration();
+    }, [validateConfig, isDangerousConfig]);
+    /**
+     * Apply configuration after validation passes.
+     * Requirements: 1.5, 6.1, 6.2, 4.3
+     *
+     * Enhanced with:
+     * - RPC retry logic for transient errors
+     * - Connection status tracking
+     * - Hardware error handling
+     */
+    const applyConfiguration = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        setValidationErrors([]);
+        setShowDangerWarning(false);
+        setConnectionStatus(ConnectionStatus.CONNECTED);
+        try {
+            if (config.mode === 'simple') {
+                // In Simple Mode, apply Core 0's config to all cores
+                // Requirements: 4.3
+                // Property 7: Simple mode configuration uniformity
+                const coreConfig = config.cores[0];
+                const response = await withRetry(() => api.callPluginMethod('set_all_cores_config', {
+                    min_mv: coreConfig.min_mv,
+                    max_mv: coreConfig.max_mv,
+                    threshold: coreConfig.threshold,
+                }), DEFAULT_RETRY_CONFIG, 'set_all_cores_config');
+                if (!response.success) {
+                    setError(response.error || 'Failed to apply configuration');
+                    if (response.validation_errors) {
+                        const errors = response.validation_errors.map((msg) => ({
+                            field: 'config',
+                            message: msg,
+                            code: 'VALIDATION_FAILED',
+                        }));
+                        setValidationErrors(errors);
+                    }
+                    return;
+                }
+            }
+            else {
+                // In Expert Mode, apply configuration for each core
+                for (const coreConfig of config.cores) {
+                    const response = await withRetry(() => api.callPluginMethod('set_dynamic_core_config', {
+                        core_id: coreConfig.core_id,
+                        min_mv: coreConfig.min_mv,
+                        max_mv: coreConfig.max_mv,
+                        threshold: coreConfig.threshold,
+                    }), DEFAULT_RETRY_CONFIG, `set_dynamic_core_config (core ${coreConfig.core_id})`);
+                    if (!response.success) {
+                        setError(response.error || 'Failed to apply configuration');
+                        if (response.validation_errors) {
+                            const errors = response.validation_errors.map((msg) => ({
+                                field: 'config',
+                                message: msg,
+                                code: 'VALIDATION_FAILED',
+                                core_id: coreConfig.core_id,
+                            }));
+                            setValidationErrors(errors);
+                        }
+                        return;
+                    }
+                }
+            }
+            // Save to localStorage
+            // Requirements: 6.1
+            // Property 10: Configuration persistence round-trip
+            try {
+                localStorage.setItem('dynamicMode', JSON.stringify(config));
+                console.log('[DynamicManualMode] Configuration saved to localStorage');
+            }
+            catch (localStorageError) {
+                // Handle localStorage errors gracefully (e.g., quota exceeded, private browsing)
+                // Requirements: 6.4
+                console.warn('[DynamicManualMode] Failed to save to localStorage:', localStorageError);
+                // Don't fail the entire operation - backend save already succeeded
+            }
+            console.log('[DynamicManualMode] Configuration applied successfully');
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to apply config:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status based on error type
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+            else if (e.message?.includes('hardware')) {
+                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                setConnectionError('Hardware error: ' + e.message);
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [config, api]);
+    /**
+     * Handle Start Dynamic Mode button click.
+     * Requirements: 5.1, 5.2
+     *
+     * Enhanced with:
+     * - RPC retry logic
+     * - LKG stability tracking
+     * - Connection error handling
+     */
+    const handleStart = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        setConnectionStatus(ConnectionStatus.CONNECTED);
+        try {
+            const response = await withRetry(() => api.callPluginMethod('start_dynamic_mode', { config }), DEFAULT_RETRY_CONFIG, 'start_dynamic_mode');
+            if (response.success) {
+                setIsActive(true);
+                // Start stability tracking for LKG
+                // Requirements: 7.4
+                stabilityTrackerRef.current.start(config);
+                console.log('[DynamicManualMode] Dynamic mode started');
+                setConnectionStatus(ConnectionStatus.CONNECTED);
+            }
+            else {
+                setError(response.error || 'Failed to start dynamic mode');
+                if (response.error?.includes('hardware')) {
+                    setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                    setConnectionError(response.error);
+                }
+            }
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to start:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+            else if (e.message?.includes('hardware')) {
+                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                setConnectionError('Hardware error: ' + e.message);
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [config, api]);
+    /**
+     * Handle Stop Dynamic Mode button click.
+     * Requirements: 5.3, 5.4
+     *
+     * Enhanced with:
+     * - RPC retry logic
+     * - LKG stability tracking stop
+     * - Connection error handling
+     */
+    const handleStop = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await withRetry(() => api.callPluginMethod('stop_dynamic_mode', {}), DEFAULT_RETRY_CONFIG, 'stop_dynamic_mode');
+            if (response.success) {
+                setIsActive(false);
+                // Stop stability tracking
+                // Requirements: 7.4
+                const stableDuration = stabilityTrackerRef.current.getStabilityDuration();
+                if (isStableEnoughForLKG(stableDuration)) {
+                    // Save as LKG if it was stable long enough
+                    saveLKG(config, stableDuration);
+                    setHasLKG(true);
+                }
+                stabilityTrackerRef.current.stop();
+                console.log('[DynamicManualMode] Dynamic mode stopped');
+                setConnectionStatus(ConnectionStatus.CONNECTED);
+            }
+            else {
+                setError(response.error || 'Failed to stop dynamic mode');
+            }
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to stop:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [api, config]);
+    /**
+     * Update core configuration.
+     */
+    const updateCoreConfig = SP_REACT.useCallback((coreId, updates) => {
+        setConfig(prev => ({
+            ...prev,
+            cores: prev.cores.map(core => core.core_id === coreId ? { ...core, ...updates } : core),
+        }));
+    }, []);
+    /**
+     * Update all cores in Simple Mode.
+     * Requirements: 4.2
+     * Property 6: Simple mode value propagation
+     */
+    const updateAllCores = SP_REACT.useCallback((updates) => {
+        setConfig(prev => ({
+            ...prev,
+            cores: prev.cores.map(core => ({ ...core, ...updates })),
+        }));
+    }, []);
+    /**
+     * Handle slider changes - propagates to all cores in Simple Mode.
+     * Requirements: 4.2, 8.3
+     */
+    const handleSliderChange = SP_REACT.useCallback((field, value) => {
+        if (config.mode === 'simple') {
+            // In Simple Mode, propagate to all cores
+            updateAllCores({ [field]: value });
+        }
+        else {
+            // In Expert Mode, update only selected core
+            updateCoreConfig(selectedCore, { [field]: value });
+        }
+    }, [config.mode, selectedCore, updateAllCores, updateCoreConfig]);
+    /**
+     * Handle gamepad navigation for slider adjustment and focus management.
+     * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+     *
+     * Property 15: Gamepad core navigation
+     * D-pad Up/Down changes selected core with wrapping (handled in CoreTabs).
+     *
+     * Property 16: Gamepad focus navigation
+     * D-pad Left/Right moves focus between sliders and buttons.
+     *
+     * Property 17: Gamepad slider adjustment
+     * L1/R1 adjusts slider value by one increment when slider has focus.
+     *
+     * Property 18: Gamepad focus indicator visibility
+     * Visual focus indicators are rendered for focused elements.
+     */
+    SP_REACT.useEffect(() => {
+        const handleGamepadInput = (e) => {
+            // D-pad Left/Right: Focus navigation between sliders
+            // Requirements: 8.2
+            // Property 16: Gamepad focus navigation
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setFocusedSlider(prev => {
+                    if (prev === null || prev === 'min')
+                        return 'threshold';
+                    if (prev === 'max')
+                        return 'min';
+                    if (prev === 'threshold')
+                        return 'max';
+                    return prev;
+                });
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setFocusedSlider(prev => {
+                    if (prev === null || prev === 'threshold')
+                        return 'min';
+                    if (prev === 'min')
+                        return 'max';
+                    if (prev === 'max')
+                        return 'threshold';
+                    return prev;
+                });
+            }
+            // L1/R1: Slider adjustment when slider has focus
+            // Requirements: 8.3
+            // Property 17: Gamepad slider adjustment
+            if ((e.key === 'PageUp' || e.key === 'PageDown') && focusedSlider) {
+                e.preventDefault();
+                const currentCore = config.mode === 'simple' ? 0 : selectedCore;
+                const currentConfig = config.cores[currentCore];
+                const increment = e.key === 'PageUp' ? 1 : -1; // L1 = PageUp, R1 = PageDown
+                if (focusedSlider === 'min') {
+                    const newValue = Math.max(-100, Math.min(0, currentConfig.min_mv + increment));
+                    handleSliderChange('min_mv', newValue);
+                }
+                else if (focusedSlider === 'max') {
+                    const newValue = Math.max(-100, Math.min(0, currentConfig.max_mv + increment));
+                    handleSliderChange('max_mv', newValue);
+                }
+                else if (focusedSlider === 'threshold') {
+                    const newValue = Math.max(0, Math.min(100, currentConfig.threshold + increment));
+                    handleSliderChange('threshold', newValue);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleGamepadInput);
+        return () => {
+            window.removeEventListener('keydown', handleGamepadInput);
+        };
+    }, [focusedSlider, config, selectedCore, handleSliderChange]);
+    if (isLoading && !config.cores.length) {
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '24px',
+                        color: '#8b929a',
+                    } },
+                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    window.SP_REACT.createElement("span", null, "Loading...")))));
+    }
+    // Check if Apply button should be disabled
+    // Requirements: 7.1
+    const hasValidationErrors = validateConfig().length > 0;
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+        connectionStatus !== ConnectionStatus.CONNECTED && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#b71c1c' :
+                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#d32f2f' :
+                            '#ff9800', // RECONNECTING
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                    border: '2px solid ' + (connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#ff5252' :
+                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#ff5252' :
+                            '#ffb74d'),
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        marginBottom: connectionError ? '6px' : '0',
+                    } },
+                    connectionStatus === ConnectionStatus.RECONNECTING && window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    connectionStatus === ConnectionStatus.HARDWARE_ERROR && window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    connectionStatus === ConnectionStatus.DISCONNECTED && window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    window.SP_REACT.createElement("span", null,
+                        connectionStatus === ConnectionStatus.RECONNECTING && 'Reconnecting...',
+                        connectionStatus === ConnectionStatus.HARDWARE_ERROR && 'Hardware Error',
+                        connectionStatus === ConnectionStatus.DISCONNECTED && 'Connection Lost')),
+                connectionError && (window.SP_REACT.createElement("div", { style: { fontSize: '11px', color: '#fff', opacity: 0.9 } }, connectionError))))),
+        showDangerWarning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '16px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    border: '2px solid #ff9800',
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: '#ff9800',
+                        marginBottom: '8px',
+                    } }, "\u26A0\uFE0F Dangerous Configuration Warning"),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: '11px',
+                        color: '#fff',
+                        marginBottom: '12px',
+                        lineHeight: '1.4',
+                    } }, "Your configuration includes aggressive voltage offsets (below -50mV) that may cause system instability or crashes. Proceed only if you understand the risks."),
+                window.SP_REACT.createElement("div", { style: { display: 'flex', gap: '8px' } },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => {
+                            setShowDangerWarning(false);
+                            applyConfiguration();
+                        }, style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#ff9800',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                            } }, "Apply Anyway")),
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => setShowDangerWarning(false), style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#3d4450',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                            } }, "Cancel")))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    backgroundColor: isActive ? '#1b5e20' : '#3d4450',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                    transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+                    boxShadow: isActive ? '0 0 16px rgba(76, 175, 80, 0.3)' : 'none',
+                } },
+                window.SP_REACT.createElement("span", { style: {
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        transition: 'color 0.3s ease',
+                    } },
+                    "Status: ",
+                    isActive ? 'Active' : 'Inactive'),
+                window.SP_REACT.createElement("div", { style: {
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: isActive ? '#4caf50' : '#8b929a',
+                        boxShadow: isActive ? '0 0 8px #4caf50' : 'none',
+                        transition: 'all 0.3s ease',
+                        animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none',
+                    } }))),
+        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: '#b71c1c',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                } },
+                window.SP_REACT.createElement("div", { style: { fontSize: '12px', color: '#fff' } }, error)))),
+        validationErrors.length > 0 && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                } }, validationErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx, style: { fontSize: '11px', color: '#ff9800', marginBottom: '4px' } },
+                err.core_id !== undefined && `Core ${err.core_id}: `,
+                err.message)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: '12px' } },
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleModeToggle, style: { width: '100%' } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: '8px',
+                            backgroundColor: config.mode === 'simple' ? '#1a9fff' : '#3d4450',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                        } }, config.mode === 'simple' ? '✓ Simple Mode' : 'Expert Mode (Per-Core)')))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(CoreTabs, { selectedCore: selectedCore, onCoreSelect: setSelectedCore, mode: config.mode })),
+        window.SP_REACT.createElement(VoltageSliders, { coreId: config.mode === 'simple' ? 0 : selectedCore, config: config.mode === 'simple' ? config.cores[0] : config.cores[selectedCore], onChange: handleSliderChange, disabled: isLoading, validationErrors: validationErrors, focusedSlider: focusedSlider, onSliderFocus: setFocusedSlider }),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: 'flex', gap: '8px', marginTop: '12px' }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Apply configuration to all cores" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleApply, disabled: isLoading || hasValidationErrors, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: hasValidationErrors ? '#3d4450' : '#1a9fff',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                opacity: hasValidationErrors ? 0.5 : 1,
+                                transition: 'all 0.2s ease',
+                            } },
+                            isLoading ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : null,
+                            window.SP_REACT.createElement("span", null, "Apply")))),
+                !isActive ? (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Start dynamic voltage adjustment" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStart, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: '#1b5e20',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaPlay, null),
+                            window.SP_REACT.createElement("span", null, "Start"))))) : (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Stop dynamic voltage adjustment" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStop, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: '#b71c1c',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaStop, null),
+                            window.SP_REACT.createElement("span", null, "Stop"))))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: 'flex',
+                    gap: '8px',
+                    marginTop: '8px',
+                    flexDirection: 'column',
+                } },
+                hasLKG && (window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Restore the last known stable configuration" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleRestoreLKG, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '8px',
+                                backgroundColor: '#ff9800',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaUndo, null),
+                            window.SP_REACT.createElement("span", null, "Restore Last Stable"))))),
+                window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Reset all cores to safe default values (-30mV/-15mV/50%)" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleResetToDefaults, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#3d4450',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                transition: 'all 0.2s ease',
+                            } }, "Reset to Safe Defaults"))))),
+        window.SP_REACT.createElement("style", null, `
+          /* Spinner animation for loading states */
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          /* Pulse animation for active status indicator */
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.7;
+              transform: scale(1.1);
+            }
+          }
+          
+          /* Smooth fade-in for error messages */
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          /* Responsive layout adjustments */
+          @media (max-width: 768px) {
+            /* Adjust padding and font sizes for smaller screens */
+            .dynamic-mode-container {
+              padding: 8px;
+            }
+            
+            .dynamic-mode-button {
+              font-size: 10px;
+              padding: 8px;
+            }
+            
+            .dynamic-mode-status {
+              font-size: 11px;
+            }
+          }
+          
+          @media (min-width: 769px) and (max-width: 1024px) {
+            /* Medium screen adjustments */
+            .dynamic-mode-container {
+              padding: 12px;
+            }
+          }
+          
+          @media (min-width: 1025px) {
+            /* Large screen adjustments */
+            .dynamic-mode-container {
+              padding: 16px;
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+          }
+          
+          /* Smooth transitions for all interactive elements */
+          button, .focusable-element {
+            transition: all 0.2s ease;
+          }
+          
+          button:hover, .focusable-element:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          }
+          
+          button:active, .focusable-element:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          }
+          
+          /* Focus indicator enhancement for gamepad navigation */
+          .gamepad-focus {
+            outline: 3px solid #1a9fff;
+            outline-offset: 2px;
+            box-shadow: 0 0 12px rgba(26, 159, 255, 0.6);
+            transition: all 0.2s ease;
+          }
+          
+          /* Smooth graph update transitions */
+          .recharts-wrapper {
+            transition: opacity 0.3s ease;
+          }
+          
+          .recharts-line {
+            transition: stroke-dashoffset 0.5s ease;
+          }
+        `)));
+};
+/**
+ * Exported component with error boundary.
+ */
+const DynamicManualMode = () => (window.SP_REACT.createElement(DynamicModeErrorBoundary, null,
+    window.SP_REACT.createElement(DynamicManualModeInternal, null)));
+
+/**
  * ExpertMode component for DeckTune.
  *
  * Feature: decktune, Frontend UI Components - Expert Mode
@@ -3545,6 +5381,7 @@ const FanTab = () => {
 
 const TABS = [
     { id: "manual", label: "Manual", icon: FaSlidersH },
+    { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
     { id: "presets", label: "Presets", icon: FaList },
     { id: "tests", label: "Tests", icon: FaVial },
     { id: "fan", label: "Fan", icon: FaFan },
@@ -3602,7 +5439,7 @@ const PanicDisableButton = () => {
 };
 /**
  * ExpertMode component - detailed controls for power users.
- * Requirements: 4.5, 7.1
+ * Requirements: 4.5, 7.1, 10.1, 10.2, 10.3, 10.4, 10.5
  */
 const ExpertMode = ({ initialTab = "manual" }) => {
     const [activeTab, setActiveTab] = SP_REACT.useState(initialTab);
@@ -3613,12 +5450,44 @@ const ExpertMode = ({ initialTab = "manual" }) => {
         window.__DECKTUNE_BUILD_ID__ = buildId;
         window.__DECKTUNE_EXPERT_MODE_VERSION__ = "FOCUSABLE_BUTTON_V1";
     }, []);
+    /**
+     * Handle tab change with persistence.
+     * Requirements: 10.5
+     */
+    const handleTabChange = SP_REACT.useCallback(async (tab) => {
+        setActiveTab(tab);
+        // Persist selected tab to settings
+        try {
+            await call("save_setting", "expert_mode_selected_tab", tab);
+            console.log("[ExpertMode] Selected tab persisted:", tab);
+        }
+        catch (error) {
+            console.error("[ExpertMode] Failed to persist selected tab:", error);
+        }
+    }, []);
+    // Load persisted tab on mount
+    SP_REACT.useEffect(() => {
+        const loadPersistedTab = async () => {
+            try {
+                const response = await call("load_setting", "expert_mode_selected_tab");
+                if (response.success && response.value) {
+                    setActiveTab(response.value);
+                    console.log("[ExpertMode] Loaded persisted tab:", response.value);
+                }
+            }
+            catch (error) {
+                console.error("[ExpertMode] Failed to load persisted tab:", error);
+            }
+        };
+        loadPersistedTab();
+    }, []);
     return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Expert Mode" },
         window.SP_REACT.createElement(PanicDisableButton, null),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: setActiveTab })),
+            window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: handleTabChange })),
         window.SP_REACT.createElement("div", { key: activeTab },
             activeTab === "manual" && window.SP_REACT.createElement(ManualTab, null),
+            activeTab === "dynamic-manual" && window.SP_REACT.createElement(DynamicManualMode, null),
             activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
             activeTab === "tests" && window.SP_REACT.createElement(TestsTabNew, null),
             activeTab === "fan" && window.SP_REACT.createElement(FanTab, null),

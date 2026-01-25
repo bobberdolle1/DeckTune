@@ -947,13 +947,20 @@ class WizardSession:
                 logger.info(f"Starting search for domain: {domain}")
                 max_stable = await self._run_step_down_search(domain)
                 
-                # CRITICAL FIX: Apply safety margin in correct direction (ADD to make less aggressive)
-                # Example: max_stable = -50mV, safety_margin = 5mV → recommended = -45mV (safer)
-                safety_margin = config.get_safety_margin()
-                recommended = max_stable + safety_margin  # Add margin to make it less negative (more conservative)
+                # CRITICAL FIX: Handle case where no stable undervolt was found
+                if max_stable == 0:
+                    # No stable undervolt found - recommend conservative value
+                    recommended = -10  # Safe conservative undervolt
+                    logger.warning(f"[WIZARD] {domain}: No stable undervolt found, using conservative -10mV")
+                else:
+                    # Apply safety margin in correct direction (ADD to make less aggressive)
+                    # Example: max_stable = -50mV, safety_margin = 5mV → recommended = -45mV (safer)
+                    safety_margin = config.get_safety_margin()
+                    recommended = max_stable + safety_margin  # Add margin to make it less negative (more conservative)
+                
                 final_offsets[domain] = recommended
                 
-                logger.info(f"[WIZARD] {domain}: max_stable={max_stable}mV, safety_margin={safety_margin}mV, recommended={recommended}mV")
+                logger.info(f"[WIZARD] {domain}: max_stable={max_stable}mV, safety_margin={config.get_safety_margin()}mV, recommended={recommended}mV")
             
             # CRITICAL: Run verification pass before accepting results
             if final_offsets and not self._cancelled:

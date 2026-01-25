@@ -12,9 +12,16 @@ import manifest from './plugin.json' with { type: 'json' };
 export default defineConfig({
   input: "./src/index.tsx",
   plugins: [
+    typescript({
+      tsconfig: './tsconfig.json',
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      sourceMap: true,
+      inlineSources: true
+    }),
     commonjs(),
     nodeResolve({
-      browser: true
+      browser: true,
+      extensions: ['.js', '.jsx', '.ts', '.tsx']
     }),
     externalGlobals({
       react: 'SP_REACT',
@@ -22,8 +29,6 @@ export default defineConfig({
       '@decky/ui': 'DFL',
       '@decky/manifest': JSON.stringify(manifest)
     }),
-    nodeResolve(),
-    typescript(),
     json(),
     replace({
       preventAssignment: false,

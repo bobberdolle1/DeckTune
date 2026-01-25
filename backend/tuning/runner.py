@@ -8,12 +8,15 @@ bundled as static binaries in the bin/ directory since pacman is unavailable.
 """
 
 import asyncio
+import logging
 import os
 import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 # Plugin directory for bundled binaries (set by Decky Loader)
 PLUGIN_DIR = os.environ.get("DECKY_PLUGIN_DIR", ".")
