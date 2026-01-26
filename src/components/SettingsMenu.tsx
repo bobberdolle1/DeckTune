@@ -527,6 +527,7 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
             </PanelSectionRow>
 
             {/* Binning Settings section */}
+            {/* Wizard Settings section - FIXED: Gamepad navigation with D-pad/stick */}
             <PanelSectionRow>
               <div style={{ marginBottom: "16px" }}>
                 <div
@@ -550,52 +551,43 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                   Advanced configuration for Wizard Mode testing algorithm.
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div>
-                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
-                      Test Duration: {binningConfig.test_duration}s
-                    </div>
-                    <input
-                      type="range"
-                      min={30}
-                      max={300}
-                      step={10}
-                      value={binningConfig.test_duration}
-                      onChange={(e) => updateBinningConfig({ test_duration: parseInt(e.target.value) })}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
+                <Focusable style={{ display: "flex", flexDirection: "column", gap: "12px" }} flow-children="vertical">
+                  <SliderField
+                    label="Test Duration"
+                    value={binningConfig.test_duration}
+                    min={30}
+                    max={300}
+                    step={10}
+                    onChange={(value) => updateBinningConfig({ test_duration: value })}
+                    showValue={true}
+                    valueSuffix=" sec"
+                    bottomSeparator="none"
+                  />
 
-                  <div>
-                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
-                      Step Size: {binningConfig.step_size}mV
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={10}
-                      step={1}
-                      value={binningConfig.step_size}
-                      onChange={(e) => updateBinningConfig({ step_size: parseInt(e.target.value) })}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
+                  <SliderField
+                    label="Step Size"
+                    value={binningConfig.step_size}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onChange={(value) => updateBinningConfig({ step_size: value })}
+                    showValue={true}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
 
-                  <div>
-                    <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px" }}>
-                      Start Value: {binningConfig.start_value}mV
-                    </div>
-                    <input
-                      type="range"
-                      min={5}
-                      max={20}
-                      step={5}
-                      value={Math.abs(binningConfig.start_value)}
-                      onChange={(e) => updateBinningConfig({ start_value: -parseInt(e.target.value) })}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                </div>
+                  <SliderField
+                    label="Start Value"
+                    value={Math.abs(binningConfig.start_value)}
+                    min={5}
+                    max={20}
+                    step={5}
+                    onChange={(value) => updateBinningConfig({ start_value: -value })}
+                    showValue={true}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
               </div>
             </PanelSectionRow>
 
