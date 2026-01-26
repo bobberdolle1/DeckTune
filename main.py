@@ -426,15 +426,15 @@ class Plugin:
             crash_info = self.wizard_session.check_dirty_exit()
             if crash_info:
                 decky.logger.warning(f"Wizard dirty exit detected: {crash_info}")
+                await self.event_emitter.emit_wizard_error(
+                    f"Previous wizard session crashed at {crash_info['current_offset']}mV. "
+                    f"Last stable: {crash_info['last_stable']}mV"
+                )
                 
             decky.logger.info("Wizard session initialized successfully")
         except Exception as e:
             decky.logger.error(f"Failed to initialize wizard session: {e}", exc_info=True)
             self.wizard_session = None
-            await self.event_emitter.emit_wizard_error(
-                f"Previous wizard session crashed at {crash_info['current_offset']}mV. "
-                f"Last stable: {crash_info['last_stable']}mV"
-            )
         
         decky.logger.info("Wizard session initialized")
         
