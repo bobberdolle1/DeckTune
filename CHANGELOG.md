@@ -2,7 +2,7 @@
 
 All notable changes to DeckTune will be documented in this file.
 
-## [3.3.3] - 2026-01-26
+## [3.3.4] - 2026-01-26
 
 ### Fixed
 - **UI Layout for Steam Deck QAM** — Fixed multiple layout issues where controls didn't fit in QAM width (310px)
