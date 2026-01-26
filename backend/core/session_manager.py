@@ -171,7 +171,7 @@ class SessionManager:
             List of sessions loaded from settings, or empty list if not found
         """
         try:
-            data = self.settings_manager.getSetting(self.SETTINGS_KEY)
+            data = self.settings_manager.get_setting(self.SETTINGS_KEY)
             if data is None:
                 return []
             return [Session.from_dict(s) for s in data]
@@ -182,7 +182,7 @@ class SessionManager:
     def _save_to_settings(self) -> None:
         """Persist sessions to settings."""
         try:
-            self.settings_manager.setSetting(
+            self.settings_manager.save_setting(
                 self.SETTINGS_KEY,
                 [s.to_dict() for s in self._sessions]
             )

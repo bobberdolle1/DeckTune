@@ -392,7 +392,7 @@ class ProfileManager:
     def _load_profiles(self) -> None:
         """Load profiles from settings storage."""
         try:
-            data = self.settings.getSetting(self.STORAGE_KEY, {})
+            data = self.settings.get_setting(self.STORAGE_KEY, {})
             
             # Load global default
             if "global_default" in data:
@@ -440,7 +440,7 @@ class ProfileManager:
                 "profiles": profiles_list
             }
             
-            self.settings.setSetting(self.STORAGE_KEY, data)
+            self.settings.save_setting(self.STORAGE_KEY, data)
             logger.info(f"Saved {len(profiles_list)} profiles to settings")
             return True
         except Exception as e:
@@ -523,7 +523,7 @@ class ProfileManager:
         """
         try:
             # Get current undervolt values from settings
-            current_cores = self.settings.getSetting("cores", [0, 0, 0, 0])
+            current_cores = self.settings.get_setting("cores", [0, 0, 0, 0])
             
             # Get dynamic mode status
             dynamic_enabled = False
@@ -533,7 +533,7 @@ class ProfileManager:
                 dynamic_enabled = self.dynamic_controller.is_running()
                 if dynamic_enabled:
                     # Get current dynamic config from settings
-                    dynamic_config = self.settings.getSetting("dynamic_config")
+                    dynamic_config = self.settings.get_setting("dynamic_config")
             
             # Create profile with captured settings
             return await self.create_profile(

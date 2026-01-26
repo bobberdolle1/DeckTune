@@ -119,7 +119,7 @@ class CrashMetricsManager:
             CrashMetrics loaded from settings, or empty metrics if not found
         """
         try:
-            data = self.settings_manager.getSetting(self.SETTINGS_KEY)
+            data = self.settings_manager.get_setting(self.SETTINGS_KEY)
             if data is None:
                 return CrashMetrics()
             return CrashMetrics.from_dict(data)
@@ -130,7 +130,7 @@ class CrashMetricsManager:
     def _save_to_settings(self) -> None:
         """Persist crash metrics to settings."""
         try:
-            self.settings_manager.setSetting(
+            self.settings_manager.save_setting(
                 self.SETTINGS_KEY,
                 self._metrics.to_dict()
             )

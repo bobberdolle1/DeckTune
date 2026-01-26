@@ -392,14 +392,14 @@ class SettingsManager:
         
         try:
             # Migrate Expert Mode setting
-            legacy_expert_mode = self.legacy_settings_manager.getSetting("expert_mode")
+            legacy_expert_mode = self.legacy_settings_manager.get_setting("expert_mode")
             if legacy_expert_mode is not None:
                 self._cache["expert_mode"] = legacy_expert_mode
                 migrated_count += 1
                 logger.info(f"Migrated expert_mode: {legacy_expert_mode}")
             
             # Migrate Expert Mode confirmation flag
-            legacy_expert_mode_confirmed = self.legacy_settings_manager.getSetting("expert_mode_confirmed")
+            legacy_expert_mode_confirmed = self.legacy_settings_manager.get_setting("expert_mode_confirmed")
             if legacy_expert_mode_confirmed is not None:
                 self._cache["expert_mode_confirmed"] = legacy_expert_mode_confirmed
                 migrated_count += 1

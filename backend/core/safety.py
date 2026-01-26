@@ -323,7 +323,7 @@ class SafetyManager:
     
     def _load_lkg_from_settings(self) -> None:
         """Load LKG values from settings on init."""
-        lkg = self.settings_manager.getSetting("lkg_cores")
+        lkg = self.settings_manager.get_setting("lkg_cores")
         if lkg and isinstance(lkg, list) and len(lkg) == 4:
             self._lkg_values = lkg
     
@@ -356,8 +356,8 @@ class SafetyManager:
             values: List of stable undervolt values
         """
         self._lkg_values = values.copy()
-        self.settings_manager.setSetting("lkg_cores", values)
-        self.settings_manager.setSetting("lkg_timestamp", datetime.now().isoformat())
+        self.settings_manager.save_setting("lkg_cores", values)
+        self.settings_manager.save_setting("lkg_timestamp", datetime.now().isoformat())
     
     def load_lkg(self) -> List[int]:
         """Load LKG values from settings.
@@ -365,7 +365,7 @@ class SafetyManager:
         Returns:
             List of last known good undervolt values
         """
-        lkg = self.settings_manager.getSetting("lkg_cores")
+        lkg = self.settings_manager.get_setting("lkg_cores")
         if lkg and isinstance(lkg, list) and len(lkg) == 4:
             self._lkg_values = lkg
             return lkg
@@ -548,7 +548,7 @@ class SafetyManager:
             self.remove_tuning_flag()
             
             # Get current values (crashed) and LKG values (to restore)
-            current_values = self.settings_manager.getSetting("cores") or [0, 0, 0, 0]
+            current_values = self.settings_manager.get_setting("cores") or [0, 0, 0, 0]
             lkg_values = self.load_lkg()
             
             # Attempt to rollback to LKG values
@@ -767,7 +767,7 @@ class SafetyManager:
                 logger.error("Invalid Iron Seeker result structure, not saving")
                 return False
             
-            self.settings_manager.setSetting(
+            self.settings_manager.save_setting(
                 "iron_seeker_results",
                 stored_result.to_dict()
             )
@@ -786,7 +786,7 @@ class SafetyManager:
         Requirements: 4.4
         """
         try:
-            data = self.settings_manager.getSetting("iron_seeker_results")
+            data = self.settings_manager.get_setting("iron_seeker_results")
             if data is None:
                 return None
             
@@ -805,7 +805,7 @@ class SafetyManager:
     def clear_iron_seeker_results(self) -> None:
         """Clear saved Iron Seeker results from settings."""
         try:
-            self.settings_manager.setSetting("iron_seeker_results", None)
+            self.settings_manager.save_setting("iron_seeker_results", None)
             logger.debug("Cleared Iron Seeker results from settings")
         except Exception as e:
             logger.warning(f"Failed to clear Iron Seeker results: {e}")
