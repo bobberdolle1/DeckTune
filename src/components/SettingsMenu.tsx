@@ -186,7 +186,7 @@ const ExpertWarningDialog: FC<ExpertWarningDialogProps> = ({
  * - WCAG AA compliant
  */
 export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
-  const { settings, setExpertMode } = useSettings();
+  const settings = useSettings();
   const [showExpertWarning, setShowExpertWarning] = useState(false);
   
   // Binning config state
@@ -240,12 +240,12 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
    * Shows confirmation dialog when enabling, directly disables when turning off.
    */
   const handleExpertModeToggle = () => {
-    if (!settings.expertMode) {
+    if (!settings.settings.expertMode) {
       // Enabling - show warning dialog
       setShowExpertWarning(true);
     } else {
       // Disabling - no confirmation needed
-      setExpertMode(false);
+      settings.setExpertMode(false);
     }
   };
 
@@ -255,7 +255,7 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
    * Requirements: 2.4, 9.4
    */
   const handleExpertModeConfirm = async () => {
-    await setExpertMode(true);
+    await settings.setExpertMode(true);
     setShowExpertWarning(false);
   };
 
@@ -390,7 +390,7 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 12px",
-                      backgroundColor: settings.expertMode
+                      backgroundColor: settings.settings.expertMode
                         ? "#b71c1c"
                         : "#3d4450",
                       borderRadius: "4px",
@@ -398,14 +398,126 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                       fontWeight: "bold",
                     }}
                     role="switch"
-                    aria-checked={settings.expertMode}
+                    aria-checked={settings.settings.expertMode}
                     aria-label="Expert Mode toggle"
                   >
                     <span>
-                      {settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"}
+                      {settings.settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"}
                     </span>
                     <span style={{ fontSize: "10px", color: "#8b929a" }}>
-                      {settings.expertMode ? "ON" : "OFF"}
+                      {settings.settings.expertMode ? "ON" : "OFF"}
+                    </span>
+                  </div>
+                </FocusableButton>
+              </div>
+            </PanelSectionRow>
+
+            {/* Apply on Startup section */}
+            <PanelSectionRow>
+              <div style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Apply on Startup
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginBottom: "8px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Automatically apply last profile when Steam Deck boots
+                </div>
+
+                <FocusableButton
+                  onClick={() => settings.setApplyOnStartup(!settings.settings.applyOnStartup)}
+                  style={{ width: "100%" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 12px",
+                      backgroundColor: settings.settings.applyOnStartup
+                        ? "#1a9fff"
+                        : "#3d4450",
+                      borderRadius: "4px",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                    }}
+                    role="switch"
+                    aria-checked={settings.settings.applyOnStartup}
+                    aria-label="Apply on Startup toggle"
+                  >
+                    <span>
+                      {settings.settings.applyOnStartup ? "✓ Apply on Startup" : "Apply on Startup"}
+                    </span>
+                    <span style={{ fontSize: "10px", color: "#8b929a" }}>
+                      {settings.settings.applyOnStartup ? "ON" : "OFF"}
+                    </span>
+                  </div>
+                </FocusableButton>
+              </div>
+            </PanelSectionRow>
+
+            {/* Game Only Mode section */}
+            <PanelSectionRow>
+              <div style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Game Only Mode
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginBottom: "8px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Apply undervolt only when games are running, reset in Steam menu
+                </div>
+
+                <FocusableButton
+                  onClick={() => settings.setGameOnlyMode(!settings.settings.gameOnlyMode)}
+                  style={{ width: "100%" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 12px",
+                      backgroundColor: settings.settings.gameOnlyMode
+                        ? "#1a9fff"
+                        : "#3d4450",
+                      borderRadius: "4px",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                    }}
+                    role="switch"
+                    aria-checked={settings.settings.gameOnlyMode}
+                    aria-label="Game Only Mode toggle"
+                  >
+                    <span>
+                      {settings.settings.gameOnlyMode ? "✓ Game Only Mode" : "Game Only Mode"}
+                    </span>
+                    <span style={{ fontSize: "10px", color: "#8b929a" }}>
+                      {settings.settings.gameOnlyMode ? "ON" : "OFF"}
                     </span>
                   </div>
                 </FocusableButton>
@@ -518,7 +630,7 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                       });
                       
                       // Reset expert mode
-                      await setExpertMode(false);
+                      await settings.setExpertMode(false);
                       
                       // Reload page
                       window.location.reload();

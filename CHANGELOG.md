@@ -2,6 +2,16 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.3.1] - 2026-01-26
+
+### Fixed
+- **Settings Menu**: Fixed non-functional "Apply on Startup" and "Game Only Mode" buttons in Expert Mode
+  - Removed redundant Focusable wrappers that blocked gamepad input
+  - Moved both settings from Expert Mode to main Settings menu for better accessibility
+  - Settings now properly accessible via header gear icon alongside Expert Mode toggle
+  - Fixed property access patterns to use correct context structure
+- **UI/UX**: Improved settings organization - global settings now in centralized location
+
 ## [3.3.0] - 2026-01-25
 
 ### Added - Frequency-Based Voltage Wizard 🎯

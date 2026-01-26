@@ -1,6 +1,6 @@
 # DeckTune
 
-**Current Stable Version**: v3.3.0 | [Branch Info](BRANCHES.md)
+**Current Stable Version**: v3.3.1 | [Branch Info](BRANCHES.md)
 
 **English** | [Русский](#russian)
 
