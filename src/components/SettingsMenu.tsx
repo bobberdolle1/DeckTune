@@ -301,7 +301,7 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
         aria-modal="true"
         aria-labelledby="settings-menu-title"
       >
-        {/* Settings panel */}
+        {/* Settings panel - FIXED: Added scroll */}
         <div
           style={{
             backgroundColor: "#1a1d23",
@@ -309,6 +309,8 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
             padding: "16px",
             maxWidth: "400px",
             width: "100%",
+            maxHeight: "80vh",
+            overflowY: "auto",
             border: "1px solid #3d4450",
           }}
           onClick={(e) => e.stopPropagation()}

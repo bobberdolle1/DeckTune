@@ -65,7 +65,6 @@ const TABS: TabConfig[] = [
   { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
   { id: "presets", label: "Presets", icon: FaList },
   { id: "tests", label: "Tests", icon: FaVial },
-  { id: "fan", label: "Fan", icon: FaFan },
   { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
 ];
 
@@ -211,7 +210,6 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
         {activeTab === "dynamic-manual" && <DynamicManualMode />}
         {activeTab === "presets" && <PresetsTabNew />}
         {activeTab === "tests" && <TestsTabNew />}
-        {activeTab === "fan" && <FanTab />}
         {activeTab === "diagnostics" && <DiagnosticsTab />}
       </div>
     </PanelSection>

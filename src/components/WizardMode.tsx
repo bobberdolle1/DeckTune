@@ -224,18 +224,18 @@ const ConfigurationScreen: FC<{
         </PanelSectionRow>
       )}
 
-      {/* CRITICAL FIX: Compact Button Grid */}
+      {/* CRITICAL FIX: Vertical Button Layout */}
       <PanelSectionRow>
         <div style={{ marginBottom: "4px" }}>
           <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" }}>
             Aggressiveness
           </div>
-          <Focusable style={{ display: "flex", gap: "4px" }}>
+          <Focusable style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <ButtonItem
               layout="below"
               onClick={() => setAggressiveness("safe")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "32px",
@@ -243,15 +243,14 @@ const ConfigurationScreen: FC<{
               }}
             >
               <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" }}>
-                <div style={{ fontWeight: "bold" }}>Safe</div>
-                <div style={{ fontSize: "7px" }}>2mV</div>
+                <div style={{ fontWeight: "bold" }}>Safe (2mV steps)</div>
               </div>
             </ButtonItem>
             <ButtonItem
               layout="below"
               onClick={() => setAggressiveness("balanced")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "32px",
@@ -259,15 +258,14 @@ const ConfigurationScreen: FC<{
               }}
             >
               <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" }}>
-                <div style={{ fontWeight: "bold" }}>Balanced</div>
-                <div style={{ fontSize: "7px" }}>5mV</div>
+                <div style={{ fontWeight: "bold" }}>Balanced (5mV steps)</div>
               </div>
             </ButtonItem>
             <ButtonItem
               layout="below"
               onClick={() => setAggressiveness("aggressive")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
                 border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "32px",
@@ -275,8 +273,7 @@ const ConfigurationScreen: FC<{
               }}
             >
               <div style={{ fontSize: "9px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" }}>
-                <div style={{ fontWeight: "bold" }}>Aggressive</div>
-                <div style={{ fontSize: "7px" }}>10mV</div>
+                <div style={{ fontWeight: "bold" }}>Aggressive (10mV steps)</div>
               </div>
             </ButtonItem>
           </Focusable>
@@ -288,12 +285,12 @@ const ConfigurationScreen: FC<{
           <div style={{ fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" }}>
             Test Duration
           </div>
-          <Focusable style={{ display: "flex", gap: "4px" }}>
+          <Focusable style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <ButtonItem
               layout="below"
               onClick={() => setTestDuration("short")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
                 border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "32px",
@@ -301,15 +298,14 @@ const ConfigurationScreen: FC<{
               }}
             >
               <div style={{ fontSize: "9px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" }}>
-                <div style={{ fontWeight: "bold" }}>Short</div>
-                <div style={{ fontSize: "7px" }}>30s</div>
+                <div style={{ fontWeight: "bold" }}>Short (30s per test)</div>
               </div>
             </ButtonItem>
             <ButtonItem
               layout="below"
               onClick={() => setTestDuration("long")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
                 border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "32px",
@@ -317,8 +313,7 @@ const ConfigurationScreen: FC<{
               }}
             >
               <div style={{ fontSize: "9px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" }}>
-                <div style={{ fontWeight: "bold" }}>Long</div>
-                <div style={{ fontSize: "7px" }}>120s</div>
+                <div style={{ fontWeight: "bold" }}>Long (120s per test)</div>
               </div>
             </ButtonItem>
           </Focusable>

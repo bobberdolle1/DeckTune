@@ -579,14 +579,14 @@ export const FrequencyWizard: FC = () => {
         {/* Configuration form - Requirements: 3.1-3.7 */}
         {!isRunning && (
           <>
-            {/* Mode Toggle: Preset vs Manual */}
+            {/* Mode Toggle: Preset vs Manual - FIXED: Vertical layout */}
             <PanelSectionRow>
-              <Focusable style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
                 <ButtonItem
                   layout="below"
                   onClick={() => setConfigMode("preset")}
                   style={{
-                    flex: 1,
+                    width: "100%",
                     backgroundColor: configMode === "preset" ? "#1a9fff" : "#3d4450",
                     border: configMode === "preset" ? "2px solid #1a9fff" : "2px solid transparent",
                     minHeight: "36px",
@@ -604,7 +604,7 @@ export const FrequencyWizard: FC = () => {
                   layout="below"
                   onClick={() => setConfigMode("manual")}
                   style={{
-                    flex: 1,
+                    width: "100%",
                     backgroundColor: configMode === "manual" ? "#1a9fff" : "#3d4450",
                     border: configMode === "manual" ? "2px solid #1a9fff" : "2px solid transparent",
                     minHeight: "36px",

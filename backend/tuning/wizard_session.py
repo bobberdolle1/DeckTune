@@ -934,8 +934,9 @@ class WizardSession:
         self._previous_values = [0, 0, 0, 0]
         
         try:
-            # Emit initial progress
-            await self._emit_progress("Initializing...")
+            # CRITICAL FIX: Emit initial progress BEFORE any async operations
+            await self._emit_progress("Initializing wizard...")
+            await asyncio.sleep(0.1)  # Give event loop time to emit
             
             # Run search for each target domain
             final_offsets = {}
@@ -945,6 +946,8 @@ class WizardSession:
                     break
                 
                 logger.info(f"Starting search for domain: {domain}")
+                await self._emit_progress(f"Testing {domain.upper()}...")
+                
                 max_stable = await self._run_step_down_search(domain)
                 
                 # CRITICAL FIX: Handle case where no stable undervolt was found

@@ -18,10 +18,10 @@ if PLUGIN_DIR not in sys.path:
     sys.path.insert(0, PLUGIN_DIR)
 
 import decky  # type: ignore
-from settings import SettingsManager  # type: ignore
 
 from backend.core.ryzenadj import RyzenadjWrapper
 from backend.core.safety import SafetyManager
+from backend.core.settings_manager import SettingsManager as CoreSettingsManager
 from backend.platform.detect import detect_platform
 from backend.tuning.autotune import AutotuneEngine
 from backend.tuning.runner import TestRunner
@@ -40,8 +40,8 @@ from backend.platform.appwatcher import AppWatcher
 SETTINGS_DIR = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
 PLUGIN_DIR = os.environ.get("DECKY_PLUGIN_DIR")
 
-# Initialize settings manager
-settings = SettingsManager(name="settings", settings_directory=SETTINGS_DIR)
+# Initialize NEW settings manager (not Decky's old one)
+settings = CoreSettingsManager()
 
 # Binary paths
 GYMDECK3_CLI_PATH = "./bin/gymdeck3"

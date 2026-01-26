@@ -30393,9 +30393,9 @@ const FrequencyWizard = () => {
                                 window.SP_REACT.createElement("span", null, "No, Continue"))))))))),
             !isRunning && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" } },
                         window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setConfigMode("preset"), style: {
-                                flex: 1,
+                                width: "100%",
                                 backgroundColor: configMode === "preset" ? "#1a9fff" : "#3d4450",
                                 border: configMode === "preset" ? "2px solid #1a9fff" : "2px solid transparent",
                                 minHeight: "36px",
@@ -30406,7 +30406,7 @@ const FrequencyWizard = () => {
                                     color: configMode === "preset" ? "#fff" : "#8b929a"
                                 } }, "Quick Presets")),
                         window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setConfigMode("manual"), style: {
-                                flex: 1,
+                                width: "100%",
                                 backgroundColor: configMode === "manual" ? "#1a9fff" : "#3d4450",
                                 border: configMode === "manual" ? "2px solid #1a9fff" : "2px solid transparent",
                                 minHeight: "36px",
@@ -30675,61 +30675,56 @@ const ConfigurationScreen = ({ onStart, platformInfo }) => {
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
                 window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Aggressiveness"),
-                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "4px" } },
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("safe"), style: {
-                            flex: 1,
+                            width: "100%",
                             backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
                             border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
                             minHeight: "32px",
                             padding: "4px",
                         } },
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Safe"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "2mV"))),
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Safe (2mV steps)"))),
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("balanced"), style: {
-                            flex: 1,
+                            width: "100%",
                             backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
                             border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
                             minHeight: "32px",
                             padding: "4px",
                         } },
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Balanced"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "5mV"))),
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Balanced (5mV steps)"))),
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("aggressive"), style: {
-                            flex: 1,
+                            width: "100%",
                             backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
                             border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
                             minHeight: "32px",
                             padding: "4px",
                         } },
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Aggressive"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "10mV")))))),
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Aggressive (10mV steps)")))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
                 window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Test Duration"),
-                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "4px" } },
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("short"), style: {
-                            flex: 1,
+                            width: "100%",
                             backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
                             border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
                             minHeight: "32px",
                             padding: "4px",
                         } },
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Short"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "30s"))),
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Short (30s per test)"))),
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("long"), style: {
-                            flex: 1,
+                            width: "100%",
                             backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
                             border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
                             minHeight: "32px",
                             padding: "4px",
                         } },
                         window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Long"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "120s")))))),
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Long (120s per test)")))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", textAlign: "center", padding: "3px" } },
                 "Est. time: ~",
@@ -31872,432 +31867,6 @@ const TestHistorySection = ({ history }) => {
                     "Cores: [",
                     entry.cores_tested.join(", "),
                     "]")))))))));
-};
-
-/**
- * FanCurveEditor component for visual fan curve editing.
- *
- * Feature: Fan Control Integration (Phase 4)
- *
- * Provides an interactive SVG graph for editing fan curve points.
- * Supports drag-and-drop point manipulation, add/remove points,
- * and real-time preview of the curve.
- */
-
-// Graph dimensions
-const GRAPH_WIDTH = 280;
-const GRAPH_HEIGHT = 160;
-const MARGIN = { top: 20, right: 30, bottom: 30, left: 40 };
-const INNER_WIDTH = GRAPH_WIDTH - MARGIN.left - MARGIN.right;
-const INNER_HEIGHT = GRAPH_HEIGHT - MARGIN.top - MARGIN.bottom;
-// Temperature and speed ranges
-const TEMP_MIN = 30;
-const TEMP_MAX = 95;
-const SPEED_MIN = 0;
-const SPEED_MAX = 100;
-// Point interaction
-const POINT_RADIUS = 8;
-const POINT_HIT_RADIUS = 15;
-/** Default fan curve */
-const DEFAULT_CURVE = [
-    { temp_c: 40, speed_percent: 20 },
-    { temp_c: 50, speed_percent: 30 },
-    { temp_c: 60, speed_percent: 45 },
-    { temp_c: 70, speed_percent: 60 },
-    { temp_c: 80, speed_percent: 80 },
-    { temp_c: 85, speed_percent: 100 },
-];
-/**
- * Convert temperature to X coordinate
- */
-const tempToX = (temp) => {
-    const normalized = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
-    return MARGIN.left + normalized * INNER_WIDTH;
-};
-/**
- * Convert speed to Y coordinate (inverted - 0% at bottom)
- */
-const speedToY = (speed) => {
-    const normalized = (speed - SPEED_MIN) / (SPEED_MAX - SPEED_MIN);
-    return MARGIN.top + INNER_HEIGHT - normalized * INNER_HEIGHT;
-};
-/**
- * Convert X coordinate to temperature
- */
-const xToTemp = (x) => {
-    const normalized = (x - MARGIN.left) / INNER_WIDTH;
-    return Math.round(TEMP_MIN + normalized * (TEMP_MAX - TEMP_MIN));
-};
-/**
- * Convert Y coordinate to speed
- */
-const yToSpeed = (y) => {
-    const normalized = 1 - (y - MARGIN.top) / INNER_HEIGHT;
-    return Math.round(SPEED_MIN + normalized * (SPEED_MAX - SPEED_MIN));
-};
-/**
- * Clamp value to range
- */
-const clamp$1 = (value, min, max) => {
-    return Math.max(min, Math.min(max, value));
-};
-/**
- * Generate SVG path for the curve
- */
-const generateCurvePath = (points) => {
-    if (points.length === 0)
-        return "";
-    const sorted = [...points].sort((a, b) => a.temp_c - b.temp_c);
-    // Start from left edge at first point's speed
-    let path = `M ${MARGIN.left} ${speedToY(sorted[0].speed_percent)}`;
-    path += ` L ${tempToX(sorted[0].temp_c)} ${speedToY(sorted[0].speed_percent)}`;
-    // Connect all points
-    for (let i = 1; i < sorted.length; i++) {
-        path += ` L ${tempToX(sorted[i].temp_c)} ${speedToY(sorted[i].speed_percent)}`;
-    }
-    // Extend to right edge at last point's speed
-    const lastPoint = sorted[sorted.length - 1];
-    path += ` L ${MARGIN.left + INNER_WIDTH} ${speedToY(lastPoint.speed_percent)}`;
-    return path;
-};
-/**
- * FanCurveEditor component
- */
-const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = false, }) => {
-    const svgRef = SP_REACT.useRef(null);
-    const [draggingIndex, setDraggingIndex] = SP_REACT.useState(null);
-    const [hasChanges, setHasChanges] = SP_REACT.useState(false);
-    const [isSaving, setIsSaving] = SP_REACT.useState(false);
-    // Handle point drag start
-    const handlePointMouseDown = SP_REACT.useCallback((index, e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDraggingIndex(index);
-    }, []);
-    // Handle mouse move for dragging
-    const handleMouseMove = SP_REACT.useCallback((e) => {
-        if (draggingIndex === null || !svgRef.current)
-            return;
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const newTemp = clamp$1(xToTemp(x), TEMP_MIN, TEMP_MAX);
-        const newSpeed = clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX);
-        const newCurve = [...config.curve];
-        newCurve[draggingIndex] = { temp_c: newTemp, speed_percent: newSpeed };
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [draggingIndex, config, onConfigChange]);
-    // Handle mouse up to stop dragging
-    const handleMouseUp = SP_REACT.useCallback(() => {
-        setDraggingIndex(null);
-    }, []);
-    // Handle click on graph to add point
-    const handleGraphClick = SP_REACT.useCallback((e) => {
-        if (draggingIndex !== null || !svgRef.current)
-            return;
-        if (config.mode !== "custom")
-            return;
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        // Check if click is within graph area
-        if (x < MARGIN.left || x > MARGIN.left + INNER_WIDTH)
-            return;
-        if (y < MARGIN.top || y > MARGIN.top + INNER_HEIGHT)
-            return;
-        // Check if click is near existing point
-        const clickTemp = xToTemp(x);
-        const isNearExisting = config.curve.some(p => Math.abs(p.temp_c - clickTemp) < 5);
-        if (isNearExisting)
-            return;
-        const newPoint = {
-            temp_c: clamp$1(clickTemp, TEMP_MIN, TEMP_MAX),
-            speed_percent: clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX),
-        };
-        const newCurve = [...config.curve, newPoint].sort((a, b) => a.temp_c - b.temp_c);
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [draggingIndex, config, onConfigChange]);
-    // Handle point removal
-    const handleRemovePoint = SP_REACT.useCallback((index) => {
-        if (config.curve.length <= 2)
-            return; // Keep at least 2 points
-        const newCurve = config.curve.filter((_, i) => i !== index);
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [config, onConfigChange]);
-    // Reset to default curve
-    const handleReset = SP_REACT.useCallback(() => {
-        onConfigChange({ ...config, curve: [...DEFAULT_CURVE] });
-        setHasChanges(true);
-    }, [config, onConfigChange]);
-    // Save configuration
-    const handleSave = SP_REACT.useCallback(async () => {
-        setIsSaving(true);
-        try {
-            await onSave(config);
-            setHasChanges(false);
-        }
-        finally {
-            setIsSaving(false);
-        }
-    }, [config, onSave]);
-    // Mode options for dropdown
-    const modeOptions = [
-        { data: "default", label: "Default (BIOS)" },
-        { data: "custom", label: "Custom Curve" },
-        { data: "fixed", label: "Fixed Speed" },
-    ];
-    // Sort curve for display
-    const sortedCurve = [...config.curve].sort((a, b) => a.temp_c - b.temp_c);
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: "Enable Fan Control", description: "Take manual control of the fan", checked: config.enabled, onChange: (enabled) => {
-                    onConfigChange({ ...config, enabled });
-                    setHasChanges(true);
-                }, disabled: isLoading })),
-        config.enabled && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.DropdownItem, { label: "Fan Mode", rgOptions: modeOptions, selectedOption: config.mode, onChange: (option) => {
-                        onConfigChange({ ...config, mode: option.data });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            status && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 12px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                        window.SP_REACT.createElement(FaFan, { style: {
-                                color: status.safety_override ? "#f44336" : "#4caf50",
-                                animation: status.speed_percent > 0 ? "spin 1s linear infinite" : "none",
-                            } }),
-                        window.SP_REACT.createElement("span", null,
-                            status.temp_c,
-                            "\u00B0C")),
-                    window.SP_REACT.createElement("div", { style: { color: "#8b929a" } },
-                        status.speed_percent,
-                        "% ",
-                        status.rpm ? `(${status.rpm} RPM)` : ""),
-                    status.safety_override && (window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "11px" } }, "Safety Override"))))),
-            config.mode === "custom" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        backgroundColor: "#1a1d23",
-                        borderRadius: "8px",
-                        padding: "8px",
-                    } },
-                    window.SP_REACT.createElement("svg", { ref: svgRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: { cursor: draggingIndex !== null ? "grabbing" : "crosshair" }, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onMouseLeave: handleMouseUp, onClick: handleGraphClick },
-                        window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1" },
-                            [0, 25, 50, 75, 100].map(speed => (window.SP_REACT.createElement("line", { key: `h-${speed}`, x1: MARGIN.left, y1: speedToY(speed), x2: MARGIN.left + INNER_WIDTH, y2: speedToY(speed) }))),
-                            [40, 50, 60, 70, 80, 90].map(temp => (window.SP_REACT.createElement("line", { key: `v-${temp}`, x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT })))),
-                        window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "10" },
-                            [0, 50, 100].map(speed => (window.SP_REACT.createElement("text", { key: `y-${speed}`, x: MARGIN.left - 5, y: speedToY(speed) + 3, textAnchor: "end" },
-                                speed,
-                                "%"))),
-                            [40, 60, 80].map(temp => (window.SP_REACT.createElement("text", { key: `x-${temp}`, x: tempToX(temp), y: MARGIN.top + INNER_HEIGHT + 15, textAnchor: "middle" },
-                                temp,
-                                "\u00B0C")))),
-                        window.SP_REACT.createElement("rect", { x: tempToX(85), y: MARGIN.top, width: MARGIN.left + INNER_WIDTH - tempToX(85), height: INNER_HEIGHT, fill: "rgba(244, 67, 54, 0.1)" }),
-                        status && (window.SP_REACT.createElement("line", { x1: tempToX(status.temp_c), y1: MARGIN.top, x2: tempToX(status.temp_c), y2: MARGIN.top + INNER_HEIGHT, stroke: "#4caf50", strokeWidth: "2", strokeDasharray: "4,4" })),
-                        window.SP_REACT.createElement("path", { d: generateCurvePath(sortedCurve), fill: "none", stroke: "#1a9fff", strokeWidth: "2" }),
-                        window.SP_REACT.createElement("path", { d: `${generateCurvePath(sortedCurve)} L ${MARGIN.left + INNER_WIDTH} ${MARGIN.top + INNER_HEIGHT} L ${MARGIN.left} ${MARGIN.top + INNER_HEIGHT} Z`, fill: "rgba(26, 159, 255, 0.1)" }),
-                        sortedCurve.map((point, index) => (window.SP_REACT.createElement("g", { key: index },
-                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_HIT_RADIUS, fill: "transparent", style: { cursor: "grab" }, onMouseDown: (e) => handlePointMouseDown(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent), e), onDoubleClick: () => handleRemovePoint(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent)) }),
-                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS, fill: "#1a9fff", stroke: "#fff", strokeWidth: "2", style: { pointerEvents: "none" } }),
-                            window.SP_REACT.createElement("text", { x: tempToX(point.temp_c), y: speedToY(point.speed_percent) - 12, fill: "#fff", fontSize: "9", textAnchor: "middle", style: { pointerEvents: "none" } },
-                                point.temp_c,
-                                "\u00B0/",
-                                point.speed_percent,
-                                "%"))))),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "10px",
-                            color: "#8b929a",
-                            textAlign: "center",
-                            marginTop: "4px",
-                        } }, "Click to add point \u2022 Drag to move \u2022 Double-click to remove")))),
-            config.mode === "fixed" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { label: "Fixed Fan Speed", value: config.curve[0]?.speed_percent ?? 50, min: 0, max: 100, step: 5, showValue: true, onChange: (value) => {
-                        onConfigChange({
-                            ...config,
-                            curve: [{ temp_c: 0, speed_percent: value }],
-                        });
-                        setHasChanges(true);
-                    }, disabled: isLoading }))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: "Zero RPM Mode", description: "Allow fan to stop below 45\u00B0C (risky!)", checked: config.zero_rpm_enabled, onChange: (zero_rpm_enabled) => {
-                        onConfigChange({ ...config, zero_rpm_enabled });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { label: "Temperature Hysteresis", description: "Prevents rapid speed changes", value: config.hysteresis_temp, min: 1, max: 10, step: 1, showValue: true, valueSuffix: "\u00B0C", onChange: (hysteresis_temp) => {
-                        onConfigChange({ ...config, hysteresis_temp });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleReset, disabled: isLoading || isSaving },
-                        window.SP_REACT.createElement(FaUndo, { style: { marginRight: "4px" } }),
-                        "Reset"),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, disabled: isLoading || isSaving || !hasChanges }, isSaving ? "Saving..." : "Save")))))));
-};
-
-/**
- * FanTab component for fan control in Expert Mode.
- *
- * Feature: decktune-critical-fixes
- * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
- *
- * Provides fan curve editing and control through the FanCurveEditor component.
- */
-
-/**
- * FanTab component for Expert Mode.
- *
- * Feature: decktune-critical-fixes
- * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
- */
-const FanTab = () => {
-    const { api } = useDeckTune();
-    const [config, setConfig] = SP_REACT.useState(null);
-    const [status, setStatus] = SP_REACT.useState(null);
-    const [isLoading, setIsLoading] = SP_REACT.useState(true);
-    const [error, setError] = SP_REACT.useState(null);
-    const [isSaving, setIsSaving] = SP_REACT.useState(false);
-    // Load fan configuration on mount
-    SP_REACT.useEffect(() => {
-        const loadFanConfig = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const result = await api.getFanConfig();
-                if (result.success && result.config) {
-                    setConfig(result.config);
-                }
-                else {
-                    setError(result.error || "Failed to load fan configuration");
-                }
-            }
-            catch (e) {
-                setError(`Error loading fan config: ${e}`);
-            }
-            finally {
-                setIsLoading(false);
-            }
-        };
-        loadFanConfig();
-    }, [api]);
-    // Poll fan status periodically
-    SP_REACT.useEffect(() => {
-        if (!config?.enabled)
-            return;
-        const pollStatus = async () => {
-            try {
-                const result = await api.getFanStatus();
-                if (result.success && result.status) {
-                    setStatus(result.status);
-                }
-            }
-            catch (e) {
-                console.error("Error polling fan status:", e);
-            }
-        };
-        // Initial poll
-        pollStatus();
-        // Poll every 2 seconds
-        const interval = setInterval(pollStatus, 2000);
-        return () => clearInterval(interval);
-    }, [api, config?.enabled]);
-    const handleConfigChange = (newConfig) => {
-        setConfig(newConfig);
-    };
-    const handleSave = async (newConfig) => {
-        setIsSaving(true);
-        setError(null);
-        try {
-            const result = await api.setFanConfig(newConfig);
-            if (result.success) {
-                setConfig(newConfig);
-            }
-            else {
-                setError(result.error || "Failed to save fan configuration");
-            }
-        }
-        catch (e) {
-            setError(`Error saving fan config: ${e}`);
-        }
-        finally {
-            setIsSaving(false);
-        }
-    };
-    // Loading state
-    if (isLoading) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    padding: "24px",
-                    color: "#8b929a",
-                } },
-                window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                window.SP_REACT.createElement("span", null, "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430...")),
-            window.SP_REACT.createElement("style", null, `
-            .spin {
-              animation: spin 1s linear infinite;
-            }
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          `)));
-    }
-    // Error state
-    if (error && !config) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "16px",
-                    backgroundColor: "#5c1313",
-                    borderRadius: "8px",
-                    border: "1px solid #f44336",
-                } },
-                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#f44336", fontSize: "24px" } }),
-                window.SP_REACT.createElement("div", { style: { color: "#ffcdd2", textAlign: "center", fontSize: "12px" } }, error),
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => window.location.reload() }, "\u041F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430"))));
-    }
-    // No config available
-    if (!config) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    textAlign: "center",
-                    padding: "24px",
-                    color: "#8b929a",
-                } }, "\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430")));
-    }
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "8px 12px",
-                    backgroundColor: "#5c1313",
-                    borderRadius: "6px",
-                    marginBottom: "8px",
-                    fontSize: "11px",
-                    color: "#ffcdd2",
-                    border: "1px solid #f44336",
-                } }, error))),
-        window.SP_REACT.createElement(FanCurveEditor, { config: config, status: status || undefined, onConfigChange: handleConfigChange, onSave: handleSave, isLoading: isSaving })));
 };
 
 /**
@@ -34153,7 +33722,6 @@ const TABS = [
     { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
     { id: "presets", label: "Presets", icon: FaList },
     { id: "tests", label: "Tests", icon: FaVial },
-    { id: "fan", label: "Fan", icon: FaFan },
     { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
 ];
 /**
@@ -34259,7 +33827,6 @@ const ExpertMode = ({ initialTab = "manual" }) => {
             activeTab === "dynamic-manual" && window.SP_REACT.createElement(DynamicManualMode, null),
             activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
             activeTab === "tests" && window.SP_REACT.createElement(TestsTabNew, null),
-            activeTab === "fan" && window.SP_REACT.createElement(FanTab, null),
             activeTab === "diagnostics" && window.SP_REACT.createElement(DiagnosticsTab, null))));
 };
 const TabNavigation = ({ activeTab, onTabChange }) => {
@@ -36095,6 +35662,8 @@ const SettingsMenu = ({ isOpen, onClose }) => {
                     padding: "16px",
                     maxWidth: "400px",
                     width: "100%",
+                    maxHeight: "80vh",
+                    overflowY: "auto",
                     border: "1px solid #3d4450",
                 }, onClick: (e) => e.stopPropagation() },
                 window.SP_REACT.createElement("div", { style: {
