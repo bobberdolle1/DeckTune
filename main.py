@@ -40,7 +40,7 @@ from backend.platform.appwatcher import AppWatcher
 SETTINGS_DIR = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
 PLUGIN_DIR = os.environ.get("DECKY_PLUGIN_DIR")
 
-# Initialize NEW settings manager (not Decky's old one)
+# Initialize settings manager
 settings = CoreSettingsManager()
 
 # Binary paths
@@ -205,15 +205,15 @@ class Plugin:
         # Initialize default settings
         for key in DEFAULT_SETTINGS:
             if key == "dynamicSettings":
-                dynamic = settings.getSetting(key)
+                dynamic = settings.get_setting(key)
                 if dynamic:
                     for subkey in DEFAULT_SETTINGS[key]:
                         if dynamic.get(subkey) is None:
                             decky.logger.info(f"Setting {subkey} to default value")
-                            settings.setSetting(subkey, DEFAULT_SETTINGS[key][subkey])
-            if settings.getSetting(key) is None:
+                            settings.save_setting(subkey, DEFAULT_SETTINGS[key][subkey])
+            if settings.get_setting(key) is None:
                 decky.logger.info(f"Setting {key} to default value")
-                settings.setSetting(key, DEFAULT_SETTINGS[key])
+                settings.save_setting(key, DEFAULT_SETTINGS[key])
         
         # 1. Detect platform
         self.platform = detect_platform()
@@ -353,10 +353,9 @@ class Plugin:
         # 12. Initialize Game Only Mode
         from backend.core.game_only_mode import GameOnlyModeController
         from backend.core.game_state_monitor import GameStateMonitor
-        from backend.core.settings_manager import SettingsManager as CoreSettingsManager
         
-        # Create settings manager for Game Only Mode with legacy migration support
-        self.game_only_settings_manager = CoreSettingsManager(legacy_settings_manager=settings)
+        # Use same settings manager instance
+        self.game_only_settings_manager = settings
         
         # Set core settings manager in ProfileManager for Apply on Startup tracking
         self.profile_manager.core_settings = self.game_only_settings_manager
@@ -803,7 +802,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
     async def save_settings(self, new_settings):
         """Save settings object (legacy method for compatibility)."""
         decky.logger.info(f"Saving settings: {new_settings}")
-        settings.setSetting("settings", new_settings)
+        settings.save_setting("settings", new_settings)
 
     async def save_setting(self, key, value):
         """Save a single setting to persistent storage.
@@ -840,7 +839,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """Reset all settings to defaults."""
         decky.logger.info("Resetting config")
         for key in DEFAULT_SETTINGS:
-            settings.setSetting(key, DEFAULT_SETTINGS[key])
+            settings.save_setting(key, DEFAULT_SETTINGS[key])
         return DEFAULT_SETTINGS
 
     async def fetch_config(self):
@@ -848,7 +847,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         decky.logger.info("Fetching config")
         config = {}
         for key in DEFAULT_SETTINGS:
-            config[key] = settings.getSetting(key)
+            config[key] = settings.get_setting(key)
         decky.logger.info(f"Config fetched: {config}")
         return config
     
@@ -905,8 +904,8 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             config = DynamicConfig.from_dict(dynamic_settings) if isinstance(dynamic_settings, dict) else dynamic_settings
         
         # Apply expert mode setting from global settings
-        expert_mode = settings.getSetting("expert_mode") or False
-        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        expert_mode = settings.get_setting("expert_mode") or False
+        expert_confirmed = settings.get_setting("expert_mode_confirmed") or False
         config.expert_mode = expert_mode and expert_confirmed
 
         # Validate configuration
@@ -917,8 +916,8 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             return {"success": False, "error": f"Invalid configuration: {errors}"}
 
         # Update status to DYNAMIC RUNNING (Requirement 10.3)
-        settings.setSetting("status", "DYNAMIC RUNNING")
-        settings.setSetting("dynamicSettings", dynamic_settings)  # Store original format for compatibility
+        settings.save_setting("status", "DYNAMIC RUNNING")
+        settings.save_setting("dynamicSettings", dynamic_settings)  # Store original format for compatibility
 
         # Start using new DynamicController
         success = await self.dynamic_controller.start(config)
@@ -927,7 +926,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             decky.logger.info(f"Gymdeck3 started with strategy: {config.strategy}")
             return {"success": True, "status": "DYNAMIC RUNNING"}
         else:
-            settings.setSetting("status", "Disabled")
+            settings.save_setting("status", "Disabled")
             await decky.emit("server_event", {"type": "update_status", "data": "disabled"})
             return {"success": False, "error": "Failed to start gymdeck3"}
 
@@ -941,7 +940,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             await self.dynamic_controller.stop()
 
         # Update status to Disabled (Requirement 10.3)
-        settings.setSetting("status", "Disabled")
+        settings.save_setting("status", "Disabled")
         await decky.emit("server_event", {"type": "update_status", "data": "disabled"})
         return {"success": True, "status": "Disabled"}
     
@@ -965,7 +964,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         Requirements: 10.3
         """
         is_running = self.is_dynamic_running()
-        current_status = settings.getSetting("status") or "Disabled"
+        current_status = settings.get_setting("status") or "Disabled"
         
         # Get detailed status from controller if running
         if is_running and self.dynamic_controller:
@@ -973,7 +972,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             return {
                 "running": status.running,
                 "status": "DYNAMIC RUNNING" if status.running else current_status,
-                "settings": settings.getSetting("dynamicSettings") or {},
+                "settings": settings.get_setting("dynamicSettings") or {},
                 "load": status.load,
                 "values": status.values,
                 "strategy": status.strategy,
@@ -984,7 +983,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         return {
             "running": is_running,
             "status": "DYNAMIC RUNNING" if is_running else current_status,
-            "settings": settings.getSetting("dynamicSettings") or {}
+            "settings": settings.get_setting("dynamicSettings") or {}
         }
 
     # ==================== Expert Mode ====================
@@ -1016,8 +1015,8 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         decky.logger.warning("EXPERT MODE ENABLED - Safety limits removed")
         decky.logger.warning("User has confirmed understanding of risks (instability, crashes, potential hardware damage)")
         
-        settings.setSetting("expert_mode", True)
-        settings.setSetting("expert_mode_confirmed", True)
+        settings.save_setting("expert_mode", True)
+        settings.save_setting("expert_mode_confirmed", True)
         
         # Emit event to frontend for visual indicator
         await decky.emit("server_event", {
@@ -1045,7 +1044,7 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """
         decky.logger.info("Expert mode disabled - returning to safe limits")
         
-        settings.setSetting("expert_mode", False)
+        settings.save_setting("expert_mode", False)
         # Keep confirmed flag so user doesn't need to re-confirm if they re-enable
         # But after plugin update, this will be reset via DEFAULT_SETTINGS
         
@@ -1069,8 +1068,8 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             
         Requirements: 13.1-13.5
         """
-        expert_mode = settings.getSetting("expert_mode") or False
-        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        expert_mode = settings.get_setting("expert_mode") or False
+        expert_confirmed = settings.get_setting("expert_mode_confirmed") or False
         
         # Determine current limits based on mode
         if expert_mode and expert_confirmed:
@@ -1103,8 +1102,8 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
             
         Requirements: 13.2, 13.7
         """
-        expert_mode = settings.getSetting("expert_mode") or False
-        expert_confirmed = settings.getSetting("expert_mode_confirmed") or False
+        expert_mode = settings.get_setting("expert_mode") or False
+        expert_confirmed = settings.get_setting("expert_mode_confirmed") or False
         is_expert_active = expert_mode and expert_confirmed
         
         # Convert to negative values if positive
