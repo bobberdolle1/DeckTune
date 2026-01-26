@@ -52,7 +52,7 @@ import { DynamicManualMode } from "./DynamicManualMode";
  * Tab type for Expert Mode navigation.
  * Requirements: 7.1, 10.1
  */
-export type ExpertTab = "manual" | "presets" | "tests" | "fan" | "diagnostics" | "dynamic-manual";
+export type ExpertTab = "manual" | "presets" | "tests" | "diagnostics";
 
 interface TabConfig {
   id: ExpertTab;
@@ -62,7 +62,6 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { id: "manual", label: "Manual", icon: FaSlidersH },
-  { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
   { id: "presets", label: "Presets", icon: FaList },
   { id: "tests", label: "Tests", icon: FaVial },
   { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
@@ -204,10 +203,16 @@ export const ExpertMode: FC<ExpertModeProps> = ({ initialTab = "manual" }) => {
         <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       </PanelSectionRow>
 
-      {/* Tab Content - key forces remount on tab change to reset focus */}
-      <div key={activeTab}>
+      {/* Tab Content - FIXED: Added scroll container with key forces remount on tab change to reset focus */}
+      <div 
+        key={activeTab}
+        style={{
+          maxHeight: "60vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+      >
         {activeTab === "manual" && <ManualTab />}
-        {activeTab === "dynamic-manual" && <DynamicManualMode />}
         {activeTab === "presets" && <PresetsTabNew />}
         {activeTab === "tests" && <TestsTabNew />}
         {activeTab === "diagnostics" && <DiagnosticsTab />}
@@ -274,7 +279,7 @@ const TabNavigation: FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
 
 
 /**
- * Manual tab component with simple/per-core modes.
+ * Manual tab component with static/dynamic mode selection.
  * 
  * Feature: ui-refactor-settings
  * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
@@ -287,6 +292,7 @@ const ManualTab: FC = () => {
   const [simpleMode, setSimpleMode] = useState<boolean>(true);
   const [simpleValue, setSimpleValue] = useState<number>(-25);
   const [isApplying, setIsApplying] = useState(false);
+  const [manualMode, setManualMode] = useState<"static" | "dynamic">("static");
 
   const safeLimit = platformInfo?.safe_limit ?? -30;
   const currentMinLimit = settings.expertMode ? -100 : safeLimit;
@@ -358,8 +364,89 @@ const ManualTab: FC = () => {
     setSimpleValue(0);
   };
 
+  // If dynamic mode selected, render DynamicManualMode
+  if (manualMode === "dynamic") {
+    return (
+      <>
+        {/* Mode selector */}
+        <PanelSectionRow>
+          <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+            <FocusableButton
+              onClick={() => setManualMode("static")}
+              style={{ width: "100%" }}
+            >
+              <div style={{
+                padding: "8px",
+                backgroundColor: "#3d4450",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: "bold",
+                textAlign: "center",
+              }}>
+                Static Undervolt
+              </div>
+            </FocusableButton>
+            <FocusableButton
+              onClick={() => setManualMode("dynamic")}
+              style={{ width: "100%" }}
+            >
+              <div style={{
+                padding: "8px",
+                backgroundColor: "#1a9fff",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: "bold",
+                textAlign: "center",
+              }}>
+                ✓ Dynamic Undervolt
+              </div>
+            </FocusableButton>
+          </Focusable>
+        </PanelSectionRow>
+        
+        <DynamicManualMode />
+      </>
+    );
+  }
+
   return (
     <>
+      {/* Mode selector */}
+      <PanelSectionRow>
+        <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+          <FocusableButton
+            onClick={() => setManualMode("static")}
+            style={{ width: "100%" }}
+          >
+            <div style={{
+              padding: "8px",
+              backgroundColor: "#1a9fff",
+              borderRadius: "6px",
+              fontSize: "11px",
+              fontWeight: "bold",
+              textAlign: "center",
+            }}>
+              ✓ Static Undervolt
+            </div>
+          </FocusableButton>
+          <FocusableButton
+            onClick={() => setManualMode("dynamic")}
+            style={{ width: "100%" }}
+          >
+            <div style={{
+              padding: "8px",
+              backgroundColor: "#3d4450",
+              borderRadius: "6px",
+              fontSize: "11px",
+              fontWeight: "bold",
+              textAlign: "center",
+            }}>
+              Dynamic Undervolt
+            </div>
+          </FocusableButton>
+        </Focusable>
+      </PanelSectionRow>
+
       {/* Platform info */}
       {platformInfo && (
         <PanelSectionRow>

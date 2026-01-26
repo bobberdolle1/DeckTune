@@ -2,35 +2,6 @@
 
 All notable changes to DeckTune will be documented in this file.
 
-## [3.3.3] - 2026-01-26
-
-### Fixed
-- **Critical: Dynamic Mode Initialization**: Fixed `'SettingsManager' object has no attribute 'get_setting'` error
-  - Replaced legacy Decky SettingsManager with CoreSettingsManager
-  - Dynamic Mode now initializes correctly
-  - All settings operations work as expected
-- **Wizard Mode UI Layouts**: Fixed button overflow issues in QAM
-  - Load-Based Wizard: Aggressiveness and Test Duration buttons now stack vertically
-  - Frequency-Based Wizard: Quick/Manual toggle now stacks vertically
-  - All buttons now fit in 310px QAM width
-- **Settings Menu Scroll**: Added scrollable container with maxHeight: 80vh
-  - Settings menu content no longer cut off
-  - All settings accessible regardless of content length
-- **Expert Mode Cleanup**: Removed Fan tab from Expert Mode tabs
-  - Fan control only accessible via header button (as intended)
-- **Benchmark Score**: Fixed benchmark always returning 0 ops/sec
-  - Enhanced stress-ng output parsing with multiple strategies
-  - Added fallback estimation (100k ops/sec baseline)
-  - Improved error logging
-- **Wizard Initialization**: Fixed wizard stuck on "Initializing..." forever
-  - Added explicit progress emission before async operations
-  - Added 100ms delay to ensure event delivery
-  - Added progress updates for each domain
-
-### Improved
-- **Backend**: Replaced all legacy SettingsManager references with CoreSettingsManager
-- **Logging**: Enhanced benchmark and wizard logging for debugging
-
 ## [3.3.2] - 2026-01-26
 
 ### Changed

@@ -30437,27 +30437,27 @@ const FrequencyWizard = () => {
                     })))),
                 configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Range" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Start Frequency (MHz)", value: config.freq_start, min: 400, max: 3500, step: 50, onChange: (value) => setConfig({ ...config, freq_start: value }), showValue: true, bottomSeparator: "none" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Start Freq", value: config.freq_start, min: 400, max: 3500, step: 50, onChange: (value) => setConfig({ ...config, freq_start: value }), showValue: true, valueSuffix: " MHz", bottomSeparator: "none" }),
                         showErrors && validationErrors.freq_start && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_start))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "End Frequency (MHz)", value: config.freq_end, min: 400, max: 3500, step: 50, onChange: (value) => setConfig({ ...config, freq_end: value }), showValue: true, bottomSeparator: "none" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "End Freq", value: config.freq_end, min: 400, max: 3500, step: 50, onChange: (value) => setConfig({ ...config, freq_end: value }), showValue: true, valueSuffix: " MHz", bottomSeparator: "none" }),
                         showErrors && validationErrors.freq_end && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_end))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Frequency Step (MHz)", value: config.freq_step, min: 50, max: 500, step: 10, onChange: (value) => setConfig({ ...config, freq_step: value }), showValue: true, description: "Larger steps = faster testing, less precision" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Freq Step", value: config.freq_step, min: 50, max: 500, step: 10, onChange: (value) => setConfig({ ...config, freq_step: value }), showValue: true, valueSuffix: " MHz", bottomSeparator: "none" }),
                         showErrors && validationErrors.freq_step && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_step))))),
                 configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Test Settings" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Test Duration (seconds)", value: config.test_duration, min: 10, max: 120, step: 5, onChange: (value) => setConfig({ ...config, test_duration: value }), showValue: true, description: "Duration to test each frequency point" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Test Duration", value: config.test_duration, min: 10, max: 120, step: 5, onChange: (value) => setConfig({ ...config, test_duration: value }), showValue: true, valueSuffix: " sec", bottomSeparator: "none" }),
                         showErrors && validationErrors.test_duration && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.test_duration))))),
                 configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Voltage Settings" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Starting Voltage (mV)", value: config.voltage_start, min: -100, max: 0, step: 1, onChange: (value) => setConfig({ ...config, voltage_start: value }), showValue: true, description: "Initial voltage offset to test" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Start Voltage", value: config.voltage_start, min: -100, max: 0, step: 1, onChange: (value) => setConfig({ ...config, voltage_start: value }), showValue: true, valueSuffix: " mV", bottomSeparator: "none" }),
                         showErrors && validationErrors.voltage_start && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.voltage_start))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Voltage Step (mV)", value: config.voltage_step, min: 1, max: 10, step: 1, onChange: (value) => setConfig({ ...config, voltage_step: value }), showValue: true, description: "Voltage increment for binary search" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Voltage Step", value: config.voltage_step, min: 1, max: 10, step: 1, onChange: (value) => setConfig({ ...config, voltage_step: value }), showValue: true, valueSuffix: " mV", bottomSeparator: "none" }),
                         showErrors && validationErrors.voltage_step && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.voltage_step))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(DFL.SliderField, { label: "Safety Margin (mV)", value: config.safety_margin, min: 0, max: 20, step: 1, onChange: (value) => setConfig({ ...config, safety_margin: value }), showValue: true, description: "Extra voltage added for stability" }),
+                        window.SP_REACT.createElement(DFL.SliderField, { label: "Safety Margin", value: config.safety_margin, min: 0, max: 20, step: 1, onChange: (value) => setConfig({ ...config, safety_margin: value }), showValue: true, valueSuffix: " mV", bottomSeparator: "none" }),
                         showErrors && validationErrors.safety_margin && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.safety_margin))))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart, disabled: isStarting || hasErrors },
@@ -31150,9 +31150,9 @@ const WizardMode = () => {
     return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Wizard Mode" },
         window.SP_REACT.createElement(PanicDisableButton$1, null),
         !isRunning && !localResult && !showHistory && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" } },
                 window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setWizardType("load"), style: {
-                        flex: 1,
+                        width: "100%",
                         backgroundColor: wizardType === "load" ? "#1a9fff" : "#3d4450",
                         border: wizardType === "load" ? "2px solid #1a9fff" : "2px solid transparent",
                         minHeight: "40px",
@@ -31163,7 +31163,7 @@ const WizardMode = () => {
                             color: wizardType === "load" ? "#fff" : "#8b929a"
                         } }, "Load-Based Wizard")),
                 window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setWizardType("frequency"), style: {
-                        flex: 1,
+                        width: "100%",
                         backgroundColor: wizardType === "frequency" ? "#1a9fff" : "#3d4450",
                         border: wizardType === "frequency" ? "2px solid #1a9fff" : "2px solid transparent",
                         minHeight: "40px",
@@ -33719,7 +33719,6 @@ const DynamicManualMode = () => (window.SP_REACT.createElement(DynamicModeErrorB
 
 const TABS = [
     { id: "manual", label: "Manual", icon: FaSlidersH },
-    { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
     { id: "presets", label: "Presets", icon: FaList },
     { id: "tests", label: "Tests", icon: FaVial },
     { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
@@ -33822,9 +33821,12 @@ const ExpertMode = ({ initialTab = "manual" }) => {
         window.SP_REACT.createElement(PanicDisableButton, null),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: handleTabChange })),
-        window.SP_REACT.createElement("div", { key: activeTab },
+        window.SP_REACT.createElement("div", { key: activeTab, style: {
+                maxHeight: "60vh",
+                overflowY: "auto",
+                overflowX: "hidden",
+            } },
             activeTab === "manual" && window.SP_REACT.createElement(ManualTab, null),
-            activeTab === "dynamic-manual" && window.SP_REACT.createElement(DynamicManualMode, null),
             activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
             activeTab === "tests" && window.SP_REACT.createElement(TestsTabNew, null),
             activeTab === "diagnostics" && window.SP_REACT.createElement(DiagnosticsTab, null))));
@@ -33856,7 +33858,7 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
     })));
 };
 /**
- * Manual tab component with simple/per-core modes.
+ * Manual tab component with static/dynamic mode selection.
  *
  * Feature: ui-refactor-settings
  * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
@@ -33869,6 +33871,7 @@ const ManualTab = () => {
     const [simpleMode, setSimpleMode] = SP_REACT.useState(true);
     const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
     const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const [manualMode, setManualMode] = SP_REACT.useState("static");
     const safeLimit = platformInfo?.safe_limit ?? -30;
     const currentMinLimit = settings.expertMode ? -100 : safeLimit;
     // Sync with state.cores
@@ -33933,7 +33936,52 @@ const ManualTab = () => {
         setCoreValues([0, 0, 0, 0]);
         setSimpleValue(0);
     };
+    // If dynamic mode selected, render DynamicManualMode
+    if (manualMode === "dynamic") {
+        return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" } },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => setManualMode("static"), style: { width: "100%" } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "8px",
+                                backgroundColor: "#3d4450",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                            } }, "Static Undervolt")),
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => setManualMode("dynamic"), style: { width: "100%" } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: "8px",
+                                backgroundColor: "#1a9fff",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                            } }, "\u2713 Dynamic Undervolt")))),
+            window.SP_REACT.createElement(DynamicManualMode, null)));
+    }
     return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" } },
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setManualMode("static"), style: { width: "100%" } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "8px",
+                            backgroundColor: "#1a9fff",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                        } }, "\u2713 Static Undervolt")),
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setManualMode("dynamic"), style: { width: "100%" } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "8px",
+                            backgroundColor: "#3d4450",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                        } }, "Dynamic Undervolt")))),
         platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
             window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px" } },
                 platformInfo.variant,

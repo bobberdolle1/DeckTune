@@ -1018,15 +1018,15 @@ export const WizardMode: FC = () => {
     <PanelSection title="Wizard Mode">
       <PanicDisableButton />
 
-      {/* Wizard Type Selector */}
+      {/* Wizard Type Selector - FIXED: Vertical layout */}
       {!isRunning && !localResult && !showHistory && (
         <PanelSectionRow>
-          <Focusable style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <Focusable style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
             <ButtonItem
               layout="below"
               onClick={() => setWizardType("load")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: wizardType === "load" ? "#1a9fff" : "#3d4450",
                 border: wizardType === "load" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "40px",
@@ -1044,7 +1044,7 @@ export const WizardMode: FC = () => {
               layout="below"
               onClick={() => setWizardType("frequency")}
               style={{
-                flex: 1,
+                width: "100%",
                 backgroundColor: wizardType === "frequency" ? "#1a9fff" : "#3d4450",
                 border: wizardType === "frequency" ? "2px solid #1a9fff" : "2px solid transparent",
                 minHeight: "40px",

@@ -709,6 +709,40 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """
         return await self.rpc.run_wizard_benchmark(duration)
     
+    # ==================== Frequency-Based Wizard ====================
+    
+    async def start_frequency_wizard(self, config):
+        """Start frequency-based wizard session.
+        
+        Args:
+            config: Dictionary with frequency wizard configuration
+        """
+        return await self.rpc.start_frequency_wizard(config)
+    
+    async def cancel_frequency_wizard(self):
+        """Cancel running frequency wizard."""
+        return await self.rpc.cancel_frequency_wizard()
+    
+    async def get_frequency_wizard_progress(self):
+        """Get frequency wizard progress."""
+        return await self.rpc.get_frequency_wizard_progress()
+    
+    async def apply_frequency_curve(self, curves):
+        """Apply frequency curves.
+        
+        Args:
+            curves: Dictionary mapping core_id to frequency curve data
+        """
+        return await self.rpc.apply_frequency_curve(curves)
+    
+    async def enable_frequency_mode(self):
+        """Enable frequency-based voltage mode."""
+        return await self.rpc.enable_frequency_mode()
+    
+    async def disable_frequency_mode(self):
+        """Disable frequency-based voltage mode."""
+        return await self.rpc.disable_frequency_mode()
+    
     # ==================== CRITICAL FIX #2: Wizard Preset Management ====================
     
     async def get_wizard_presets(self):

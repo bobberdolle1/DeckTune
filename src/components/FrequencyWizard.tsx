@@ -673,13 +673,14 @@ export const FrequencyWizard: FC = () => {
               <PanelSection title="Frequency Range">
               <PanelSectionRow>
                 <SliderField
-                  label="Start Frequency (MHz)"
+                  label="Start Freq"
                   value={config.freq_start}
                   min={400}
                   max={3500}
                   step={50}
                   onChange={(value) => setConfig({ ...config, freq_start: value })}
                   showValue={true}
+                  valueSuffix=" MHz"
                   bottomSeparator="none"
                 />
                 {showErrors && validationErrors.freq_start && (
@@ -689,13 +690,14 @@ export const FrequencyWizard: FC = () => {
 
               <PanelSectionRow>
                 <SliderField
-                  label="End Frequency (MHz)"
+                  label="End Freq"
                   value={config.freq_end}
                   min={400}
                   max={3500}
                   step={50}
                   onChange={(value) => setConfig({ ...config, freq_end: value })}
                   showValue={true}
+                  valueSuffix=" MHz"
                   bottomSeparator="none"
                 />
                 {showErrors && validationErrors.freq_end && (
@@ -705,14 +707,15 @@ export const FrequencyWizard: FC = () => {
 
               <PanelSectionRow>
                 <SliderField
-                  label="Frequency Step (MHz)"
+                  label="Freq Step"
                   value={config.freq_step}
                   min={50}
                   max={500}
                   step={10}
                   onChange={(value) => setConfig({ ...config, freq_step: value })}
                   showValue={true}
-                  description="Larger steps = faster testing, less precision"
+                  valueSuffix=" MHz"
+                  bottomSeparator="none"
                 />
                 {showErrors && validationErrors.freq_step && (
                   <div className="error-text">{validationErrors.freq_step}</div>
@@ -726,14 +729,15 @@ export const FrequencyWizard: FC = () => {
             <PanelSection title="Test Settings">
               <PanelSectionRow>
                 <SliderField
-                  label="Test Duration (seconds)"
+                  label="Test Duration"
                   value={config.test_duration}
                   min={10}
                   max={120}
                   step={5}
                   onChange={(value) => setConfig({ ...config, test_duration: value })}
                   showValue={true}
-                  description="Duration to test each frequency point"
+                  valueSuffix=" sec"
+                  bottomSeparator="none"
                 />
                 {showErrors && validationErrors.test_duration && (
                   <div className="error-text">{validationErrors.test_duration}</div>
@@ -747,14 +751,15 @@ export const FrequencyWizard: FC = () => {
             <PanelSection title="Voltage Settings">
               <PanelSectionRow>
                 <SliderField
-                  label="Starting Voltage (mV)"
+                  label="Start Voltage"
                   value={config.voltage_start}
                   min={-100}
                   max={0}
                   step={1}
                   onChange={(value) => setConfig({ ...config, voltage_start: value })}
                   showValue={true}
-                  description="Initial voltage offset to test"
+                  valueSuffix=" mV"
+                  bottomSeparator="none"
                 />
                 {showErrors && validationErrors.voltage_start && (
                   <div className="error-text">{validationErrors.voltage_start}</div>
@@ -763,14 +768,15 @@ export const FrequencyWizard: FC = () => {
 
               <PanelSectionRow>
                 <SliderField
-                  label="Voltage Step (mV)"
+                  label="Voltage Step"
                   value={config.voltage_step}
                   min={1}
                   max={10}
                   step={1}
                   onChange={(value) => setConfig({ ...config, voltage_step: value })}
                   showValue={true}
-                  description="Voltage increment for binary search"
+                  valueSuffix=" mV"
+                  bottomSeparator="none"
                 />
                 {showErrors && validationErrors.voltage_step && (
                   <div className="error-text">{validationErrors.voltage_step}</div>
@@ -779,14 +785,15 @@ export const FrequencyWizard: FC = () => {
 
               <PanelSectionRow>
                 <SliderField
-                  label="Safety Margin (mV)"
+                  label="Safety Margin"
                   value={config.safety_margin}
                   min={0}
                   max={20}
                   step={1}
                   onChange={(value) => setConfig({ ...config, safety_margin: value })}
                   showValue={true}
-                  description="Extra voltage added for stability"
+                  valueSuffix=" mV"
+                  bottomSeparator="none"
                 />
                 {showErrors && validationErrors.safety_margin && (
                   <div className="error-text">{validationErrors.safety_margin}</div>
