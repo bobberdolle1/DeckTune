@@ -10,10 +10,21 @@ All notable changes to DeckTune will be documented in this file.
   - Wizard Mode: Changed Load-Based/Frequency-Based selector from horizontal to vertical layout
   - Load-Based Wizard: Changed Aggressiveness and Test Duration buttons from horizontal grid to vertical stack
   - Frequency Wizard: Changed Quick/Manual toggle from horizontal to vertical layout
-  - Frequency Wizard Manual Config: Shortened slider labels (e.g., "Start Frequency (MHz)" → "Start Freq" with valueSuffix " MHz")
+  - Frequency Wizard Manual Config: Shortened slider labels (e.g., "Start Frequency (MHz)" → "Start" with valueSuffix " MHz")
   - Expert Mode: Added scroll container with maxHeight 60vh and overflowY auto
   - Expert Mode: Removed Fan tab from TABS array (already moved to header)
   - Expert Mode: Moved Dynamic Manual Mode from separate tab into Manual tab as Static/Dynamic toggle
+- **Slider Layout Optimization** — Fixed slider labels overflowing in Dynamic Undervolt and Frequency Wizard
+  - VoltageSliders: Shortened labels ("Minimal Value" → "Min", "Maximum Value" → "Max") with valueSuffix " mV"
+  - FrequencyWizard: Shortened all slider labels ("Start Freq" → "Start", "Test Duration" → "Duration", etc.) with valueSuffix
+  - All sliders now display values inline with proper units
+- **Gamepad Control for Wizard Settings** — Added full gamepad support for all wizard configuration sliders
+  - Wrapped all SliderField components in Focusable for L1/R1 control
+  - Users can now adjust all frequency wizard settings with gamepad
+- **Settings Reset Functionality** — Added reset button to restore default wizard configuration
+  - "Reset to Defaults" button in manual config mode
+  - Restores all frequency, test, and voltage settings to balanced defaults
+  - Clears validation errors on reset
 - **Dynamic Mode Initialization** — Fixed critical error on plugin load
   - Changed import from old Decky SettingsManager to new CoreSettingsManager
   - Fixed error: 'SettingsManager' object has no attribute 'get_setting'
@@ -41,6 +52,7 @@ All notable changes to DeckTune will be documented in this file.
 - **UI Responsiveness** — All controls now fit properly in Steam Deck QAM width
 - **Error Handling** — Better error messages and logging for troubleshooting
 - **User Experience** — Vertical layouts improve readability and navigation on small screens
+- **Gamepad Navigation** — Full gamepad support for all wizard configuration options
 
 ## [3.3.2] - 2026-01-26
 
