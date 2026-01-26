@@ -149,6 +149,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M304 48c0 26.51-21.49 48-48 48s-48-21.49-48-48 21.49-48 48-48 48 21.49 48 48zm-48 368c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zm208-208c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zM96 256c0-26.51-21.49-48-48-48S0 229.49 0 256s21.49 48 48 48 48-21.49 48-48zm12.922 99.078c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.491-48-48-48zm294.156 0c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.49-48-48-48zM108.922 60.922c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.491-48-48-48z"},"child":[]}]})(props);
 }function FaStop (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48z"},"child":[]}]})(props);
+}function FaSync (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M440.65 12.57l4 82.77A247.16 247.16 0 0 0 255.83 8C134.73 8 33.91 94.92 12.29 209.82A12 12 0 0 0 24.09 224h49.05a12 12 0 0 0 11.67-9.26 175.91 175.91 0 0 1 317-56.94l-101.46-4.86a12 12 0 0 0-12.57 12v47.41a12 12 0 0 0 12 12H500a12 12 0 0 0 12-12V12a12 12 0 0 0-12-12h-47.37a12 12 0 0 0-11.98 12.57zM255.83 432a175.61 175.61 0 0 1-146-77.8l101.8 4.87a12 12 0 0 0 12.57-12v-47.4a12 12 0 0 0-12-12H12a12 12 0 0 0-12 12V500a12 12 0 0 0 12 12h47.35a12 12 0 0 0 12-12.6l-4.15-82.57A247.17 247.17 0 0 0 255.83 504c121.11 0 221.93-86.92 243.55-201.82a12 12 0 0 0-11.8-14.18h-49.05a12 12 0 0 0-11.67 9.26A175.86 175.86 0 0 1 255.83 432z"},"child":[]}]})(props);
 }function FaThermometerHalf (props) {
   return GenIcon({"attr":{"viewBox":"0 0 256 512"},"child":[{"tag":"path","attr":{"d":"M192 384c0 35.346-28.654 64-64 64s-64-28.654-64-64c0-23.685 12.876-44.349 32-55.417V224c0-17.673 14.327-32 32-32s32 14.327 32 32v104.583c19.124 11.068 32 31.732 32 55.417zm32-84.653c19.912 22.563 32 52.194 32 84.653 0 70.696-57.303 128-128 128-.299 0-.609-.001-.909-.003C56.789 511.509-.357 453.636.002 383.333.166 351.135 12.225 321.755 32 299.347V96c0-53.019 42.981-96 96-96s96 42.981 96 96v203.347zM208 384c0-34.339-19.37-52.19-32-66.502V96c0-26.467-21.533-48-48-48S80 69.533 80 96v221.498c-12.732 14.428-31.825 32.1-31.999 66.08-.224 43.876 35.563 80.116 79.423 80.42L128 464c44.112 0 80-35.888 80-80z"},"child":[]}]})(props);
 }function FaTimes (props) {
@@ -35391,11 +35393,25 @@ const HeaderBar = ({ onFanControlClick, onSettingsClick, version, }) => {
  * Provides centralized settings management interface:
  * - Expert Mode toggle with confirmation dialog
  * - Binning Settings (test duration, step size, start value)
+ * - Update Management (check for updates, install)
  * - Modal overlay with backdrop dismiss
  * - Gamepad navigation support
  * - Accessibility compliant (WCAG AA)
  */
 
+// Add CSS animation for spinner
+const spinKeyframes = `
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+`;
+// Inject keyframes into document
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = spinKeyframes;
+    document.head.appendChild(style);
+}
 /**
  * Expert Mode Warning Dialog component.
  *
@@ -35505,6 +35521,47 @@ const SettingsMenu = ({ isOpen, onClose }) => {
         start_value: -10,
     });
     const [binningLoaded, setBinningLoaded] = SP_REACT.useState(false);
+    // Update state
+    const [updateInfo, setUpdateInfo] = SP_REACT.useState({
+        checking: false,
+        available: false,
+        currentVersion: "3.4.0",
+    });
+    const [installing, setInstalling] = SP_REACT.useState(false);
+    const [updateProgress, setUpdateProgress] = SP_REACT.useState({
+        stage: "idle",
+        progress: 0,
+        message: "",
+        eta_seconds: 0,
+    });
+    // Poll update status when installing
+    SP_REACT.useEffect(() => {
+        if (!installing)
+            return;
+        const pollInterval = setInterval(async () => {
+            try {
+                const status = await call("get_update_status");
+                setUpdateProgress({
+                    stage: status.stage,
+                    progress: status.progress,
+                    message: status.message,
+                    eta_seconds: status.eta_seconds,
+                });
+                // Stop polling if complete or error
+                if (status.stage === "complete" || status.stage === "error") {
+                    setInstalling(false);
+                    clearInterval(pollInterval);
+                    if (status.stage === "complete") {
+                        // Plugin will reload automatically
+                    }
+                }
+            }
+            catch (err) {
+                console.error("Failed to get update status:", err);
+            }
+        }, 1000);
+        return () => clearInterval(pollInterval);
+    }, [installing]);
     // Load binning config on mount
     SP_REACT.useEffect(() => {
         if (isOpen && !binningLoaded) {
@@ -35535,6 +35592,64 @@ const SettingsMenu = ({ isOpen, onClose }) => {
         }
         catch (err) {
             console.error("Failed to update binning config:", err);
+        }
+    };
+    const checkForUpdates = async () => {
+        setUpdateInfo({ ...updateInfo, checking: true, error: undefined });
+        try {
+            const response = await call("check_for_updates");
+            if (response.success) {
+                setUpdateInfo({
+                    checking: false,
+                    available: response.update_available || false,
+                    currentVersion: response.current_version || "3.4.0",
+                    latestVersion: response.latest_version,
+                    releaseNotes: response.release_notes,
+                    downloadUrl: response.download_url,
+                });
+            }
+            else {
+                setUpdateInfo({
+                    ...updateInfo,
+                    checking: false,
+                    error: response.error || "Failed to check for updates",
+                });
+            }
+        }
+        catch (err) {
+            console.error("Failed to check for updates:", err);
+            setUpdateInfo({
+                ...updateInfo,
+                checking: false,
+                error: "Network error checking for updates",
+            });
+        }
+    };
+    const installUpdate = async () => {
+        if (!updateInfo.downloadUrl)
+            return;
+        setInstalling(true);
+        try {
+            const response = await call("install_update", updateInfo.downloadUrl);
+            if (response.success) {
+                // Update started in background - start polling
+                setInstalling(true);
+                setUpdateProgress({
+                    stage: "starting",
+                    progress: 0,
+                    message: "Starting update...",
+                    eta_seconds: 0,
+                });
+            }
+            else {
+                alert(`Failed to install update: ${response.error}`);
+                setInstalling(false);
+            }
+        }
+        catch (err) {
+            console.error("Failed to install update:", err);
+            alert("Failed to install update");
+            setInstalling(false);
         }
     };
     if (!isOpen)
@@ -35732,25 +35847,10 @@ const SettingsMenu = ({ isOpen, onClose }) => {
                                     marginBottom: "12px",
                                     lineHeight: "1.4",
                                 } }, "Advanced configuration for Wizard Mode testing algorithm."),
-                            window.SP_REACT.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "12px" } },
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Test Duration: ",
-                                        binningConfig.test_duration,
-                                        "s"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 30, max: 300, step: 10, value: binningConfig.test_duration, onChange: (e) => updateBinningConfig({ test_duration: parseInt(e.target.value) }), style: { width: "100%" } })),
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Step Size: ",
-                                        binningConfig.step_size,
-                                        "mV"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 1, max: 10, step: 1, value: binningConfig.step_size, onChange: (e) => updateBinningConfig({ step_size: parseInt(e.target.value) }), style: { width: "100%" } })),
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Start Value: ",
-                                        binningConfig.start_value,
-                                        "mV"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 5, max: 20, step: 5, value: Math.abs(binningConfig.start_value), onChange: (e) => updateBinningConfig({ start_value: -parseInt(e.target.value) }), style: { width: "100%" } }))))),
+                            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "12px" }, "flow-children": "vertical" },
+                                window.SP_REACT.createElement(DFL.SliderField, { label: "Test Duration", value: binningConfig.test_duration, min: 30, max: 300, step: 10, onChange: (value) => updateBinningConfig({ test_duration: value }), showValue: true, valueSuffix: " sec", bottomSeparator: "none" }),
+                                window.SP_REACT.createElement(DFL.SliderField, { label: "Step Size", value: binningConfig.step_size, min: 1, max: 10, step: 1, onChange: (value) => updateBinningConfig({ step_size: value }), showValue: true, valueSuffix: " mV", bottomSeparator: "none" }),
+                                window.SP_REACT.createElement(DFL.SliderField, { label: "Start Value", value: Math.abs(binningConfig.start_value), min: 5, max: 20, step: 5, onChange: (value) => updateBinningConfig({ start_value: -value }), showValue: true, valueSuffix: " mV", bottomSeparator: "none" })))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement("div", { style: {
                                 fontSize: "9px",
@@ -35758,6 +35858,164 @@ const SettingsMenu = ({ isOpen, onClose }) => {
                                 textAlign: "center",
                                 padding: "4px",
                             } }, "\u2713 Changes saved automatically")),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Plugin Updates"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "12px",
+                                    lineHeight: "1.4",
+                                } }, "Check for and install DeckTune updates from GitHub"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "8px",
+                                } },
+                                "Current Version: ",
+                                window.SP_REACT.createElement("strong", { style: { color: "#fff" } }, updateInfo.currentVersion)),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: checkForUpdates, disabled: updateInfo.checking || installing, style: { width: "100%", marginBottom: "8px" } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "8px",
+                                        padding: "10px 12px",
+                                        backgroundColor: updateInfo.checking ? "#3d4450" : "#1a9fff",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                        opacity: updateInfo.checking || installing ? 0.6 : 1,
+                                    } },
+                                    window.SP_REACT.createElement(FaSync, { size: 12, "aria-hidden": "true", style: {
+                                            animation: updateInfo.checking ? "spin 1s linear infinite" : "none",
+                                        } }),
+                                    window.SP_REACT.createElement("span", null, updateInfo.checking ? "Checking..." : "Check for Updates"))),
+                            updateInfo.available && updateInfo.latestVersion && (window.SP_REACT.createElement("div", { style: {
+                                    padding: "12px",
+                                    backgroundColor: "#1a4d2e",
+                                    borderRadius: "4px",
+                                    marginBottom: "8px",
+                                    border: "1px solid #4caf50",
+                                } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                        color: "#4caf50",
+                                        marginBottom: "8px",
+                                    } },
+                                    "\u2713 Update Available: v",
+                                    updateInfo.latestVersion),
+                                updateInfo.releaseNotes && (window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "9px",
+                                        color: "#8b929a",
+                                        marginBottom: "8px",
+                                        maxHeight: "60px",
+                                        overflowY: "auto",
+                                        lineHeight: "1.3",
+                                    } }, updateInfo.releaseNotes.split('\n').slice(0, 3).join('\n'))),
+                                window.SP_REACT.createElement(FocusableButton, { onClick: installUpdate, disabled: installing, style: { width: "100%" } },
+                                    window.SP_REACT.createElement("div", { style: {
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "8px",
+                                            padding: "8px",
+                                            backgroundColor: installing ? "#3d4450" : "#4caf50",
+                                            borderRadius: "4px",
+                                            fontSize: "10px",
+                                            fontWeight: "bold",
+                                            opacity: installing ? 0.6 : 1,
+                                        } },
+                                        window.SP_REACT.createElement(FaDownload, { size: 10, "aria-hidden": "true" }),
+                                        window.SP_REACT.createElement("span", null, installing ? "Installing..." : "Install Update"))),
+                                installing && (window.SP_REACT.createElement("div", { style: { marginTop: "12px" } },
+                                    window.SP_REACT.createElement("div", { style: {
+                                            width: "100%",
+                                            height: "8px",
+                                            backgroundColor: "#3d4450",
+                                            borderRadius: "4px",
+                                            overflow: "hidden",
+                                            marginBottom: "8px",
+                                        } },
+                                        window.SP_REACT.createElement("div", { style: {
+                                                width: `${updateProgress.progress}%`,
+                                                height: "100%",
+                                                backgroundColor: "#4caf50",
+                                                transition: "width 0.3s ease",
+                                            } })),
+                                    window.SP_REACT.createElement("div", { style: {
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            fontSize: "9px",
+                                            color: "#8b929a",
+                                        } },
+                                        window.SP_REACT.createElement("span", null, updateProgress.message),
+                                        window.SP_REACT.createElement("span", null,
+                                            updateProgress.progress,
+                                            "%")),
+                                    updateProgress.eta_seconds > 0 && (window.SP_REACT.createElement("div", { style: {
+                                            fontSize: "9px",
+                                            color: "#8b929a",
+                                            textAlign: "center",
+                                            marginTop: "4px",
+                                        } },
+                                        "ETA: ",
+                                        Math.ceil(updateProgress.eta_seconds / 60),
+                                        " min")),
+                                    window.SP_REACT.createElement("div", { style: {
+                                            fontSize: "9px",
+                                            color: "#1a9fff",
+                                            textAlign: "center",
+                                            marginTop: "8px",
+                                            fontWeight: "bold",
+                                        } },
+                                        updateProgress.stage === "downloading" && "⬇ Downloading...",
+                                        updateProgress.stage === "extracting" && "📦 Extracting...",
+                                        updateProgress.stage === "installing" && "⚙️ Installing...",
+                                        updateProgress.stage === "finalizing" && "✓ Finalizing...",
+                                        updateProgress.stage === "complete" && "✓ Complete! Reloading..."))))),
+                            !updateInfo.available && !updateInfo.checking && updateInfo.latestVersion && (window.SP_REACT.createElement("div", null,
+                                window.SP_REACT.createElement("div", { style: {
+                                        fontSize: "10px",
+                                        color: "#4caf50",
+                                        textAlign: "center",
+                                        padding: "8px",
+                                        marginBottom: "8px",
+                                    } }, "\u2713 You're running the latest version"),
+                                window.SP_REACT.createElement(FocusableButton, { onClick: async () => {
+                                        if (confirm("Reinstall current version? This will redownload and reinstall all plugin files.")) {
+                                            await installUpdate();
+                                        }
+                                    }, disabled: installing, style: { width: "100%" } },
+                                    window.SP_REACT.createElement("div", { style: {
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "8px",
+                                            padding: "8px",
+                                            backgroundColor: installing ? "#3d4450" : "#3d4450",
+                                            borderRadius: "4px",
+                                            fontSize: "10px",
+                                            fontWeight: "bold",
+                                            opacity: installing ? 0.6 : 1,
+                                        } },
+                                        window.SP_REACT.createElement(FaSync, { size: 10, "aria-hidden": "true" }),
+                                        window.SP_REACT.createElement("span", null, installing ? "Reinstalling..." : "Force Reinstall"))))),
+                            updateInfo.error && (window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "9px",
+                                    color: "#f44336",
+                                    textAlign: "center",
+                                    padding: "8px",
+                                    backgroundColor: "rgba(244, 67, 54, 0.1)",
+                                    borderRadius: "4px",
+                                } }, updateInfo.error)))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(FocusableButton, { onClick: async () => {
                                 if (confirm("Reset all settings to defaults? This will clear wizard setup state and all configurations.")) {
