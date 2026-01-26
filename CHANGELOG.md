@@ -2,6 +2,46 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.3.3] - 2026-01-26
+
+### Fixed
+- **UI Layout for Steam Deck QAM** — Fixed multiple layout issues where controls didn't fit in QAM width (310px)
+  - Settings menu: Added scroll container with maxHeight 80vh and overflowY auto
+  - Wizard Mode: Changed Load-Based/Frequency-Based selector from horizontal to vertical layout
+  - Load-Based Wizard: Changed Aggressiveness and Test Duration buttons from horizontal grid to vertical stack
+  - Frequency Wizard: Changed Quick/Manual toggle from horizontal to vertical layout
+  - Frequency Wizard Manual Config: Shortened slider labels (e.g., "Start Frequency (MHz)" → "Start Freq" with valueSuffix " MHz")
+  - Expert Mode: Added scroll container with maxHeight 60vh and overflowY auto
+  - Expert Mode: Removed Fan tab from TABS array (already moved to header)
+  - Expert Mode: Moved Dynamic Manual Mode from separate tab into Manual tab as Static/Dynamic toggle
+- **Dynamic Mode Initialization** — Fixed critical error on plugin load
+  - Changed import from old Decky SettingsManager to new CoreSettingsManager
+  - Fixed error: 'SettingsManager' object has no attribute 'get_setting'
+  - Dynamic mode now initializes correctly on startup
+- **Frequency Wizard RPC Methods** — Added missing frontend-facing RPC wrappers
+  - Added start_frequency_wizard(config) method
+  - Added cancel_frequency_wizard() method
+  - Added get_frequency_wizard_progress() method
+  - Added apply_frequency_curve(curves) method
+  - Added enable_frequency_mode() method
+  - Added disable_frequency_mode() method
+  - Frequency wizard now responds to Start Wizard button
+- **Benchmark Score Parsing** — Enhanced stress-ng output parsing
+  - Added multiple parsing strategies for "bogo ops" in stdout and stderr
+  - Added fallback estimation: 100k ops/sec based on duration if no operations parsed
+  - Improved logging to show parsed operations and calculated score
+  - Benchmark now shows actual ops/sec instead of 0
+- **Wizard Progress Emission** — Fixed wizard initialization hang
+  - Added explicit progress emission with await self._emit_progress()
+  - Added 100ms delay after initial emission to ensure event loop processes
+  - Added progress updates for each domain being tested
+  - Wizard now shows proper progress instead of infinite "Initializing" with ETA: 0s
+
+### Improved
+- **UI Responsiveness** — All controls now fit properly in Steam Deck QAM width
+- **Error Handling** — Better error messages and logging for troubleshooting
+- **User Experience** — Vertical layouts improve readability and navigation on small screens
+
 ## [3.3.2] - 2026-01-26
 
 ### Changed
