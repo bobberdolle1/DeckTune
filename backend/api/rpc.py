@@ -299,9 +299,9 @@ class DeckTuneRPC:
             logger.debug(f"Game running: {game_is_running}")
         
         # Save values to settings first (always save, regardless of game state)
-        self.settings.setSetting("cores", clamped_cores)
-        self.settings.setSetting("lkg_cores", clamped_cores)
-        self.settings.setSetting("lkg_timestamp", datetime.now().isoformat())
+        self.settings.save_setting("cores", clamped_cores)
+        self.settings.save_setting("lkg_cores", clamped_cores)
+        self.settings.save_setting("lkg_timestamp", datetime.now().isoformat())
         
         # Determine if we should apply now or defer to GameOnlyModeController
         should_apply_now = True
@@ -323,7 +323,7 @@ class DeckTuneRPC:
             success, error = await self.ryzenadj.apply_values_async(clamped_cores)
             
             if success:
-                self.settings.setSetting("status", "enabled")
+                self.settings.save_setting("status", "enabled")
                 await self.event_emitter.emit_status("enabled")
                 logger.info(f"Undervolt applied successfully: {clamped_cores}")
                 return {
@@ -346,7 +346,7 @@ class DeckTuneRPC:
                 }
         else:
             # Values saved but not applied (deferred to game start)
-            self.settings.setSetting("status", "deferred")
+            self.settings.save_setting("status", "deferred")
             await self.event_emitter.emit_status("deferred")
             logger.info(f"Undervolt values saved but not applied: {clamped_cores}")
             return {
@@ -369,7 +369,7 @@ class DeckTuneRPC:
         success, error = await self.ryzenadj.disable_async()
         
         if success:
-            self.settings.setSetting("status", "disabled")
+            self.settings.save_setting("status", "disabled")
             await self.event_emitter.emit_status("disabled")
             return {"success": True}
         else:
@@ -392,7 +392,7 @@ class DeckTuneRPC:
         
         success, error = self.ryzenadj.disable()
         
-        self.settings.setSetting("status", "disabled")
+        self.settings.save_setting("status", "disabled")
         await self.event_emitter.emit_status("disabled")
         
         if success:
@@ -456,18 +456,18 @@ class DeckTuneRPC:
             result = await self.autotune_engine.run(config)
             
             if result.stable:
-                self.settings.setSetting("cores", result.cores)
-                self.settings.setSetting("status", "enabled")
+                self.settings.save_setting("cores", result.cores)
+                self.settings.save_setting("status", "enabled")
             else:
-                self.settings.setSetting("status", "disabled")
+                self.settings.save_setting("status", "disabled")
                 
         except asyncio.CancelledError:
             logger.info("Autotune task cancelled")
-            self.settings.setSetting("status", "disabled")
+            self.settings.save_setting("status", "disabled")
             await self.event_emitter.emit_status("disabled")
         except Exception as e:
             logger.exception(f"Autotune error: {e}")
-            self.settings.setSetting("status", "error")
+            self.settings.save_setting("status", "error")
             await self.event_emitter.emit_status("error")
     
     async def stop_autotune(self) -> Dict[str, Any]:
@@ -631,7 +631,7 @@ class DeckTuneRPC:
             
         Requirements: 10.1, 10.5
         """
-        config = self.settings.getSetting("binning_config") or {
+        config = self.settings.get_setting("binning_config") or {
             "test_duration": 60,
             "step_size": 5,
             "start_value": -10,
@@ -656,7 +656,7 @@ class DeckTuneRPC:
         Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
         """
         # Get current config
-        current_config = self.settings.getSetting("binning_config") or {
+        current_config = self.settings.get_setting("binning_config") or {
             "test_duration": 60,
             "step_size": 5,
             "start_value": -10,
@@ -690,7 +690,7 @@ class DeckTuneRPC:
             current_config["consecutive_fail_limit"] = config["consecutive_fail_limit"]
         
         # Persist config
-        self.settings.setSetting("binning_config", current_config)
+        self.settings.save_setting("binning_config", current_config)
         
         logger.info(f"Updated binning config: {current_config}")
         return {"success": True, "config": current_config}
@@ -1043,14 +1043,14 @@ class DeckTuneRPC:
         """
         from datetime import datetime
         
-        history = self.settings.getSetting("test_history") or []
+        history = self.settings.get_setting("test_history") or []
         
         entry = {
             "test_name": test_name,
             "passed": result.passed,
             "duration": result.duration,
             "timestamp": datetime.now().isoformat(),
-            "cores_tested": self.settings.getSetting("cores") or [0, 0, 0, 0]
+            "cores_tested": self.settings.get_setting("cores") or [0, 0, 0, 0]
         }
         
         history.append(entry)
@@ -1059,7 +1059,7 @@ class DeckTuneRPC:
         if len(history) > 10:
             history = history[-10:]
         
-        self.settings.setSetting("test_history", history)
+        self.settings.save_setting("test_history", history)
     
     async def get_test_history(self) -> List[Dict[str, Any]]:
         """Get last 10 test results.
@@ -1067,7 +1067,7 @@ class DeckTuneRPC:
         Returns:
             List of test history entries
         """
-        return self.settings.getSetting("test_history") or []
+        return self.settings.get_setting("test_history") or []
     
     # ==================== Preset Management ====================
     # Requirements: 5.1, 5.5
@@ -1085,7 +1085,7 @@ class DeckTuneRPC:
         """
         logger.info(f"Saving preset: {preset}")
         
-        presets = self.settings.getSetting("presets") or []
+        presets = self.settings.get_setting("presets") or []
         
         # Remove existing preset with same app_id
         app_id = preset.get("app_id")
@@ -1104,7 +1104,7 @@ class DeckTuneRPC:
         }
         
         presets.append(new_preset)
-        self.settings.setSetting("presets", presets)
+        self.settings.save_setting("presets", presets)
         
         logger.info(f"Preset saved: {new_preset}")
         return {"success": True, "preset": new_preset}
@@ -1120,7 +1120,7 @@ class DeckTuneRPC:
         """
         logger.info(f"Deleting preset with app_id: {app_id}")
         
-        presets = self.settings.getSetting("presets") or []
+        presets = self.settings.get_setting("presets") or []
         original_count = len(presets)
         
         presets = [p for p in presets if p.get("app_id") != app_id]
@@ -1128,7 +1128,7 @@ class DeckTuneRPC:
         if len(presets) == original_count:
             return {"success": False, "error": f"Preset with app_id {app_id} not found"}
         
-        self.settings.setSetting("presets", presets)
+        self.settings.save_setting("presets", presets)
         return {"success": True}
     
     async def get_presets(self) -> List[Dict[str, Any]]:
@@ -1137,7 +1137,7 @@ class DeckTuneRPC:
         Returns:
             List of preset dictionaries
         """
-        return self.settings.getSetting("presets") or []
+        return self.settings.get_setting("presets") or []
     
     async def export_presets(self) -> str:
         """Export all presets as JSON string.
@@ -1149,7 +1149,7 @@ class DeckTuneRPC:
         """
         import json
         
-        presets = self.settings.getSetting("presets") or []
+        presets = self.settings.get_setting("presets") or []
         
         export_data = {
             "version": "1.0",
@@ -1189,7 +1189,7 @@ class DeckTuneRPC:
             return {"success": False, "error": "Presets must be a list"}
         
         # Validate and merge presets
-        existing_presets = self.settings.getSetting("presets") or []
+        existing_presets = self.settings.get_setting("presets") or []
         existing_app_ids = {p.get("app_id") for p in existing_presets}
         
         imported_count = 0
@@ -1225,7 +1225,7 @@ class DeckTuneRPC:
             existing_app_ids.add(app_id)
             imported_count += 1
         
-        self.settings.setSetting("presets", existing_presets)
+        self.settings.save_setting("presets", existing_presets)
         
         logger.info(f"Imported {imported_count} presets")
         return {"success": True, "imported_count": imported_count}
@@ -1339,11 +1339,11 @@ class DeckTuneRPC:
         import json
         
         config = {
-            "cores": self.settings.getSetting("cores") or [0, 0, 0, 0],
-            "lkg_cores": self.settings.getSetting("lkg_cores") or [0, 0, 0, 0],
-            "lkg_timestamp": self.settings.getSetting("lkg_timestamp"),
-            "status": self.settings.getSetting("status") or "disabled",
-            "presets_count": len(self.settings.getSetting("presets") or []),
+            "cores": self.settings.get_setting("cores") or [0, 0, 0, 0],
+            "lkg_cores": self.settings.get_setting("lkg_cores") or [0, 0, 0, 0],
+            "lkg_timestamp": self.settings.get_setting("lkg_timestamp"),
+            "status": self.settings.get_setting("status") or "disabled",
+            "presets_count": len(self.settings.get_setting("presets") or []),
             "platform": {
                 "model": self.platform.model,
                 "variant": self.platform.variant,
@@ -1456,9 +1456,9 @@ class DeckTuneRPC:
             pass
         
         # Get current status
-        info["current_status"] = self.settings.getSetting("status") or "disabled"
-        info["current_cores"] = self.settings.getSetting("cores") or [0, 0, 0, 0]
-        info["lkg_cores"] = self.settings.getSetting("lkg_cores") or [0, 0, 0, 0]
+        info["current_status"] = self.settings.get_setting("status") or "disabled"
+        info["current_cores"] = self.settings.get_setting("cores") or [0, 0, 0, 0]
+        info["lkg_cores"] = self.settings.get_setting("lkg_cores") or [0, 0, 0, 0]
         
         return info
 
@@ -1489,7 +1489,7 @@ class DeckTuneRPC:
         logger.info("Starting benchmark")
         
         # Get current undervolt values for recording
-        cores_used = self.settings.getSetting("cores") or [0, 0, 0, 0]
+        cores_used = self.settings.get_setting("cores") or [0, 0, 0, 0]
         
         # Run benchmark in background task
         self._benchmark_task = asyncio.create_task(
@@ -1525,7 +1525,7 @@ class DeckTuneRPC:
             self._add_to_benchmark_history(result)
             
             # Get comparison with previous result if available
-            history = self.settings.getSetting("benchmark_history") or []
+            history = self.settings.get_setting("benchmark_history") or []
             comparison = None
             
             if len(history) >= 2:
@@ -1565,7 +1565,7 @@ class DeckTuneRPC:
         Args:
             result: BenchmarkResult object
         """
-        history = self.settings.getSetting("benchmark_history") or []
+        history = self.settings.get_setting("benchmark_history") or []
         
         entry = {
             "score": result.score,
@@ -1580,7 +1580,7 @@ class DeckTuneRPC:
         if len(history) > 20:
             history = history[-20:]
         
-        self.settings.setSetting("benchmark_history", history)
+        self.settings.save_setting("benchmark_history", history)
     
     async def get_benchmark_history(self) -> Dict[str, Any]:
         """Get last 20 benchmark results.
@@ -1592,7 +1592,7 @@ class DeckTuneRPC:
             
         Requirements: 7.5
         """
-        history = self.settings.getSetting("benchmark_history") or []
+        history = self.settings.get_setting("benchmark_history") or []
         
         # Add comparisons to each result (except the first)
         results_with_comparison = []
@@ -1677,7 +1677,7 @@ class DeckTuneRPC:
         """
         from ..dynamic.config import FanConfig
         
-        fan_data = self.settings.getSetting("fan_config") or {}
+        fan_data = self.settings.get_setting("fan_config") or {}
         fan_config = FanConfig.from_dict(fan_data)
         
         return {
@@ -1703,7 +1703,7 @@ class DeckTuneRPC:
         
         try:
             # Get current config
-            current_data = self.settings.getSetting("fan_config") or {}
+            current_data = self.settings.get_setting("fan_config") or {}
             current_config = FanConfig.from_dict(current_data)
             
             # Update fields
@@ -1737,7 +1737,7 @@ class DeckTuneRPC:
                 return {"success": False, "error": "; ".join(errors)}
             
             # Persist
-            self.settings.setSetting("fan_config", current_config.to_dict())
+            self.settings.save_setting("fan_config", current_config.to_dict())
             
             logger.info(f"Updated fan config: enabled={current_config.enabled}, mode={current_config.mode}")
             return {"success": True, "config": current_config.to_dict()}
@@ -1781,13 +1781,13 @@ class DeckTuneRPC:
                 prev_temp = temp_c
             
             # Update config
-            current_data = self.settings.getSetting("fan_config") or {}
+            current_data = self.settings.get_setting("fan_config") or {}
             current_config = FanConfig.from_dict(current_data)
             current_config.curve = curve
             current_config.mode = "custom"  # Auto-switch to custom mode
             
             # Persist
-            self.settings.setSetting("fan_config", current_config.to_dict())
+            self.settings.save_setting("fan_config", current_config.to_dict())
             
             logger.info(f"Set fan curve with {len(curve)} points")
             return {"success": True, "curve": [p.to_dict() for p in curve]}
@@ -1811,12 +1811,12 @@ class DeckTuneRPC:
             return {"success": False, "error": f"Invalid mode: {mode}. Must be default, custom, or fixed"}
         
         try:
-            current_data = self.settings.getSetting("fan_config") or {}
+            current_data = self.settings.get_setting("fan_config") or {}
             current_config = FanConfig.from_dict(current_data)
             current_config.mode = mode
             
             # Persist
-            self.settings.setSetting("fan_config", current_config.to_dict())
+            self.settings.save_setting("fan_config", current_config.to_dict())
             
             logger.info(f"Set fan mode to: {mode}")
             return {"success": True, "mode": mode}
@@ -1837,12 +1837,12 @@ class DeckTuneRPC:
         from ..dynamic.config import FanConfig
         
         try:
-            current_data = self.settings.getSetting("fan_config") or {}
+            current_data = self.settings.get_setting("fan_config") or {}
             current_config = FanConfig.from_dict(current_data)
             current_config.enabled = enabled
             
             # Persist
-            self.settings.setSetting("fan_config", current_config.to_dict())
+            self.settings.save_setting("fan_config", current_config.to_dict())
             
             logger.info(f"Fan control {'enabled' if enabled else 'disabled'}")
             return {"success": True, "enabled": enabled}
@@ -2080,7 +2080,7 @@ class DeckTuneRPC:
                    f"safety_margin={iron_seeker_config.safety_margin}")
         
         # Get current undervolt values as initial values
-        initial_values = self.settings.getSetting("cores") or [0, 0, 0, 0]
+        initial_values = self.settings.get_setting("cores") or [0, 0, 0, 0]
         
         # Run Iron Seeker in background task
         self._iron_seeker_task = asyncio.create_task(
@@ -2123,8 +2123,8 @@ class DeckTuneRPC:
                 
                 # Also update current cores to recommended values
                 recommended_values = [c.recommended for c in result.cores]
-                self.settings.setSetting("cores", recommended_values)
-                self.settings.setSetting("status", "enabled")
+                self.settings.save_setting("cores", recommended_values)
+                self.settings.save_setting("status", "enabled")
                 
                 logger.info(f"Iron Seeker completed: recommended values = {recommended_values}")
             else:
@@ -2435,10 +2435,10 @@ class DeckTuneRPC:
             
             # Save curve to settings
             logger.info("Saving curve to settings...")
-            curves = self.settings.getSetting("frequency_curves") or {}
+            curves = self.settings.get_setting("frequency_curves") or {}
             logger.info(f"Existing curves: {list(curves.keys())}")
             curves[str(core_id)] = curve.to_dict()
-            self.settings.setSetting("frequency_curves", curves)
+            self.settings.save_setting("frequency_curves", curves)
             logger.info(f"Curve saved for core {core_id}")
             
             # Emit completion event
@@ -2589,7 +2589,7 @@ class DeckTuneRPC:
         Validates: Requirements 11.4
         """
         try:
-            curves = self.settings.getSetting("frequency_curves") or {}
+            curves = self.settings.get_setting("frequency_curves") or {}
             curve_data = curves.get(str(core_id))
             
             if not curve_data:
@@ -2642,7 +2642,7 @@ class DeckTuneRPC:
                     }
             
             # Save curves to settings
-            self.settings.setSetting("frequency_curves", curves)
+            self.settings.save_setting("frequency_curves", curves)
             
             logger.info(f"Applied frequency curves for {len(curves)} cores")
             return {"success": True}
@@ -2665,7 +2665,7 @@ class DeckTuneRPC:
         """
         try:
             # Set frequency mode flag
-            self.settings.setSetting("frequency_mode_enabled", True)
+            self.settings.save_setting("frequency_mode_enabled", True)
             
             # TODO: Activate frequency controller in Rust dynamic controller
             # This will be implemented when integrating with gymdeck3
@@ -2691,7 +2691,7 @@ class DeckTuneRPC:
         """
         try:
             # Clear frequency mode flag
-            self.settings.setSetting("frequency_mode_enabled", False)
+            self.settings.save_setting("frequency_mode_enabled", False)
             
             # TODO: Deactivate frequency controller in Rust dynamic controller
             # This will be implemented when integrating with gymdeck3
@@ -3066,7 +3066,7 @@ class DeckTuneRPC:
         """
         try:
             # Get acoustic profile from settings
-            acoustic_data = self.settings.getSetting("acoustic_profile") or {}
+            acoustic_data = self.settings.get_setting("acoustic_profile") or {}
             profile = acoustic_data.get("profile", "balanced")
             
             # Profile descriptions
@@ -3115,13 +3115,13 @@ class DeckTuneRPC:
         
         try:
             # Get current acoustic settings
-            acoustic_data = self.settings.getSetting("acoustic_profile") or {}
+            acoustic_data = self.settings.get_setting("acoustic_profile") or {}
             
             # Update profile
             acoustic_data["profile"] = profile
             
             # Persist
-            self.settings.setSetting("acoustic_profile", acoustic_data)
+            self.settings.save_setting("acoustic_profile", acoustic_data)
             
             logger.info(f"Set acoustic profile to: {profile}")
             return {"success": True, "profile": profile}
@@ -3145,7 +3145,7 @@ class DeckTuneRPC:
         """
         try:
             # Get PWM smoothing config from settings
-            smoothing_data = self.settings.getSetting("pwm_smoothing") or {}
+            smoothing_data = self.settings.get_setting("pwm_smoothing") or {}
             
             return {
                 "success": True,
@@ -3177,7 +3177,7 @@ class DeckTuneRPC:
         """
         try:
             # Get current config
-            smoothing_data = self.settings.getSetting("pwm_smoothing") or {}
+            smoothing_data = self.settings.get_setting("pwm_smoothing") or {}
             
             # Update fields
             if "enabled" in config:
@@ -3193,7 +3193,7 @@ class DeckTuneRPC:
                 smoothing_data["ramp_time_sec"] = ramp_time
             
             # Persist
-            self.settings.setSetting("pwm_smoothing", smoothing_data)
+            self.settings.save_setting("pwm_smoothing", smoothing_data)
             
             logger.info(f"Updated PWM smoothing config: enabled={smoothing_data.get('enabled', True)}, "
                        f"ramp_time_sec={smoothing_data.get('ramp_time_sec', 2.0)}")
@@ -3452,9 +3452,9 @@ class DeckTuneRPC:
         Validates: Requirements 5.5, 5.6
         """
         try:
-            first_run_complete = self.settings.getSetting("first_run_complete") or False
-            wizard_goal = self.settings.getSetting("wizard_goal")
-            wizard_completed_at = self.settings.getSetting("wizard_completed_at")
+            first_run_complete = self.settings.get_setting("first_run_complete") or False
+            wizard_goal = self.settings.get_setting("wizard_goal")
+            wizard_completed_at = self.settings.get_setting("wizard_completed_at")
             
             return {
                 "success": True,
@@ -3494,9 +3494,9 @@ class DeckTuneRPC:
         try:
             from datetime import datetime
             
-            self.settings.setSetting("wizard_goal", goal)
-            self.settings.setSetting("wizard_completed_at", datetime.now().isoformat())
-            self.settings.setSetting("first_run_complete", True)
+            self.settings.save_setting("wizard_goal", goal)
+            self.settings.save_setting("wizard_completed_at", datetime.now().isoformat())
+            self.settings.save_setting("first_run_complete", True)
             
             logger.info(f"Wizard completed with goal: {goal}")
             
@@ -3522,7 +3522,7 @@ class DeckTuneRPC:
         Validates: Requirements 5.6
         """
         try:
-            self.settings.setSetting("first_run_complete", False)
+            self.settings.save_setting("first_run_complete", False)
             
             logger.info("Wizard state reset - will show on next load")
             
