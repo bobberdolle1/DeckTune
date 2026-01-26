@@ -184,15 +184,15 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ flex: 1 }}>
                 <SliderField
-                  label="Minimal Value"
-                  description={`Voltage offset at low CPU load: ${config.min_mv} mV`}
+                  label="Min"
                   value={config.min_mv}
                   min={-100}
                   max={0}
                   step={1}
                   onChange={handleMinChange}
                   disabled={disabled}
-                  showValue={false}
+                  showValue={true}
+                  valueSuffix=" mV"
                 />
               </div>
               <FaInfoCircle 
@@ -255,15 +255,15 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ flex: 1 }}>
                 <SliderField
-                  label="Maximum Value"
-                  description={`Voltage offset at high CPU load: ${config.max_mv} mV`}
+                  label="Max"
                   value={config.max_mv}
                   min={-100}
                   max={0}
                   step={1}
                   onChange={handleMaxChange}
                   disabled={disabled}
-                  showValue={false}
+                  showValue={true}
+                  valueSuffix=" mV"
                 />
               </div>
               <FaInfoCircle 
@@ -327,14 +327,14 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
               <div style={{ flex: 1 }}>
                 <SliderField
                   label="Threshold"
-                  description={`CPU load transition point: ${config.threshold}%`}
                   value={config.threshold}
                   min={0}
                   max={100}
                   step={1}
                   onChange={handleThresholdChange}
                   disabled={disabled}
-                  showValue={false}
+                  showValue={true}
+                  valueSuffix="%"
                 />
               </div>
               <FaInfoCircle 

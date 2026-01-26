@@ -672,51 +672,57 @@ export const FrequencyWizard: FC = () => {
             {configMode === "manual" && (
               <PanelSection title="Frequency Range">
               <PanelSectionRow>
-                <SliderField
-                  label="Start Freq"
-                  value={config.freq_start}
-                  min={400}
-                  max={3500}
-                  step={50}
-                  onChange={(value) => setConfig({ ...config, freq_start: value })}
-                  showValue={true}
-                  valueSuffix=" MHz"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Start"
+                    value={config.freq_start}
+                    min={400}
+                    max={3500}
+                    step={50}
+                    onChange={(value) => setConfig({ ...config, freq_start: value })}
+                    showValue={true}
+                    valueSuffix=" MHz"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.freq_start && (
                   <div className="error-text">{validationErrors.freq_start}</div>
                 )}
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <SliderField
-                  label="End Freq"
-                  value={config.freq_end}
-                  min={400}
-                  max={3500}
-                  step={50}
-                  onChange={(value) => setConfig({ ...config, freq_end: value })}
-                  showValue={true}
-                  valueSuffix=" MHz"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="End"
+                    value={config.freq_end}
+                    min={400}
+                    max={3500}
+                    step={50}
+                    onChange={(value) => setConfig({ ...config, freq_end: value })}
+                    showValue={true}
+                    valueSuffix=" MHz"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.freq_end && (
                   <div className="error-text">{validationErrors.freq_end}</div>
                 )}
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <SliderField
-                  label="Freq Step"
-                  value={config.freq_step}
-                  min={50}
-                  max={500}
-                  step={10}
-                  onChange={(value) => setConfig({ ...config, freq_step: value })}
-                  showValue={true}
-                  valueSuffix=" MHz"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Step"
+                    value={config.freq_step}
+                    min={50}
+                    max={500}
+                    step={10}
+                    onChange={(value) => setConfig({ ...config, freq_step: value })}
+                    showValue={true}
+                    valueSuffix=" MHz"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.freq_step && (
                   <div className="error-text">{validationErrors.freq_step}</div>
                 )}
@@ -728,17 +734,19 @@ export const FrequencyWizard: FC = () => {
             {configMode === "manual" && (
             <PanelSection title="Test Settings">
               <PanelSectionRow>
-                <SliderField
-                  label="Test Duration"
-                  value={config.test_duration}
-                  min={10}
-                  max={120}
-                  step={5}
-                  onChange={(value) => setConfig({ ...config, test_duration: value })}
-                  showValue={true}
-                  valueSuffix=" sec"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Duration"
+                    value={config.test_duration}
+                    min={10}
+                    max={120}
+                    step={5}
+                    onChange={(value) => setConfig({ ...config, test_duration: value })}
+                    showValue={true}
+                    valueSuffix=" sec"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.test_duration && (
                   <div className="error-text">{validationErrors.test_duration}</div>
                 )}
@@ -750,51 +758,57 @@ export const FrequencyWizard: FC = () => {
             {configMode === "manual" && (
             <PanelSection title="Voltage Settings">
               <PanelSectionRow>
-                <SliderField
-                  label="Start Voltage"
-                  value={config.voltage_start}
-                  min={-100}
-                  max={0}
-                  step={1}
-                  onChange={(value) => setConfig({ ...config, voltage_start: value })}
-                  showValue={true}
-                  valueSuffix=" mV"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Start"
+                    value={config.voltage_start}
+                    min={-100}
+                    max={0}
+                    step={1}
+                    onChange={(value) => setConfig({ ...config, voltage_start: value })}
+                    showValue={true}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.voltage_start && (
                   <div className="error-text">{validationErrors.voltage_start}</div>
                 )}
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <SliderField
-                  label="Voltage Step"
-                  value={config.voltage_step}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onChange={(value) => setConfig({ ...config, voltage_step: value })}
-                  showValue={true}
-                  valueSuffix=" mV"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Step"
+                    value={config.voltage_step}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onChange={(value) => setConfig({ ...config, voltage_step: value })}
+                    showValue={true}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.voltage_step && (
                   <div className="error-text">{validationErrors.voltage_step}</div>
                 )}
               </PanelSectionRow>
 
               <PanelSectionRow>
-                <SliderField
-                  label="Safety Margin"
-                  value={config.safety_margin}
-                  min={0}
-                  max={20}
-                  step={1}
-                  onChange={(value) => setConfig({ ...config, safety_margin: value })}
-                  showValue={true}
-                  valueSuffix=" mV"
-                  bottomSeparator="none"
-                />
+                <Focusable>
+                  <SliderField
+                    label="Safety"
+                    value={config.safety_margin}
+                    min={0}
+                    max={20}
+                    step={1}
+                    onChange={(value) => setConfig({ ...config, safety_margin: value })}
+                    showValue={true}
+                    valueSuffix=" mV"
+                    bottomSeparator="none"
+                  />
+                </Focusable>
                 {showErrors && validationErrors.safety_margin && (
                   <div className="error-text">{validationErrors.safety_margin}</div>
                 )}
@@ -804,25 +818,52 @@ export const FrequencyWizard: FC = () => {
 
             {/* Start button - Requirement: 6.3 */}
             <PanelSectionRow>
-              <ButtonItem
-                layout="below"
-                onClick={handleStart}
-                disabled={isStarting || hasErrors}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                  {isStarting ? (
-                    <>
-                      <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
-                      <span>Starting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaPlay />
-                      <span>Start Wizard</span>
-                    </>
-                  )}
-                </div>
-              </ButtonItem>
+              <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={handleStart}
+                  disabled={isStarting || hasErrors}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    {isStarting ? (
+                      <>
+                        <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                        <span>Starting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaPlay />
+                        <span>Start Wizard</span>
+                      </>
+                    )}
+                  </div>
+                </ButtonItem>
+                
+                {/* Reset button for manual config */}
+                {configMode === "manual" && (
+                  <ButtonItem
+                    layout="below"
+                    onClick={() => {
+                      setConfig({
+                        freq_start: 400,
+                        freq_end: 3500,
+                        freq_step: 200,
+                        test_duration: 20,
+                        voltage_start: -30,
+                        voltage_step: 2,
+                        safety_margin: 5,
+                      });
+                      setShowErrors(false);
+                      setError(null);
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <FaStop />
+                      <span>Reset to Defaults</span>
+                    </div>
+                  </ButtonItem>
+                )}
+              </Focusable>
               
               {/* Validation error summary - Requirement: 3.7 */}
               {showErrors && hasErrors && (
