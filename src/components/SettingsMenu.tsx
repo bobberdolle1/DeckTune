@@ -960,15 +960,47 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
 
                 {/* No Update Available */}
                 {!updateInfo.available && !updateInfo.checking && updateInfo.latestVersion && (
-                  <div
-                    style={{
-                      fontSize: "10px",
-                      color: "#4caf50",
-                      textAlign: "center",
-                      padding: "8px",
-                    }}
-                  >
-                    ✓ You're running the latest version
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#4caf50",
+                        textAlign: "center",
+                        padding: "8px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      ✓ You're running the latest version
+                    </div>
+
+                    {/* Force Reinstall Button */}
+                    <FocusableButton
+                      onClick={async () => {
+                        if (confirm("Reinstall current version? This will redownload and reinstall all plugin files.")) {
+                          await installUpdate();
+                        }
+                      }}
+                      disabled={installing}
+                      style={{ width: "100%" }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          padding: "8px",
+                          backgroundColor: installing ? "#3d4450" : "#3d4450",
+                          borderRadius: "4px",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          opacity: installing ? 0.6 : 1,
+                        }}
+                      >
+                        <FaSync size={10} aria-hidden="true" />
+                        <span>{installing ? "Reinstalling..." : "Force Reinstall"}</span>
+                      </div>
+                    </FocusableButton>
                   </div>
                 )}
 
