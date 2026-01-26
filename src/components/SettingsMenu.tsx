@@ -7,17 +7,33 @@
  * Provides centralized settings management interface:
  * - Expert Mode toggle with confirmation dialog
  * - Binning Settings (test duration, step size, start value)
+ * - Update Management (check for updates, install)
  * - Modal overlay with backdrop dismiss
  * - Gamepad navigation support
  * - Accessibility compliant (WCAG AA)
  */
 
 import { FC, useState, useEffect } from "react";
-import { PanelSection, PanelSectionRow, Focusable } from "@decky/ui";
-import { FaTimes, FaExclamationTriangle, FaCheck } from "react-icons/fa";
+import { PanelSection, PanelSectionRow, Focusable, SliderField } from "@decky/ui";
+import { FaTimes, FaExclamationTriangle, FaCheck, FaDownload, FaSync } from "react-icons/fa";
 import { call } from "@decky/api";
 import { useSettings } from "../context/SettingsContext";
 import { FocusableButton } from "./FocusableButton";
+
+// Add CSS animation for spinner
+const spinKeyframes = `
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+`;
+
+// Inject keyframes into document
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = spinKeyframes;
+  document.head.appendChild(style);
+}
 
 /**
  * Props for SettingsMenu component.
@@ -197,6 +213,71 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
   });
   const [binningLoaded, setBinningLoaded] = useState(false);
 
+  // Update state
+  const [updateInfo, setUpdateInfo] = useState<{
+    checking: boolean;
+    available: boolean;
+    currentVersion: string;
+    latestVersion?: string;
+    releaseNotes?: string;
+    downloadUrl?: string;
+    error?: string;
+  }>({
+    checking: false,
+    available: false,
+    currentVersion: "3.4.0",
+  });
+  const [installing, setInstalling] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<{
+    stage: string;
+    progress: number;
+    message: string;
+    eta_seconds: number;
+  }>({
+    stage: "idle",
+    progress: 0,
+    message: "",
+    eta_seconds: 0,
+  });
+
+  // Poll update status when installing
+  useEffect(() => {
+    if (!installing) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await call("get_update_status") as {
+          in_progress: boolean;
+          stage: string;
+          progress: number;
+          message: string;
+          eta_seconds: number;
+        };
+
+        setUpdateProgress({
+          stage: status.stage,
+          progress: status.progress,
+          message: status.message,
+          eta_seconds: status.eta_seconds,
+        });
+
+        // Stop polling if complete or error
+        if (status.stage === "complete" || status.stage === "error") {
+          setInstalling(false);
+          clearInterval(pollInterval);
+          
+          if (status.stage === "complete") {
+            // Plugin will reload automatically
+          }
+        }
+      } catch (err) {
+        console.error("Failed to get update status:", err);
+      }
+    }, 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [installing]);
+
   // Load binning config on mount
   useEffect(() => {
     if (isOpen && !binningLoaded) {
@@ -228,6 +309,78 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
       await call("update_binning_config", newConfig);
     } catch (err) {
       console.error("Failed to update binning config:", err);
+    }
+  };
+
+  const checkForUpdates = async () => {
+    setUpdateInfo({ ...updateInfo, checking: true, error: undefined });
+    
+    try {
+      const response = await call("check_for_updates") as {
+        success: boolean;
+        update_available?: boolean;
+        current_version?: string;
+        latest_version?: string;
+        release_notes?: string;
+        download_url?: string;
+        error?: string;
+      };
+      
+      if (response.success) {
+        setUpdateInfo({
+          checking: false,
+          available: response.update_available || false,
+          currentVersion: response.current_version || "3.4.0",
+          latestVersion: response.latest_version,
+          releaseNotes: response.release_notes,
+          downloadUrl: response.download_url,
+        });
+      } else {
+        setUpdateInfo({
+          ...updateInfo,
+          checking: false,
+          error: response.error || "Failed to check for updates",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to check for updates:", err);
+      setUpdateInfo({
+        ...updateInfo,
+        checking: false,
+        error: "Network error checking for updates",
+      });
+    }
+  };
+
+  const installUpdate = async () => {
+    if (!updateInfo.downloadUrl) return;
+    
+    setInstalling(true);
+    
+    try {
+      const response = await call("install_update", updateInfo.downloadUrl) as {
+        success: boolean;
+        message?: string;
+        error?: string;
+      };
+      
+      if (response.success) {
+        // Update started in background - start polling
+        setInstalling(true);
+        setUpdateProgress({
+          stage: "starting",
+          progress: 0,
+          message: "Starting update...",
+          eta_seconds: 0,
+        });
+      } else {
+        alert(`Failed to install update: ${response.error}`);
+        setInstalling(false);
+      }
+    } catch (err) {
+      console.error("Failed to install update:", err);
+      alert("Failed to install update");
+      setInstalling(false);
     }
   };
 
@@ -602,6 +755,238 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                 }}
               >
                 ✓ Changes saved automatically
+              </div>
+            </PanelSectionRow>
+            
+            {/* Update Management Section */}
+            <PanelSectionRow>
+              <div style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Plugin Updates
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginBottom: "12px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  Check for and install DeckTune updates from GitHub
+                </div>
+
+                {/* Current Version */}
+                <div
+                  style={{
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Current Version: <strong style={{ color: "#fff" }}>{updateInfo.currentVersion}</strong>
+                </div>
+
+                {/* Check for Updates Button */}
+                <FocusableButton
+                  onClick={checkForUpdates}
+                  disabled={updateInfo.checking || installing}
+                  style={{ width: "100%", marginBottom: "8px" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      padding: "10px 12px",
+                      backgroundColor: updateInfo.checking ? "#3d4450" : "#1a9fff",
+                      borderRadius: "4px",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      opacity: updateInfo.checking || installing ? 0.6 : 1,
+                    }}
+                  >
+                    <FaSync
+                      size={12}
+                      aria-hidden="true"
+                      style={{
+                        animation: updateInfo.checking ? "spin 1s linear infinite" : "none",
+                      }}
+                    />
+                    <span>{updateInfo.checking ? "Checking..." : "Check for Updates"}</span>
+                  </div>
+                </FocusableButton>
+
+                {/* Update Available */}
+                {updateInfo.available && updateInfo.latestVersion && (
+                  <div
+                    style={{
+                      padding: "12px",
+                      backgroundColor: "#1a4d2e",
+                      borderRadius: "4px",
+                      marginBottom: "8px",
+                      border: "1px solid #4caf50",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        color: "#4caf50",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      ✓ Update Available: v{updateInfo.latestVersion}
+                    </div>
+                    
+                    {updateInfo.releaseNotes && (
+                      <div
+                        style={{
+                          fontSize: "9px",
+                          color: "#8b929a",
+                          marginBottom: "8px",
+                          maxHeight: "60px",
+                          overflowY: "auto",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        {updateInfo.releaseNotes.split('\n').slice(0, 3).join('\n')}
+                      </div>
+                    )}
+
+                    <FocusableButton
+                      onClick={installUpdate}
+                      disabled={installing}
+                      style={{ width: "100%" }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          padding: "8px",
+                          backgroundColor: installing ? "#3d4450" : "#4caf50",
+                          borderRadius: "4px",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          opacity: installing ? 0.6 : 1,
+                        }}
+                      >
+                        <FaDownload size={10} aria-hidden="true" />
+                        <span>{installing ? "Installing..." : "Install Update"}</span>
+                      </div>
+                    </FocusableButton>
+
+                    {/* Installation Progress */}
+                    {installing && (
+                      <div style={{ marginTop: "12px" }}>
+                        {/* Progress Bar */}
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "8px",
+                            backgroundColor: "#3d4450",
+                            borderRadius: "4px",
+                            overflow: "hidden",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${updateProgress.progress}%`,
+                              height: "100%",
+                              backgroundColor: "#4caf50",
+                              transition: "width 0.3s ease",
+                            }}
+                          />
+                        </div>
+
+                        {/* Progress Info */}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            fontSize: "9px",
+                            color: "#8b929a",
+                          }}
+                        >
+                          <span>{updateProgress.message}</span>
+                          <span>{updateProgress.progress}%</span>
+                        </div>
+
+                        {/* ETA */}
+                        {updateProgress.eta_seconds > 0 && (
+                          <div
+                            style={{
+                              fontSize: "9px",
+                              color: "#8b929a",
+                              textAlign: "center",
+                              marginTop: "4px",
+                            }}
+                          >
+                            ETA: {Math.ceil(updateProgress.eta_seconds / 60)} min
+                          </div>
+                        )}
+
+                        {/* Stage Indicator */}
+                        <div
+                          style={{
+                            fontSize: "9px",
+                            color: "#1a9fff",
+                            textAlign: "center",
+                            marginTop: "8px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {updateProgress.stage === "downloading" && "⬇ Downloading..."}
+                          {updateProgress.stage === "extracting" && "📦 Extracting..."}
+                          {updateProgress.stage === "installing" && "⚙️ Installing..."}
+                          {updateProgress.stage === "finalizing" && "✓ Finalizing..."}
+                          {updateProgress.stage === "complete" && "✓ Complete! Reloading..."}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* No Update Available */}
+                {!updateInfo.available && !updateInfo.checking && updateInfo.latestVersion && (
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "#4caf50",
+                      textAlign: "center",
+                      padding: "8px",
+                    }}
+                  >
+                    ✓ You're running the latest version
+                  </div>
+                )}
+
+                {/* Error */}
+                {updateInfo.error && (
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: "#f44336",
+                      textAlign: "center",
+                      padding: "8px",
+                      backgroundColor: "rgba(244, 67, 54, 0.1)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    {updateInfo.error}
+                  </div>
+                )}
               </div>
             </PanelSectionRow>
             

@@ -22,6 +22,7 @@ import decky  # type: ignore
 from backend.core.ryzenadj import RyzenadjWrapper
 from backend.core.safety import SafetyManager
 from backend.core.settings_manager import SettingsManager as CoreSettingsManager
+from backend.core.updater import UpdateManager
 from backend.platform.detect import detect_platform
 from backend.tuning.autotune import AutotuneEngine
 from backend.tuning.runner import TestRunner
@@ -106,6 +107,7 @@ class Plugin:
         self.app_watcher = None  # Steam app watcher
         self.fan_control_service = None  # Fan control service
         self.wizard_session = None  # Wizard mode session
+        self.update_manager = None  # Update manager
 
     def _ensure_binary_permissions(self):
         """Ensure all binaries have executable permissions.
@@ -437,7 +439,28 @@ class Plugin:
         
         decky.logger.info("Wizard session initialized")
         
-        # 15. Check for boot recovery (Requirement: Integration)
+        # 15. Initialize Update Manager
+        try:
+            from backend.core.updater import UpdateManager
+            
+            # Get current version from plugin.json
+            current_version = "3.4.0"
+            
+            self.update_manager = UpdateManager(
+                plugin_dir=PLUGIN_DIR,
+                current_version=current_version,
+                event_emitter=self.event_emitter
+            )
+            
+            # Set in RPC
+            self.rpc.set_update_manager(self.update_manager)
+            
+            decky.logger.info(f"Update manager initialized (current version: {current_version})")
+        except Exception as e:
+            decky.logger.error(f"Failed to initialize update manager: {e}", exc_info=True)
+            self.update_manager = None
+        
+        # 16. Check for boot recovery (Requirement: Integration)
         if self.safety.check_boot_recovery():
             decky.logger.info("Boot recovery triggered - rolling back to LKG values")
             # Safety manager already handles the rollback in check_boot_recovery()
@@ -1413,3 +1436,41 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         Validates: Requirements 9.4
         """
         return await self.rpc.get_core_metrics(core_id)
+
+    # ==================== Update Management ====================
+    
+    async def check_for_updates(self):
+        """Check for available updates from GitHub.
+        
+        Returns:
+            Dictionary with update availability and version info
+        """
+        if not self.update_manager:
+            return {"success": False, "error": "Update manager not initialized"}
+        
+        return await self.update_manager.check_for_updates()
+    
+    async def install_update(self, download_url):
+        """Download and install update.
+        
+        Args:
+            download_url: URL to download the update zip file
+            
+        Returns:
+            Dictionary with success status
+        """
+        if not self.update_manager:
+            return {"success": False, "error": "Update manager not initialized"}
+        
+        return await self.update_manager.install_update(download_url)
+    
+    async def get_update_status(self):
+        """Get current update installation status.
+        
+        Returns:
+            Dictionary with update progress info
+        """
+        if not self.update_manager:
+            return {"in_progress": False, "message": "Update manager not initialized"}
+        
+        return await self.update_manager.get_update_status()

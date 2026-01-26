@@ -95,6 +95,7 @@ class DeckTuneRPC:
         self.iron_seeker_engine = iron_seeker_engine
         self.blackbox = blackbox
         self.fan_control_service = None  # Will be set via set_fan_control_service()
+        self._update_manager = None  # Will be set via set_update_manager()
         
         self._delay_task: Optional[asyncio.Task] = None
         self._autotune_task: Optional[asyncio.Task] = None
@@ -3847,6 +3848,15 @@ class DeckTuneRPC:
         self._wizard_session: Optional[WizardSession] = session
         self._wizard_task: Optional[asyncio.Task] = None
     
+    def set_update_manager(self, manager) -> None:
+        """Set the update manager instance.
+        
+        Args:
+            manager: UpdateManager instance
+        """
+        from ..core.updater import UpdateManager
+        self._update_manager: Optional[UpdateManager] = manager
+    
     async def start_wizard(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Start wizard session.
         
@@ -4366,3 +4376,41 @@ class DeckTuneRPC:
             return {"success": False, "error": "Dynamic mode not initialized"}
         
         return await self.dynamic_mode_rpc.get_platform_limits()
+
+    # ==================== Update Management ====================
+    
+    async def check_for_updates(self) -> Dict[str, Any]:
+        """Check for available updates from GitHub.
+        
+        Returns:
+            Dictionary with update availability and version info
+        """
+        if not hasattr(self, '_update_manager') or not self._update_manager:
+            return {"success": False, "error": "Update manager not initialized"}
+        
+        return await self._update_manager.check_for_updates()
+    
+    async def install_update(self, download_url: str) -> Dict[str, Any]:
+        """Download and install update.
+        
+        Args:
+            download_url: URL to download the update zip file
+            
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_update_manager') or not self._update_manager:
+            return {"success": False, "error": "Update manager not initialized"}
+        
+        return await self._update_manager.install_update(download_url)
+    
+    async def get_update_status(self) -> Dict[str, Any]:
+        """Get current update installation status.
+        
+        Returns:
+            Dictionary with update progress info
+        """
+        if not hasattr(self, '_update_manager') or not self._update_manager:
+            return {"in_progress": False, "message": "Update manager not initialized"}
+        
+        return await self._update_manager.get_update_status()

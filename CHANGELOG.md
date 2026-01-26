@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.4.0] - 2026-01-26
+
+### Added
+- **In-App Update System** — Check and install updates directly from Settings
+  - GitHub releases integration with version comparison
+  - Real-time progress tracking with ETA
+  - Progress bar with stage indicators (downloading, extracting, installing)
+  - Automatic plugin reload after installation
+  - User data preservation during updates
+  - Release notes preview before installation
+
+### Technical Details
+- Backend: `UpdateManager` with async download/install pipeline
+- Frontend: Progress polling with 1-second intervals
+- Stages: Download (0-40%), Extract (45-55%), Install (60-90%), Finalize (92-95%), Complete (100%)
+- Safety: Backup creation, settings preservation, binary permissions restoration
+
 ## [3.3.4] - 2026-01-26
 
 ### Fixed
