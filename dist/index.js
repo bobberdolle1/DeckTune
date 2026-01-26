@@ -32063,6 +32063,7 @@ const CoreTabs = ({ selectedCore, onCoreSelect, mode, }) => {
  * - Responsive layout for different screen sizes
  */
 
+
 /**
  * Clamp a value to a specified range.
  * Property 1: Slider value clamping
@@ -32123,69 +32124,10 @@ const VoltageSliders = ({ coreId, config, onChange, disabled = false, validation
     const minErrors = getFieldErrors('min_mv');
     const maxErrors = getFieldErrors('max_mv');
     const thresholdErrors = getFieldErrors('threshold');
-    /**
-     * Tooltip component for displaying help text.
-     */
-    const Tooltip = ({ text, visible }) => {
-        if (!visible)
-            return null;
-        return (window.SP_REACT.createElement("div", { style: {
-                position: 'absolute',
-                top: '-60px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: '#1a1f2c',
-                border: '2px solid #1a9fff',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '11px',
-                color: '#fff',
-                whiteSpace: 'nowrap',
-                zIndex: 1000,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-                animation: 'tooltipFadeIn 0.2s ease',
-            } },
-            text,
-            window.SP_REACT.createElement("div", { style: {
-                    position: 'absolute',
-                    bottom: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 0,
-                    height: 0,
-                    borderLeft: '8px solid transparent',
-                    borderRight: '8px solid transparent',
-                    borderTop: '8px solid #1a9fff',
-                } })));
-    };
     return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('min'), onMouseEnter: () => setShowMinTooltip(true), onMouseLeave: () => setShowMinTooltip(false), style: {
-                        border: focusedSlider === 'min' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'min' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Min", value: config.min_mv, min: -100, max: 0, step: 1, onChange: handleMinChange, disabled: disabled, showValue: true, valueSuffix: " mV" })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowMinTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowMinTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "Conservative voltage offset applied when CPU load is below threshold", visible: showMinTooltip })),
+            window.SP_REACT.createElement(Focusable, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "Min", value: config.min_mv, min: -100, max: 0, step: 1, onChange: handleMinChange, disabled: disabled, showValue: true, valueSuffix: " mV", bottomSeparator: "none" })),
             minErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
                     marginTop: '4px',
                     padding: '6px 8px',
@@ -32193,35 +32135,10 @@ const VoltageSliders = ({ coreId, config, onChange, disabled = false, validation
                     borderRadius: '4px',
                     fontSize: '10px',
                     color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
                 } }, minErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('max'), onMouseEnter: () => setShowMaxTooltip(true), onMouseLeave: () => setShowMaxTooltip(false), style: {
-                        border: focusedSlider === 'max' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'max' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Max", value: config.max_mv, min: -100, max: 0, step: 1, onChange: handleMaxChange, disabled: disabled, showValue: true, valueSuffix: " mV" })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowMaxTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowMaxTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "Aggressive voltage offset applied when CPU load is above threshold", visible: showMaxTooltip })),
+            window.SP_REACT.createElement(Focusable, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "Max", value: config.max_mv, min: -100, max: 0, step: 1, onChange: handleMaxChange, disabled: disabled, showValue: true, valueSuffix: " mV", bottomSeparator: "none" })),
             maxErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
                     marginTop: '4px',
                     padding: '6px 8px',
@@ -32229,35 +32146,10 @@ const VoltageSliders = ({ coreId, config, onChange, disabled = false, validation
                     borderRadius: '4px',
                     fontSize: '10px',
                     color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
                 } }, maxErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
         window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('threshold'), onMouseEnter: () => setShowThresholdTooltip(true), onMouseLeave: () => setShowThresholdTooltip(false), style: {
-                        border: focusedSlider === 'threshold' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'threshold' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", value: config.threshold, min: 0, max: 100, step: 1, onChange: handleThresholdChange, disabled: disabled, showValue: true, valueSuffix: "%" })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowThresholdTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowThresholdTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "CPU load percentage where voltage transitions from minimal to maximum", visible: showThresholdTooltip })),
+            window.SP_REACT.createElement(Focusable, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", value: config.threshold, min: 0, max: 100, step: 1, onChange: handleThresholdChange, disabled: disabled, showValue: true, valueSuffix: "%", bottomSeparator: "none" })),
             thresholdErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
                     marginTop: '4px',
                     padding: '6px 8px',
@@ -32265,31 +32157,7 @@ const VoltageSliders = ({ coreId, config, onChange, disabled = false, validation
                     borderRadius: '4px',
                     fontSize: '10px',
                     color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
-                } }, thresholdErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
-        window.SP_REACT.createElement("style", null, `
-          @keyframes tooltipFadeIn {
-            from {
-              opacity: 0;
-              transform: translateX(-50%) translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(-50%) translateY(0);
-            }
-          }
-          
-          @keyframes errorFadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `)));
+                } }, thresholdErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err))))))));
 };
 
 /**

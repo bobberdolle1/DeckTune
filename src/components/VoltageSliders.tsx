@@ -167,58 +167,20 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
     <>
       {/* MinimalValue Slider */}
       <PanelSectionRow>
-        <div style={{ position: 'relative' }}>
-          <div
-            onClick={() => onSliderFocus?.('min')}
-            onMouseEnter={() => setShowMinTooltip(true)}
-            onMouseLeave={() => setShowMinTooltip(false)}
-            style={{
-              border: focusedSlider === 'min' ? '3px solid #1a9fff' : '3px solid transparent',
-              borderRadius: '8px',
-              boxShadow: focusedSlider === 'min' ? '0 0 12px #1a9fff99' : 'none',
-              padding: '4px',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <SliderField
-                  label="Min"
-                  value={config.min_mv}
-                  min={-100}
-                  max={0}
-                  step={1}
-                  onChange={handleMinChange}
-                  disabled={disabled}
-                  showValue={true}
-                  valueSuffix=" mV"
-                />
-              </div>
-              <FaInfoCircle 
-                style={{ 
-                  color: '#8b929a', 
-                  fontSize: '14px',
-                  flexShrink: 0,
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s ease',
-                }} 
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                  setShowMinTooltip(true);
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                  setShowMinTooltip(false);
-                }}
-              />
-            </div>
-          </div>
-          <Tooltip 
-            text="Conservative voltage offset applied when CPU load is below threshold" 
-            visible={showMinTooltip} 
+        <Focusable>
+          <SliderField
+            label="Min"
+            value={config.min_mv}
+            min={-100}
+            max={0}
+            step={1}
+            onChange={handleMinChange}
+            disabled={disabled}
+            showValue={true}
+            valueSuffix=" mV"
+            bottomSeparator="none"
           />
-        </div>
+        </Focusable>
         {minErrors.length > 0 && (
           <div style={{
             marginTop: '4px',
@@ -227,7 +189,6 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
             borderRadius: '4px',
             fontSize: '10px',
             color: '#ff9800',
-            animation: 'errorFadeIn 0.3s ease',
           }}>
             {minErrors.map((err, idx) => (
               <div key={idx}>{err}</div>
@@ -238,58 +199,20 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
       
       {/* MaximumValue Slider */}
       <PanelSectionRow>
-        <div style={{ position: 'relative' }}>
-          <div
-            onClick={() => onSliderFocus?.('max')}
-            onMouseEnter={() => setShowMaxTooltip(true)}
-            onMouseLeave={() => setShowMaxTooltip(false)}
-            style={{
-              border: focusedSlider === 'max' ? '3px solid #1a9fff' : '3px solid transparent',
-              borderRadius: '8px',
-              boxShadow: focusedSlider === 'max' ? '0 0 12px #1a9fff99' : 'none',
-              padding: '4px',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <SliderField
-                  label="Max"
-                  value={config.max_mv}
-                  min={-100}
-                  max={0}
-                  step={1}
-                  onChange={handleMaxChange}
-                  disabled={disabled}
-                  showValue={true}
-                  valueSuffix=" mV"
-                />
-              </div>
-              <FaInfoCircle 
-                style={{ 
-                  color: '#8b929a', 
-                  fontSize: '14px',
-                  flexShrink: 0,
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s ease',
-                }} 
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                  setShowMaxTooltip(true);
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                  setShowMaxTooltip(false);
-                }}
-              />
-            </div>
-          </div>
-          <Tooltip 
-            text="Aggressive voltage offset applied when CPU load is above threshold" 
-            visible={showMaxTooltip} 
+        <Focusable>
+          <SliderField
+            label="Max"
+            value={config.max_mv}
+            min={-100}
+            max={0}
+            step={1}
+            onChange={handleMaxChange}
+            disabled={disabled}
+            showValue={true}
+            valueSuffix=" mV"
+            bottomSeparator="none"
           />
-        </div>
+        </Focusable>
         {maxErrors.length > 0 && (
           <div style={{
             marginTop: '4px',
@@ -298,7 +221,6 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
             borderRadius: '4px',
             fontSize: '10px',
             color: '#ff9800',
-            animation: 'errorFadeIn 0.3s ease',
           }}>
             {maxErrors.map((err, idx) => (
               <div key={idx}>{err}</div>
@@ -309,58 +231,20 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
       
       {/* Threshold Slider */}
       <PanelSectionRow>
-        <div style={{ position: 'relative' }}>
-          <div
-            onClick={() => onSliderFocus?.('threshold')}
-            onMouseEnter={() => setShowThresholdTooltip(true)}
-            onMouseLeave={() => setShowThresholdTooltip(false)}
-            style={{
-              border: focusedSlider === 'threshold' ? '3px solid #1a9fff' : '3px solid transparent',
-              borderRadius: '8px',
-              boxShadow: focusedSlider === 'threshold' ? '0 0 12px #1a9fff99' : 'none',
-              padding: '4px',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <SliderField
-                  label="Threshold"
-                  value={config.threshold}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onChange={handleThresholdChange}
-                  disabled={disabled}
-                  showValue={true}
-                  valueSuffix="%"
-                />
-              </div>
-              <FaInfoCircle 
-                style={{ 
-                  color: '#8b929a', 
-                  fontSize: '14px',
-                  flexShrink: 0,
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s ease',
-                }} 
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                  setShowThresholdTooltip(true);
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                  setShowThresholdTooltip(false);
-                }}
-              />
-            </div>
-          </div>
-          <Tooltip 
-            text="CPU load percentage where voltage transitions from minimal to maximum" 
-            visible={showThresholdTooltip} 
+        <Focusable>
+          <SliderField
+            label="Threshold"
+            value={config.threshold}
+            min={0}
+            max={100}
+            step={1}
+            onChange={handleThresholdChange}
+            disabled={disabled}
+            showValue={true}
+            valueSuffix="%"
+            bottomSeparator="none"
           />
-        </div>
+        </Focusable>
         {thresholdErrors.length > 0 && (
           <div style={{
             marginTop: '4px',
@@ -369,7 +253,6 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
             borderRadius: '4px',
             fontSize: '10px',
             color: '#ff9800',
-            animation: 'errorFadeIn 0.3s ease',
           }}>
             {thresholdErrors.map((err, idx) => (
               <div key={idx}>{err}</div>
@@ -377,33 +260,6 @@ export const VoltageSliders: FC<VoltageSlidersProps> = ({
           </div>
         )}
       </PanelSectionRow>
-      
-      {/* CSS Animations */}
-      <style>
-        {`
-          @keyframes tooltipFadeIn {
-            from {
-              opacity: 0;
-              transform: translateX(-50%) translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(-50%) translateY(0);
-            }
-          }
-          
-          @keyframes errorFadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
     </>
   );
 };
