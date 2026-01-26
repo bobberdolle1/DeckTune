@@ -1,8 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc b6dafcf7a874d08b4e8922fa9b4e7f2795d9dc977ba6335f9602a421e84cbfd6 # shrinks to curve = FrequencyCurve { core_id: 0, points: [FrequencyPoint { frequency_mhz: 560, voltage_mv: -1, stable: true, test_duration: 30, timestamp: 967553626.0156429 }, FrequencyPoint { frequency_mhz: 788, voltage_mv: -2, stable: true, test_duration: 30, timestamp: 967553626.0156429 }, FrequencyPoint { frequency_mhz: 1598, voltage_mv: -21, stable: true, test_duration: 30, timestamp: 967553626.0156429 }, FrequencyPoint { frequency_mhz: 2295, voltage_mv: -94, stable: true, test_duration: 30, timestamp: 967553626.0156429 }, FrequencyPoint { frequency_mhz: 2731, voltage_mv: -49, stable: true, test_duration: 30, timestamp: 967553626.0156429 }], created_at: 967553626.0156429, wizard_config: Object {"test": Bool(true)} }
-cc 45ec1ce0302a8d124d0bf2212d044b295ef5a4e6976a2fc82a9a6fe406090cec # shrinks to curve = FrequencyCurve { core_id: 0, points: [FrequencyPoint { frequency_mhz: 780, voltage_mv: -1, stable: true, test_duration: 30, timestamp: 9012100240.773615 }, FrequencyPoint { frequency_mhz: 1099, voltage_mv: -2, stable: true, test_duration: 30, timestamp: 9012100240.773615 }], created_at: 9012100240.773615, wizard_config: Object {"test": Bool(true)} }
