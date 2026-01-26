@@ -38,7 +38,7 @@ shutil.copy(PROJECT_DIR / "dist" / "index.js", DECKTUNE_DIR / "dist")
 if (PROJECT_DIR / "dist" / "index.js.map").exists():
     shutil.copy(PROJECT_DIR / "dist" / "index.js.map", DECKTUNE_DIR / "dist")
 
-for f in ["main.py", "plugin.json", "LICENSE", "install.sh"]:
+for f in ["main.py", "plugin.json", "package.json", "LICENSE", "install.sh"]:
     shutil.copy(PROJECT_DIR / f, DECKTUNE_DIR)
 
 # Copy backend (exclude __pycache__)
