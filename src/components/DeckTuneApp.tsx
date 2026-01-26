@@ -36,11 +36,10 @@ import { getApiInstance } from "../api";
 const DeckTuneContent: FC = () => {
   // Load saved mode from localStorage, default to wizard
   // Requirements: 8.1, 8.2 - Fan Control accessed only via header, not in mode list
-  // Requirements: 10.1, 10.2, 10.5 - Frequency mode integration
-  const [mode, setMode] = useState<"wizard" | "expert" | "frequency" | "fan">(() => {
+  const [mode, setMode] = useState<"wizard" | "expert" | "fan">(() => {
     try {
       const saved = localStorage.getItem('decktune_ui_mode');
-      return (saved === "expert" || saved === "wizard" || saved === "frequency" || saved === "fan") ? saved : "wizard";
+      return (saved === "expert" || saved === "wizard" || saved === "fan") ? saved : "wizard";
     } catch {
       return "wizard";
     }
@@ -74,14 +73,9 @@ const DeckTuneContent: FC = () => {
   useEffect(() => {
     const handleModeSwitch = async () => {
       try {
-        if (mode === "frequency") {
-          // Activate frequency-based voltage control
-          await api.enableFrequencyMode();
-        } else if (mode === "wizard" || mode === "expert") {
-          // Deactivate frequency-based voltage control (switch to load-based)
-          await api.disableFrequencyMode();
-        }
-        // Fan mode doesn't affect voltage control
+        // Frequency mode is now part of Wizard Mode, not a separate top-level mode
+        // Always use load-based mode for wizard and expert
+        await api.disableFrequencyMode();
       } catch (e) {
         console.error("Failed to switch voltage control mode:", e);
       }
@@ -165,9 +159,9 @@ const DeckTuneContent: FC = () => {
    * Requirements: 8.4, 8.5 - Preserve previously selected mode
    */
   const handleFanControlBack = () => {
-    // Return to the last non-fan mode (wizard, expert, or frequency)
+    // Return to the last non-fan mode (wizard or expert)
     const lastMode = localStorage.getItem('decktune_last_mode');
-    if (lastMode === "expert" || lastMode === "wizard" || lastMode === "frequency") {
+    if (lastMode === "expert" || lastMode === "wizard") {
       setMode(lastMode);
     } else {
       setMode("wizard");
@@ -413,53 +407,6 @@ const DeckTuneContent: FC = () => {
                 )}
               </div>
             </Focusable>
-
-            <Focusable
-              className="fade-in mode-button-focusable"
-              style={{ 
-                minHeight: "40px", 
-                padding: "8px 12px",
-                backgroundColor: mode === "frequency" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                borderRadius: "8px",
-                border: mode === "frequency" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-                animationDelay: "0.2s"
-              }}
-              onActivate={() => setMode("frequency")}
-              onClick={() => setMode("frequency")}
-            >
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "space-between",
-                fontSize: "12px",
-                fontWeight: mode === "frequency" ? "bold" : "normal",
-                color: mode === "frequency" ? "#fff" : "#8b929a"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FaBolt size={14} style={{ 
-                    filter: mode === "frequency" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none" 
-                  }} />
-                  <span>Frequency-Based</span>
-                </div>
-                {mode === "frequency" && (
-                  <div className="status-badge" style={{
-                    fontSize: "9px",
-                    color: "#fff",
-                    padding: "3px 6px",
-                    backgroundColor: getStatusColor(),
-                    borderRadius: "4px",
-                    fontWeight: "bold",
-                    boxShadow: `0 0 10px ${getStatusColor()}`,
-                  }}>
-                    {getStatusText()}
-                  </div>
-                )}
-              </div>
-            </Focusable>
           </Focusable>
         </PanelSectionRow>
       </PanelSection>
@@ -469,8 +416,6 @@ const DeckTuneContent: FC = () => {
           <WizardMode />
         ) : mode === "expert" ? (
           <ExpertMode />
-        ) : mode === "frequency" ? (
-          <FrequencyWizard />
         ) : (
           <FanControl onBack={handleFanControlBack} />
         )}

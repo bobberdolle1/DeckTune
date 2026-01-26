@@ -1950,5732 +1950,6 @@ const useWizard = () => {
     return context;
 };
 
-/**
- * Refactored WizardMode component for DeckTune.
- *
- * Feature: Wizard Mode Refactoring
- *
- * Complete redesign with:
- * - Configuration screen with aggressiveness/duration settings
- * - Real-time progress with ETA/OTA/heartbeat
- * - Results screen with curve visualization and chip grading
- * - Crash recovery modal
- * - Results history browser
- */
-
-// ==================== Panic Disable Button ====================
-const PanicDisableButton$1 = () => {
-    const { api } = useDeckTune();
-    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
-    const handlePanicDisable = async () => {
-        setIsPanicking(true);
-        try {
-            await api.panicDisable();
-        }
-        finally {
-            setIsPanicking(false);
-        }
-    };
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handlePanicDisable, disabled: isPanicking, style: {
-                backgroundColor: "#b71c1c",
-                borderRadius: "4px",
-                minHeight: "30px",
-                padding: "4px 6px",
-            } },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "4px",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    fontSize: "11px",
-                } }, isPanicking ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }),
-                window.SP_REACT.createElement("span", null, "Disabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
-                window.SP_REACT.createElement("span", null, "PANIC DISABLE"))))),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-// ==================== Crash Recovery Modal ====================
-const CrashRecoveryModal = ({ crashInfo, onDismiss }) => {
-    return (window.SP_REACT.createElement("div", { style: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-        } },
-        window.SP_REACT.createElement("div", { style: {
-                backgroundColor: "#1a1d24",
-                borderRadius: "8px",
-                padding: "20px",
-                maxWidth: "400px",
-                border: "2px solid #ff9800",
-            } },
-            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" } },
-                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800", fontSize: "24px" } }),
-                window.SP_REACT.createElement("h3", { style: { margin: 0, color: "#fff" } }, "Crash Detected")),
-            window.SP_REACT.createElement("p", { style: { fontSize: "13px", color: "#ccc", marginBottom: "15px" } }, "The system crashed during wizard testing. This is normal when pushing limits."),
-            window.SP_REACT.createElement("div", { style: { backgroundColor: "#2a2d34", padding: "10px", borderRadius: "4px", marginBottom: "15px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "5px" } }, "Crash Details:"),
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#fff" } },
-                    "Testing: ",
-                    window.SP_REACT.createElement("strong", null,
-                        crashInfo?.currentOffset ?? 0,
-                        "mV")),
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#4caf50" } },
-                    "Last Stable: ",
-                    window.SP_REACT.createElement("strong", null,
-                        crashInfo?.lastStable,
-                        "mV"))),
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onDismiss },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
-                    window.SP_REACT.createElement(FaCheck, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, "Continue"))))));
-};
-// ==================== Configuration Screen ====================
-const ConfigurationScreen = ({ onStart, platformInfo }) => {
-    const [aggressiveness, setAggressiveness] = SP_REACT.useState("balanced");
-    const [testDuration, setTestDuration] = SP_REACT.useState("short");
-    const [isBenchmarking, setIsBenchmarking] = SP_REACT.useState(false);
-    const [benchmarkResult, setBenchmarkResult] = SP_REACT.useState(null);
-    const handleStart = () => {
-        const config = {
-            targetDomains: ["cpu"],
-            aggressiveness,
-            testDuration,
-            safetyLimits: {
-                cpu: platformInfo?.safe_limit || -100,
-            },
-        };
-        onStart(config);
-    };
-    const handleRunBenchmark = async () => {
-        setIsBenchmarking(true);
-        setBenchmarkResult(null);
-        try {
-            const result = await call("run_wizard_benchmark", 10);
-            if (result?.success) {
-                setBenchmarkResult(result);
-            }
-        }
-        catch (err) {
-            console.error("Benchmark failed:", err);
-        }
-        finally {
-            setIsBenchmarking(false);
-        }
-    };
-    const getEstimatedTime = () => {
-        const base = testDuration === "short" ? 5 : 15;
-        const multiplier = aggressiveness === "safe" ? 2 : aggressiveness === "aggressive" ? 0.5 : 1;
-        return Math.round(base * multiplier);
-    };
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", maxHeight: "400px", overflowY: "auto" } },
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#ccc", marginBottom: "6px" } }, "Find optimal undervolt through systematic testing.")),
-        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
-                platformInfo.variant,
-                " \u2022 Limit: ",
-                platformInfo.safe_limit,
-                "mV"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Aggressiveness"),
-                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("safe"), style: {
-                            flex: 1,
-                            backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
-                            border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
-                            minHeight: "32px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Safe"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "2mV"))),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("balanced"), style: {
-                            flex: 1,
-                            backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
-                            border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
-                            minHeight: "32px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Balanced"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "5mV"))),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("aggressive"), style: {
-                            flex: 1,
-                            backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
-                            border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
-                            minHeight: "32px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Aggressive"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "10mV")))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Test Duration"),
-                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("short"), style: {
-                            flex: 1,
-                            backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
-                            border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
-                            minHeight: "32px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Short"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "30s"))),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("long"), style: {
-                            flex: 1,
-                            backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
-                            border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
-                            minHeight: "32px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" } },
-                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Long"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "120s")))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", textAlign: "center", padding: "3px" } },
-                "Est. time: ~",
-                getEstimatedTime(),
-                " min")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunBenchmark, disabled: isBenchmarking },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "10px" } },
-                    isBenchmarking ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaChartLine, { size: 10 }),
-                    window.SP_REACT.createElement("span", null, isBenchmarking ? "Running..." : "Benchmark")))),
-        isBenchmarking && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: "Benchmark", description: "Testing...", nProgress: 50, sOperationText: "Wait..." }))),
-        benchmarkResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#4caf50", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
-                window.SP_REACT.createElement("div", null,
-                    "Score: ",
-                    benchmarkResult.score,
-                    " ops/sec"),
-                window.SP_REACT.createElement("div", null,
-                    "Temp: ",
-                    benchmarkResult.max_temp,
-                    "\u00B0C \u2022 Freq: ",
-                    benchmarkResult.max_freq,
-                    " MHz")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "11px" } },
-                    window.SP_REACT.createElement(FaPlay, { size: 10 }),
-                    window.SP_REACT.createElement("span", null, "Start Wizard"))))));
-};
-// ==================== Progress Screen ====================
-const ProgressScreen = ({ progress, onCancel }) => {
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-    };
-    const formatOTA = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-    };
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "15px" } },
-                window.SP_REACT.createElement(FaSpinner, { style: {
-                        animation: "spin 1s linear infinite",
-                        fontSize: "32px",
-                        color: "#1a9fff",
-                    } }))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: progress?.currentStage || "Initializing...", description: `Testing ${progress?.currentOffset ?? 0}mV`, nProgress: progress?.progressPercent || 0, sOperationText: `ETA: ${formatTime(progress?.etaSeconds || 0)}` })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "11px",
-                    color: "#8b929a",
-                    padding: "8px",
-                    backgroundColor: "#1a1d24",
-                    borderRadius: "4px",
-                } },
-                window.SP_REACT.createElement("div", null,
-                    window.SP_REACT.createElement("div", null,
-                        "Elapsed: ",
-                        formatOTA(progress?.otaSeconds || 0)),
-                    window.SP_REACT.createElement("div", null,
-                        "Iterations: ",
-                        progress?.liveMetrics?.iterations || 0)),
-                window.SP_REACT.createElement("div", { style: { textAlign: "right" } },
-                    window.SP_REACT.createElement("div", null,
-                        "Last Stable: ",
-                        progress?.liveMetrics?.last_stable ?? 0,
-                        "mV"),
-                    window.SP_REACT.createElement("div", { style: { color: "#4caf50" } }, "\u25CF Active")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
-                    window.SP_REACT.createElement(FaStop, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, "Cancel"))))));
-};
-// ==================== Chip Grade Badge ====================
-const ChipGradeBadge = ({ grade }) => {
-    const getGradeConfig = () => {
-        switch (grade) {
-            case "Platinum":
-                return { icon: FaTrophy, color: "#e5e4e2", glow: "#e5e4e2" };
-            case "Gold":
-                return { icon: FaMedal, color: "#ffd700", glow: "#ffd700" };
-            case "Silver":
-                return { icon: FaAward, color: "#c0c0c0", glow: "#c0c0c0" };
-            default:
-                return { icon: FaCertificate, color: "#cd7f32", glow: "#cd7f32" };
-        }
-    };
-    const config = getGradeConfig();
-    const Icon = config.icon;
-    return (window.SP_REACT.createElement("div", { style: {
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-            padding: "15px",
-            backgroundColor: "#1a1d24",
-            borderRadius: "8px",
-            border: `2px solid ${config.color}`,
-            boxShadow: `0 0 15px ${config.glow}`,
-        } },
-        window.SP_REACT.createElement(Icon, { style: { fontSize: "32px", color: config.color } }),
-        window.SP_REACT.createElement("div", null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "18px", fontWeight: "bold", color: config.color } }, grade),
-            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Chip Quality"))));
-};
-// ==================== Enhanced Interactive Curve Chart ====================
-const EnhancedCurveChart = ({ data }) => {
-    const [hoveredPoint, setHoveredPoint] = SP_REACT.useState(null);
-    const [tooltipPos, setTooltipPos] = SP_REACT.useState({ x: 0, y: 0 });
-    if (!data || data.length === 0)
-        return null;
-    const width = 320;
-    const height = 180;
-    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
-    const offsets = data.map((d) => d.offset);
-    const temps = data.map((d) => d.temp);
-    const xMin = Math.min(...offsets);
-    const xMax = Math.max(...offsets);
-    const yMin = 0;
-    const yMax = Math.max(...temps, 100);
-    const xScale = (x) => padding.left + ((x - xMin) / (xMax - xMin)) * (width - padding.left - padding.right);
-    const yScale = (y) => height - padding.bottom - ((y - yMin) / (yMax - yMin)) * (height - padding.top - padding.bottom);
-    const handlePointHover = (index, event) => {
-        setHoveredPoint(index);
-        const rect = event.currentTarget.getBoundingClientRect();
-        setTooltipPos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-    };
-    return (window.SP_REACT.createElement("div", { style: { position: "relative" } },
-        window.SP_REACT.createElement("svg", { width: width, height: height, style: { backgroundColor: "#0d0f12", borderRadius: "4px" } },
-            [0, 25, 50, 75, 100].map((temp) => (window.SP_REACT.createElement("g", { key: temp },
-                window.SP_REACT.createElement("line", { x1: padding.left, y1: yScale(temp), x2: width - padding.right, y2: yScale(temp), stroke: "#2a2d34", strokeWidth: 1, strokeDasharray: "2,2" }),
-                window.SP_REACT.createElement("text", { x: padding.left - 5, y: yScale(temp) + 3, fontSize: "9", fill: "#5a5d64", textAnchor: "end" },
-                    temp,
-                    "\u00B0C")))),
-            window.SP_REACT.createElement("line", { x1: padding.left, y1: padding.top, x2: padding.left, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
-            window.SP_REACT.createElement("line", { x1: padding.left, y1: height - padding.bottom, x2: width - padding.right, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
-            window.SP_REACT.createElement("defs", null,
-                window.SP_REACT.createElement("linearGradient", { id: "lineGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
-                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "#4caf50" }),
-                    window.SP_REACT.createElement("stop", { offset: "50%", stopColor: "#1a9fff" }),
-                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "#f44336" }))),
-            window.SP_REACT.createElement("polyline", { points: data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" "), fill: "none", stroke: "url(#lineGradient)", strokeWidth: 2 }),
-            data.map((point, i) => {
-                const color = point.result === "pass" ? "#4caf50" :
-                    point.result === "fail" ? "#ff9800" :
-                        "#f44336";
-                return (window.SP_REACT.createElement("g", { key: i },
-                    window.SP_REACT.createElement("circle", { cx: xScale(point.offset), cy: yScale(point.temp), r: hoveredPoint === i ? 6 : 4, fill: color, stroke: "#fff", strokeWidth: hoveredPoint === i ? 2 : 1, style: { cursor: "pointer", transition: "all 0.2s" }, onMouseEnter: (e) => handlePointHover(i, e), onMouseLeave: () => setHoveredPoint(null) })));
-            }),
-            window.SP_REACT.createElement("text", { x: width / 2, y: height - 5, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold" }, "Voltage Offset (mV)"),
-            window.SP_REACT.createElement("text", { x: 15, y: height / 2, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold", transform: `rotate(-90, 15, ${height / 2})` }, "Temperature (\u00B0C)"),
-            window.SP_REACT.createElement("g", { transform: `translate(${width - 100}, 15)` },
-                window.SP_REACT.createElement("circle", { cx: 0, cy: 0, r: 3, fill: "#4caf50" }),
-                window.SP_REACT.createElement("text", { x: 8, y: 3, fontSize: "9", fill: "#8b929a" }, "Pass"),
-                window.SP_REACT.createElement("circle", { cx: 0, cy: 12, r: 3, fill: "#ff9800" }),
-                window.SP_REACT.createElement("text", { x: 8, y: 15, fontSize: "9", fill: "#8b929a" }, "Fail"),
-                window.SP_REACT.createElement("circle", { cx: 0, cy: 24, r: 3, fill: "#f44336" }),
-                window.SP_REACT.createElement("text", { x: 8, y: 27, fontSize: "9", fill: "#8b929a" }, "Crash"))),
-        hoveredPoint !== null && (window.SP_REACT.createElement("div", { style: {
-                position: "absolute",
-                left: tooltipPos.x + 10,
-                top: tooltipPos.y - 40,
-                backgroundColor: "#1a1d24",
-                border: "1px solid #3d4450",
-                borderRadius: "4px",
-                padding: "6px 10px",
-                fontSize: "10px",
-                color: "#fff",
-                pointerEvents: "none",
-                zIndex: 1000,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-            } },
-            window.SP_REACT.createElement("div", null,
-                window.SP_REACT.createElement("strong", null,
-                    data[hoveredPoint].offset,
-                    "mV")),
-            window.SP_REACT.createElement("div", null,
-                "Temp: ",
-                data[hoveredPoint].temp,
-                "\u00B0C"),
-            window.SP_REACT.createElement("div", { style: {
-                    color: data[hoveredPoint].result === "pass" ? "#4caf50" :
-                        data[hoveredPoint].result === "fail" ? "#ff9800" : "#f44336"
-                } }, data[hoveredPoint].result.toUpperCase())))));
-};
-// ==================== Results Screen ====================
-const ResultsScreen = ({ result, onApply, onStartOver }) => {
-    const cpuOffset = result?.offsets?.cpu || 0;
-    const [isApplying, setIsApplying] = SP_REACT.useState(false);
-    const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(false);
-    const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(false);
-    const handleApply = async () => {
-        setIsApplying(true);
-        try {
-            await onApply(applyOnStartup, gameOnlyMode);
-        }
-        finally {
-            setIsApplying(false);
-        }
-    };
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(ChipGradeBadge, { grade: result?.chipGrade || "Bronze" })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "32px", fontWeight: "bold", color: "#1a9fff" } },
-                    cpuOffset,
-                    "mV"),
-                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Recommended Undervolt"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "center" } },
-                window.SP_REACT.createElement(EnhancedCurveChart, { data: result?.curveData || [] }))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    fontSize: "10px",
-                    color: "#8b929a",
-                    padding: "8px",
-                    backgroundColor: "#1a1d24",
-                    borderRadius: "4px",
-                } },
-                window.SP_REACT.createElement("div", null,
-                    "Duration: ",
-                    Math.round(result?.duration || 0),
-                    "s"),
-                window.SP_REACT.createElement("div", null,
-                    "Iterations: ",
-                    result?.iterations || 0))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", description: "Automatically apply this preset when DeckTune starts", checked: applyOnStartup, onChange: setApplyOnStartup })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", description: "Only apply when a game is running", checked: gameOnlyMode, onChange: setGameOnlyMode })),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleApply, disabled: isApplying },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: isApplying ? "#8b929a" : "#4caf50" } },
-                    isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 12 }) : window.SP_REACT.createElement(FaCheck, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, isApplying ? "Applying..." : "Apply & Save as Wizard Preset")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
-                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, "Start Over"))))));
-};
-// ==================== Wizard History View (Inline) ====================
-const WizardHistoryView = ({ onClose }) => {
-    const [presets, setPresets] = SP_REACT.useState([]);
-    const [selectedPreset, setSelectedPreset] = SP_REACT.useState(null);
-    const [isLoading, setIsLoading] = SP_REACT.useState(true);
-    const loadPresets = async () => {
-        setIsLoading(true);
-        try {
-            const result = await call("get_wizard_presets");
-            setPresets(result || []);
-        }
-        catch (err) {
-            console.error("Failed to load wizard presets:", err);
-        }
-        finally {
-            setIsLoading(false);
-        }
-    };
-    SP_REACT.useEffect(() => {
-        loadPresets();
-    }, []);
-    const handleApply = async (preset) => {
-        try {
-            await call("apply_wizard_result", preset.id, true, preset.apply_on_startup, preset.game_only_mode);
-            console.log("Applied wizard preset:", preset.id);
-        }
-        catch (err) {
-            console.error("Failed to apply preset:", err);
-        }
-    };
-    const handleDelete = async (presetId) => {
-        try {
-            await call("delete_wizard_preset", presetId);
-            console.log("Deleted wizard preset:", presetId);
-            setSelectedPreset(null);
-            await loadPresets();
-        }
-        catch (err) {
-            console.error("Failed to delete preset:", err);
-        }
-    };
-    const handleUpdateOptions = async (presetId, applyOnStartup, gameOnlyMode) => {
-        try {
-            await call("update_wizard_preset_options", presetId, applyOnStartup, gameOnlyMode);
-            console.log("Updated wizard preset options:", presetId);
-            await loadPresets();
-        }
-        catch (err) {
-            console.error("Failed to update preset options:", err);
-        }
-    };
-    if (isLoading) {
-        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px" } },
-                    window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { fontSize: "24px", color: "#1a9fff" } }),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginTop: "10px" } }, "Loading presets...")))));
-    }
-    if (selectedPreset) {
-        const cpuOffset = selectedPreset.offsets?.cpu || 0;
-        const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(selectedPreset.apply_on_startup);
-        const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(selectedPreset.game_only_mode);
-        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(null) },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "5px" } },
-                        window.SP_REACT.createElement(FaHistory, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Back to List")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(ChipGradeBadge, { grade: selectedPreset.chip_grade })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
-                    window.SP_REACT.createElement("div", { style: { fontSize: "24px", fontWeight: "bold", color: "#1a9fff" } },
-                        cpuOffset,
-                        "mV"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, new Date(selectedPreset.timestamp).toLocaleString()))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", checked: applyOnStartup, onChange: (val) => {
-                        setApplyOnStartup(val);
-                        handleUpdateOptions(selectedPreset.id, val, gameOnlyMode);
-                    } })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", checked: gameOnlyMode, onChange: (val) => {
-                        setGameOnlyMode(val);
-                        handleUpdateOptions(selectedPreset.id, applyOnStartup, val);
-                    } })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleApply(selectedPreset) },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" } },
-                        window.SP_REACT.createElement(FaCheck, { size: 12 }),
-                        window.SP_REACT.createElement("span", null, "Apply Preset")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleDelete(selectedPreset.id) },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
-                        window.SP_REACT.createElement(FaTimes, { size: 12 }),
-                        window.SP_REACT.createElement("span", null, "Delete Preset"))))));
-    }
-    if (presets.length === 0) {
-        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#8b929a", fontSize: "12px" } }, "No wizard presets found. Run the wizard to create your first preset."))));
-    }
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } }, presets.map((preset) => {
-        const cpuOffset = preset.offsets?.cpu || 0;
-        const date = new Date(preset.timestamp).toLocaleDateString();
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.id },
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(preset) },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "16px" } },
-                            preset.chip_grade === "Platinum" && window.SP_REACT.createElement(FaTrophy, { style: { color: "#e5e4e2" } }),
-                            preset.chip_grade === "Gold" && window.SP_REACT.createElement(FaMedal, { style: { color: "#ffd700" } }),
-                            preset.chip_grade === "Silver" && window.SP_REACT.createElement(FaAward, { style: { color: "#c0c0c0" } }),
-                            preset.chip_grade === "Bronze" && window.SP_REACT.createElement(FaCertificate, { style: { color: "#cd7f32" } })),
-                        window.SP_REACT.createElement("div", null,
-                            window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold" } },
-                                preset.chip_grade,
-                                " \u2022 ",
-                                cpuOffset,
-                                "mV"),
-                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, date)))))));
-    })));
-};
-// ==================== Main Component ====================
-const WizardMode = () => {
-    const { info: platformInfo } = usePlatformInfo();
-    const { isRunning, progress, result, dirtyExit, startWizard, cancelWizard, applyResult, } = useWizard();
-    const [showCrashModal, setShowCrashModal] = SP_REACT.useState(false);
-    const [localResult, setLocalResult] = SP_REACT.useState(null);
-    const [showHistory, setShowHistory] = SP_REACT.useState(false);
-    SP_REACT.useEffect(() => {
-        if (dirtyExit?.detected && !showCrashModal) {
-            setShowCrashModal(true);
-        }
-    }, [dirtyExit]);
-    SP_REACT.useEffect(() => {
-        if (result) {
-            setLocalResult(result);
-        }
-    }, [result]);
-    const handleStart = async (config) => {
-        try {
-            setLocalResult(null);
-            await startWizard(config);
-        }
-        catch (err) {
-            console.error("Failed to start wizard:", err);
-        }
-    };
-    const handleCancel = async () => {
-        try {
-            await cancelWizard();
-        }
-        catch (err) {
-            console.error("Failed to cancel wizard:", err);
-        }
-    };
-    const handleApply = async (applyOnStartup, gameOnlyMode) => {
-        if (!localResult)
-            return;
-        try {
-            await applyResult(localResult.id, true, applyOnStartup, gameOnlyMode);
-            console.log(`Applied wizard result with options: startup=${applyOnStartup}, gameOnly=${gameOnlyMode}`);
-        }
-        catch (err) {
-            console.error("Failed to apply result:", err);
-        }
-    };
-    const handleStartOver = () => {
-        setLocalResult(null);
-    };
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Wizard Mode" },
-        window.SP_REACT.createElement(PanicDisableButton$1, null),
-        !isRunning && !localResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowHistory(!showHistory) },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
-                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
-                    window.SP_REACT.createElement("span", null, showHistory ? "Back to Wizard" : "View History"))))),
-        showCrashModal && dirtyExit?.crashInfo && (window.SP_REACT.createElement(CrashRecoveryModal, { crashInfo: dirtyExit.crashInfo, onDismiss: () => setShowCrashModal(false) })),
-        !isRunning && !localResult && !showHistory && (window.SP_REACT.createElement(ConfigurationScreen, { onStart: handleStart, platformInfo: platformInfo })),
-        !isRunning && !localResult && showHistory && (window.SP_REACT.createElement(WizardHistoryView, { onClose: () => setShowHistory(false) })),
-        isRunning && progress && (window.SP_REACT.createElement(ProgressScreen, { progress: progress, onCancel: handleCancel })),
-        !isRunning && localResult && (window.SP_REACT.createElement(ResultsScreen, { result: localResult, onApply: handleApply, onStartOver: handleStartOver }))));
-};
-
-/**
- * FocusableButton - Custom button component with gamepad focus support.
- *
- * Replaces Decky UI's default square focus with custom rounded focus.
- * Uses inline styles to avoid CSS specificity issues.
- */
-
-
-const FocusableButton = ({ children, onClick, onActivate, style = {}, focusColor = "#1a9fff", disabled = false, className = "", }) => {
-    const [isFocused, setIsFocused] = SP_REACT.useState(false);
-    const handleClick = () => {
-        if (!disabled && onClick)
-            onClick();
-    };
-    const handleActivate = () => {
-        if (!disabled) {
-            if (onActivate) {
-                onActivate();
-            }
-            else if (onClick) {
-                // Fallback to onClick if onActivate not provided
-                onClick();
-            }
-        }
-    };
-    return (window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleActivate, onClick: handleClick, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), className: className, style: {
-            ...style,
-            // Use border instead of outline for rounded corners
-            border: isFocused && !disabled ? `3px solid ${focusColor}` : "3px solid transparent",
-            borderRadius: "8px", // Rounded corners
-            boxShadow: isFocused && !disabled ? `0 0 12px ${focusColor}99` : "none",
-            transform: isFocused && !disabled ? "scale(1.05)" : "scale(1)",
-            transition: "all 0.2s ease",
-            cursor: disabled ? "not-allowed" : "pointer",
-            opacity: disabled ? 0.5 : 1,
-            // Remove any padding/margin that might cause issues
-            padding: 0,
-            margin: 0,
-        } }, children));
-};
-
-/**
- * Redesigned Presets tab - compact and gamepad-friendly.
- *
- * Two sections:
- * 1. Game Profiles - auto-switching profiles per game
- * 2. Global Presets - manual presets you can apply anytime
- */
-
-const PresetsTabNew = () => {
-    const { state, api } = useDeckTune();
-    const profilesHook = useProfiles();
-    // Extra safety: ensure profiles is always an array
-    const profiles = Array.isArray(profilesHook.profiles) ? profilesHook.profiles : [];
-    const { activeProfile, runningAppId, runningAppName } = profilesHook;
-    const [activeSection, setActiveSection] = SP_REACT.useState("profiles");
-    // Load profiles on mount
-    SP_REACT.useEffect(() => {
-        const loadProfiles = async () => {
-            try {
-                await api.getProfiles();
-            }
-            catch (e) {
-                console.error("Failed to load profiles:", e);
-            }
-        };
-        loadProfiles();
-    }, [api]);
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: {
-                    display: "flex",
-                    gap: "4px",
-                    marginBottom: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "4px",
-                    padding: "2px",
-                }, "flow-children": "horizontal" },
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("profiles"), style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "6px",
-                            fontSize: "10px",
-                            backgroundColor: activeSection === "profiles" ? "#1a9fff" : "transparent",
-                            borderRadius: "4px",
-                            color: activeSection === "profiles" ? "#fff" : "#8b929a",
-                        } },
-                        window.SP_REACT.createElement(FaGamepad, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Game Profiles"))),
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("presets"), style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "6px",
-                            fontSize: "10px",
-                            backgroundColor: activeSection === "presets" ? "#1a9fff" : "transparent",
-                            borderRadius: "4px",
-                            color: activeSection === "presets" ? "#fff" : "#8b929a",
-                        } },
-                        window.SP_REACT.createElement(FaGlobe, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Global Presets"))))),
-        activeSection === "profiles" ? (window.SP_REACT.createElement(GameProfilesSection, { profiles: profiles, activeProfile: activeProfile, runningAppId: runningAppId, runningAppName: runningAppName, api: api })) : (window.SP_REACT.createElement(GlobalPresetsSection, { presets: state.presets, api: api })),
-        window.SP_REACT.createElement("style", null, `
-          .section-button {
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background-color: transparent;
-            color: #8b929a;
-          }
-          .section-button.active {
-            background-color: #1a9fff;
-            color: #fff;
-          }
-          .section-button.gpfocus {
-            border: 2px solid #1a9fff;
-            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
-          }
-          .section-button:hover {
-            background-color: rgba(26, 159, 255, 0.2);
-          }
-          
-          .preset-action-btn {
-            border-radius: 4px;
-            transition: all 0.2s ease;
-          }
-          .preset-action-btn.gpfocus {
-            transform: scale(1.05);
-            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
-          }
-          .preset-apply.gpfocus > div {
-            background-color: #1585d8 !important;
-          }
-          .preset-delete.gpfocus > div {
-            background-color: #3a3d45 !important;
-          }
-          
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-const GameProfilesSection = ({ profiles, activeProfile, runningAppId, runningAppName, api }) => {
-    const [isCreating, setIsCreating] = SP_REACT.useState(false);
-    const handleQuickCreate = async () => {
-        if (!runningAppId || !runningAppName)
-            return;
-        setIsCreating(true);
-        try {
-            const result = await api.createProfileForCurrentGame();
-            if (!result.success) {
-                alert(`Failed: ${result.error}`);
-            }
-        }
-        finally {
-            setIsCreating(false);
-        }
-    };
-    const handleDelete = async (appId, name) => {
-        DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Profile", strDescription: `Delete profile for ${name}?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
-                await api.deleteProfile(appId);
-            } }));
-    };
-    const formatCores = (cores) => {
-        const allSame = cores.every(v => v === cores[0]);
-        return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        runningAppId && runningAppName && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(FocusableButton, { onClick: handleQuickCreate, disabled: isCreating, style: { width: "100%", marginBottom: "8px" } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        fontSize: "10px",
-                        padding: "10px",
-                        backgroundColor: "#1a9fff",
-                        borderRadius: "6px",
-                        fontWeight: "bold"
-                    } },
-                    isCreating ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
-                    window.SP_REACT.createElement("span", null,
-                        "Save for ",
-                        runningAppName))))),
-        profiles.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
-                "No game profiles yet.",
-                runningAppId && window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to create one!")))) : (profiles.map((profile) => {
-            const isActive = activeProfile?.app_id === profile.app_id || runningAppId === profile.app_id;
-            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: profile.app_id },
-                window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "6px 8px",
-                            backgroundColor: isActive ? "#1a3a5c" : "#23262e",
-                            borderRadius: "6px 6px 0 0",
-                            border: isActive ? "2px solid #1a9fff" : "none",
-                            borderBottom: "1px solid #3d4450"
-                        } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                            window.SP_REACT.createElement("span", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, profile.name),
-                            isActive && (window.SP_REACT.createElement("span", { style: { fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" } }, "ACTIVE"))),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
-                            formatCores(profile.cores),
-                            profile.dynamic_enabled && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u26A1 Dynamic"))),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: {
-                            backgroundColor: "#1a1d24",
-                            borderRadius: "0 0 6px 6px",
-                            padding: "6px",
-                        } },
-                        window.SP_REACT.createElement(DFL.Focusable, { className: "preset-action-btn preset-delete", focusClassName: "gpfocus", onActivate: () => handleDelete(profile.app_id, profile.name), onClick: () => handleDelete(profile.app_id, profile.name) },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    padding: "6px 8px",
-                                    fontSize: "9px",
-                                    fontWeight: "600",
-                                    borderRadius: "4px",
-                                    backgroundColor: "#2a2d35",
-                                    color: "#f44336",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease"
-                                } },
-                                window.SP_REACT.createElement(FaTrash, { size: 8 }),
-                                window.SP_REACT.createElement("span", null, "Delete Profile")))))));
-        })),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-const GlobalPresetsSection = ({ presets, api }) => {
-    const [isApplying, setIsApplying] = SP_REACT.useState(null);
-    const [isSaving, setIsSaving] = SP_REACT.useState(false);
-    const handleApply = async (preset) => {
-        setIsApplying(preset.app_id);
-        try {
-            await api.applyUndervolt(preset.value);
-        }
-        finally {
-            setIsApplying(null);
-        }
-    };
-    const handleDelete = async (appId, label) => {
-        DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Preset", strDescription: `Delete preset "${label}"?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
-                await api.deletePreset(appId);
-            } }));
-    };
-    const handleQuickSave = async () => {
-        setIsSaving(true);
-        try {
-            const timestamp = new Date().toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            const label = `Preset ${timestamp}`;
-            // Get current cores from API state
-            const cores = api.state.cores || [0, 0, 0, 0];
-            // Create preset object
-            const preset = {
-                app_id: Date.now(), // Use timestamp as unique ID
-                label: label,
-                value: cores,
-                timeout: 0,
-                use_timeout: false,
-                tested: false,
-            };
-            console.log("Saving preset:", preset);
-            // Call backend to save preset
-            const result = await call("save_preset", preset);
-            console.log("Save result:", result);
-            if (result.success) {
-                // Reload presets directly
-                const updatedPresets = await call("get_presets");
-                console.log("Updated presets:", updatedPresets);
-                // Use setState to properly trigger React re-render
-                api.setState({ presets: updatedPresets });
-            }
-        }
-        catch (e) {
-            console.error("Failed to save preset:", e);
-            alert(`Failed to save: ${e}`);
-        }
-        finally {
-            setIsSaving(false);
-        }
-    };
-    const formatCores = (cores) => {
-        const allSame = cores.every(v => v === cores[0]);
-        return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(FocusableButton, { onClick: handleQuickSave, disabled: isSaving, style: { width: "100%", marginBottom: "8px" } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        fontSize: "10px",
-                        padding: "10px",
-                        backgroundColor: "#1a9fff",
-                        borderRadius: "6px",
-                        fontWeight: "bold"
-                    } },
-                    isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
-                    window.SP_REACT.createElement("span", null, "Save Current Values")))),
-        presets.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
-                "No global presets saved.",
-                window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to save your current values!")))) : (presets.map((preset) => {
-            const isApplyingThis = isApplying === preset.app_id;
-            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.app_id },
-                window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
-                    window.SP_REACT.createElement("div", { style: { padding: "6px 8px", backgroundColor: "#23262e", borderRadius: "6px 6px 0 0", borderBottom: "1px solid #3d4450" } },
-                        window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, preset.label),
-                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
-                            formatCores(preset.value),
-                            preset.tested && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u2713 Tested"))),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: {
-                            display: "flex",
-                            gap: "4px",
-                            backgroundColor: "#1a1d24",
-                            borderRadius: "0 0 6px 6px",
-                            padding: "6px",
-                        }, "flow-children": "horizontal" },
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, className: "preset-action-btn preset-apply", focusClassName: "gpfocus", onActivate: () => handleApply(preset), onClick: () => handleApply(preset) },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    padding: "6px 8px",
-                                    fontSize: "9px",
-                                    fontWeight: "600",
-                                    borderRadius: "4px",
-                                    backgroundColor: "#1a9fff",
-                                    color: "#fff",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease"
-                                } },
-                                isApplyingThis ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 9 }) : window.SP_REACT.createElement(FaCheck, { size: 9 }),
-                                window.SP_REACT.createElement("span", null, "Apply"))),
-                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, className: "preset-action-btn preset-delete", focusClassName: "gpfocus", onActivate: () => handleDelete(preset.app_id, preset.label), onClick: () => handleDelete(preset.app_id, preset.label) },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    padding: "6px 8px",
-                                    fontSize: "9px",
-                                    fontWeight: "600",
-                                    borderRadius: "4px",
-                                    backgroundColor: "#2a2d35",
-                                    color: "#f44336",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease"
-                                } },
-                                window.SP_REACT.createElement(FaTrash, { size: 8 }),
-                                window.SP_REACT.createElement("span", null, "Delete")))))));
-        })),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-
-/**
- * Redesigned Tests tab - compact and gamepad-friendly.
- *
- * Feature: decktune, Frontend UI Components - Expert Mode
- * Requirements: 7.4
- *
- * Two sections:
- * 1. Run Tests - test selection and execution with progress
- * 2. Test History - last 10 test results
- */
-
-/**
- * Available test options with compact labels and estimated durations.
- */
-const TEST_OPTIONS = [
-    { value: "cpu_quick", label: "CPU Quick", duration: "30s", durationSeconds: 30, icon: "⚡" },
-    { value: "cpu_long", label: "CPU Long", duration: "5m", durationSeconds: 300, icon: "🔥" },
-    { value: "ram_quick", label: "RAM Quick", duration: "2m", durationSeconds: 120, icon: "💾" },
-    { value: "ram_thorough", label: "RAM Thorough", duration: "15m", durationSeconds: 900, icon: "🧠" },
-    { value: "combo", label: "Combo Stress", duration: "5m", durationSeconds: 300, icon: "💪" },
-    { value: "cpu_loop", label: "CPU Loop", duration: "∞", durationSeconds: 0, icon: "🔁" },
-];
-const TestsTabNew = () => {
-    const { history, currentTest, isRunning, runTest } = useTests();
-    const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
-    const [activeSection, setActiveSection] = SP_REACT.useState("run");
-    // NUCLEAR CACHE BUST - v3.1.19-20260118-2230
-    SP_REACT.useEffect(() => {
-        const buildId = "v3.1.19-20260118-2230-FOCUSABLE-BUTTON";
-        console.log(`[DeckTune CACHE BUST] ${buildId} - TestsTabNew with FocusableButton`);
-        window.__DECKTUNE_BUILD_ID__ = buildId;
-        window.__DECKTUNE_TESTS_TAB_VERSION__ = "FOCUSABLE_BUTTON";
-    }, []);
-    // Check binaries on mount
-    SP_REACT.useEffect(() => {
-        checkBinaries();
-    }, []);
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: {
-                    display: "flex",
-                    gap: "4px",
-                    marginBottom: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "4px",
-                    padding: "2px",
-                }, "flow-children": "horizontal" },
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("run"), style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "6px",
-                            fontSize: "10px",
-                            backgroundColor: activeSection === "run" ? "#1a9fff" : "transparent",
-                            borderRadius: "4px",
-                            color: activeSection === "run" ? "#fff" : "#8b929a",
-                        } },
-                        window.SP_REACT.createElement(FaPlay, { style: { fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", null, "Run Tests"))),
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("history"), style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "6px",
-                            fontSize: "10px",
-                            backgroundColor: activeSection === "history" ? "#1a9fff" : "transparent",
-                            borderRadius: "4px",
-                            color: activeSection === "history" ? "#fff" : "#8b929a",
-                        } },
-                        window.SP_REACT.createElement(FaHistory, { style: { fontSize: "10px" } }),
-                        window.SP_REACT.createElement("span", null, "History"))))),
-        activeSection === "run" ? (window.SP_REACT.createElement(RunTestsSection, { isRunning: isRunning, currentTest: currentTest, runTest: runTest, hasMissing: hasMissing, missingBinaries: missingBinaries })) : (window.SP_REACT.createElement(TestHistorySection, { history: history })),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-const RunTestsSection = ({ isRunning, currentTest, runTest, hasMissing, missingBinaries }) => {
-    const [progress, setProgress] = SP_REACT.useState(0);
-    const [startTime, setStartTime] = SP_REACT.useState(null);
-    const [estimatedDuration, setEstimatedDuration] = SP_REACT.useState(0);
-    const [testResult, setTestResult] = SP_REACT.useState(null);
-    const [elapsedTime, setElapsedTime] = SP_REACT.useState(0);
-    // Progress tracking
-    SP_REACT.useEffect(() => {
-        if (!isRunning || !currentTest) {
-            setProgress(0);
-            setStartTime(null);
-            setElapsedTime(0);
-            return;
-        }
-        // Set start time and estimated duration
-        const testOption = TEST_OPTIONS.find(t => t.value === currentTest);
-        if (testOption && !startTime) {
-            setStartTime(Date.now());
-            setEstimatedDuration(testOption.durationSeconds);
-            setTestResult(null);
-        }
-        // Update progress every second
-        const interval = setInterval(() => {
-            if (startTime) {
-                const elapsed = (Date.now() - startTime) / 1000;
-                setElapsedTime(Math.floor(elapsed));
-                if (estimatedDuration > 0) {
-                    const newProgress = Math.min((elapsed / estimatedDuration) * 100, 99);
-                    setProgress(newProgress);
-                }
-                else {
-                    // Loop test - show elapsed time only
-                    setProgress(0);
-                }
-            }
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [isRunning, currentTest, startTime, estimatedDuration]);
-    const handleRunTest = async (testValue) => {
-        if (isRunning)
-            return;
-        setProgress(0);
-        setStartTime(null);
-        setTestResult(null);
-        try {
-            const result = await runTest(testValue);
-            setProgress(100);
-            setTestResult({ passed: result?.passed ?? true });
-        }
-        catch (error) {
-            setTestResult({ passed: false, error: error?.message || "Test failed" });
-        }
-    };
-    const getTestLabel = (value) => {
-        return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
-    };
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        if (mins > 0) {
-            return `${mins}m ${secs}s`;
-        }
-        return `${secs}s`;
-    };
-    const getRemainingTime = () => {
-        if (!startTime || !estimatedDuration)
-            return "";
-        const remaining = Math.max(0, estimatedDuration - elapsedTime);
-        return formatTime(remaining) + " left";
-    };
-    const isLoopTest = currentTest && TEST_OPTIONS.find(t => t.value === currentTest)?.durationSeconds === 0;
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        hasMissing && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                    padding: "10px",
-                    backgroundColor: "#5c4813",
-                    borderRadius: "6px",
-                    marginBottom: "12px",
-                    border: "1px solid #ff9800",
-                } },
-                window.SP_REACT.createElement(FaExclamationCircle, { style: { color: "#ff9800", fontSize: "14px", flexShrink: 0, marginTop: "1px" } }),
-                window.SP_REACT.createElement("div", null,
-                    window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#ffb74d", marginBottom: "3px", fontSize: "10px" } }, "Missing Components"),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ffe0b2" } },
-                        "Required: ",
-                        window.SP_REACT.createElement("strong", null, missingBinaries.join(", "))))))),
-        testResult && !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "10px",
-                    backgroundColor: testResult.passed ? "#1b5e20" : "#5c1313",
-                    borderRadius: "6px",
-                    marginBottom: "12px",
-                    border: `1px solid ${testResult.passed ? "#4caf50" : "#f44336"}`,
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: testResult.error ? "4px" : "0" } },
-                    testResult.passed ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "12px" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#f44336", fontSize: "12px" } })),
-                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, testResult.passed ? "Test Passed!" : "Test Failed")),
-                testResult.error && (window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ffcdd2", marginTop: "4px" } }, testResult.error))))),
-        isRunning && currentTest && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#1a3a5c",
-                    borderRadius: "6px",
-                    marginBottom: "12px",
-                    border: "1px solid #1a9fff",
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#1a9fff", fontSize: "12px" } }),
-                        window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, getTestLabel(currentTest))),
-                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a" } }, isLoopTest ? `${formatTime(elapsedTime)} elapsed` : getRemainingTime())),
-                !isLoopTest && (window.SP_REACT.createElement("div", null,
-                    window.SP_REACT.createElement("div", { style: {
-                            width: "100%",
-                            height: "6px",
-                            backgroundColor: "#23262e",
-                            borderRadius: "3px",
-                            overflow: "hidden"
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: `${progress}%`,
-                                height: "100%",
-                                backgroundColor: "#1a9fff",
-                                transition: "width 0.3s ease",
-                                borderRadius: "3px"
-                            } })),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px", textAlign: "center" } },
-                        Math.round(progress),
-                        "%"))),
-                isLoopTest && (window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", textAlign: "center", marginTop: "4px" } }, "Running until manually stopped (restart plugin to cancel)"))))),
-        !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "6px",
-                } }, TEST_OPTIONS.map((test) => (window.SP_REACT.createElement(FocusableButton, { key: test.value, onClick: () => !hasMissing && handleRunTest(test.value), disabled: hasMissing },
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "10px 8px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "6px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" } },
-                        window.SP_REACT.createElement("span", { style: { fontSize: "14px" } }, test.icon),
-                        window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, test.label)),
-                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a" } }, test.durationSeconds === 0 ? "Until cancelled" : `Duration: ${test.duration}`))))))))));
-};
-const TestHistorySection = ({ history }) => {
-    const formatDuration = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        if (mins > 0) {
-            return `${mins}m ${secs}s`;
-        }
-        return `${secs}s`;
-    };
-    const formatTimestamp = (timestamp) => {
-        try {
-            const date = new Date(timestamp);
-            return date.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-        }
-        catch {
-            return timestamp;
-        }
-    };
-    const getTestLabel = (value) => {
-        return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
-    };
-    const getTestIcon = (value) => {
-        return TEST_OPTIONS.find((t) => t.value === value)?.icon || "🔧";
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null, history.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "24px", fontSize: "11px" } },
-            "No tests run yet.",
-            window.SP_REACT.createElement("div", { style: { marginTop: "4px", fontSize: "9px" } }, "Switch to \"Run Tests\" to start!")))) : (history.slice(0, 10).map((entry, index) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: index },
-        window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", style: {
-                marginBottom: "6px",
-            } },
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "8px 10px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "6px",
-                    borderLeft: `3px solid ${entry.passed ? "#4caf50" : "#f44336"}`,
-                } },
-                window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-                        window.SP_REACT.createElement("span", { style: { fontSize: "12px" } }, getTestIcon(entry.test_name)),
-                        entry.passed ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "10px" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#f44336", fontSize: "10px" } })),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "10px" } }, getTestLabel(entry.test_name))),
-                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a" } }, formatDuration(entry.duration))),
-                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginBottom: "2px" } }, formatTimestamp(entry.timestamp)),
-                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a" } },
-                    "Cores: [",
-                    entry.cores_tested.join(", "),
-                    "]")))))))));
-};
-
-/**
- * FanCurveEditor component for visual fan curve editing.
- *
- * Feature: Fan Control Integration (Phase 4)
- *
- * Provides an interactive SVG graph for editing fan curve points.
- * Supports drag-and-drop point manipulation, add/remove points,
- * and real-time preview of the curve.
- */
-
-// Graph dimensions
-const GRAPH_WIDTH = 280;
-const GRAPH_HEIGHT = 160;
-const MARGIN = { top: 20, right: 30, bottom: 30, left: 40 };
-const INNER_WIDTH = GRAPH_WIDTH - MARGIN.left - MARGIN.right;
-const INNER_HEIGHT = GRAPH_HEIGHT - MARGIN.top - MARGIN.bottom;
-// Temperature and speed ranges
-const TEMP_MIN = 30;
-const TEMP_MAX = 95;
-const SPEED_MIN = 0;
-const SPEED_MAX = 100;
-// Point interaction
-const POINT_RADIUS = 8;
-const POINT_HIT_RADIUS = 15;
-/** Default fan curve */
-const DEFAULT_CURVE = [
-    { temp_c: 40, speed_percent: 20 },
-    { temp_c: 50, speed_percent: 30 },
-    { temp_c: 60, speed_percent: 45 },
-    { temp_c: 70, speed_percent: 60 },
-    { temp_c: 80, speed_percent: 80 },
-    { temp_c: 85, speed_percent: 100 },
-];
-/**
- * Convert temperature to X coordinate
- */
-const tempToX = (temp) => {
-    const normalized = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
-    return MARGIN.left + normalized * INNER_WIDTH;
-};
-/**
- * Convert speed to Y coordinate (inverted - 0% at bottom)
- */
-const speedToY = (speed) => {
-    const normalized = (speed - SPEED_MIN) / (SPEED_MAX - SPEED_MIN);
-    return MARGIN.top + INNER_HEIGHT - normalized * INNER_HEIGHT;
-};
-/**
- * Convert X coordinate to temperature
- */
-const xToTemp = (x) => {
-    const normalized = (x - MARGIN.left) / INNER_WIDTH;
-    return Math.round(TEMP_MIN + normalized * (TEMP_MAX - TEMP_MIN));
-};
-/**
- * Convert Y coordinate to speed
- */
-const yToSpeed = (y) => {
-    const normalized = 1 - (y - MARGIN.top) / INNER_HEIGHT;
-    return Math.round(SPEED_MIN + normalized * (SPEED_MAX - SPEED_MIN));
-};
-/**
- * Clamp value to range
- */
-const clamp$1 = (value, min, max) => {
-    return Math.max(min, Math.min(max, value));
-};
-/**
- * Generate SVG path for the curve
- */
-const generateCurvePath = (points) => {
-    if (points.length === 0)
-        return "";
-    const sorted = [...points].sort((a, b) => a.temp_c - b.temp_c);
-    // Start from left edge at first point's speed
-    let path = `M ${MARGIN.left} ${speedToY(sorted[0].speed_percent)}`;
-    path += ` L ${tempToX(sorted[0].temp_c)} ${speedToY(sorted[0].speed_percent)}`;
-    // Connect all points
-    for (let i = 1; i < sorted.length; i++) {
-        path += ` L ${tempToX(sorted[i].temp_c)} ${speedToY(sorted[i].speed_percent)}`;
-    }
-    // Extend to right edge at last point's speed
-    const lastPoint = sorted[sorted.length - 1];
-    path += ` L ${MARGIN.left + INNER_WIDTH} ${speedToY(lastPoint.speed_percent)}`;
-    return path;
-};
-/**
- * FanCurveEditor component
- */
-const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = false, }) => {
-    const svgRef = SP_REACT.useRef(null);
-    const [draggingIndex, setDraggingIndex] = SP_REACT.useState(null);
-    const [hasChanges, setHasChanges] = SP_REACT.useState(false);
-    const [isSaving, setIsSaving] = SP_REACT.useState(false);
-    // Handle point drag start
-    const handlePointMouseDown = SP_REACT.useCallback((index, e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDraggingIndex(index);
-    }, []);
-    // Handle mouse move for dragging
-    const handleMouseMove = SP_REACT.useCallback((e) => {
-        if (draggingIndex === null || !svgRef.current)
-            return;
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const newTemp = clamp$1(xToTemp(x), TEMP_MIN, TEMP_MAX);
-        const newSpeed = clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX);
-        const newCurve = [...config.curve];
-        newCurve[draggingIndex] = { temp_c: newTemp, speed_percent: newSpeed };
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [draggingIndex, config, onConfigChange]);
-    // Handle mouse up to stop dragging
-    const handleMouseUp = SP_REACT.useCallback(() => {
-        setDraggingIndex(null);
-    }, []);
-    // Handle click on graph to add point
-    const handleGraphClick = SP_REACT.useCallback((e) => {
-        if (draggingIndex !== null || !svgRef.current)
-            return;
-        if (config.mode !== "custom")
-            return;
-        const svg = svgRef.current;
-        const rect = svg.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        // Check if click is within graph area
-        if (x < MARGIN.left || x > MARGIN.left + INNER_WIDTH)
-            return;
-        if (y < MARGIN.top || y > MARGIN.top + INNER_HEIGHT)
-            return;
-        // Check if click is near existing point
-        const clickTemp = xToTemp(x);
-        const isNearExisting = config.curve.some(p => Math.abs(p.temp_c - clickTemp) < 5);
-        if (isNearExisting)
-            return;
-        const newPoint = {
-            temp_c: clamp$1(clickTemp, TEMP_MIN, TEMP_MAX),
-            speed_percent: clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX),
-        };
-        const newCurve = [...config.curve, newPoint].sort((a, b) => a.temp_c - b.temp_c);
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [draggingIndex, config, onConfigChange]);
-    // Handle point removal
-    const handleRemovePoint = SP_REACT.useCallback((index) => {
-        if (config.curve.length <= 2)
-            return; // Keep at least 2 points
-        const newCurve = config.curve.filter((_, i) => i !== index);
-        onConfigChange({ ...config, curve: newCurve });
-        setHasChanges(true);
-    }, [config, onConfigChange]);
-    // Reset to default curve
-    const handleReset = SP_REACT.useCallback(() => {
-        onConfigChange({ ...config, curve: [...DEFAULT_CURVE] });
-        setHasChanges(true);
-    }, [config, onConfigChange]);
-    // Save configuration
-    const handleSave = SP_REACT.useCallback(async () => {
-        setIsSaving(true);
-        try {
-            await onSave(config);
-            setHasChanges(false);
-        }
-        finally {
-            setIsSaving(false);
-        }
-    }, [config, onSave]);
-    // Mode options for dropdown
-    const modeOptions = [
-        { data: "default", label: "Default (BIOS)" },
-        { data: "custom", label: "Custom Curve" },
-        { data: "fixed", label: "Fixed Speed" },
-    ];
-    // Sort curve for display
-    const sortedCurve = [...config.curve].sort((a, b) => a.temp_c - b.temp_c);
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ToggleField, { label: "Enable Fan Control", description: "Take manual control of the fan", checked: config.enabled, onChange: (enabled) => {
-                    onConfigChange({ ...config, enabled });
-                    setHasChanges(true);
-                }, disabled: isLoading })),
-        config.enabled && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.DropdownItem, { label: "Fan Mode", rgOptions: modeOptions, selectedOption: config.mode, onChange: (option) => {
-                        onConfigChange({ ...config, mode: option.data });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            status && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 12px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                        window.SP_REACT.createElement(FaFan, { style: {
-                                color: status.safety_override ? "#f44336" : "#4caf50",
-                                animation: status.speed_percent > 0 ? "spin 1s linear infinite" : "none",
-                            } }),
-                        window.SP_REACT.createElement("span", null,
-                            status.temp_c,
-                            "\u00B0C")),
-                    window.SP_REACT.createElement("div", { style: { color: "#8b929a" } },
-                        status.speed_percent,
-                        "% ",
-                        status.rpm ? `(${status.rpm} RPM)` : ""),
-                    status.safety_override && (window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "11px" } }, "Safety Override"))))),
-            config.mode === "custom" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        backgroundColor: "#1a1d23",
-                        borderRadius: "8px",
-                        padding: "8px",
-                    } },
-                    window.SP_REACT.createElement("svg", { ref: svgRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: { cursor: draggingIndex !== null ? "grabbing" : "crosshair" }, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onMouseLeave: handleMouseUp, onClick: handleGraphClick },
-                        window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1" },
-                            [0, 25, 50, 75, 100].map(speed => (window.SP_REACT.createElement("line", { key: `h-${speed}`, x1: MARGIN.left, y1: speedToY(speed), x2: MARGIN.left + INNER_WIDTH, y2: speedToY(speed) }))),
-                            [40, 50, 60, 70, 80, 90].map(temp => (window.SP_REACT.createElement("line", { key: `v-${temp}`, x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT })))),
-                        window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "10" },
-                            [0, 50, 100].map(speed => (window.SP_REACT.createElement("text", { key: `y-${speed}`, x: MARGIN.left - 5, y: speedToY(speed) + 3, textAnchor: "end" },
-                                speed,
-                                "%"))),
-                            [40, 60, 80].map(temp => (window.SP_REACT.createElement("text", { key: `x-${temp}`, x: tempToX(temp), y: MARGIN.top + INNER_HEIGHT + 15, textAnchor: "middle" },
-                                temp,
-                                "\u00B0C")))),
-                        window.SP_REACT.createElement("rect", { x: tempToX(85), y: MARGIN.top, width: MARGIN.left + INNER_WIDTH - tempToX(85), height: INNER_HEIGHT, fill: "rgba(244, 67, 54, 0.1)" }),
-                        status && (window.SP_REACT.createElement("line", { x1: tempToX(status.temp_c), y1: MARGIN.top, x2: tempToX(status.temp_c), y2: MARGIN.top + INNER_HEIGHT, stroke: "#4caf50", strokeWidth: "2", strokeDasharray: "4,4" })),
-                        window.SP_REACT.createElement("path", { d: generateCurvePath(sortedCurve), fill: "none", stroke: "#1a9fff", strokeWidth: "2" }),
-                        window.SP_REACT.createElement("path", { d: `${generateCurvePath(sortedCurve)} L ${MARGIN.left + INNER_WIDTH} ${MARGIN.top + INNER_HEIGHT} L ${MARGIN.left} ${MARGIN.top + INNER_HEIGHT} Z`, fill: "rgba(26, 159, 255, 0.1)" }),
-                        sortedCurve.map((point, index) => (window.SP_REACT.createElement("g", { key: index },
-                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_HIT_RADIUS, fill: "transparent", style: { cursor: "grab" }, onMouseDown: (e) => handlePointMouseDown(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent), e), onDoubleClick: () => handleRemovePoint(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent)) }),
-                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS, fill: "#1a9fff", stroke: "#fff", strokeWidth: "2", style: { pointerEvents: "none" } }),
-                            window.SP_REACT.createElement("text", { x: tempToX(point.temp_c), y: speedToY(point.speed_percent) - 12, fill: "#fff", fontSize: "9", textAnchor: "middle", style: { pointerEvents: "none" } },
-                                point.temp_c,
-                                "\u00B0/",
-                                point.speed_percent,
-                                "%"))))),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "10px",
-                            color: "#8b929a",
-                            textAlign: "center",
-                            marginTop: "4px",
-                        } }, "Click to add point \u2022 Drag to move \u2022 Double-click to remove")))),
-            config.mode === "fixed" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { label: "Fixed Fan Speed", value: config.curve[0]?.speed_percent ?? 50, min: 0, max: 100, step: 5, showValue: true, onChange: (value) => {
-                        onConfigChange({
-                            ...config,
-                            curve: [{ temp_c: 0, speed_percent: value }],
-                        });
-                        setHasChanges(true);
-                    }, disabled: isLoading }))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.ToggleField, { label: "Zero RPM Mode", description: "Allow fan to stop below 45\u00B0C (risky!)", checked: config.zero_rpm_enabled, onChange: (zero_rpm_enabled) => {
-                        onConfigChange({ ...config, zero_rpm_enabled });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.SliderField, { label: "Temperature Hysteresis", description: "Prevents rapid speed changes", value: config.hysteresis_temp, min: 1, max: 10, step: 1, showValue: true, valueSuffix: "\u00B0C", onChange: (hysteresis_temp) => {
-                        onConfigChange({ ...config, hysteresis_temp });
-                        setHasChanges(true);
-                    }, disabled: isLoading })),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleReset, disabled: isLoading || isSaving },
-                        window.SP_REACT.createElement(FaUndo, { style: { marginRight: "4px" } }),
-                        "Reset"),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, disabled: isLoading || isSaving || !hasChanges }, isSaving ? "Saving..." : "Save")))))));
-};
-
-/**
- * FanTab component for fan control in Expert Mode.
- *
- * Feature: decktune-critical-fixes
- * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
- *
- * Provides fan curve editing and control through the FanCurveEditor component.
- */
-
-/**
- * FanTab component for Expert Mode.
- *
- * Feature: decktune-critical-fixes
- * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
- */
-const FanTab = () => {
-    const { api } = useDeckTune();
-    const [config, setConfig] = SP_REACT.useState(null);
-    const [status, setStatus] = SP_REACT.useState(null);
-    const [isLoading, setIsLoading] = SP_REACT.useState(true);
-    const [error, setError] = SP_REACT.useState(null);
-    const [isSaving, setIsSaving] = SP_REACT.useState(false);
-    // Load fan configuration on mount
-    SP_REACT.useEffect(() => {
-        const loadFanConfig = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const result = await api.getFanConfig();
-                if (result.success && result.config) {
-                    setConfig(result.config);
-                }
-                else {
-                    setError(result.error || "Failed to load fan configuration");
-                }
-            }
-            catch (e) {
-                setError(`Error loading fan config: ${e}`);
-            }
-            finally {
-                setIsLoading(false);
-            }
-        };
-        loadFanConfig();
-    }, [api]);
-    // Poll fan status periodically
-    SP_REACT.useEffect(() => {
-        if (!config?.enabled)
-            return;
-        const pollStatus = async () => {
-            try {
-                const result = await api.getFanStatus();
-                if (result.success && result.status) {
-                    setStatus(result.status);
-                }
-            }
-            catch (e) {
-                console.error("Error polling fan status:", e);
-            }
-        };
-        // Initial poll
-        pollStatus();
-        // Poll every 2 seconds
-        const interval = setInterval(pollStatus, 2000);
-        return () => clearInterval(interval);
-    }, [api, config?.enabled]);
-    const handleConfigChange = (newConfig) => {
-        setConfig(newConfig);
-    };
-    const handleSave = async (newConfig) => {
-        setIsSaving(true);
-        setError(null);
-        try {
-            const result = await api.setFanConfig(newConfig);
-            if (result.success) {
-                setConfig(newConfig);
-            }
-            else {
-                setError(result.error || "Failed to save fan configuration");
-            }
-        }
-        catch (e) {
-            setError(`Error saving fan config: ${e}`);
-        }
-        finally {
-            setIsSaving(false);
-        }
-    };
-    // Loading state
-    if (isLoading) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    padding: "24px",
-                    color: "#8b929a",
-                } },
-                window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                window.SP_REACT.createElement("span", null, "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430...")),
-            window.SP_REACT.createElement("style", null, `
-            .spin {
-              animation: spin 1s linear infinite;
-            }
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          `)));
-    }
-    // Error state
-    if (error && !config) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "16px",
-                    backgroundColor: "#5c1313",
-                    borderRadius: "8px",
-                    border: "1px solid #f44336",
-                } },
-                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#f44336", fontSize: "24px" } }),
-                window.SP_REACT.createElement("div", { style: { color: "#ffcdd2", textAlign: "center", fontSize: "12px" } }, error),
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => window.location.reload() }, "\u041F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430"))));
-    }
-    // No config available
-    if (!config) {
-        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    textAlign: "center",
-                    padding: "24px",
-                    color: "#8b929a",
-                } }, "\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430")));
-    }
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "8px 12px",
-                    backgroundColor: "#5c1313",
-                    borderRadius: "6px",
-                    marginBottom: "8px",
-                    fontSize: "11px",
-                    color: "#ffcdd2",
-                    border: "1px solid #f44336",
-                } }, error))),
-        window.SP_REACT.createElement(FanCurveEditor, { config: config, status: status || undefined, onConfigChange: handleConfigChange, onSave: handleSave, isLoading: isSaving })));
-};
-
-/**
- * Type definitions for Dynamic Manual Mode feature.
- *
- * Feature: manual-dynamic-mode
- * Requirements: 1.1, 1.2, 1.3, 1.4
- */
-/**
- * Validation error codes for different failure types.
- *
- * Requirements: 7.1, 7.2, 7.3, 7.4
- */
-var ValidationErrorCode;
-(function (ValidationErrorCode) {
-    /** Minimum voltage is greater than maximum voltage */
-    ValidationErrorCode["MIN_GREATER_THAN_MAX"] = "MIN_GREATER_THAN_MAX";
-    /** Voltage value is below platform minimum limit */
-    ValidationErrorCode["BELOW_PLATFORM_MIN"] = "BELOW_PLATFORM_MIN";
-    /** Voltage value is above 0mV */
-    ValidationErrorCode["ABOVE_ZERO"] = "ABOVE_ZERO";
-    /** Threshold is outside valid range (0-100) */
-    ValidationErrorCode["INVALID_THRESHOLD"] = "INVALID_THRESHOLD";
-    /** Configuration exceeds platform safety limits */
-    ValidationErrorCode["EXCEEDS_SAFETY_LIMIT"] = "EXCEEDS_SAFETY_LIMIT";
-    /** Invalid core ID */
-    ValidationErrorCode["INVALID_CORE_ID"] = "INVALID_CORE_ID";
-    /** Generic validation failure */
-    ValidationErrorCode["VALIDATION_FAILED"] = "VALIDATION_FAILED";
-})(ValidationErrorCode || (ValidationErrorCode = {}));
-/**
- * Connection status for error banners.
- *
- * Requirements: Error banners for connection issues
- */
-var ConnectionStatus;
-(function (ConnectionStatus) {
-    /** Connected and operational */
-    ConnectionStatus["CONNECTED"] = "CONNECTED";
-    /** Attempting to reconnect */
-    ConnectionStatus["RECONNECTING"] = "RECONNECTING";
-    /** Connection lost */
-    ConnectionStatus["DISCONNECTED"] = "DISCONNECTED";
-    /** Hardware error detected */
-    ConnectionStatus["HARDWARE_ERROR"] = "HARDWARE_ERROR";
-})(ConnectionStatus || (ConnectionStatus = {}));
-
-/**
- * CoreTabs component for per-core navigation in Dynamic Manual Mode.
- *
- * Feature: manual-dynamic-mode
- * Requirements: 1.1, 4.1
- *
- * Provides tab navigation for cores 0-3 with:
- * - Tab selection handler
- * - Active core indicator
- * - Hidden in Simple Mode
- * - Gamepad navigation support (D-pad Up/Down)
- */
-
-/**
- * CoreTabs component.
- *
- * Renders tabs for cores 0-3 with gamepad navigation support.
- * Hidden in Simple Mode per Requirements 4.1.
- *
- * Property 15: Gamepad core navigation
- * For any D-pad Up or Down input, the selected core index SHALL change by ±1
- * (wrapping at boundaries 0 and 3).
- *
- * Requirements: 1.1, 4.1, 8.1
- */
-const CoreTabs = ({ selectedCore, onCoreSelect, mode, }) => {
-    /**
-     * Handle gamepad navigation for core selection.
-     * Requirements: 8.1
-     *
-     * Property 15: Gamepad core navigation
-     * D-pad Up/Down changes selected core with wrapping.
-     */
-    SP_REACT.useEffect(() => {
-        const handleGamepadInput = (e) => {
-            // Only handle in expert mode
-            if (mode !== 'expert')
-                return;
-            // D-pad Up: Previous core (with wrapping)
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                const newCore = selectedCore === 0 ? 3 : selectedCore - 1;
-                onCoreSelect(newCore);
-            }
-            // D-pad Down: Next core (with wrapping)
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                const newCore = selectedCore === 3 ? 0 : selectedCore + 1;
-                onCoreSelect(newCore);
-            }
-        };
-        window.addEventListener('keydown', handleGamepadInput);
-        return () => {
-            window.removeEventListener('keydown', handleGamepadInput);
-        };
-    }, [selectedCore, onCoreSelect, mode]);
-    /**
-     * Hide tabs in Simple Mode.
-     * Requirements: 4.1
-     */
-    if (mode === 'simple') {
-        return null;
-    }
-    /**
-     * Render tabs for cores 0-3 - Compact for QAM.
-     * Requirements: 1.1
-     */
-    return (window.SP_REACT.createElement("div", { style: {
-            marginBottom: '8px',
-        } },
-        window.SP_REACT.createElement(DFL.Focusable, { style: {
-                display: 'flex',
-                gap: '4px',
-            }, "flow-children": "horizontal" }, [0, 1, 2, 3].map((coreId) => {
-            const isActive = coreId === selectedCore;
-            return (window.SP_REACT.createElement(FocusableButton, { key: coreId, onClick: () => onCoreSelect(coreId), style: {
-                    flex: 1,
-                }, focusColor: isActive ? '#4caf50' : '#1a9fff' },
-                window.SP_REACT.createElement("div", { style: {
-                        padding: '8px 6px',
-                        backgroundColor: isActive ? '#1b5e20' : '#3d4450',
-                        borderRadius: '4px',
-                        textAlign: 'center',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        color: isActive ? '#fff' : '#8b929a',
-                        transition: 'all 0.2s ease',
-                        position: 'relative',
-                    } },
-                    isActive && (window.SP_REACT.createElement("div", { style: {
-                            position: 'absolute',
-                            top: '3px',
-                            right: '3px',
-                            width: '5px',
-                            height: '5px',
-                            borderRadius: '50%',
-                            backgroundColor: '#4caf50',
-                            boxShadow: '0 0 4px #4caf50',
-                        } })),
-                    window.SP_REACT.createElement("div", null,
-                        "Core ",
-                        coreId))));
-        }))));
-};
-
-/**
- * VoltageSliders component for dynamic voltage configuration.
- *
- * Feature: manual-dynamic-mode
- * Requirements: 1.2, 1.3, 1.4, 5.2, 5.4
- *
- * Provides three sliders for configuring voltage curves:
- * - MinimalValue: Voltage offset at low CPU load (-100 to 0 mV)
- * - MaximumValue: Voltage offset at high CPU load (-100 to 0 mV)
- * - Threshold: CPU load percentage where transition occurs (0 to 100%)
- *
- * Property 1: Slider value clamping
- * All slider values are clamped to their valid ranges.
- *
- * UI Polish:
- * - Tooltips for each control explaining their purpose
- * - Smooth transitions for focus indicators
- * - Responsive layout for different screen sizes
- */
-
-/**
- * Clamp a value to a specified range.
- * Property 1: Slider value clamping
- *
- * @param value - Value to clamp
- * @param min - Minimum allowed value
- * @param max - Maximum allowed value
- * @returns Clamped value within [min, max]
- */
-const clamp = (value, min, max) => {
-    return Math.max(min, Math.min(max, value));
-};
-/**
- * VoltageSliders component.
- * Requirements: 1.2, 1.3, 1.4, 8.3, 8.5
- * UI Polish: Tooltips, smooth transitions, responsive layout
- */
-const VoltageSliders = ({ coreId, config, onChange, disabled = false, validationErrors = [], focusedSlider = null, onSliderFocus, }) => {
-    // Tooltip visibility state
-    const [showMinTooltip, setShowMinTooltip] = SP_REACT.useState(false);
-    const [showMaxTooltip, setShowMaxTooltip] = SP_REACT.useState(false);
-    const [showThresholdTooltip, setShowThresholdTooltip] = SP_REACT.useState(false);
-    /**
-     * Handle MinimalValue slider change.
-     * Requirements: 1.2
-     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
-     */
-    const handleMinChange = (value) => {
-        const clamped = clamp(Math.round(value), -100, 0);
-        onChange('min_mv', clamped);
-    };
-    /**
-     * Handle MaximumValue slider change.
-     * Requirements: 1.3
-     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
-     */
-    const handleMaxChange = (value) => {
-        const clamped = clamp(Math.round(value), -100, 0);
-        onChange('max_mv', clamped);
-    };
-    /**
-     * Handle Threshold slider change.
-     * Requirements: 1.4
-     * Property 1: Slider value clamping - values are clamped to 0 to 100%
-     */
-    const handleThresholdChange = (value) => {
-        const clamped = clamp(Math.round(value), 0, 100);
-        onChange('threshold', clamped);
-    };
-    /**
-     * Get validation errors for a specific field.
-     */
-    const getFieldErrors = (field) => {
-        return validationErrors
-            .filter(err => err.field === field && (err.core_id === undefined || err.core_id === coreId))
-            .map(err => err.message);
-    };
-    const minErrors = getFieldErrors('min_mv');
-    const maxErrors = getFieldErrors('max_mv');
-    const thresholdErrors = getFieldErrors('threshold');
-    /**
-     * Tooltip component for displaying help text.
-     */
-    const Tooltip = ({ text, visible }) => {
-        if (!visible)
-            return null;
-        return (window.SP_REACT.createElement("div", { style: {
-                position: 'absolute',
-                top: '-60px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: '#1a1f2c',
-                border: '2px solid #1a9fff',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '11px',
-                color: '#fff',
-                whiteSpace: 'nowrap',
-                zIndex: 1000,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-                animation: 'tooltipFadeIn 0.2s ease',
-            } },
-            text,
-            window.SP_REACT.createElement("div", { style: {
-                    position: 'absolute',
-                    bottom: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 0,
-                    height: 0,
-                    borderLeft: '8px solid transparent',
-                    borderRight: '8px solid transparent',
-                    borderTop: '8px solid #1a9fff',
-                } })));
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('min'), onMouseEnter: () => setShowMinTooltip(true), onMouseLeave: () => setShowMinTooltip(false), style: {
-                        border: focusedSlider === 'min' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'min' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Minimal Value", description: `Voltage offset at low CPU load: ${config.min_mv} mV`, value: config.min_mv, min: -100, max: 0, step: 1, onChange: handleMinChange, disabled: disabled, showValue: false })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowMinTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowMinTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "Conservative voltage offset applied when CPU load is below threshold", visible: showMinTooltip })),
-            minErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
-                    marginTop: '4px',
-                    padding: '6px 8px',
-                    backgroundColor: '#5c1313',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
-                } }, minErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('max'), onMouseEnter: () => setShowMaxTooltip(true), onMouseLeave: () => setShowMaxTooltip(false), style: {
-                        border: focusedSlider === 'max' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'max' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Maximum Value", description: `Voltage offset at high CPU load: ${config.max_mv} mV`, value: config.max_mv, min: -100, max: 0, step: 1, onChange: handleMaxChange, disabled: disabled, showValue: false })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowMaxTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowMaxTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "Aggressive voltage offset applied when CPU load is above threshold", visible: showMaxTooltip })),
-            maxErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
-                    marginTop: '4px',
-                    padding: '6px 8px',
-                    backgroundColor: '#5c1313',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
-                } }, maxErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
-                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('threshold'), onMouseEnter: () => setShowThresholdTooltip(true), onMouseLeave: () => setShowThresholdTooltip(false), style: {
-                        border: focusedSlider === 'threshold' ? '3px solid #1a9fff' : '3px solid transparent',
-                        borderRadius: '8px',
-                        boxShadow: focusedSlider === 'threshold' ? '0 0 12px #1a9fff99' : 'none',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                    } },
-                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                            window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", description: `CPU load transition point: ${config.threshold}%`, value: config.threshold, min: 0, max: 100, step: 1, onChange: handleThresholdChange, disabled: disabled, showValue: false })),
-                        window.SP_REACT.createElement(FaInfoCircle, { style: {
-                                color: '#8b929a',
-                                fontSize: '14px',
-                                flexShrink: 0,
-                                opacity: 0.7,
-                                transition: 'opacity 0.2s ease',
-                            }, onMouseEnter: (e) => {
-                                e.currentTarget.style.opacity = '1';
-                                setShowThresholdTooltip(true);
-                            }, onMouseLeave: (e) => {
-                                e.currentTarget.style.opacity = '0.7';
-                                setShowThresholdTooltip(false);
-                            } }))),
-                window.SP_REACT.createElement(Tooltip, { text: "CPU load percentage where voltage transitions from minimal to maximum", visible: showThresholdTooltip })),
-            thresholdErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
-                    marginTop: '4px',
-                    padding: '6px 8px',
-                    backgroundColor: '#5c1313',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    color: '#ff9800',
-                    animation: 'errorFadeIn 0.3s ease',
-                } }, thresholdErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
-        window.SP_REACT.createElement("style", null, `
-          @keyframes tooltipFadeIn {
-            from {
-              opacity: 0;
-              transform: translateX(-50%) translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(-50%) translateY(0);
-            }
-          }
-          
-          @keyframes errorFadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `)));
-};
-
-/**
- * RPC retry utility with exponential backoff.
- *
- * Feature: manual-dynamic-mode
- * Requirements: Error handling with retry logic
- *
- * Provides automatic retry logic for RPC calls with exponential backoff
- * to handle transient network errors and connection issues.
- */
-/**
- * Default retry configuration.
- * - 3 retry attempts
- * - 500ms initial delay
- * - 2x backoff multiplier (500ms, 1000ms, 2000ms)
- * - 5000ms maximum delay
- */
-const DEFAULT_RETRY_CONFIG = {
-    maxRetries: 3,
-    initialDelay: 500,
-    backoffMultiplier: 2,
-    maxDelay: 5000,
-};
-/**
- * Sleep for a specified duration.
- *
- * @param ms - Duration in milliseconds
- */
-const sleep = (ms) => {
-    return new Promise(resolve => setTimeout(resolve, ms));
-};
-/**
- * Calculate delay for a retry attempt using exponential backoff.
- *
- * @param attempt - Current attempt number (0-indexed)
- * @param config - Retry configuration
- * @returns Delay in milliseconds
- */
-const calculateDelay = (attempt, config) => {
-    const delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
-    return Math.min(delay, config.maxDelay);
-};
-/**
- * Determine if an error is retryable.
- *
- * Retryable errors include:
- * - Network errors (connection lost, timeout)
- * - Temporary server errors (503, 504)
- * - RPC errors marked as recoverable
- *
- * Non-retryable errors include:
- * - Validation errors (400)
- * - Permission errors (403)
- * - Not found errors (404)
- * - Hardware errors
- *
- * @param error - Error object
- * @returns True if error is retryable
- */
-const isRetryableError = (error) => {
-    // Network errors
-    if (error.message?.includes('network') ||
-        error.message?.includes('timeout') ||
-        error.message?.includes('connection')) {
-        return true;
-    }
-    // RPC errors with recoverable flag
-    if (error.recoverable === true) {
-        return true;
-    }
-    // HTTP status codes
-    if (error.status) {
-        // Retry on 503 (Service Unavailable) and 504 (Gateway Timeout)
-        if (error.status === 503 || error.status === 504) {
-            return true;
-        }
-        // Don't retry on client errors (4xx) or hardware errors
-        if (error.status >= 400 && error.status < 500) {
-            return false;
-        }
-    }
-    // Hardware errors are not retryable
-    if (error.code === 'HARDWARE_ERROR' || error.message?.includes('hardware')) {
-        return false;
-    }
-    // Default to retryable for unknown errors
-    return true;
-};
-/**
- * Execute an RPC call with automatic retry logic.
- *
- * Retries the operation up to maxRetries times with exponential backoff
- * if the error is retryable. Logs retry attempts for debugging.
- *
- * @param operation - Async function to execute
- * @param config - Retry configuration (optional, uses defaults)
- * @param operationName - Name for logging (optional)
- * @returns Promise resolving to operation result
- * @throws Last error if all retries fail
- *
- * @example
- * ```typescript
- * const result = await withRetry(
- *   () => api.callPluginMethod('get_dynamic_config', {}),
- *   undefined,
- *   'get_dynamic_config'
- * );
- * ```
- */
-async function withRetry(operation, config = DEFAULT_RETRY_CONFIG, operationName = 'RPC call') {
-    let lastError;
-    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-        try {
-            // Execute the operation
-            const result = await operation();
-            // Log successful retry
-            if (attempt > 0) {
-                console.log(`[RPCRetry] ${operationName} succeeded on attempt ${attempt + 1}`);
-            }
-            return result;
-        }
-        catch (error) {
-            lastError = error;
-            // Check if we should retry
-            const shouldRetry = attempt < config.maxRetries && isRetryableError(error);
-            if (shouldRetry) {
-                const delay = calculateDelay(attempt, config);
-                console.warn(`[RPCRetry] ${operationName} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), ` +
-                    `retrying in ${delay}ms:`, error);
-                await sleep(delay);
-            }
-            else {
-                // No more retries or non-retryable error
-                if (attempt >= config.maxRetries) {
-                    console.error(`[RPCRetry] ${operationName} failed after ${config.maxRetries + 1} attempts:`, error);
-                }
-                else {
-                    console.error(`[RPCRetry] ${operationName} failed with non-retryable error:`, error);
-                }
-                throw error;
-            }
-        }
-    }
-    // Should never reach here, but TypeScript needs it
-    throw lastError;
-}
-
-/**
- * Last Known Good (LKG) configuration storage utility.
- *
- * Feature: manual-dynamic-mode
- * Requirements: 7.4 - LKG configuration storage and recovery
- *
- * Manages storage and retrieval of stable configurations for error recovery.
- * A configuration is marked as "stable" after running successfully for 30 seconds.
- */
-/**
- * Storage key for LKG configuration in localStorage.
- */
-const LKG_STORAGE_KEY = 'dynamicMode_lkg';
-/**
- * Minimum duration (in seconds) a configuration must be stable before
- * being marked as Last Known Good.
- */
-const STABILITY_THRESHOLD_SECONDS = 30;
-/**
- * Save a configuration as Last Known Good.
- *
- * Stores the configuration with timestamp and stability duration.
- * This should be called after a configuration has been running
- * successfully for at least STABILITY_THRESHOLD_SECONDS.
- *
- * @param config - Configuration to save as LKG
- * @param stableDuration - Duration in seconds the config has been stable
- * @returns True if saved successfully
- *
- * Requirements: 7.4
- */
-function saveLKG(config, stableDuration) {
-    try {
-        const lkg = {
-            config,
-            timestamp: Date.now(),
-            stable_duration: stableDuration,
-        };
-        localStorage.setItem(LKG_STORAGE_KEY, JSON.stringify(lkg));
-        console.log(`[LKG] Saved Last Known Good config (stable for ${stableDuration}s)`);
-        return true;
-    }
-    catch (error) {
-        console.error('[LKG] Failed to save Last Known Good config:', error);
-        return false;
-    }
-}
-/**
- * Load the Last Known Good configuration.
- *
- * Retrieves the most recently saved stable configuration.
- * Returns null if no LKG configuration exists or if loading fails.
- *
- * @returns Last Known Good configuration or null
- *
- * Requirements: 7.4
- */
-function loadLKG() {
-    try {
-        const stored = localStorage.getItem(LKG_STORAGE_KEY);
-        if (!stored) {
-            console.log('[LKG] No Last Known Good config found');
-            return null;
-        }
-        const lkg = JSON.parse(stored);
-        // Validate structure
-        if (!lkg.config || !lkg.timestamp || typeof lkg.stable_duration !== 'number') {
-            console.warn('[LKG] Invalid Last Known Good config structure');
-            return null;
-        }
-        console.log(`[LKG] Loaded Last Known Good config from ${new Date(lkg.timestamp).toLocaleString()} ` +
-            `(stable for ${lkg.stable_duration}s)`);
-        return lkg;
-    }
-    catch (error) {
-        console.error('[LKG] Failed to load Last Known Good config:', error);
-        return null;
-    }
-}
-/**
- * Check if a configuration has been stable long enough to be marked as LKG.
- *
- * @param stableDuration - Duration in seconds the config has been stable
- * @returns True if duration meets the stability threshold
- */
-function isStableEnoughForLKG(stableDuration) {
-    return stableDuration >= STABILITY_THRESHOLD_SECONDS;
-}
-/**
- * Stability tracker for monitoring configuration stability.
- *
- * Tracks how long a configuration has been running without errors
- * and automatically saves it as LKG when it reaches the stability threshold.
- */
-class StabilityTracker {
-    constructor() {
-        this.startTime = null;
-        this.config = null;
-        this.checkInterval = null;
-    }
-    /**
-     * Start tracking stability for a configuration.
-     *
-     * @param config - Configuration to track
-     */
-    start(config) {
-        this.stop(); // Stop any existing tracking
-        this.config = config;
-        this.startTime = Date.now();
-        console.log('[LKG] Started stability tracking');
-        // Check stability every 5 seconds
-        this.checkInterval = setInterval(() => {
-            this.checkStability();
-        }, 5000);
-    }
-    /**
-     * Stop tracking stability.
-     */
-    stop() {
-        if (this.checkInterval) {
-            clearInterval(this.checkInterval);
-            this.checkInterval = null;
-        }
-        this.startTime = null;
-        this.config = null;
-        console.log('[LKG] Stopped stability tracking');
-    }
-    /**
-     * Check if configuration has been stable long enough and save as LKG.
-     */
-    checkStability() {
-        if (!this.startTime || !this.config) {
-            return;
-        }
-        const stableDuration = (Date.now() - this.startTime) / 1000;
-        if (isStableEnoughForLKG(stableDuration)) {
-            // Save as LKG
-            saveLKG(this.config, stableDuration);
-            // Stop tracking - we've saved it
-            this.stop();
-        }
-    }
-    /**
-     * Get current stability duration in seconds.
-     *
-     * @returns Duration in seconds, or 0 if not tracking
-     */
-    getStabilityDuration() {
-        if (!this.startTime) {
-            return 0;
-        }
-        return (Date.now() - this.startTime) / 1000;
-    }
-}
-
-/**
- * DynamicManualMode component for per-core dynamic voltage control.
- *
- * Feature: manual-dynamic-mode
- * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4
- *
- * Provides granular per-core dynamic voltage configuration with:
- * - Simple Mode: Unified controls for all cores
- * - Expert Mode: Per-core configuration
- * - Real-time voltage curve visualization
- * - Live metrics monitoring (500ms polling)
- * - Configuration persistence (localStorage + backend)
- * - Safety validation and error handling
- */
-
-/**
- * Safe default configuration values.
- * Requirements: 7.5
- */
-const SAFE_DEFAULTS = {
-    min_mv: -30,
-    max_mv: -15,
-    threshold: 50,
-};
-/**
- * Create default configuration for all cores.
- */
-const createDefaultConfig = () => ({
-    mode: 'simple',
-    cores: [0, 1, 2, 3].map(core_id => ({
-        core_id,
-        ...SAFE_DEFAULTS,
-    })),
-    version: 1,
-});
-/**
- * DynamicManualMode error boundary wrapper.
- * Requirements: Error handling
- *
- * Catches React errors and provides recovery options:
- * - Retry: Attempt to re-render the component
- * - Restore LKG: Load Last Known Good configuration
- * - Reset: Reset to safe defaults
- */
-class DynamicModeErrorBoundary extends SP_REACT.Component {
-    constructor(props) {
-        super(props);
-        this.handleRetry = () => {
-            this.setState({ hasError: false, error: null });
-        };
-        this.handleRestoreLKG = () => {
-            try {
-                const lkg = loadLKG();
-                if (lkg) {
-                    // Save LKG config to localStorage for component to load
-                    localStorage.setItem('dynamicMode', JSON.stringify(lkg.config));
-                    console.log('[DynamicManualMode] Restored Last Known Good config');
-                }
-            }
-            catch (e) {
-                console.error('[DynamicManualMode] Failed to restore LKG:', e);
-            }
-            this.setState({ hasError: false, error: null });
-        };
-        this.handleReset = () => {
-            try {
-                // Clear localStorage to force safe defaults
-                localStorage.removeItem('dynamicMode');
-                console.log('[DynamicManualMode] Reset to safe defaults');
-            }
-            catch (e) {
-                console.error('[DynamicManualMode] Failed to reset:', e);
-            }
-            this.setState({ hasError: false, error: null });
-        };
-        this.state = { hasError: false, error: null };
-    }
-    static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-    }
-    componentDidCatch(error, errorInfo) {
-        console.error('[DynamicManualMode] Error caught by boundary:', error, errorInfo);
-        // Log to backend for diagnostics
-        try {
-            // TODO: Send error report to backend
-            console.error('[DynamicManualMode] Error details:', {
-                message: error.message,
-                stack: error.stack,
-                componentStack: errorInfo.componentStack,
-            });
-        }
-        catch (e) {
-            console.error('[DynamicManualMode] Failed to log error:', e);
-        }
-    }
-    render() {
-        if (this.state.hasError) {
-            return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
-                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: '16px',
-                            backgroundColor: '#b71c1c',
-                            borderRadius: '8px',
-                            color: '#fff',
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontWeight: 'bold',
-                                marginBottom: '8px'
-                            } },
-                            window.SP_REACT.createElement(FaExclamationTriangle, null),
-                            window.SP_REACT.createElement("span", null, "Error Loading Dynamic Mode")),
-                        window.SP_REACT.createElement("div", { style: { fontSize: '12px', marginBottom: '12px' } }, this.state.error?.message || 'Unknown error'),
-                        window.SP_REACT.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRetry, style: { width: '100%' } },
-                                window.SP_REACT.createElement("div", { style: {
-                                        padding: '8px',
-                                        backgroundColor: '#1a9fff',
-                                        borderRadius: '6px',
-                                        textAlign: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px',
-                                    } }, "Retry")),
-                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRestoreLKG, style: { width: '100%' } },
-                                window.SP_REACT.createElement("div", { style: {
-                                        padding: '8px',
-                                        backgroundColor: '#ff9800',
-                                        borderRadius: '6px',
-                                        textAlign: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px',
-                                    } }, "Restore Last Stable")),
-                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleReset, style: { width: '100%' } },
-                                window.SP_REACT.createElement("div", { style: {
-                                        padding: '8px',
-                                        backgroundColor: '#3d4450',
-                                        borderRadius: '6px',
-                                        textAlign: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px',
-                                    } }, "Reset to Defaults")))))));
-        }
-        return this.props.children;
-    }
-}
-/**
- * Main DynamicManualMode component.
- * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4, 8.1, 8.2, 8.3, 8.4, 8.5
- */
-const DynamicManualModeInternal = () => {
-    const api = useApi();
-    // Component state
-    const [config, setConfig] = SP_REACT.useState(createDefaultConfig());
-    const [selectedCore, setSelectedCore] = SP_REACT.useState(0);
-    const [isActive, setIsActive] = SP_REACT.useState(false);
-    const [isLoading, setIsLoading] = SP_REACT.useState(false);
-    const [error, setError] = SP_REACT.useState(null);
-    const [validationErrors, setValidationErrors] = SP_REACT.useState([]);
-    const [metrics, setMetrics] = SP_REACT.useState(new Map());
-    const [showDangerWarning, setShowDangerWarning] = SP_REACT.useState(false);
-    const [platformLimits, setPlatformLimits] = SP_REACT.useState({ min: -100, max: 0 });
-    // Connection status tracking
-    // Requirements: Error banners for connection issues
-    const [connectionStatus, setConnectionStatus] = SP_REACT.useState(ConnectionStatus.CONNECTED);
-    const [connectionError, setConnectionError] = SP_REACT.useState(null);
-    // LKG tracking
-    // Requirements: 7.4 - Last Known Good configuration
-    const stabilityTrackerRef = SP_REACT.useRef(new StabilityTracker());
-    const [hasLKG, setHasLKG] = SP_REACT.useState(false);
-    // Gamepad navigation state
-    // Requirements: 8.1, 8.2, 8.3, 8.5
-    const [focusedSlider, setFocusedSlider] = SP_REACT.useState(null);
-    // Polling interval ref
-    const pollingIntervalRef = SP_REACT.useRef(null);
-    /**
-     * Load configuration and platform limits on mount.
-     * Requirements: 6.1, 6.3, 6.4, 7.2, 7.3
-     *
-     * Property 10: Configuration persistence round-trip
-     * Loads configuration with fallback chain: localStorage → backend → safe defaults
-     *
-     * Enhanced with:
-     * - RPC retry logic for transient errors
-     * - Connection status tracking
-     * - LKG availability check
-     */
-    SP_REACT.useEffect(() => {
-        const loadConfig = async () => {
-            setIsLoading(true);
-            setConnectionStatus(ConnectionStatus.CONNECTED);
-            try {
-                // Check if LKG is available
-                const lkg = loadLKG();
-                setHasLKG(lkg !== null);
-                // Load platform limits first with retry logic
-                // Requirements: 7.2, 7.3
-                try {
-                    const limitsResponse = await withRetry(() => api.callPluginMethod('get_platform_limits', {}), DEFAULT_RETRY_CONFIG, 'get_platform_limits');
-                    if (limitsResponse.success && limitsResponse.limits) {
-                        setPlatformLimits(limitsResponse.limits);
-                        console.log('[DynamicManualMode] Platform limits:', limitsResponse.limits);
-                    }
-                }
-                catch (limitsError) {
-                    console.warn('[DynamicManualMode] Failed to load platform limits, using defaults:', limitsError);
-                    // Don't fail the entire load - continue with defaults
-                }
-                // Try localStorage first
-                // Requirements: 6.3
-                try {
-                    const storedConfig = localStorage.getItem('dynamicMode');
-                    if (storedConfig) {
-                        const parsed = JSON.parse(storedConfig);
-                        // Validate the loaded config has required structure
-                        if (parsed.cores && Array.isArray(parsed.cores) && parsed.cores.length === 4) {
-                            setConfig(parsed);
-                            console.log('[DynamicManualMode] Loaded config from localStorage');
-                            setConnectionStatus(ConnectionStatus.CONNECTED);
-                            return;
-                        }
-                        else {
-                            console.warn('[DynamicManualMode] Invalid localStorage config structure, falling back');
-                        }
-                    }
-                }
-                catch (localStorageError) {
-                    // Handle localStorage errors gracefully
-                    // Requirements: 6.4
-                    console.warn('[DynamicManualMode] localStorage error:', localStorageError);
-                    // Continue to backend fallback
-                }
-                // Fallback to backend with retry logic
-                // Requirements: 6.4
-                try {
-                    const response = await withRetry(() => api.callPluginMethod('get_dynamic_config', {}), DEFAULT_RETRY_CONFIG, 'get_dynamic_config');
-                    if (response.success && response.config) {
-                        setConfig(response.config);
-                        console.log('[DynamicManualMode] Loaded config from backend');
-                        setConnectionStatus(ConnectionStatus.CONNECTED);
-                        return;
-                    }
-                }
-                catch (backendError) {
-                    console.warn('[DynamicManualMode] Backend load error:', backendError);
-                    // Update connection status based on error type
-                    if (backendError.message?.includes('network') ||
-                        backendError.message?.includes('connection')) {
-                        setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                        setConnectionError('Connection to backend lost');
-                    }
-                    else if (backendError.message?.includes('hardware')) {
-                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                        setConnectionError('Hardware error detected');
-                    }
-                    // Continue to safe defaults
-                }
-                // Use safe defaults if both localStorage and backend fail
-                // Requirements: 6.4
-                setConfig(createDefaultConfig());
-                console.log('[DynamicManualMode] Using safe defaults');
-            }
-            catch (e) {
-                console.error('[DynamicManualMode] Failed to load config:', e);
-                setConfig(createDefaultConfig());
-                setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                setConnectionError(e.message || 'Unknown error');
-            }
-            finally {
-                setIsLoading(false);
-            }
-        };
-        loadConfig();
-        // Cleanup stability tracker on unmount
-        return () => {
-            stabilityTrackerRef.current.stop();
-        };
-    }, [api]);
-    /**
-     * Start metrics polling when active.
-     * Requirements: 3.1, 3.5
-     *
-     * Enhanced with:
-     * - Connection error handling
-     * - Automatic reconnection attempts
-     */
-    SP_REACT.useEffect(() => {
-        if (isActive) {
-            // Start polling
-            pollingIntervalRef.current = setInterval(async () => {
-                try {
-                    const response = await api.callPluginMethod('get_core_metrics', { core_id: selectedCore });
-                    if (response.success && response.metrics) {
-                        setMetrics(prev => {
-                            const updated = new Map(prev);
-                            updated.set(selectedCore, response.metrics);
-                            return updated;
-                        });
-                        // Clear connection errors on successful poll
-                        if (connectionStatus !== ConnectionStatus.CONNECTED) {
-                            setConnectionStatus(ConnectionStatus.CONNECTED);
-                            setConnectionError(null);
-                            console.log('[DynamicManualMode] Connection restored');
-                        }
-                    }
-                    else {
-                        // Handle RPC error response
-                        if (response.error?.includes('hardware')) {
-                            setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                            setConnectionError(response.error);
-                        }
-                    }
-                }
-                catch (e) {
-                    console.error('[DynamicManualMode] Failed to poll metrics:', e);
-                    // Update connection status based on error
-                    if (e.message?.includes('network') || e.message?.includes('connection')) {
-                        if (connectionStatus === ConnectionStatus.CONNECTED) {
-                            setConnectionStatus(ConnectionStatus.RECONNECTING);
-                            setConnectionError('Connection lost, attempting to reconnect...');
-                        }
-                    }
-                    else if (e.message?.includes('hardware')) {
-                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                        setConnectionError('Hardware error detected');
-                        // Stop dynamic mode on hardware error
-                        handleStop();
-                    }
-                }
-            }, 500);
-        }
-        else {
-            // Stop polling
-            if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-            }
-        }
-        return () => {
-            if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-            }
-        };
-    }, [isActive, selectedCore, api, connectionStatus]);
-    /**
-     * Validate current configuration.
-     * Requirements: 7.1, 7.2, 7.3
-     *
-     * Returns validation errors if configuration is invalid.
-     */
-    const validateConfig = SP_REACT.useCallback(() => {
-        const errors = [];
-        const coresToValidate = config.mode === 'simple' ? [config.cores[0]] : config.cores;
-        for (const core of coresToValidate) {
-            // Check min <= max ordering
-            // Requirements: 7.1
-            // Property 12: Validation min-max ordering
-            if (core.min_mv > core.max_mv) {
-                errors.push({
-                    field: 'config',
-                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) must be ≤ Maximum Value (${core.max_mv}mV)`,
-                    code: 'MIN_GREATER_THAN_MAX',
-                    core_id: core.core_id,
-                });
-            }
-            // Check platform limits
-            // Requirements: 7.2, 7.3
-            // Property 13: Voltage lower bound clamping
-            // Property 14: Voltage upper bound clamping
-            if (core.min_mv < platformLimits.min) {
-                errors.push({
-                    field: 'min_mv',
-                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is below platform limit (${platformLimits.min}mV)`,
-                    code: 'BELOW_PLATFORM_MIN',
-                    core_id: core.core_id,
-                });
-            }
-            if (core.max_mv < platformLimits.min) {
-                errors.push({
-                    field: 'max_mv',
-                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is below platform limit (${platformLimits.min}mV)`,
-                    code: 'BELOW_PLATFORM_MIN',
-                    core_id: core.core_id,
-                });
-            }
-            if (core.min_mv > platformLimits.max) {
-                errors.push({
-                    field: 'min_mv',
-                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is above 0mV`,
-                    code: 'ABOVE_ZERO',
-                    core_id: core.core_id,
-                });
-            }
-            if (core.max_mv > platformLimits.max) {
-                errors.push({
-                    field: 'max_mv',
-                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is above 0mV`,
-                    code: 'ABOVE_ZERO',
-                    core_id: core.core_id,
-                });
-            }
-            // Check threshold range
-            if (core.threshold < 0 || core.threshold > 100) {
-                errors.push({
-                    field: 'threshold',
-                    message: `Core ${core.core_id}: Threshold (${core.threshold}%) must be between 0 and 100`,
-                    code: 'INVALID_THRESHOLD',
-                    core_id: core.core_id,
-                });
-            }
-        }
-        return errors;
-    }, [config, platformLimits]);
-    /**
-     * Check if configuration is dangerous.
-     * Requirements: 7.4
-     *
-     * A configuration is dangerous if any voltage is below -50mV.
-     */
-    const isDangerousConfig = SP_REACT.useCallback(() => {
-        const DANGER_THRESHOLD = -50;
-        const coresToCheck = config.mode === 'simple' ? [config.cores[0]] : config.cores;
-        return coresToCheck.some(core => core.min_mv < DANGER_THRESHOLD || core.max_mv < DANGER_THRESHOLD);
-    }, [config]);
-    /**
-     * Reset configuration to safe defaults.
-     * Requirements: 7.5
-     */
-    const handleResetToDefaults = SP_REACT.useCallback(() => {
-        setConfig(createDefaultConfig());
-        setValidationErrors([]);
-        setError(null);
-        setShowDangerWarning(false);
-        console.log('[DynamicManualMode] Reset to safe defaults');
-    }, []);
-    /**
-     * Restore Last Known Good configuration.
-     * Requirements: 7.4
-     *
-     * Loads the most recent stable configuration from LKG storage.
-     * This is used for error recovery when the current configuration
-     * causes issues.
-     */
-    const handleRestoreLKG = SP_REACT.useCallback(() => {
-        const lkg = loadLKG();
-        if (!lkg) {
-            setError('No Last Known Good configuration available');
-            return;
-        }
-        setConfig(lkg.config);
-        setValidationErrors([]);
-        setError(null);
-        setShowDangerWarning(false);
-        console.log(`[DynamicManualMode] Restored Last Known Good config from ` +
-            `${new Date(lkg.timestamp).toLocaleString()} (stable for ${lkg.stable_duration}s)`);
-    }, []);
-    /**
-     * Handle mode toggle (Simple/Expert).
-     * Requirements: 4.1, 4.4, 4.5
-     *
-     * Property 8: Mode switching configuration preservation
-     * When switching modes, all core configurations are preserved.
-     */
-    const handleModeToggle = SP_REACT.useCallback(() => {
-        setConfig(prev => {
-            const newMode = prev.mode === 'simple' ? 'expert' : 'simple';
-            // Configuration is always preserved when switching modes
-            // Requirements: 4.4
-            // In Simple Mode, we display Core 0's config but all cores retain their values
-            // Requirements: 4.5
-            return { ...prev, mode: newMode };
-        });
-    }, []);
-    /**
-     * Handle Apply button click.
-     * Requirements: 1.5, 6.1, 6.2, 4.3, 7.1, 7.4
-     */
-    const handleApply = SP_REACT.useCallback(async () => {
-        // Validate configuration first
-        // Requirements: 7.1
-        const errors = validateConfig();
-        if (errors.length > 0) {
-            setValidationErrors(errors);
-            setError('Configuration validation failed. Please fix the errors below.');
-            return;
-        }
-        // Check for dangerous configuration
-        // Requirements: 7.4
-        if (isDangerousConfig()) {
-            setShowDangerWarning(true);
-            return;
-        }
-        // Proceed with applying configuration
-        await applyConfiguration();
-    }, [validateConfig, isDangerousConfig]);
-    /**
-     * Apply configuration after validation passes.
-     * Requirements: 1.5, 6.1, 6.2, 4.3
-     *
-     * Enhanced with:
-     * - RPC retry logic for transient errors
-     * - Connection status tracking
-     * - Hardware error handling
-     */
-    const applyConfiguration = SP_REACT.useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        setValidationErrors([]);
-        setShowDangerWarning(false);
-        setConnectionStatus(ConnectionStatus.CONNECTED);
-        try {
-            if (config.mode === 'simple') {
-                // In Simple Mode, apply Core 0's config to all cores
-                // Requirements: 4.3
-                // Property 7: Simple mode configuration uniformity
-                const coreConfig = config.cores[0];
-                const response = await withRetry(() => api.callPluginMethod('set_all_cores_config', {
-                    min_mv: coreConfig.min_mv,
-                    max_mv: coreConfig.max_mv,
-                    threshold: coreConfig.threshold,
-                }), DEFAULT_RETRY_CONFIG, 'set_all_cores_config');
-                if (!response.success) {
-                    setError(response.error || 'Failed to apply configuration');
-                    if (response.validation_errors) {
-                        const errors = response.validation_errors.map((msg) => ({
-                            field: 'config',
-                            message: msg,
-                            code: 'VALIDATION_FAILED',
-                        }));
-                        setValidationErrors(errors);
-                    }
-                    return;
-                }
-            }
-            else {
-                // In Expert Mode, apply configuration for each core
-                for (const coreConfig of config.cores) {
-                    const response = await withRetry(() => api.callPluginMethod('set_dynamic_core_config', {
-                        core_id: coreConfig.core_id,
-                        min_mv: coreConfig.min_mv,
-                        max_mv: coreConfig.max_mv,
-                        threshold: coreConfig.threshold,
-                    }), DEFAULT_RETRY_CONFIG, `set_dynamic_core_config (core ${coreConfig.core_id})`);
-                    if (!response.success) {
-                        setError(response.error || 'Failed to apply configuration');
-                        if (response.validation_errors) {
-                            const errors = response.validation_errors.map((msg) => ({
-                                field: 'config',
-                                message: msg,
-                                code: 'VALIDATION_FAILED',
-                                core_id: coreConfig.core_id,
-                            }));
-                            setValidationErrors(errors);
-                        }
-                        return;
-                    }
-                }
-            }
-            // Save to localStorage
-            // Requirements: 6.1
-            // Property 10: Configuration persistence round-trip
-            try {
-                localStorage.setItem('dynamicMode', JSON.stringify(config));
-                console.log('[DynamicManualMode] Configuration saved to localStorage');
-            }
-            catch (localStorageError) {
-                // Handle localStorage errors gracefully (e.g., quota exceeded, private browsing)
-                // Requirements: 6.4
-                console.warn('[DynamicManualMode] Failed to save to localStorage:', localStorageError);
-                // Don't fail the entire operation - backend save already succeeded
-            }
-            console.log('[DynamicManualMode] Configuration applied successfully');
-            setConnectionStatus(ConnectionStatus.CONNECTED);
-        }
-        catch (e) {
-            console.error('[DynamicManualMode] Failed to apply config:', e);
-            setError(e.message || 'Unknown error');
-            // Update connection status based on error type
-            if (e.message?.includes('network') || e.message?.includes('connection')) {
-                setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                setConnectionError('Connection to backend lost');
-            }
-            else if (e.message?.includes('hardware')) {
-                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                setConnectionError('Hardware error: ' + e.message);
-            }
-        }
-        finally {
-            setIsLoading(false);
-        }
-    }, [config, api]);
-    /**
-     * Handle Start Dynamic Mode button click.
-     * Requirements: 5.1, 5.2
-     *
-     * Enhanced with:
-     * - RPC retry logic
-     * - LKG stability tracking
-     * - Connection error handling
-     */
-    const handleStart = SP_REACT.useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        setConnectionStatus(ConnectionStatus.CONNECTED);
-        try {
-            const response = await withRetry(() => api.callPluginMethod('start_dynamic_mode', { config }), DEFAULT_RETRY_CONFIG, 'start_dynamic_mode');
-            if (response.success) {
-                setIsActive(true);
-                // Start stability tracking for LKG
-                // Requirements: 7.4
-                stabilityTrackerRef.current.start(config);
-                console.log('[DynamicManualMode] Dynamic mode started');
-                setConnectionStatus(ConnectionStatus.CONNECTED);
-            }
-            else {
-                setError(response.error || 'Failed to start dynamic mode');
-                if (response.error?.includes('hardware')) {
-                    setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                    setConnectionError(response.error);
-                }
-            }
-        }
-        catch (e) {
-            console.error('[DynamicManualMode] Failed to start:', e);
-            setError(e.message || 'Unknown error');
-            // Update connection status
-            if (e.message?.includes('network') || e.message?.includes('connection')) {
-                setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                setConnectionError('Connection to backend lost');
-            }
-            else if (e.message?.includes('hardware')) {
-                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
-                setConnectionError('Hardware error: ' + e.message);
-            }
-        }
-        finally {
-            setIsLoading(false);
-        }
-    }, [config, api]);
-    /**
-     * Handle Stop Dynamic Mode button click.
-     * Requirements: 5.3, 5.4
-     *
-     * Enhanced with:
-     * - RPC retry logic
-     * - LKG stability tracking stop
-     * - Connection error handling
-     */
-    const handleStop = SP_REACT.useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const response = await withRetry(() => api.callPluginMethod('stop_dynamic_mode', {}), DEFAULT_RETRY_CONFIG, 'stop_dynamic_mode');
-            if (response.success) {
-                setIsActive(false);
-                // Stop stability tracking
-                // Requirements: 7.4
-                const stableDuration = stabilityTrackerRef.current.getStabilityDuration();
-                if (isStableEnoughForLKG(stableDuration)) {
-                    // Save as LKG if it was stable long enough
-                    saveLKG(config, stableDuration);
-                    setHasLKG(true);
-                }
-                stabilityTrackerRef.current.stop();
-                console.log('[DynamicManualMode] Dynamic mode stopped');
-                setConnectionStatus(ConnectionStatus.CONNECTED);
-            }
-            else {
-                setError(response.error || 'Failed to stop dynamic mode');
-            }
-        }
-        catch (e) {
-            console.error('[DynamicManualMode] Failed to stop:', e);
-            setError(e.message || 'Unknown error');
-            // Update connection status
-            if (e.message?.includes('network') || e.message?.includes('connection')) {
-                setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                setConnectionError('Connection to backend lost');
-            }
-        }
-        finally {
-            setIsLoading(false);
-        }
-    }, [api, config]);
-    /**
-     * Update core configuration.
-     */
-    const updateCoreConfig = SP_REACT.useCallback((coreId, updates) => {
-        setConfig(prev => ({
-            ...prev,
-            cores: prev.cores.map(core => core.core_id === coreId ? { ...core, ...updates } : core),
-        }));
-    }, []);
-    /**
-     * Update all cores in Simple Mode.
-     * Requirements: 4.2
-     * Property 6: Simple mode value propagation
-     */
-    const updateAllCores = SP_REACT.useCallback((updates) => {
-        setConfig(prev => ({
-            ...prev,
-            cores: prev.cores.map(core => ({ ...core, ...updates })),
-        }));
-    }, []);
-    /**
-     * Handle slider changes - propagates to all cores in Simple Mode.
-     * Requirements: 4.2, 8.3
-     */
-    const handleSliderChange = SP_REACT.useCallback((field, value) => {
-        if (config.mode === 'simple') {
-            // In Simple Mode, propagate to all cores
-            updateAllCores({ [field]: value });
-        }
-        else {
-            // In Expert Mode, update only selected core
-            updateCoreConfig(selectedCore, { [field]: value });
-        }
-    }, [config.mode, selectedCore, updateAllCores, updateCoreConfig]);
-    /**
-     * Handle gamepad navigation for slider adjustment and focus management.
-     * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
-     *
-     * Property 15: Gamepad core navigation
-     * D-pad Up/Down changes selected core with wrapping (handled in CoreTabs).
-     *
-     * Property 16: Gamepad focus navigation
-     * D-pad Left/Right moves focus between sliders and buttons.
-     *
-     * Property 17: Gamepad slider adjustment
-     * L1/R1 adjusts slider value by one increment when slider has focus.
-     *
-     * Property 18: Gamepad focus indicator visibility
-     * Visual focus indicators are rendered for focused elements.
-     */
-    SP_REACT.useEffect(() => {
-        const handleGamepadInput = (e) => {
-            // D-pad Left/Right: Focus navigation between sliders
-            // Requirements: 8.2
-            // Property 16: Gamepad focus navigation
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                setFocusedSlider(prev => {
-                    if (prev === null || prev === 'min')
-                        return 'threshold';
-                    if (prev === 'max')
-                        return 'min';
-                    if (prev === 'threshold')
-                        return 'max';
-                    return prev;
-                });
-            }
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                setFocusedSlider(prev => {
-                    if (prev === null || prev === 'threshold')
-                        return 'min';
-                    if (prev === 'min')
-                        return 'max';
-                    if (prev === 'max')
-                        return 'threshold';
-                    return prev;
-                });
-            }
-            // L1/R1: Slider adjustment when slider has focus
-            // Requirements: 8.3
-            // Property 17: Gamepad slider adjustment
-            if ((e.key === 'PageUp' || e.key === 'PageDown') && focusedSlider) {
-                e.preventDefault();
-                const currentCore = config.mode === 'simple' ? 0 : selectedCore;
-                const currentConfig = config.cores[currentCore];
-                const increment = e.key === 'PageUp' ? 1 : -1; // L1 = PageUp, R1 = PageDown
-                if (focusedSlider === 'min') {
-                    const newValue = Math.max(-100, Math.min(0, currentConfig.min_mv + increment));
-                    handleSliderChange('min_mv', newValue);
-                }
-                else if (focusedSlider === 'max') {
-                    const newValue = Math.max(-100, Math.min(0, currentConfig.max_mv + increment));
-                    handleSliderChange('max_mv', newValue);
-                }
-                else if (focusedSlider === 'threshold') {
-                    const newValue = Math.max(0, Math.min(100, currentConfig.threshold + increment));
-                    handleSliderChange('threshold', newValue);
-                }
-            }
-        };
-        window.addEventListener('keydown', handleGamepadInput);
-        return () => {
-            window.removeEventListener('keydown', handleGamepadInput);
-        };
-    }, [focusedSlider, config, selectedCore, handleSliderChange]);
-    if (isLoading && !config.cores.length) {
-        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '24px',
-                        color: '#8b929a',
-                    } },
-                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    window.SP_REACT.createElement("span", null, "Loading...")))));
-    }
-    // Check if Apply button should be disabled
-    // Requirements: 7.1
-    const hasValidationErrors = validateConfig().length > 0;
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
-        connectionStatus !== ConnectionStatus.CONNECTED && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: '12px',
-                    backgroundColor: connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#b71c1c' :
-                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#d32f2f' :
-                            '#ff9800', // RECONNECTING
-                    borderRadius: '6px',
-                    marginBottom: '12px',
-                    border: '2px solid ' + (connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#ff5252' :
-                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#ff5252' :
-                            '#ffb74d'),
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        marginBottom: connectionError ? '6px' : '0',
-                    } },
-                    connectionStatus === ConnectionStatus.RECONNECTING && window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    connectionStatus === ConnectionStatus.HARDWARE_ERROR && window.SP_REACT.createElement(FaExclamationTriangle, null),
-                    connectionStatus === ConnectionStatus.DISCONNECTED && window.SP_REACT.createElement(FaExclamationTriangle, null),
-                    window.SP_REACT.createElement("span", null,
-                        connectionStatus === ConnectionStatus.RECONNECTING && 'Reconnecting...',
-                        connectionStatus === ConnectionStatus.HARDWARE_ERROR && 'Hardware Error',
-                        connectionStatus === ConnectionStatus.DISCONNECTED && 'Connection Lost')),
-                connectionError && (window.SP_REACT.createElement("div", { style: { fontSize: '11px', color: '#fff', opacity: 0.9 } }, connectionError))))),
-        showDangerWarning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: '16px',
-                    backgroundColor: '#5c1313',
-                    borderRadius: '8px',
-                    marginBottom: '12px',
-                    border: '2px solid #ff9800',
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: '13px',
-                        fontWeight: 'bold',
-                        color: '#ff9800',
-                        marginBottom: '8px',
-                    } }, "\u26A0\uFE0F Dangerous Configuration Warning"),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: '11px',
-                        color: '#fff',
-                        marginBottom: '12px',
-                        lineHeight: '1.4',
-                    } }, "Your configuration includes aggressive voltage offsets (below -50mV) that may cause system instability or crashes. Proceed only if you understand the risks."),
-                window.SP_REACT.createElement("div", { style: { display: 'flex', gap: '8px' } },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: () => {
-                            setShowDangerWarning(false);
-                            applyConfiguration();
-                        }, style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: {
-                                padding: '8px',
-                                backgroundColor: '#ff9800',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                textAlign: 'center',
-                            } }, "Apply Anyway")),
-                    window.SP_REACT.createElement(FocusableButton, { onClick: () => setShowDangerWarning(false), style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: {
-                                padding: '8px',
-                                backgroundColor: '#3d4450',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                textAlign: 'center',
-                            } }, "Cancel")))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    backgroundColor: isActive ? '#1b5e20' : '#3d4450',
-                    borderRadius: '6px',
-                    marginBottom: '12px',
-                    transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
-                    boxShadow: isActive ? '0 0 16px rgba(76, 175, 80, 0.3)' : 'none',
-                } },
-                window.SP_REACT.createElement("span", { style: {
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        transition: 'color 0.3s ease',
-                    } },
-                    "Status: ",
-                    isActive ? 'Active' : 'Inactive'),
-                window.SP_REACT.createElement("div", { style: {
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: isActive ? '#4caf50' : '#8b929a',
-                        boxShadow: isActive ? '0 0 8px #4caf50' : 'none',
-                        transition: 'all 0.3s ease',
-                        animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none',
-                    } }))),
-        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: '12px',
-                    backgroundColor: '#b71c1c',
-                    borderRadius: '6px',
-                    marginBottom: '12px',
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: '12px', color: '#fff' } }, error)))),
-        validationErrors.length > 0 && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: '12px',
-                    backgroundColor: '#5c1313',
-                    borderRadius: '6px',
-                    marginBottom: '12px',
-                } }, validationErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx, style: { fontSize: '11px', color: '#ff9800', marginBottom: '4px' } },
-                err.core_id !== undefined && `Core ${err.core_id}: `,
-                err.message)))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: '12px' } },
-                window.SP_REACT.createElement(FocusableButton, { onClick: handleModeToggle, style: { width: '100%' } },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: '8px',
-                            backgroundColor: config.mode === 'simple' ? '#1a9fff' : '#3d4450',
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                        } }, config.mode === 'simple' ? '✓ Simple Mode' : 'Expert Mode (Per-Core)')))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(CoreTabs, { selectedCore: selectedCore, onCoreSelect: setSelectedCore, mode: config.mode })),
-        window.SP_REACT.createElement(VoltageSliders, { coreId: config.mode === 'simple' ? 0 : selectedCore, config: config.mode === 'simple' ? config.cores[0] : config.cores[selectedCore], onChange: handleSliderChange, disabled: isLoading, validationErrors: validationErrors, focusedSlider: focusedSlider, onSliderFocus: setFocusedSlider }),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { display: 'flex', gap: '8px', marginTop: '12px' }, "flow-children": "horizontal" },
-                window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Apply configuration to all cores" },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: handleApply, disabled: isLoading || hasValidationErrors, style: { width: '100%' } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                padding: '10px',
-                                backgroundColor: hasValidationErrors ? '#3d4450' : '#1a9fff',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                opacity: hasValidationErrors ? 0.5 : 1,
-                                transition: 'all 0.2s ease',
-                            } },
-                            isLoading ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : null,
-                            window.SP_REACT.createElement("span", null, "Apply")))),
-                !isActive ? (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Start dynamic voltage adjustment" },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStart, disabled: isLoading, style: { width: '100%' } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                padding: '10px',
-                                backgroundColor: '#1b5e20',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                transition: 'all 0.2s ease',
-                            } },
-                            window.SP_REACT.createElement(FaPlay, null),
-                            window.SP_REACT.createElement("span", null, "Start"))))) : (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Stop dynamic voltage adjustment" },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStop, disabled: isLoading, style: { width: '100%' } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                padding: '10px',
-                                backgroundColor: '#b71c1c',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                transition: 'all 0.2s ease',
-                            } },
-                            window.SP_REACT.createElement(FaStop, null),
-                            window.SP_REACT.createElement("span", null, "Stop"))))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: {
-                    display: 'flex',
-                    gap: '8px',
-                    marginTop: '8px',
-                    flexDirection: 'column',
-                } },
-                hasLKG && (window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Restore the last known stable configuration" },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: handleRestoreLKG, disabled: isLoading, style: { width: '100%' } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                padding: '8px',
-                                backgroundColor: '#ff9800',
-                                borderRadius: '6px',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                transition: 'all 0.2s ease',
-                            } },
-                            window.SP_REACT.createElement(FaUndo, null),
-                            window.SP_REACT.createElement("span", null, "Restore Last Stable"))))),
-                window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Reset all cores to safe default values (-30mV/-15mV/50%)" },
-                    window.SP_REACT.createElement(FocusableButton, { onClick: handleResetToDefaults, disabled: isLoading, style: { width: '100%' } },
-                        window.SP_REACT.createElement("div", { style: {
-                                padding: '8px',
-                                backgroundColor: '#3d4450',
-                                borderRadius: '6px',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                textAlign: 'center',
-                                transition: 'all 0.2s ease',
-                            } }, "Reset to Safe Defaults"))))),
-        window.SP_REACT.createElement("style", null, `
-          /* Spinner animation for loading states */
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          
-          /* Pulse animation for active status indicator */
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-              transform: scale(1);
-            }
-            50% {
-              opacity: 0.7;
-              transform: scale(1.1);
-            }
-          }
-          
-          /* Smooth fade-in for error messages */
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          /* Responsive layout adjustments */
-          @media (max-width: 768px) {
-            /* Adjust padding and font sizes for smaller screens */
-            .dynamic-mode-container {
-              padding: 8px;
-            }
-            
-            .dynamic-mode-button {
-              font-size: 10px;
-              padding: 8px;
-            }
-            
-            .dynamic-mode-status {
-              font-size: 11px;
-            }
-          }
-          
-          @media (min-width: 769px) and (max-width: 1024px) {
-            /* Medium screen adjustments */
-            .dynamic-mode-container {
-              padding: 12px;
-            }
-          }
-          
-          @media (min-width: 1025px) {
-            /* Large screen adjustments */
-            .dynamic-mode-container {
-              padding: 16px;
-              max-width: 1200px;
-              margin: 0 auto;
-            }
-          }
-          
-          /* Smooth transitions for all interactive elements */
-          button, .focusable-element {
-            transition: all 0.2s ease;
-          }
-          
-          button:hover, .focusable-element:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-          }
-          
-          button:active, .focusable-element:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          }
-          
-          /* Focus indicator enhancement for gamepad navigation */
-          .gamepad-focus {
-            outline: 3px solid #1a9fff;
-            outline-offset: 2px;
-            box-shadow: 0 0 12px rgba(26, 159, 255, 0.6);
-            transition: all 0.2s ease;
-          }
-          
-          /* Smooth graph update transitions */
-          .recharts-wrapper {
-            transition: opacity 0.3s ease;
-          }
-          
-          .recharts-line {
-            transition: stroke-dashoffset 0.5s ease;
-          }
-        `)));
-};
-/**
- * Exported component with error boundary.
- */
-const DynamicManualMode = () => (window.SP_REACT.createElement(DynamicModeErrorBoundary, null,
-    window.SP_REACT.createElement(DynamicManualModeInternal, null)));
-
-/**
- * ExpertMode component for DeckTune.
- *
- * Feature: decktune, Frontend UI Components - Expert Mode
- * Requirements: 4.5, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2
- *
- * Feature: decktune-critical-fixes
- * Validates: Requirements 2.1, 2.2, 2.3, 2.5, 2.6
- *
- * Provides detailed manual controls and diagnostics for power users:
- * - Manual tab: Per-core sliders, Apply/Test/Disable buttons, live metrics
- * - Presets tab: Preset list with edit/delete/export, import
- * - Tests tab: Test selection, run button, history
- * - Diagnostics tab: System info, logs, export
- * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
- *
- * v3.1.19: Complete focus system refactor with FocusableButton
- */
-
-const TABS = [
-    { id: "manual", label: "Manual", icon: FaSlidersH },
-    { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
-    { id: "presets", label: "Presets", icon: FaList },
-    { id: "tests", label: "Tests", icon: FaVial },
-    { id: "fan", label: "Fan", icon: FaFan },
-    { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
-];
-/**
- * Panic Disable Button component - compact emergency reset.
- * Requirements: 4.5
- *
- * Features:
- * - Compact red button with white focus outline
- * - Immediate reset to 0 on click
- * - Uses FocusableButton for custom focus
- */
-const PanicDisableButton = () => {
-    const { api } = useDeckTune();
-    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
-    const [isFocused, setIsFocused] = SP_REACT.useState(false);
-    const handlePanicDisable = async () => {
-        setIsPanicking(true);
-        try {
-            await api.panicDisable();
-        }
-        finally {
-            setIsPanicking(false);
-        }
-    };
-    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-        window.SP_REACT.createElement(DFL.Focusable, { onActivate: handlePanicDisable, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), style: {
-                padding: 0,
-                margin: 0,
-            } },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    padding: "12px 16px",
-                    backgroundColor: "#b71c1c",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    fontSize: "12px",
-                    border: isFocused && !isPanicking ? "3px solid #fff" : "3px solid transparent",
-                    boxShadow: isFocused && !isPanicking ? "0 0 12px rgba(255, 255, 255, 0.6)" : "none",
-                    transform: isFocused && !isPanicking ? "scale(1.05)" : "scale(1)",
-                    transition: "all 0.2s ease",
-                    cursor: isPanicking ? "not-allowed" : "pointer",
-                    opacity: isPanicking ? 0.5 : 1,
-                } }, isPanicking ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { fontSize: "12px" } }),
-                window.SP_REACT.createElement("span", null, "Disabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(FaExclamationTriangle, { style: { fontSize: "12px" } }),
-                window.SP_REACT.createElement("span", null, "PANIC DISABLE")))))));
-};
-/**
- * ExpertMode component - detailed controls for power users.
- * Requirements: 4.5, 7.1, 10.1, 10.2, 10.3, 10.4, 10.5
- */
-const ExpertMode = ({ initialTab = "manual" }) => {
-    const [activeTab, setActiveTab] = SP_REACT.useState(initialTab);
-    // NUCLEAR CACHE BUST - v3.1.19-20260118-2230
-    SP_REACT.useEffect(() => {
-        const buildId = "v3.1.19-20260118-2230-FOCUSABLE-BUTTON";
-        console.log(`[DeckTune CACHE BUST] ${buildId} - FocusableButton refactor complete`);
-        window.__DECKTUNE_BUILD_ID__ = buildId;
-        window.__DECKTUNE_EXPERT_MODE_VERSION__ = "FOCUSABLE_BUTTON_V1";
-    }, []);
-    /**
-     * Handle tab change with persistence.
-     * Requirements: 10.5
-     */
-    const handleTabChange = SP_REACT.useCallback(async (tab) => {
-        setActiveTab(tab);
-        // Persist selected tab to settings
-        try {
-            await call("save_setting", "expert_mode_selected_tab", tab);
-            console.log("[ExpertMode] Selected tab persisted:", tab);
-        }
-        catch (error) {
-            console.error("[ExpertMode] Failed to persist selected tab:", error);
-        }
-    }, []);
-    // Load persisted tab on mount
-    SP_REACT.useEffect(() => {
-        const loadPersistedTab = async () => {
-            try {
-                const response = await call("load_setting", "expert_mode_selected_tab");
-                if (response.success && response.value) {
-                    setActiveTab(response.value);
-                    console.log("[ExpertMode] Loaded persisted tab:", response.value);
-                }
-            }
-            catch (error) {
-                console.error("[ExpertMode] Failed to load persisted tab:", error);
-            }
-        };
-        loadPersistedTab();
-    }, []);
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Expert Mode" },
-        window.SP_REACT.createElement(PanicDisableButton, null),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: handleTabChange })),
-        window.SP_REACT.createElement("div", { key: activeTab },
-            activeTab === "manual" && window.SP_REACT.createElement(ManualTab, null),
-            activeTab === "dynamic-manual" && window.SP_REACT.createElement(DynamicManualMode, null),
-            activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
-            activeTab === "tests" && window.SP_REACT.createElement(TestsTabNew, null),
-            activeTab === "fan" && window.SP_REACT.createElement(FanTab, null),
-            activeTab === "diagnostics" && window.SP_REACT.createElement(DiagnosticsTab, null))));
-};
-const TabNavigation = ({ activeTab, onTabChange }) => {
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: {
-            display: "flex",
-            marginBottom: "8px",
-            backgroundColor: "#23262e",
-            borderRadius: "4px",
-            padding: "2px",
-            gap: "2px",
-        }, "flow-children": "horizontal" }, TABS.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        return (window.SP_REACT.createElement(FocusableButton, { key: tab.id, onClick: () => onTabChange(tab.id), focusColor: isActive ? "#1a9fff" : "#666", style: {
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "1px",
-                padding: "4px 2px",
-                borderRadius: "3px",
-                backgroundColor: isActive ? "#1a9fff" : "transparent",
-                color: isActive ? "#fff" : "#8b929a",
-            } },
-            window.SP_REACT.createElement(Icon, null),
-            window.SP_REACT.createElement("span", { style: { fontSize: "8px", fontWeight: isActive ? "600" : "400" } }, tab.label)));
-    })));
-};
-/**
- * Manual tab component with simple/per-core modes.
- *
- * Feature: ui-refactor-settings
- * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
- */
-const ManualTab = () => {
-    const { state, api } = useDeckTune();
-    const { info: platformInfo } = usePlatformInfo();
-    const { settings, setApplyOnStartup, setGameOnlyMode } = useSettings();
-    const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
-    const [simpleMode, setSimpleMode] = SP_REACT.useState(true);
-    const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
-    const [isApplying, setIsApplying] = SP_REACT.useState(false);
-    const safeLimit = platformInfo?.safe_limit ?? -30;
-    const currentMinLimit = settings.expertMode ? -100 : safeLimit;
-    // Sync with state.cores
-    SP_REACT.useEffect(() => {
-        setCoreValues([...state.cores]);
-        const avg = Math.round(state.cores.reduce((sum, val) => sum + val, 0) / 4);
-        setSimpleValue(avg);
-    }, [state.cores]);
-    /**
-     * Handle simple mode toggle.
-     */
-    const handleSimpleModeToggle = () => {
-        if (!simpleMode) {
-            // Switching to simple: use average
-            const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
-            setSimpleValue(avg);
-        }
-        else {
-            // Switching to per-core: copy simple value to all cores
-            setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
-        }
-        setSimpleMode(!simpleMode);
-    };
-    /**
-     * Handle simple slider change.
-     */
-    const handleSimpleValueChange = (value) => {
-        setSimpleValue(value);
-        setCoreValues([value, value, value, value]);
-    };
-    /**
-     * Handle slider value change for a specific core.
-     */
-    const handleCoreChange = (core, value) => {
-        const newValues = [...coreValues];
-        newValues[core] = value;
-        setCoreValues(newValues);
-    };
-    /**
-     * Apply current values.
-     */
-    const handleApply = async () => {
-        setIsApplying(true);
-        try {
-            await api.applyUndervolt(coreValues);
-        }
-        finally {
-            setIsApplying(false);
-        }
-    };
-    /**
-     * Disable undervolt (reset to 0 on backend, but keep UI values).
-     */
-    const handleDisable = async () => {
-        await api.disableUndervolt();
-        // Don't reset UI values - user can re-enable with same values
-    };
-    /**
-     * Reset UI values to 0.
-     */
-    const handleReset = () => {
-        setCoreValues([0, 0, 0, 0]);
-        setSimpleValue(0);
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px" } },
-                platformInfo.variant,
-                " (",
-                platformInfo.model,
-                ") \u2022 Limit: ",
-                platformInfo.safe_limit,
-                "mV"))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "12px", fontWeight: "bold", marginBottom: "8px", marginTop: "4px" } }, "Startup Behavior")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "8px" } },
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setApplyOnStartup(!settings.applyOnStartup), style: { width: "100%" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "10px",
-                            backgroundColor: settings.applyOnStartup ? "#1a9fff" : "#3d4450",
-                            borderRadius: "6px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "11px",
-                                fontWeight: "bold",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                            } },
-                            settings.applyOnStartup ? "✓" : "○",
-                            " Apply on Startup"),
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "9px",
-                                color: settings.applyOnStartup ? "#e0e0e0" : "#8b929a",
-                                lineHeight: "1.3",
-                            } }, "Automatically apply last profile when Steam Deck boots"))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "12px" } },
-                window.SP_REACT.createElement(FocusableButton, { onClick: () => setGameOnlyMode(!settings.gameOnlyMode), style: { width: "100%" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "10px",
-                            backgroundColor: settings.gameOnlyMode ? "#1a9fff" : "#3d4450",
-                            borderRadius: "6px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "11px",
-                                fontWeight: "bold",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                            } },
-                            settings.gameOnlyMode ? "✓" : "○",
-                            " Game Only Mode"),
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "9px",
-                                color: settings.gameOnlyMode ? "#e0e0e0" : "#8b929a",
-                                lineHeight: "1.3",
-                            } }, "Apply undervolt only when games are running, reset in Steam menu"))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "8px" } },
-                window.SP_REACT.createElement(FocusableButton, { onClick: handleSimpleModeToggle, style: { width: "100%" } },
-                    window.SP_REACT.createElement("div", { style: {
-                            padding: "6px",
-                            backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
-                            borderRadius: "4px",
-                            fontSize: "9px",
-                            fontWeight: "bold",
-                            textAlign: "center",
-                        } }, simpleMode ? "✓ Simple Mode" : "Per-Core Mode")))),
-        settings.expertMode && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "6px",
-                    backgroundColor: "#5c1313",
-                    borderRadius: "4px",
-                    border: "1px solid #ff6b6b",
-                    marginBottom: "8px"
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", display: "flex", alignItems: "center", gap: "4px" } },
-                    window.SP_REACT.createElement(FaExclamationTriangle, { size: 9 }),
-                    window.SP_REACT.createElement("span", null, "Expert mode active \u2022 Range: -100mV"))))),
-        simpleMode ? (
-        /* Simple Mode: Single slider for all cores */
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
-        /* Per-core sliders */
-        [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
-            window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px", marginTop: "8px" }, "flow-children": "horizontal" },
-                window.SP_REACT.createElement(FocusableButton, { onClick: handleApply, disabled: isApplying, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "8px",
-                            backgroundColor: "#1a9fff",
-                            borderRadius: "6px",
-                            fontSize: "10px",
-                            fontWeight: "bold",
-                        } },
-                        isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaCheck, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Apply"))),
-                window.SP_REACT.createElement(FocusableButton, { onClick: handleDisable, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "8px",
-                            backgroundColor: "#3d4450",
-                            borderRadius: "6px",
-                            fontSize: "10px",
-                            fontWeight: "bold"
-                        } },
-                        window.SP_REACT.createElement(FaBan, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Disable"))),
-                window.SP_REACT.createElement(FocusableButton, { onClick: handleReset, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "8px",
-                            backgroundColor: "#5c4813",
-                            borderRadius: "6px",
-                            fontSize: "10px",
-                            fontWeight: "bold",
-                            color: "#ff9800"
-                        } },
-                        window.SP_REACT.createElement(FaTimes, { size: 10 }),
-                        window.SP_REACT.createElement("span", null, "Reset"))))),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-/**
- * Diagnostics tab component.
- * Requirements: 7.5, 8.1, 8.2
- *
- * Features:
- * - System info display (platform, SteamOS version)
- * - Log viewer
- * - Export Diagnostics button
- */
-const DiagnosticsTab = () => {
-    const { api } = useDeckTune();
-    const { info: platformInfo } = usePlatformInfo();
-    const [systemInfo, setSystemInfo] = SP_REACT.useState(null);
-    const [isExporting, setIsExporting] = SP_REACT.useState(false);
-    const [exportResult, setExportResult] = SP_REACT.useState(null);
-    const [isLoading, setIsLoading] = SP_REACT.useState(true);
-    // Fetch system info on mount
-    SP_REACT.useEffect(() => {
-        const fetchSystemInfo = async () => {
-            setIsLoading(true);
-            try {
-                const info = await api.getSystemInfo();
-                setSystemInfo(info);
-            }
-            catch (e) {
-                console.error("Failed to fetch system info:", e);
-            }
-            finally {
-                setIsLoading(false);
-            }
-        };
-        fetchSystemInfo();
-    }, [api]);
-    /**
-     * Handle export diagnostics button click.
-     */
-    const handleExportDiagnostics = async () => {
-        setIsExporting(true);
-        setExportResult(null);
-        try {
-            const result = await api.exportDiagnostics();
-            setExportResult(result);
-        }
-        catch (e) {
-            setExportResult({ success: false, error: "Export failed" });
-        }
-        finally {
-            setIsExporting(false);
-        }
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "System Information")),
-        isLoading ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", color: "#8b929a" } },
-                window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                window.SP_REACT.createElement("span", null, "Loading system info...")))) : (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                } },
-                window.SP_REACT.createElement(InfoRow, { label: "Platform", value: platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown" }),
-                window.SP_REACT.createElement(InfoRow, { label: "Safe Limit", value: platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown" }),
-                window.SP_REACT.createElement(InfoRow, { label: "Detection", value: platformInfo?.detected ? "Successful" : "Failed" }),
-                systemInfo && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                    window.SP_REACT.createElement("div", { style: { borderTop: "1px solid #3d4450", margin: "8px 0" } }),
-                    window.SP_REACT.createElement(InfoRow, { label: "SteamOS Version", value: systemInfo.steamos_version || "Unknown" }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Kernel", value: systemInfo.kernel || "Unknown" }),
-                    window.SP_REACT.createElement(InfoRow, { label: "Hostname", value: systemInfo.hostname || "Unknown" }),
-                    systemInfo.uptime && (window.SP_REACT.createElement(InfoRow, { label: "Uptime", value: formatUptime(systemInfo.uptime) }))))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Current Configuration")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                } }, systemInfo?.config ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement(InfoRow, { label: "Active Cores", value: `[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]` }),
-                window.SP_REACT.createElement(InfoRow, { label: "LKG Cores", value: `[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]` }),
-                window.SP_REACT.createElement(InfoRow, { label: "Status", value: systemInfo.config.status || "Unknown" }),
-                window.SP_REACT.createElement(InfoRow, { label: "Presets Count", value: String(systemInfo.config.presets_count || 0) }))) : (window.SP_REACT.createElement("div", { style: { color: "#8b929a" } }, "Configuration not available")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Recent Logs")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "8px",
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "8px",
-                    maxHeight: "150px",
-                    overflowY: "auto",
-                    fontFamily: "monospace",
-                    fontSize: "10px",
-                    color: "#8b929a",
-                } }, systemInfo?.logs ? (systemInfo.logs.split("\n").slice(-20).map((line, index) => (window.SP_REACT.createElement("div", { key: index, style: { marginBottom: "2px" } }, line)))) : (window.SP_REACT.createElement("div", null, "No logs available")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { marginTop: "16px" } },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportDiagnostics, disabled: isExporting },
-                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isExporting ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                        window.SP_REACT.createElement("span", null, "Exporting..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                        window.SP_REACT.createElement(FaDownload, null),
-                        window.SP_REACT.createElement("span", null, "Export Diagnostics"))))))),
-        exportResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: exportResult.success ? "#1b5e20" : "#b71c1c",
-                    borderRadius: "8px",
-                    marginTop: "8px",
-                } }, exportResult.success ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement("div", { style: { fontWeight: "bold", marginBottom: "4px" } },
-                    window.SP_REACT.createElement(FaCheck, { style: { marginRight: "8px" } }),
-                    "Export Successful"),
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px", wordBreak: "break-all" } },
-                    "Saved to: ",
-                    exportResult.path))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-                window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
-                    window.SP_REACT.createElement(FaTimes, { style: { marginRight: "8px" } }),
-                    "Export Failed"),
-                window.SP_REACT.createElement("div", { style: { fontSize: "12px" } }, exportResult.error)))))),
-        window.SP_REACT.createElement("style", null, `
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `)));
-};
-const InfoRow = ({ label, value }) => (window.SP_REACT.createElement("div", { style: {
-        display: "flex",
-        justifyContent: "space-between",
-        marginBottom: "6px",
-        fontSize: "12px",
-    } },
-    window.SP_REACT.createElement("span", { style: { color: "#8b929a" } },
-        label,
-        ":"),
-    window.SP_REACT.createElement("span", { style: { color: "#fff" } }, value)));
-/**
- * Format uptime seconds to human readable string.
- */
-const formatUptime = (seconds) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const parts = [];
-    if (days > 0)
-        parts.push(`${days}d`);
-    if (hours > 0)
-        parts.push(`${hours}h`);
-    if (mins > 0)
-        parts.push(`${mins}m`);
-    return parts.length > 0 ? parts.join(" ") : "< 1m";
-};
-
-/**
- * SetupWizard component for DeckTune first-run experience.
- *
- * Feature: decktune-3.1-reliability-ux, Setup Wizard
- * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
- *
- * Provides a guided setup process for new users:
- * - Step 1: Welcome with introduction
- * - Step 2: Explanation of undervolting benefits/risks
- * - Step 3: Goal selection with estimates
- * - Step 4: Confirmation and completion
- */
-
-// ============================================================================
-// Constants
-// Requirements: 5.4
-// ============================================================================
-/**
- * Goal estimates for each preset goal.
- * Requirements: 5.4
- *
- * These estimates are based on typical Steam Deck undervolting results.
- * Actual results vary based on silicon quality and workload.
- */
-const GOAL_ESTIMATES = {
-    quiet: {
-        batteryImprovement: "+10-15%",
-        tempReduction: "-8-12°C",
-        description: "Prioritizes lower temperatures and quieter fan operation. Best for casual gaming and media consumption.",
-    },
-    balanced: {
-        batteryImprovement: "+15-20%",
-        tempReduction: "-5-8°C",
-        description: "Good balance between performance, battery life, and thermals. Recommended for most users.",
-    },
-    battery: {
-        batteryImprovement: "+20-30%",
-        tempReduction: "-3-5°C",
-        description: "Maximizes battery life with aggressive power savings. Ideal for long gaming sessions away from power.",
-    },
-    performance: {
-        batteryImprovement: "+5-10%",
-        tempReduction: "-2-4°C",
-        description: "Finds the most aggressive stable undervolt for maximum efficiency. For users who want every bit of optimization.",
-    },
-};
-/**
- * Goal display information.
- * Requirements: 5.3
- */
-const GOAL_INFO = {
-    quiet: {
-        label: "Quiet/Cool",
-        icon: FaLeaf,
-        color: "#4caf50",
-    },
-    balanced: {
-        label: "Balanced",
-        icon: FaBalanceScale,
-        color: "#2196f3",
-    },
-    battery: {
-        label: "Max Battery",
-        icon: FaBatteryFull,
-        color: "#ff9800",
-    },
-    performance: {
-        label: "Max Performance",
-        icon: FaRocket,
-        color: "#f44336",
-    },
-};
-const STEP_ORDER = ['welcome', 'explanation', 'goal', 'confirm'];
-const StepIndicator = ({ currentStep }) => {
-    const steps = [
-        { id: 'welcome', label: 'Welcome' },
-        { id: 'explanation', label: 'Learn' },
-        { id: 'goal', label: 'Goal' },
-        { id: 'confirm', label: 'Confirm' },
-    ];
-    const currentIndex = STEP_ORDER.indexOf(currentStep);
-    return (window.SP_REACT.createElement(DFL.Focusable, { style: {
-            display: "flex",
-            justifyContent: "center",
-            gap: "8px",
-            marginBottom: "16px",
-        } }, steps.map((s, index) => (window.SP_REACT.createElement("div", { key: s.id, style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-        } },
-        window.SP_REACT.createElement("div", { style: {
-                width: "24px",
-                height: "24px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: currentIndex >= index ? "#1a9fff" : "#3d4450",
-                color: currentIndex >= index ? "#fff" : "#8b929a",
-                fontWeight: "bold",
-                fontSize: "12px",
-            } }, currentIndex > index ? window.SP_REACT.createElement(FaCheck, { size: 10 }) : index + 1),
-        window.SP_REACT.createElement("span", { style: {
-                color: currentIndex >= index ? "#fff" : "#8b929a",
-                fontSize: "10px",
-                display: index < steps.length - 1 ? "none" : "inline",
-            } }, s.label),
-        index < steps.length - 1 && (window.SP_REACT.createElement("div", { style: {
-                width: "16px",
-                height: "2px",
-                backgroundColor: currentIndex > index ? "#1a9fff" : "#3d4450",
-            } })))))));
-};
-const WelcomeStep = ({ onNext, onSkip }) => {
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    textAlign: "center",
-                    padding: "16px",
-                } },
-                window.SP_REACT.createElement(FaBolt, { style: {
-                        fontSize: "48px",
-                        color: "#1a9fff",
-                        marginBottom: "16px",
-                    } }),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "18px",
-                        fontWeight: "bold",
-                        marginBottom: "8px",
-                    } }, "Welcome to DeckTune!"),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "13px",
-                        color: "#8b929a",
-                        lineHeight: "1.5",
-                    } }, "Let's set up your Steam Deck for optimal performance and battery life. This wizard will guide you through the process."))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        color: "#1a9fff",
-                    } },
-                    window.SP_REACT.createElement("span", null, "Get Started"),
-                    window.SP_REACT.createElement(FaArrowRight, null)))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        color: "#8b929a",
-                        fontSize: "12px",
-                    } },
-                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
-};
-const ExplanationStep = ({ onNext, onBack, onSkip }) => {
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#1a3a5c",
-                    borderRadius: "8px",
-                    marginBottom: "12px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "8px",
-                    } },
-                    window.SP_REACT.createElement(FaInfoCircle, { style: { color: "#1a9fff" } }),
-                    window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, "What is Undervolting?")),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "12px",
-                        color: "#b0bec5",
-                        lineHeight: "1.5",
-                    } }, "Undervolting reduces the voltage supplied to your CPU while maintaining the same performance. This results in lower temperatures, quieter fans, and longer battery life."))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    gap: "8px",
-                    marginBottom: "12px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        flex: 1,
-                        padding: "12px",
-                        backgroundColor: "#1b5e20",
-                        borderRadius: "8px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            marginBottom: "6px",
-                        } },
-                        window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50" } }),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Benefits")),
-                    window.SP_REACT.createElement("ul", { style: {
-                            fontSize: "10px",
-                            color: "#a5d6a7",
-                            margin: 0,
-                            paddingLeft: "16px",
-                            lineHeight: "1.6",
-                        } },
-                        window.SP_REACT.createElement("li", null, "Lower temperatures"),
-                        window.SP_REACT.createElement("li", null, "Quieter fan operation"),
-                        window.SP_REACT.createElement("li", null, "Extended battery life"),
-                        window.SP_REACT.createElement("li", null, "Same performance"))),
-                window.SP_REACT.createElement("div", { style: {
-                        flex: 1,
-                        padding: "12px",
-                        backgroundColor: "#5c4813",
-                        borderRadius: "8px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            marginBottom: "6px",
-                        } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800" } }),
-                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Risks")),
-                    window.SP_REACT.createElement("ul", { style: {
-                            fontSize: "10px",
-                            color: "#ffe0b2",
-                            margin: 0,
-                            paddingLeft: "16px",
-                            lineHeight: "1.6",
-                        } },
-                        window.SP_REACT.createElement("li", null, "System instability if too aggressive"),
-                        window.SP_REACT.createElement("li", null, "Requires testing"),
-                        window.SP_REACT.createElement("li", null, "Results vary by chip"))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "10px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    color: "#8b929a",
-                    textAlign: "center",
-                } },
-                window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", marginRight: "6px" } }),
-                "DeckTune includes automatic safety features and crash recovery.")),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                        } },
-                        window.SP_REACT.createElement(FaArrowLeft, null),
-                        window.SP_REACT.createElement("span", null, "Back"))),
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            color: "#1a9fff",
-                        } },
-                        window.SP_REACT.createElement("span", null, "Next"),
-                        window.SP_REACT.createElement(FaArrowRight, null))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#8b929a",
-                        fontSize: "12px",
-                    } },
-                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
-};
-const GoalStep = ({ selectedGoal, onSelectGoal, onNext, onBack, onSkip, }) => {
-    const goals = ['quiet', 'balanced', 'battery', 'performance'];
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    marginBottom: "8px",
-                } }, "Choose Your Goal"),
-            window.SP_REACT.createElement("div", { style: {
-                    fontSize: "11px",
-                    color: "#8b929a",
-                    marginBottom: "12px",
-                } }, "Select what matters most to you. You can change this later.")),
-        goals.map((goal) => {
-            const info = GOAL_INFO[goal];
-            const estimate = GOAL_ESTIMATES[goal];
-            const Icon = info.icon;
-            const isSelected = selectedGoal === goal;
-            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: goal },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelectGoal(goal), style: {
-                        border: isSelected ? `2px solid ${info.color}` : "2px solid transparent",
-                        borderRadius: "8px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "12px",
-                            padding: "4px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: {
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "8px",
-                                backgroundColor: isSelected ? info.color : "#3d4450",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                            } },
-                            window.SP_REACT.createElement(Icon, { style: { color: "#fff", fontSize: "16px" } })),
-                        window.SP_REACT.createElement("div", { style: { flex: 1, textAlign: "left" } },
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontWeight: "bold",
-                                    fontSize: "13px",
-                                    color: isSelected ? info.color : "#fff",
-                                } }, info.label),
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "10px",
-                                    color: "#8b929a",
-                                    marginTop: "2px",
-                                } },
-                                estimate.description.split('.')[0],
-                                ".")),
-                        isSelected && (window.SP_REACT.createElement(FaCheck, { style: { color: info.color, fontSize: "14px" } }))))));
-        }),
-        selectedGoal && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                    marginTop: "8px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        marginBottom: "8px",
-                        color: GOAL_INFO[selectedGoal].color,
-                    } }, "Estimated Improvements"),
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        gap: "16px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginBottom: "4px",
-                            } },
-                            window.SP_REACT.createElement(FaBatteryFull, { style: { color: "#4caf50", fontSize: "12px" } }),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Battery")),
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "16px",
-                                fontWeight: "bold",
-                                color: "#4caf50",
-                            } }, GOAL_ESTIMATES[selectedGoal].batteryImprovement)),
-                    window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginBottom: "4px",
-                            } },
-                            window.SP_REACT.createElement(FaThermometerHalf, { style: { color: "#2196f3", fontSize: "12px" } }),
-                            window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Temperature")),
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "16px",
-                                fontWeight: "bold",
-                                color: "#2196f3",
-                            } }, GOAL_ESTIMATES[selectedGoal].tempReduction))),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "9px",
-                        color: "#666",
-                        marginTop: "8px",
-                        fontStyle: "italic",
-                    } }, "* Actual results vary based on silicon quality and workload")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                        } },
-                        window.SP_REACT.createElement(FaArrowLeft, null),
-                        window.SP_REACT.createElement("span", null, "Back"))),
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, disabled: !selectedGoal, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            color: selectedGoal ? "#1a9fff" : "#8b929a",
-                            opacity: selectedGoal ? 1 : 0.5,
-                        } },
-                        window.SP_REACT.createElement("span", null, "Next"),
-                        window.SP_REACT.createElement(FaArrowRight, null))))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#8b929a",
-                        fontSize: "12px",
-                    } },
-                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
-};
-const ConfirmStep = ({ selectedGoal, onConfirm, onBack, onCancel, isLoading, }) => {
-    const info = GOAL_INFO[selectedGoal];
-    const Icon = info.icon;
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    textAlign: "center",
-                    padding: "16px",
-                } },
-                window.SP_REACT.createElement("div", { style: {
-                        width: "64px",
-                        height: "64px",
-                        borderRadius: "50%",
-                        backgroundColor: info.color,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 16px",
-                    } },
-                    window.SP_REACT.createElement(Icon, { style: { color: "#fff", fontSize: "28px" } })),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                        marginBottom: "8px",
-                    } }, "Ready to Start!"),
-                window.SP_REACT.createElement("div", { style: {
-                        fontSize: "12px",
-                        color: "#8b929a",
-                    } },
-                    "You've selected ",
-                    window.SP_REACT.createElement("strong", { style: { color: info.color } }, info.label)))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "12px",
-                    backgroundColor: "#23262e",
-                    borderRadius: "8px",
-                } },
-                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "8px" } }, "What happens next:"),
-                window.SP_REACT.createElement("ul", { style: {
-                        fontSize: "11px",
-                        color: "#b0bec5",
-                        margin: 0,
-                        paddingLeft: "20px",
-                        lineHeight: "1.8",
-                    } },
-                    window.SP_REACT.createElement("li", null, "Your preferences will be saved"),
-                    window.SP_REACT.createElement("li", null, "DeckTune will be configured for your goal"),
-                    window.SP_REACT.createElement("li", null, "You can run autotune to find optimal values"),
-                    window.SP_REACT.createElement("li", null, "Settings can be changed anytime in Expert mode")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onConfirm, disabled: isLoading, style: { marginTop: "12px" } },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        color: "#4caf50",
-                    } },
-                    window.SP_REACT.createElement(FaCheck, null),
-                    window.SP_REACT.createElement("span", null, isLoading ? "Saving..." : "Complete Setup")))),
-        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, disabled: isLoading, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                        } },
-                        window.SP_REACT.createElement(FaArrowLeft, null),
-                        window.SP_REACT.createElement("span", null, "Back"))),
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, disabled: isLoading, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            color: "#ff6b6b",
-                        } },
-                        window.SP_REACT.createElement(FaTimes, null),
-                        window.SP_REACT.createElement("span", null, "Cancel")))))));
-};
-// ============================================================================
-// Main Component
-// Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// ============================================================================
-/**
- * SetupWizard component - guided first-run experience.
- *
- * Requirements:
- * - 5.1: Display welcome wizard on first run
- * - 5.2: Explain undervolting benefits/risks
- * - 5.3: Offer preset goals with explanations
- * - 5.4: Show estimated improvements for selected goal
- * - 5.5: Save preferences on completion
- * - 5.6: Allow re-running wizard from settings
- * - 5.7: Allow skip/cancel without applying changes
- */
-const SetupWizard = ({ onComplete, onCancel, onSkip, }) => {
-    const { api } = useDeckTune();
-    const { info: platformInfo } = usePlatformInfo();
-    const [wizardState, setWizardState] = SP_REACT.useState({
-        step: 'welcome',
-        selectedGoal: null,
-    });
-    const [isLoading, setIsLoading] = SP_REACT.useState(false);
-    const [error, setError] = SP_REACT.useState(null);
-    /**
-     * Navigate to next step.
-     */
-    const goToNextStep = () => {
-        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
-        const currentIndex = stepOrder.indexOf(wizardState.step);
-        if (currentIndex < stepOrder.length - 1) {
-            setWizardState((prev) => ({
-                ...prev,
-                step: stepOrder[currentIndex + 1],
-            }));
-        }
-    };
-    /**
-     * Navigate to previous step.
-     */
-    const goToPreviousStep = () => {
-        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
-        const currentIndex = stepOrder.indexOf(wizardState.step);
-        if (currentIndex > 0) {
-            setWizardState((prev) => ({
-                ...prev,
-                step: stepOrder[currentIndex - 1],
-            }));
-        }
-    };
-    /**
-     * Handle goal selection.
-     * Requirements: 5.3
-     */
-    const handleSelectGoal = (goal) => {
-        setWizardState((prev) => ({
-            ...prev,
-            selectedGoal: goal,
-        }));
-    };
-    /**
-     * Handle wizard completion.
-     * Requirements: 5.5
-     *
-     * Saves preferences and marks first_run_complete.
-     */
-    const handleComplete = async () => {
-        if (!wizardState.selectedGoal)
-            return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Save wizard settings via RPC
-            await api.saveSetting('wizard_goal', wizardState.selectedGoal);
-            await api.saveSetting('wizard_completed_at', new Date().toISOString());
-            await api.saveSetting('first_run_complete', true);
-            setWizardState((prev) => ({
-                ...prev,
-                step: 'complete',
-            }));
-            onComplete?.(wizardState.selectedGoal);
-        }
-        catch (e) {
-            setError(String(e));
-        }
-        finally {
-            setIsLoading(false);
-        }
-    };
-    /**
-     * Handle wizard cancellation.
-     * Requirements: 5.7
-     *
-     * Does not modify any settings or apply any values.
-     */
-    const handleCancel = () => {
-        // Reset state without saving anything
-        setWizardState({
-            step: 'welcome',
-            selectedGoal: null,
-        });
-        onCancel?.();
-    };
-    /**
-     * Handle wizard skip.
-     * Requirements: 5.7
-     *
-     * Marks first_run_complete but doesn't apply any settings.
-     */
-    const handleSkip = async () => {
-        try {
-            // Only mark as complete, don't save any goal
-            await api.saveSetting('first_run_complete', true);
-            onSkip?.();
-        }
-        catch (e) {
-            // Silently fail - user can still use the plugin
-            onSkip?.();
-        }
-    };
-    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Setup Wizard" },
-        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    fontSize: "10px",
-                    color: "#8b929a",
-                    textAlign: "center",
-                    marginBottom: "8px",
-                } },
-                "Detected: ",
-                platformInfo.variant,
-                " (",
-                platformInfo.model,
-                ")"))),
-        wizardState.step !== 'complete' && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement(StepIndicator, { currentStep: wizardState.step }))),
-        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-            window.SP_REACT.createElement("div", { style: {
-                    padding: "8px",
-                    backgroundColor: "#b71c1c",
-                    borderRadius: "4px",
-                    fontSize: "11px",
-                    color: "#fff",
-                    textAlign: "center",
-                } }, error))),
-        wizardState.step === 'welcome' && (window.SP_REACT.createElement(WelcomeStep, { onNext: goToNextStep, onSkip: handleSkip })),
-        wizardState.step === 'explanation' && (window.SP_REACT.createElement(ExplanationStep, { onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
-        wizardState.step === 'goal' && (window.SP_REACT.createElement(GoalStep, { selectedGoal: wizardState.selectedGoal, onSelectGoal: handleSelectGoal, onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
-        wizardState.step === 'confirm' && wizardState.selectedGoal && (window.SP_REACT.createElement(ConfirmStep, { selectedGoal: wizardState.selectedGoal, onConfirm: handleComplete, onBack: goToPreviousStep, onCancel: handleCancel, isLoading: isLoading })),
-        wizardState.step === 'complete' && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        textAlign: "center",
-                        padding: "24px",
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            width: "64px",
-                            height: "64px",
-                            borderRadius: "50%",
-                            backgroundColor: "#4caf50",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            margin: "0 auto 16px",
-                        } },
-                        window.SP_REACT.createElement(FaCheck, { style: { color: "#fff", fontSize: "28px" } })),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            marginBottom: "8px",
-                        } }, "Setup Complete!"),
-                    window.SP_REACT.createElement("div", { style: {
-                            fontSize: "12px",
-                            color: "#8b929a",
-                        } }, "DeckTune is ready to use. Head to Wizard mode to run autotune and find your optimal undervolt values.")))))));
-};
-
-/**
- * FanControl component for fan curve management.
- *
- * Feature: fan-control-curves
- * Requirements: 4.1, 4.2, 4.3
- *
- * Provides UI for:
- * - Preset selection (Stock, Silent, Turbo)
- * - Custom curve creation and management
- * - Real-time status display
- * - Navigation back to admin panel
- */
-
-/**
- * FanControl component
- * Requirements: 4.1, 4.2, 4.3
- */
-const FanControl = ({ onBack }) => {
-    const [status, setStatus] = SP_REACT.useState(null);
-    const [presets, setPresets] = SP_REACT.useState([]);
-    const [customCurves, setCustomCurves] = SP_REACT.useState([]);
-    const [isLoading, setIsLoading] = SP_REACT.useState(true);
-    const [error, setError] = SP_REACT.useState(null);
-    const [isApplying, setIsApplying] = SP_REACT.useState(false);
-    const [showCustomEditor, setShowCustomEditor] = SP_REACT.useState(false);
-    const [customCurveName, setCustomCurveName] = SP_REACT.useState("");
-    const [customPoints, setCustomPoints] = SP_REACT.useState([
-        { temp: 40, speed: 20 },
-        { temp: 60, speed: 50 },
-        { temp: 80, speed: 100 },
-    ]);
-    const [validationError, setValidationError] = SP_REACT.useState(null);
-    // Load initial data
-    SP_REACT.useEffect(() => {
-        loadInitialData();
-    }, []);
-    // Poll status every 2 seconds
-    SP_REACT.useEffect(() => {
-        const interval = setInterval(() => {
-            loadStatus();
-        }, 2000);
-        return () => clearInterval(interval);
-    }, []);
-    const loadInitialData = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Load presets
-            const presetsResult = await call("fan_list_presets");
-            if (presetsResult.success && presetsResult.presets) {
-                setPresets(presetsResult.presets);
-            }
-            // Load custom curves
-            const customResult = await call("fan_list_custom");
-            if (customResult.success && customResult.curves) {
-                setCustomCurves(customResult.curves);
-            }
-            // Load status
-            await loadStatus();
-        }
-        catch (e) {
-            setError(`Failed to load fan control data: ${e}`);
-        }
-        finally {
-            setIsLoading(false);
-        }
-    };
-    const loadStatus = async () => {
-        try {
-            const result = await call("fan_get_status");
-            if (result.success && result.status) {
-                setStatus(result.status);
-            }
-        }
-        catch (e) {
-            console.error("Failed to load fan status:", e);
-        }
-    };
-    const applyPreset = async (presetName) => {
-        setIsApplying(true);
-        setError(null);
-        try {
-            const result = await call("fan_apply_preset", presetName);
-            if (!result.success) {
-                setError(result.error || "Failed to apply preset");
-            }
-            else {
-                await loadStatus();
-            }
-        }
-        catch (e) {
-            setError(`Error applying preset: ${e}`);
-        }
-        finally {
-            setIsApplying(false);
-        }
-    };
-    const loadCustomCurve = async (curveName) => {
-        setIsApplying(true);
-        setError(null);
-        try {
-            const result = await call("fan_load_custom", curveName);
-            if (!result.success) {
-                setError(result.error || "Failed to load custom curve");
-            }
-            else {
-                await loadStatus();
-            }
-        }
-        catch (e) {
-            setError(`Error loading custom curve: ${e}`);
-        }
-        finally {
-            setIsApplying(false);
-        }
-    };
-    const deleteCustomCurve = async (curveName) => {
-        setError(null);
-        try {
-            const result = await call("fan_delete_custom", curveName);
-            if (!result.success) {
-                setError(result.error || "Failed to delete custom curve");
-            }
-            else {
-                // Refresh custom curves list
-                const customResult = await call("fan_list_custom");
-                if (customResult.success && customResult.curves) {
-                    setCustomCurves(customResult.curves);
-                }
-            }
-        }
-        catch (e) {
-            setError(`Error deleting custom curve: ${e}`);
-        }
-    };
-    const validatePoints = (points) => {
-        // Check point count (3-10)
-        if (points.length < 3) {
-            return "Curve must have at least 3 points";
-        }
-        if (points.length > 10) {
-            return "Curve cannot have more than 10 points";
-        }
-        // Check each point
-        for (const point of points) {
-            if (point.temp < 0 || point.temp > 120) {
-                return `Temperature ${point.temp}°C is out of range [0, 120]`;
-            }
-            if (point.speed < 0 || point.speed > 100) {
-                return `Speed ${point.speed}% is out of range [0, 100]`;
-            }
-        }
-        return null;
-    };
-    const addPoint = () => {
-        if (customPoints.length >= 10) {
-            setValidationError("Cannot add more than 10 points");
-            return;
-        }
-        // Add a new point between the last two points
-        const lastPoint = customPoints[customPoints.length - 1];
-        const secondLastPoint = customPoints[customPoints.length - 2];
-        const newTemp = Math.round((lastPoint.temp + secondLastPoint.temp) / 2);
-        const newSpeed = Math.round((lastPoint.speed + secondLastPoint.speed) / 2);
-        setCustomPoints([...customPoints, { temp: newTemp, speed: newSpeed }]);
-        setValidationError(null);
-    };
-    const removePoint = (index) => {
-        if (customPoints.length <= 3) {
-            setValidationError("Curve must have at least 3 points");
-            return;
-        }
-        const newPoints = customPoints.filter((_, i) => i !== index);
-        setCustomPoints(newPoints);
-        setValidationError(null);
-    };
-    const updatePoint = (index, field, value) => {
-        const numValue = parseInt(value, 10);
-        if (isNaN(numValue))
-            return;
-        const newPoints = [...customPoints];
-        newPoints[index] = { ...newPoints[index], [field]: numValue };
-        setCustomPoints(newPoints);
-        // Validate
-        const error = validatePoints(newPoints);
-        setValidationError(error);
-    };
-    const saveCustomCurve = async () => {
-        // Validate curve name
-        if (!customCurveName.trim()) {
-            setValidationError("Please enter a curve name");
-            return;
-        }
-        // Validate points
-        const error = validatePoints(customPoints);
-        if (error) {
-            setValidationError(error);
-            return;
-        }
-        setIsApplying(true);
-        setValidationError(null);
-        try {
-            const result = await call("fan_create_custom", customCurveName.trim(), customPoints);
-            if (!result.success) {
-                setValidationError(result.error || "Failed to create custom curve");
-            }
-            else {
-                // Refresh custom curves list
-                const customResult = await call("fan_list_custom");
-                if (customResult.success && customResult.curves) {
-                    setCustomCurves(customResult.curves);
-                }
-                // Close editor
-                setShowCustomEditor(false);
-                setCustomCurveName("");
-                setCustomPoints([
-                    { temp: 40, speed: 20 },
-                    { temp: 60, speed: 50 },
-                    { temp: 80, speed: 100 },
-                ]);
-            }
-        }
-        catch (e) {
-            setValidationError(`Error creating custom curve: ${e}`);
-        }
-        finally {
-            setIsApplying(false);
-        }
-    };
-    const openCustomEditor = () => {
-        setShowCustomEditor(true);
-        setValidationError(null);
-        setCustomCurveName("");
-        setCustomPoints([
-            { temp: 40, speed: 20 },
-            { temp: 60, speed: 50 },
-            { temp: 80, speed: 100 },
-        ]);
-    };
-    // Loading state
-    if (isLoading) {
-        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        padding: "24px",
-                        color: "#8b929a",
-                    } },
-                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
-                    window.SP_REACT.createElement("span", null, "Loading fan control...")),
-                window.SP_REACT.createElement("style", null, `
-              .spin {
-                animation: spin 1s linear infinite;
-              }
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-            `))));
-    }
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement(DFL.PanelSection, null,
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, null,
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: {
-                            minHeight: "40px",
-                            padding: "8px 12px",
-                            backgroundColor: "rgba(61, 68, 80, 0.5)",
-                            borderRadius: "8px",
-                        } },
-                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                            window.SP_REACT.createElement(FaArrowLeft, { size: 14 }),
-                            window.SP_REACT.createElement("span", null, "Back to Main View"))))),
-            error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "8px 12px",
-                        backgroundColor: "#5c1313",
-                        borderRadius: "6px",
-                        marginBottom: "8px",
-                        fontSize: "11px",
-                        color: "#ffcdd2",
-                        border: "1px solid #f44336",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                    } },
-                    window.SP_REACT.createElement(FaExclamationTriangle, null),
-                    error))),
-            status && !status.hwmon_available && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "8px 12px",
-                        backgroundColor: "#5c4813",
-                        borderRadius: "6px",
-                        marginBottom: "8px",
-                        fontSize: "11px",
-                        color: "#fff3cd",
-                        border: "1px solid #ff9800",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                    } },
-                    window.SP_REACT.createElement(FaExclamationTriangle, null),
-                    "Hardware interface unavailable - fan control disabled")))),
-        status && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Current Status" },
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        justifyContent: "space-between",
-                        padding: "8px 12px",
-                        backgroundColor: "#23262e",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                    } },
-                    window.SP_REACT.createElement("div", null,
-                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Temperature"),
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
-                            status.current_temp.toFixed(1),
-                            "\u00B0C")),
-                    window.SP_REACT.createElement("div", null,
-                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Current Speed"),
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
-                            status.current_speed,
-                            "%")),
-                    window.SP_REACT.createElement("div", null,
-                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Target Speed"),
-                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
-                            status.target_speed,
-                            "%")))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        padding: "6px 12px",
-                        backgroundColor: "#1a1d23",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        color: "#8b929a",
-                        textAlign: "center",
-                    } },
-                    "Active: ",
-                    status.active_curve,
-                    " (",
-                    status.curve_type,
-                    ")")))),
-        window.SP_REACT.createElement(DFL.PanelSection, { title: "Presets" }, presets.map((preset) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset },
-            window.SP_REACT.createElement(DFL.Focusable, null,
-                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => applyPreset(preset), disabled: isApplying || (status && !status.hwmon_available), style: {
-                        minHeight: "40px",
-                        padding: "8px 12px",
-                        backgroundColor: status?.active_curve === preset && status?.curve_type === "preset"
-                            ? "#1a9fff"
-                            : "rgba(61, 68, 80, 0.5)",
-                        borderRadius: "8px",
-                        border: status?.active_curve === preset && status?.curve_type === "preset"
-                            ? "2px solid rgba(26, 159, 255, 0.5)"
-                            : "2px solid transparent",
-                    } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        } },
-                        window.SP_REACT.createElement("span", { style: { textTransform: "capitalize" } }, preset),
-                        status?.active_curve === preset && status?.curve_type === "preset" && (window.SP_REACT.createElement("span", { style: { fontSize: "11px", color: "#4caf50" } }, "\u25CF Active"))))))))),
-        window.SP_REACT.createElement(DFL.PanelSection, { title: "Custom Curves" },
-            customCurves.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement("div", { style: {
-                        textAlign: "center",
-                        padding: "16px",
-                        color: "#8b929a",
-                        fontSize: "12px",
-                    } }, "No custom curves created yet"))) : (customCurves.map((curve) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: curve },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
-                    } },
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 } },
-                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => loadCustomCurve(curve), disabled: isApplying || (status && !status.hwmon_available), style: {
-                                minHeight: "40px",
-                                padding: "8px 12px",
-                                backgroundColor: status?.active_curve === curve && status?.curve_type === "custom"
-                                    ? "#1a9fff"
-                                    : "rgba(61, 68, 80, 0.5)",
-                                borderRadius: "8px",
-                                border: status?.active_curve === curve && status?.curve_type === "custom"
-                                    ? "2px solid rgba(26, 159, 255, 0.5)"
-                                    : "2px solid transparent",
-                            } },
-                            window.SP_REACT.createElement("div", { style: {
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                } },
-                                window.SP_REACT.createElement("span", null, curve),
-                                status?.active_curve === curve && status?.curve_type === "custom" && (window.SP_REACT.createElement("span", { style: { fontSize: "11px", color: "#4caf50" } }, "\u25CF Active"))))),
-                    window.SP_REACT.createElement(DFL.Focusable, null,
-                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => deleteCustomCurve(curve), disabled: isApplying, style: {
-                                minHeight: "40px",
-                                padding: "8px 12px",
-                                backgroundColor: "#5c1313",
-                                borderRadius: "8px",
-                                border: "1px solid #f44336",
-                            } }, "Delete"))))))),
-            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, null,
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: openCustomEditor, disabled: status && !status.hwmon_available, style: {
-                            minHeight: "40px",
-                            padding: "8px 12px",
-                            backgroundColor: "rgba(26, 159, 255, 0.2)",
-                            borderRadius: "8px",
-                            border: "1px solid #1a9fff",
-                        } }, "Edit Curve")))),
-        showCustomEditor && (window.SP_REACT.createElement(DFL.ModalRoot, { onCancel: () => setShowCustomEditor(false) },
-            window.SP_REACT.createElement(DFL.ModalHeader, null, "Create Custom Fan Curve"),
-            window.SP_REACT.createElement(DFL.ModalBody, null,
-                window.SP_REACT.createElement("div", { style: { padding: "16px" } },
-                    window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "8px", fontSize: "13px", color: "#8b929a" } }, "Curve Name"),
-                        window.SP_REACT.createElement(DFL.TextField, { value: customCurveName, onChange: (e) => setCustomCurveName(e.target.value), placeholder: "Enter curve name", style: {
-                                width: "100%",
-                                padding: "8px",
-                                backgroundColor: "#23262e",
-                                border: "1px solid #3d4450",
-                                borderRadius: "4px",
-                                color: "#fff",
-                            } })),
-                    window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
-                        window.SP_REACT.createElement("div", { style: {
-                                marginBottom: "8px",
-                                fontSize: "13px",
-                                color: "#8b929a",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            } },
-                            window.SP_REACT.createElement("span", null, "Curve Points (3-10)"),
-                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: addPoint, disabled: customPoints.length >= 10, style: {
-                                    padding: "4px 8px",
-                                    fontSize: "11px",
-                                    backgroundColor: "rgba(76, 175, 80, 0.2)",
-                                    border: "1px solid #4caf50",
-                                    borderRadius: "4px",
-                                } },
-                                window.SP_REACT.createElement(FaPlus, { size: 10, style: { marginRight: "4px" } }),
-                                "Add Point")),
-                        customPoints.map((point, index) => (window.SP_REACT.createElement("div", { key: index, style: {
-                                display: "flex",
-                                gap: "8px",
-                                marginBottom: "8px",
-                                alignItems: "center",
-                            } },
-                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "4px" } }, "Temp (\u00B0C)"),
-                                window.SP_REACT.createElement(DFL.TextField, { value: point.temp.toString(), onChange: (e) => updatePoint(index, "temp", e.target.value), type: "number", min: 0, max: 120, style: {
-                                        width: "100%",
-                                        padding: "6px",
-                                        backgroundColor: "#23262e",
-                                        border: "1px solid #3d4450",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                    } })),
-                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
-                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "4px" } }, "Speed (%)"),
-                                window.SP_REACT.createElement(DFL.TextField, { value: point.speed.toString(), onChange: (e) => updatePoint(index, "speed", e.target.value), type: "number", min: 0, max: 100, style: {
-                                        width: "100%",
-                                        padding: "6px",
-                                        backgroundColor: "#23262e",
-                                        border: "1px solid #3d4450",
-                                        borderRadius: "4px",
-                                        color: "#fff",
-                                    } })),
-                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => removePoint(index), disabled: customPoints.length <= 3, style: {
-                                    padding: "6px 8px",
-                                    marginTop: "16px",
-                                    backgroundColor: "rgba(244, 67, 54, 0.2)",
-                                    border: "1px solid #f44336",
-                                    borderRadius: "4px",
-                                } },
-                                window.SP_REACT.createElement(FaTrash, { size: 12 })))))),
-                    validationError && (window.SP_REACT.createElement("div", { style: {
-                            padding: "8px 12px",
-                            backgroundColor: "#5c1313",
-                            borderRadius: "6px",
-                            marginBottom: "8px",
-                            fontSize: "11px",
-                            color: "#ffcdd2",
-                            border: "1px solid #f44336",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        } },
-                        window.SP_REACT.createElement(FaExclamationTriangle, null),
-                        validationError)))),
-            window.SP_REACT.createElement(DFL.ModalFooter, null,
-                window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowCustomEditor(false), disabled: isApplying, style: {
-                            padding: "8px 16px",
-                            backgroundColor: "rgba(61, 68, 80, 0.5)",
-                            borderRadius: "4px",
-                        } }, "Cancel"),
-                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: saveCustomCurve, disabled: isApplying || !!validationError || !customCurveName.trim(), style: {
-                            padding: "8px 16px",
-                            backgroundColor: "#1a9fff",
-                            borderRadius: "4px",
-                        } }, isApplying ? "Saving..." : "Save Curve")))))));
-};
-
-/**
- * HeaderBar component for DeckTune.
- *
- * Feature: ui-refactor-settings
- * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
- *
- * Provides compact navigation to Fan Control and Settings:
- * - Fan Control icon button (FaFan)
- * - Settings icon button (FaCog)
- * - Compact display with 20px icons
- * - Gamepad navigation support via FocusableButton
- */
-/**
- * HeaderBar component - compact navigation for Fan Control and Settings.
- *
- * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
- *
- * Features:
- * - Positioned at top of DeckTuneApp
- * - Two icon buttons: Fan Control (FaFan) and Settings (FaCog)
- * - Icons sized at 20px for compact display (Requirement 1.5)
- * - Gamepad navigation support via FocusableButton
- * - Hover and focus states for accessibility
- */
-const HeaderBar = ({ onFanControlClick, onSettingsClick, version, }) => {
-    return (window.SP_REACT.createElement("div", { style: {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px 12px",
-            backgroundColor: "rgba(26, 29, 35, 0.5)",
-            borderRadius: "8px",
-            marginBottom: "12px",
-        }, role: "navigation", "aria-label": "Quick navigation" },
-        version && (window.SP_REACT.createElement("div", { style: {
-                fontSize: "10px",
-                color: "#5a5d64",
-                fontFamily: "monospace",
-            } },
-            "v",
-            version)),
-        window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
-            window.SP_REACT.createElement(FocusableButton, { onClick: onFanControlClick, style: { padding: 0 }, "aria-label": "Open Fan Control" },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "36px",
-                        height: "36px",
-                        backgroundColor: "rgba(61, 68, 80, 0.5)",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                    } },
-                    window.SP_REACT.createElement(FaFan, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))),
-            window.SP_REACT.createElement(FocusableButton, { onClick: onSettingsClick, style: { padding: 0 }, "aria-label": "Open Settings" },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "36px",
-                        height: "36px",
-                        backgroundColor: "rgba(61, 68, 80, 0.5)",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                    } },
-                    window.SP_REACT.createElement(FaCog, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))))));
-};
-
-/**
- * SettingsMenu component for DeckTune.
- *
- * Feature: ui-refactor-settings
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
- *
- * Provides centralized settings management interface:
- * - Expert Mode toggle with confirmation dialog
- * - Binning Settings (test duration, step size, start value)
- * - Modal overlay with backdrop dismiss
- * - Gamepad navigation support
- * - Accessibility compliant (WCAG AA)
- */
-
-/**
- * Expert Mode Warning Dialog component.
- *
- * Requirements: 2.3, 2.4, 9.3
- *
- * Displays warning about risks and requires explicit confirmation
- * before enabling Expert Mode.
- */
-const ExpertWarningDialog = ({ isOpen, onConfirm, onCancel, }) => {
-    if (!isOpen)
-        return null;
-    return (window.SP_REACT.createElement("div", { style: {
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.9)",
-            zIndex: 10000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-        }, role: "dialog", "aria-modal": "true", "aria-labelledby": "expert-warning-title", "aria-describedby": "expert-warning-description" },
-        window.SP_REACT.createElement("div", { style: {
-                backgroundColor: "#1a1d23",
-                borderRadius: "8px",
-                padding: "16px",
-                maxWidth: "400px",
-                border: "2px solid #ff6b6b",
-            } },
-            window.SP_REACT.createElement("div", { style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "12px",
-                } },
-                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" }, "aria-hidden": "true" }),
-                window.SP_REACT.createElement("div", { id: "expert-warning-title", style: {
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        color: "#ff6b6b",
-                    } }, "Expert Undervolter Mode")),
-            window.SP_REACT.createElement("div", { id: "expert-warning-description", style: {
-                    fontSize: "11px",
-                    lineHeight: "1.5",
-                    marginBottom: "12px",
-                    color: "#e0e0e0",
-                } },
-                window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
-                    window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
-                    " Expert mode removes safety limits."),
-                window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
-                    window.SP_REACT.createElement("strong", null, "Risks:"),
-                    " System instability, crashes, data loss, hardware damage."),
-                window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, "Use at your own risk!")),
-            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
-                window.SP_REACT.createElement(FocusableButton, { onClick: onConfirm, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "8px",
-                            backgroundColor: "#b71c1c",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: "bold",
-                        } },
-                        window.SP_REACT.createElement(FaCheck, { size: 10, "aria-hidden": "true" }),
-                        window.SP_REACT.createElement("span", null, "I Understand"))),
-                window.SP_REACT.createElement(FocusableButton, { onClick: onCancel, style: { flex: 1 } },
-                    window.SP_REACT.createElement("div", { style: {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px",
-                            padding: "8px",
-                            backgroundColor: "#3d4450",
-                            borderRadius: "4px",
-                            fontSize: "10px",
-                            fontWeight: "bold",
-                        } },
-                        window.SP_REACT.createElement(FaTimes, { size: 10, "aria-hidden": "true" }),
-                        window.SP_REACT.createElement("span", null, "Cancel")))))));
-};
-/**
- * SettingsMenu component - centralized settings management.
- *
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
- *
- * Features:
- * - Modal overlay with backdrop dismiss
- * - Expert Mode toggle with confirmation
- * - Binning Settings (test duration, step size, start value)
- * - Auto-save on changes (Requirement 9.4)
- * - Gamepad navigation support
- * - WCAG AA compliant
- */
-const SettingsMenu = ({ isOpen, onClose }) => {
-    const { settings, setExpertMode } = useSettings();
-    const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
-    // Binning config state
-    const [binningConfig, setBinningConfig] = SP_REACT.useState({
-        test_duration: 60,
-        step_size: 5,
-        start_value: -10,
-    });
-    const [binningLoaded, setBinningLoaded] = SP_REACT.useState(false);
-    // Load binning config on mount
-    SP_REACT.useEffect(() => {
-        if (isOpen && !binningLoaded) {
-            loadBinningConfig();
-        }
-    }, [isOpen]);
-    const loadBinningConfig = async () => {
-        try {
-            const response = await call("get_binning_config");
-            if (response.success && response.config) {
-                setBinningConfig({
-                    test_duration: response.config.test_duration || 60,
-                    step_size: response.config.step_size || 5,
-                    start_value: response.config.start_value || -10,
-                });
-                setBinningLoaded(true);
-            }
-        }
-        catch (err) {
-            console.error("Failed to load binning config:", err);
-        }
-    };
-    const updateBinningConfig = async (updates) => {
-        const newConfig = { ...binningConfig, ...updates };
-        setBinningConfig(newConfig);
-        try {
-            await call("update_binning_config", newConfig);
-        }
-        catch (err) {
-            console.error("Failed to update binning config:", err);
-        }
-    };
-    if (!isOpen)
-        return null;
-    /**
-     * Handle Expert Mode toggle.
-     *
-     * Requirements: 2.3, 2.4
-     * Shows confirmation dialog when enabling, directly disables when turning off.
-     */
-    const handleExpertModeToggle = () => {
-        if (!settings.expertMode) {
-            // Enabling - show warning dialog
-            setShowExpertWarning(true);
-        }
-        else {
-            // Disabling - no confirmation needed
-            setExpertMode(false);
-        }
-    };
-    /**
-     * Handle Expert Mode confirmation.
-     *
-     * Requirements: 2.4, 9.4
-     */
-    const handleExpertModeConfirm = async () => {
-        await setExpertMode(true);
-        setShowExpertWarning(false);
-    };
-    /**
-     * Handle Expert Mode cancellation.
-     *
-     * Requirements: 2.4
-     */
-    const handleExpertModeCancel = () => {
-        setShowExpertWarning(false);
-    };
-    /**
-     * Handle backdrop click to close menu.
-     *
-     * Requirements: 2.1, 9.5
-     */
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
-    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
-        window.SP_REACT.createElement("div", { style: {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.85)",
-                zIndex: 9999,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "20px",
-            }, onClick: handleBackdropClick, role: "dialog", "aria-modal": "true", "aria-labelledby": "settings-menu-title" },
-            window.SP_REACT.createElement("div", { style: {
-                    backgroundColor: "#1a1d23",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    maxWidth: "400px",
-                    width: "100%",
-                    border: "1px solid #3d4450",
-                }, onClick: (e) => e.stopPropagation() },
-                window.SP_REACT.createElement("div", { style: {
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "16px",
-                    } },
-                    window.SP_REACT.createElement("h2", { id: "settings-menu-title", style: {
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            color: "#fff",
-                            margin: 0,
-                        } }, "Settings"),
-                    window.SP_REACT.createElement(FocusableButton, { onClick: onClose },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "32px",
-                                height: "32px",
-                                backgroundColor: "#3d4450",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                            }, "aria-label": "Close settings" },
-                            window.SP_REACT.createElement(FaTimes, { size: 14, color: "#fff", "aria-hidden": "true" })))),
-                window.SP_REACT.createElement(DFL.PanelSection, null,
-                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "12px",
-                                    fontWeight: "bold",
-                                    color: "#fff",
-                                    marginBottom: "8px",
-                                } }, "Expert Mode"),
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "10px",
-                                    color: "#8b929a",
-                                    marginBottom: "8px",
-                                    lineHeight: "1.4",
-                                } }, "Removes safety limits for advanced undervolting. Use with caution."),
-                            window.SP_REACT.createElement(FocusableButton, { onClick: handleExpertModeToggle, style: { width: "100%" } },
-                                window.SP_REACT.createElement("div", { style: {
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        padding: "10px 12px",
-                                        backgroundColor: settings.expertMode
-                                            ? "#b71c1c"
-                                            : "#3d4450",
-                                        borderRadius: "4px",
-                                        fontSize: "11px",
-                                        fontWeight: "bold",
-                                    }, role: "switch", "aria-checked": settings.expertMode, "aria-label": "Expert Mode toggle" },
-                                    window.SP_REACT.createElement("span", null, settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"),
-                                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.expertMode ? "ON" : "OFF"))))),
-                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "12px",
-                                    fontWeight: "bold",
-                                    color: "#fff",
-                                    marginBottom: "8px",
-                                } }, "Wizard Settings"),
-                            window.SP_REACT.createElement("div", { style: {
-                                    fontSize: "10px",
-                                    color: "#8b929a",
-                                    marginBottom: "12px",
-                                    lineHeight: "1.4",
-                                } }, "Advanced configuration for Wizard Mode testing algorithm."),
-                            window.SP_REACT.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "12px" } },
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Test Duration: ",
-                                        binningConfig.test_duration,
-                                        "s"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 30, max: 300, step: 10, value: binningConfig.test_duration, onChange: (e) => updateBinningConfig({ test_duration: parseInt(e.target.value) }), style: { width: "100%" } })),
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Step Size: ",
-                                        binningConfig.step_size,
-                                        "mV"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 1, max: 10, step: 1, value: binningConfig.step_size, onChange: (e) => updateBinningConfig({ step_size: parseInt(e.target.value) }), style: { width: "100%" } })),
-                                window.SP_REACT.createElement("div", null,
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
-                                        "Start Value: ",
-                                        binningConfig.start_value,
-                                        "mV"),
-                                    window.SP_REACT.createElement("input", { type: "range", min: 5, max: 20, step: 5, value: Math.abs(binningConfig.start_value), onChange: (e) => updateBinningConfig({ start_value: -parseInt(e.target.value) }), style: { width: "100%" } }))))),
-                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement("div", { style: {
-                                fontSize: "9px",
-                                color: "#4caf50",
-                                textAlign: "center",
-                                padding: "4px",
-                            } }, "\u2713 Changes saved automatically")),
-                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                        window.SP_REACT.createElement(FocusableButton, { onClick: async () => {
-                                if (confirm("Reset all settings to defaults? This will clear wizard setup state and all configurations.")) {
-                                    try {
-                                        // Clear localStorage
-                                        localStorage.removeItem('decktune_wizard_setup_complete');
-                                        localStorage.removeItem('decktune_ui_mode');
-                                        localStorage.removeItem('decktune_last_mode');
-                                        // Reset binning config
-                                        await call("update_binning_config", {
-                                            test_duration: 60,
-                                            step_size: 5,
-                                            start_value: -10,
-                                        });
-                                        // Reset expert mode
-                                        await setExpertMode(false);
-                                        // Reload page
-                                        window.location.reload();
-                                    }
-                                    catch (err) {
-                                        console.error("Failed to reset settings:", err);
-                                    }
-                                }
-                            }, style: {
-                                width: "100%",
-                                padding: "10px",
-                                backgroundColor: "#f44336",
-                                borderRadius: "4px",
-                                color: "#fff",
-                                fontWeight: "bold",
-                                fontSize: "12px",
-                                textAlign: "center",
-                                cursor: "pointer",
-                            } }, "Reset All Settings"))))),
-        window.SP_REACT.createElement(ExpertWarningDialog, { isOpen: showExpertWarning, onConfirm: handleExpertModeConfirm, onCancel: handleExpertModeCancel })));
-};
-
 function r(e){var t,f,n="";if("string"==typeof e||"number"==typeof e)n+=e;else if("object"==typeof e)if(Array.isArray(e)){var o=e.length;for(t=0;t<o;t++)e[t]&&(f=r(e[t]))&&(n&&(n+=" "),n+=f);}else for(f in e)e[f]&&(n&&(n+=" "),n+=f);return n}function clsx(){for(var e,t,f=0,n="",o=arguments.length;f<o;f++)(e=arguments[f])&&(t=r(e))&&(n&&(n+=" "),n+=t);return n}
 
 var EventKeys = ['dangerouslySetInnerHTML', 'onCopy', 'onCopyCapture', 'onCut', 'onCutCapture', 'onPaste', 'onPasteCapture', 'onCompositionEnd', 'onCompositionEndCapture', 'onCompositionStart', 'onCompositionStartCapture', 'onCompositionUpdate', 'onCompositionUpdateCapture', 'onFocus', 'onFocusCapture', 'onBlur', 'onBlurCapture', 'onChange', 'onChangeCapture', 'onBeforeInput', 'onBeforeInputCapture', 'onInput', 'onInputCapture', 'onReset', 'onResetCapture', 'onSubmit', 'onSubmitCapture', 'onInvalid', 'onInvalidCapture', 'onLoad', 'onLoadCapture', 'onError', 'onErrorCapture', 'onKeyDown', 'onKeyDownCapture', 'onKeyPress', 'onKeyPressCapture', 'onKeyUp', 'onKeyUpCapture', 'onAbort', 'onAbortCapture', 'onCanPlay', 'onCanPlayCapture', 'onCanPlayThrough', 'onCanPlayThroughCapture', 'onDurationChange', 'onDurationChangeCapture', 'onEmptied', 'onEmptiedCapture', 'onEncrypted', 'onEncryptedCapture', 'onEnded', 'onEndedCapture', 'onLoadedData', 'onLoadedDataCapture', 'onLoadedMetadata', 'onLoadedMetadataCapture', 'onLoadStart', 'onLoadStartCapture', 'onPause', 'onPauseCapture', 'onPlay', 'onPlayCapture', 'onPlaying', 'onPlayingCapture', 'onProgress', 'onProgressCapture', 'onRateChange', 'onRateChangeCapture', 'onSeeked', 'onSeekedCapture', 'onSeeking', 'onSeekingCapture', 'onStalled', 'onStalledCapture', 'onSuspend', 'onSuspendCapture', 'onTimeUpdate', 'onTimeUpdateCapture', 'onVolumeChange', 'onVolumeChangeCapture', 'onWaiting', 'onWaitingCapture', 'onAuxClick', 'onAuxClickCapture', 'onClick', 'onClickCapture', 'onContextMenu', 'onContextMenuCapture', 'onDoubleClick', 'onDoubleClickCapture', 'onDrag', 'onDragCapture', 'onDragEnd', 'onDragEndCapture', 'onDragEnter', 'onDragEnterCapture', 'onDragExit', 'onDragExitCapture', 'onDragLeave', 'onDragLeaveCapture', 'onDragOver', 'onDragOverCapture', 'onDragStart', 'onDragStartCapture', 'onDrop', 'onDropCapture', 'onMouseDown', 'onMouseDownCapture', 'onMouseEnter', 'onMouseLeave', 'onMouseMove', 'onMouseMoveCapture', 'onMouseOut', 'onMouseOutCapture', 'onMouseOver', 'onMouseOverCapture', 'onMouseUp', 'onMouseUpCapture', 'onSelect', 'onSelectCapture', 'onTouchCancel', 'onTouchCancelCapture', 'onTouchEnd', 'onTouchEndCapture', 'onTouchMove', 'onTouchMoveCapture', 'onTouchStart', 'onTouchStartCapture', 'onPointerDown', 'onPointerDownCapture', 'onPointerMove', 'onPointerMoveCapture', 'onPointerUp', 'onPointerUpCapture', 'onPointerCancel', 'onPointerCancelCapture', 'onPointerEnter', 'onPointerEnterCapture', 'onPointerLeave', 'onPointerLeaveCapture', 'onPointerOver', 'onPointerOverCapture', 'onPointerOut', 'onPointerOutCapture', 'onGotPointerCapture', 'onGotPointerCaptureCapture', 'onLostPointerCapture', 'onLostPointerCaptureCapture', 'onScroll', 'onScrollCapture', 'onWheel', 'onWheelCapture', 'onAnimationStart', 'onAnimationStartCapture', 'onAnimationEnd', 'onAnimationEndCapture', 'onAnimationIteration', 'onAnimationIterationCapture', 'onTransitionEnd', 'onTransitionEndCapture'];
@@ -35798,6 +30072,8 @@ const validateConfig = (config) => {
  */
 const FrequencyWizard = () => {
     const { state, api } = useDeckTune();
+    // Configuration mode: "preset" or "manual"
+    const [configMode, setConfigMode] = SP_REACT.useState("preset");
     // Configuration state - Requirements: 3.1
     const [config, setConfig] = SP_REACT.useState({
         freq_start: 400,
@@ -35840,6 +30116,7 @@ const FrequencyWizard = () => {
      */
     const handlePresetClick = (preset) => {
         setConfig(preset.config);
+        setConfigMode("preset");
         setShowErrors(false);
         setError(null);
     };
@@ -35848,22 +30125,33 @@ const FrequencyWizard = () => {
      * Requirements: 6.3
      */
     const handleStart = async () => {
+        console.log("[FrequencyWizard] Start button clicked");
         // Validate configuration - Requirement 3.7
         const errors = validateConfig(config);
         if (Object.keys(errors).length > 0) {
+            console.error("[FrequencyWizard] Validation errors:", errors);
             setShowErrors(true);
             return;
         }
         setIsStarting(true);
         setError(null);
+        console.log("[FrequencyWizard] Starting wizard with config:", config);
         try {
             const result = await api.startFrequencyWizard(config);
+            console.log("[FrequencyWizard] Start result:", result);
             if (!result.success) {
-                setError(result.error || "Failed to start wizard");
+                const errorMsg = result.error || "Failed to start wizard";
+                console.error("[FrequencyWizard] Start failed:", errorMsg);
+                setError(errorMsg);
+            }
+            else {
+                console.log("[FrequencyWizard] Wizard started successfully");
             }
         }
         catch (err) {
-            setError(String(err));
+            const errorMsg = String(err);
+            console.error("[FrequencyWizard] Exception during start:", errorMsg);
+            setError(errorMsg);
         }
         finally {
             setIsStarting(false);
@@ -35959,6 +30247,8 @@ const FrequencyWizard = () => {
             border: 2px solid transparent;
             transition: all 0.3s ease;
             cursor: pointer;
+            max-width: 100%;
+            overflow: hidden;
           }
           
           .preset-card:hover {
@@ -35969,6 +30259,13 @@ const FrequencyWizard = () => {
           .preset-card.active {
             border-color: #1a9fff;
             background: rgba(26, 159, 255, 0.2);
+          }
+          
+          .preset-card:focus-within,
+          .preset-card.gpfocus {
+            outline: 3px solid #1a9fff !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(26, 159, 255, 0.6) !important;
           }
           
           .error-text {
@@ -36096,25 +30393,49 @@ const FrequencyWizard = () => {
                                 window.SP_REACT.createElement("span", null, "No, Continue"))))))))),
             !isRunning && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setConfigMode("preset"), style: {
+                                flex: 1,
+                                backgroundColor: configMode === "preset" ? "#1a9fff" : "#3d4450",
+                                border: configMode === "preset" ? "2px solid #1a9fff" : "2px solid transparent",
+                                minHeight: "36px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "11px",
+                                    fontWeight: "bold",
+                                    color: configMode === "preset" ? "#fff" : "#8b929a"
+                                } }, "Quick Presets")),
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setConfigMode("manual"), style: {
+                                flex: 1,
+                                backgroundColor: configMode === "manual" ? "#1a9fff" : "#3d4450",
+                                border: configMode === "manual" ? "2px solid #1a9fff" : "2px solid transparent",
+                                minHeight: "36px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "11px",
+                                    fontWeight: "bold",
+                                    color: configMode === "manual" ? "#fff" : "#8b929a"
+                                } }, "Manual Config")))),
+                configMode === "preset" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement("div", { style: { marginBottom: "8px" } },
-                        window.SP_REACT.createElement("span", { style: { color: "#8b929a", fontSize: "11px", fontWeight: "bold" } }, "Quick Presets")),
-                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } }, QUICK_PRESETS.map((preset) => {
+                        window.SP_REACT.createElement("span", { style: { color: "#8b929a", fontSize: "11px", fontWeight: "bold" } }, "Select Preset")),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px", maxWidth: "100%" } }, QUICK_PRESETS.map((preset) => {
                         const Icon = preset.icon;
                         const isActive = JSON.stringify(config) === JSON.stringify(preset.config);
-                        return (window.SP_REACT.createElement(DFL.Focusable, { key: preset.name, className: `preset-card ${isActive ? "active" : ""}`, onActivate: () => handlePresetClick(preset), onClick: () => handlePresetClick(preset) },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
-                                window.SP_REACT.createElement(Icon, { style: { fontSize: "20px", color: isActive ? "#1a9fff" : "#8b929a" } }),
-                                window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                        return (window.SP_REACT.createElement(DFL.Focusable, { key: preset.name, className: `preset-card ${isActive ? "active" : ""}`, onActivate: () => handlePresetClick(preset), onClick: () => handlePresetClick(preset), style: { width: "100%" } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", width: "100%" } },
+                                window.SP_REACT.createElement(Icon, { style: { fontSize: "20px", color: isActive ? "#1a9fff" : "#8b929a", flexShrink: 0 } }),
+                                window.SP_REACT.createElement("div", { style: { flex: 1, minWidth: 0 } },
                                     window.SP_REACT.createElement("div", { style: {
                                             fontSize: "12px",
                                             fontWeight: "bold",
                                             color: isActive ? "#1a9fff" : "#fff",
                                             marginBottom: "2px",
                                         } }, preset.name),
-                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, preset.description)),
-                                isActive && (window.SP_REACT.createElement(FaCheck, { style: { color: "#1a9fff", fontSize: "14px" } })))));
-                    }))),
-                window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Range" },
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, preset.description)),
+                                isActive && (window.SP_REACT.createElement(FaCheck, { style: { color: "#1a9fff", fontSize: "14px", flexShrink: 0 } })))));
+                    })))),
+                configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Range" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(DFL.SliderField, { label: "Start Frequency (MHz)", value: config.freq_start, min: 400, max: 3500, step: 50, onChange: (value) => setConfig({ ...config, freq_start: value }), showValue: true, bottomSeparator: "none" }),
                         showErrors && validationErrors.freq_start && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_start))),
@@ -36123,12 +30444,12 @@ const FrequencyWizard = () => {
                         showErrors && validationErrors.freq_end && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_end))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(DFL.SliderField, { label: "Frequency Step (MHz)", value: config.freq_step, min: 50, max: 500, step: 10, onChange: (value) => setConfig({ ...config, freq_step: value }), showValue: true, description: "Larger steps = faster testing, less precision" }),
-                        showErrors && validationErrors.freq_step && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_step)))),
-                window.SP_REACT.createElement(DFL.PanelSection, { title: "Test Settings" },
+                        showErrors && validationErrors.freq_step && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.freq_step))))),
+                configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Test Settings" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(DFL.SliderField, { label: "Test Duration (seconds)", value: config.test_duration, min: 10, max: 120, step: 5, onChange: (value) => setConfig({ ...config, test_duration: value }), showValue: true, description: "Duration to test each frequency point" }),
-                        showErrors && validationErrors.test_duration && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.test_duration)))),
-                window.SP_REACT.createElement(DFL.PanelSection, { title: "Voltage Settings" },
+                        showErrors && validationErrors.test_duration && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.test_duration))))),
+                configMode === "manual" && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Voltage Settings" },
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(DFL.SliderField, { label: "Starting Voltage (mV)", value: config.voltage_start, min: -100, max: 0, step: 1, onChange: (value) => setConfig({ ...config, voltage_start: value }), showValue: true, description: "Initial voltage offset to test" }),
                         showErrors && validationErrors.voltage_start && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.voltage_start))),
@@ -36137,7 +30458,7 @@ const FrequencyWizard = () => {
                         showErrors && validationErrors.voltage_step && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.voltage_step))),
                     window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                         window.SP_REACT.createElement(DFL.SliderField, { label: "Safety Margin (mV)", value: config.safety_margin, min: 0, max: 20, step: 1, onChange: (value) => setConfig({ ...config, safety_margin: value }), showValue: true, description: "Extra voltage added for stability" }),
-                        showErrors && validationErrors.safety_margin && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.safety_margin)))),
+                        showErrors && validationErrors.safety_margin && (window.SP_REACT.createElement("div", { className: "error-text" }, validationErrors.safety_margin))))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                     window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart, disabled: isStarting || hasErrors },
                         window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isStarting ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
@@ -36207,6 +30528,5765 @@ const FrequencyWizard = () => {
 };
 
 /**
+ * Refactored WizardMode component for DeckTune.
+ *
+ * Feature: Wizard Mode Refactoring
+ *
+ * Complete redesign with:
+ * - Configuration screen with aggressiveness/duration settings
+ * - Real-time progress with ETA/OTA/heartbeat
+ * - Results screen with curve visualization and chip grading
+ * - Crash recovery modal
+ * - Results history browser
+ */
+
+// ==================== Panic Disable Button ====================
+const PanicDisableButton$1 = () => {
+    const { api } = useDeckTune();
+    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
+    const handlePanicDisable = async () => {
+        setIsPanicking(true);
+        try {
+            await api.panicDisable();
+        }
+        finally {
+            setIsPanicking(false);
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handlePanicDisable, disabled: isPanicking, style: {
+                backgroundColor: "#b71c1c",
+                borderRadius: "4px",
+                minHeight: "30px",
+                padding: "4px 6px",
+            } },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "4px",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    fontSize: "11px",
+                } }, isPanicking ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }),
+                window.SP_REACT.createElement("span", null, "Disabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement(FaExclamationTriangle, { size: 10 }),
+                window.SP_REACT.createElement("span", null, "PANIC DISABLE"))))),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+// ==================== Crash Recovery Modal ====================
+const CrashRecoveryModal = ({ crashInfo, onDismiss }) => {
+    return (window.SP_REACT.createElement("div", { style: {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+        } },
+        window.SP_REACT.createElement("div", { style: {
+                backgroundColor: "#1a1d24",
+                borderRadius: "8px",
+                padding: "20px",
+                maxWidth: "400px",
+                border: "2px solid #ff9800",
+            } },
+            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" } },
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800", fontSize: "24px" } }),
+                window.SP_REACT.createElement("h3", { style: { margin: 0, color: "#fff" } }, "Crash Detected")),
+            window.SP_REACT.createElement("p", { style: { fontSize: "13px", color: "#ccc", marginBottom: "15px" } }, "The system crashed during wizard testing. This is normal when pushing limits."),
+            window.SP_REACT.createElement("div", { style: { backgroundColor: "#2a2d34", padding: "10px", borderRadius: "4px", marginBottom: "15px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "5px" } }, "Crash Details:"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#fff" } },
+                    "Testing: ",
+                    window.SP_REACT.createElement("strong", null,
+                        crashInfo?.currentOffset ?? 0,
+                        "mV")),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#4caf50" } },
+                    "Last Stable: ",
+                    window.SP_REACT.createElement("strong", null,
+                        crashInfo?.lastStable,
+                        "mV"))),
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onDismiss },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, "Continue"))))));
+};
+// ==================== Configuration Screen ====================
+const ConfigurationScreen = ({ onStart, platformInfo }) => {
+    const [aggressiveness, setAggressiveness] = SP_REACT.useState("balanced");
+    const [testDuration, setTestDuration] = SP_REACT.useState("short");
+    const [isBenchmarking, setIsBenchmarking] = SP_REACT.useState(false);
+    const [benchmarkResult, setBenchmarkResult] = SP_REACT.useState(null);
+    const handleStart = () => {
+        const config = {
+            targetDomains: ["cpu"],
+            aggressiveness,
+            testDuration,
+            safetyLimits: {
+                cpu: platformInfo?.safe_limit || -100,
+            },
+        };
+        onStart(config);
+    };
+    const handleRunBenchmark = async () => {
+        setIsBenchmarking(true);
+        setBenchmarkResult(null);
+        try {
+            const result = await call("run_wizard_benchmark", 10);
+            if (result?.success) {
+                setBenchmarkResult(result);
+            }
+        }
+        catch (err) {
+            console.error("Benchmark failed:", err);
+        }
+        finally {
+            setIsBenchmarking(false);
+        }
+    };
+    const getEstimatedTime = () => {
+        const base = testDuration === "short" ? 5 : 15;
+        const multiplier = aggressiveness === "safe" ? 2 : aggressiveness === "aggressive" ? 0.5 : 1;
+        return Math.round(base * multiplier);
+    };
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "6px", maxHeight: "400px", overflowY: "auto" } },
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#ccc", marginBottom: "6px" } }, "Find optimal undervolt through systematic testing.")),
+        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
+                platformInfo.variant,
+                " \u2022 Limit: ",
+                platformInfo.safe_limit,
+                "mV"))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Aggressiveness"),
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("safe"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "safe" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "safe" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "32px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "safe" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Safe"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "2mV"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("balanced"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "balanced" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "balanced" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "32px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "balanced" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Balanced"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "5mV"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setAggressiveness("aggressive"), style: {
+                            flex: 1,
+                            backgroundColor: aggressiveness === "aggressive" ? "#1a9fff" : "#3d4450",
+                            border: aggressiveness === "aggressive" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "32px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: aggressiveness === "aggressive" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Aggressive"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "10mV")))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { marginBottom: "4px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px", fontWeight: "bold" } }, "Test Duration"),
+                window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "4px" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("short"), style: {
+                            flex: 1,
+                            backgroundColor: testDuration === "short" ? "#1a9fff" : "#3d4450",
+                            border: testDuration === "short" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "32px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "short" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Short"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "30s"))),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setTestDuration("long"), style: {
+                            flex: 1,
+                            backgroundColor: testDuration === "long" ? "#1a9fff" : "#3d4450",
+                            border: testDuration === "long" ? "2px solid #1a9fff" : "2px solid transparent",
+                            minHeight: "32px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", textAlign: "center", color: testDuration === "long" ? "#fff" : "#8b929a" } },
+                            window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } }, "Long"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "7px" } }, "120s")))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", textAlign: "center", padding: "3px" } },
+                "Est. time: ~",
+                getEstimatedTime(),
+                " min")),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleRunBenchmark, disabled: isBenchmarking },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "10px" } },
+                    isBenchmarking ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaChartLine, { size: 10 }),
+                    window.SP_REACT.createElement("span", null, isBenchmarking ? "Running..." : "Benchmark")))),
+        isBenchmarking && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: "Benchmark", description: "Testing...", nProgress: 50, sOperationText: "Wait..." }))),
+        benchmarkResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#4caf50", padding: "6px", backgroundColor: "#1a1d24", borderRadius: "4px" } },
+                window.SP_REACT.createElement("div", null,
+                    "Score: ",
+                    benchmarkResult.score,
+                    " ops/sec"),
+                window.SP_REACT.createElement("div", null,
+                    "Temp: ",
+                    benchmarkResult.max_temp,
+                    "\u00B0C \u2022 Freq: ",
+                    benchmarkResult.max_freq,
+                    " MHz")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleStart },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "11px" } },
+                    window.SP_REACT.createElement(FaPlay, { size: 10 }),
+                    window.SP_REACT.createElement("span", null, "Start Wizard"))))));
+};
+// ==================== Progress Screen ====================
+const ProgressScreen = ({ progress, onCancel }) => {
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    };
+    const formatOTA = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
+    };
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { textAlign: "center", marginBottom: "15px" } },
+                window.SP_REACT.createElement(FaSpinner, { style: {
+                        animation: "spin 1s linear infinite",
+                        fontSize: "32px",
+                        color: "#1a9fff",
+                    } }))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ProgressBarWithInfo, { label: progress?.currentStage || "Initializing...", description: `Testing ${progress?.currentOffset ?? 0}mV`, nProgress: progress?.progressPercent || 0, sOperationText: `ETA: ${formatTime(progress?.etaSeconds || 0)}` })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    padding: "8px",
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "4px",
+                } },
+                window.SP_REACT.createElement("div", null,
+                    window.SP_REACT.createElement("div", null,
+                        "Elapsed: ",
+                        formatOTA(progress?.otaSeconds || 0)),
+                    window.SP_REACT.createElement("div", null,
+                        "Iterations: ",
+                        progress?.liveMetrics?.iterations || 0)),
+                window.SP_REACT.createElement("div", { style: { textAlign: "right" } },
+                    window.SP_REACT.createElement("div", null,
+                        "Last Stable: ",
+                        progress?.liveMetrics?.last_stable ?? 0,
+                        "mV"),
+                    window.SP_REACT.createElement("div", { style: { color: "#4caf50" } }, "\u25CF Active")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
+                    window.SP_REACT.createElement(FaStop, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, "Cancel"))))));
+};
+// ==================== Chip Grade Badge ====================
+const ChipGradeBadge = ({ grade }) => {
+    const getGradeConfig = () => {
+        switch (grade) {
+            case "Platinum":
+                return { icon: FaTrophy, color: "#e5e4e2", glow: "#e5e4e2" };
+            case "Gold":
+                return { icon: FaMedal, color: "#ffd700", glow: "#ffd700" };
+            case "Silver":
+                return { icon: FaAward, color: "#c0c0c0", glow: "#c0c0c0" };
+            default:
+                return { icon: FaCertificate, color: "#cd7f32", glow: "#cd7f32" };
+        }
+    };
+    const config = getGradeConfig();
+    const Icon = config.icon;
+    return (window.SP_REACT.createElement("div", { style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            padding: "15px",
+            backgroundColor: "#1a1d24",
+            borderRadius: "8px",
+            border: `2px solid ${config.color}`,
+            boxShadow: `0 0 15px ${config.glow}`,
+        } },
+        window.SP_REACT.createElement(Icon, { style: { fontSize: "32px", color: config.color } }),
+        window.SP_REACT.createElement("div", null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "18px", fontWeight: "bold", color: config.color } }, grade),
+            window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Chip Quality"))));
+};
+// ==================== Enhanced Interactive Curve Chart ====================
+const EnhancedCurveChart = ({ data }) => {
+    const [hoveredPoint, setHoveredPoint] = SP_REACT.useState(null);
+    const [tooltipPos, setTooltipPos] = SP_REACT.useState({ x: 0, y: 0 });
+    if (!data || data.length === 0)
+        return null;
+    const width = 320;
+    const height = 180;
+    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+    const offsets = data.map((d) => d.offset);
+    const temps = data.map((d) => d.temp);
+    const xMin = Math.min(...offsets);
+    const xMax = Math.max(...offsets);
+    const yMin = 0;
+    const yMax = Math.max(...temps, 100);
+    const xScale = (x) => padding.left + ((x - xMin) / (xMax - xMin)) * (width - padding.left - padding.right);
+    const yScale = (y) => height - padding.bottom - ((y - yMin) / (yMax - yMin)) * (height - padding.top - padding.bottom);
+    const handlePointHover = (index, event) => {
+        setHoveredPoint(index);
+        const rect = event.currentTarget.getBoundingClientRect();
+        setTooltipPos({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+    };
+    return (window.SP_REACT.createElement("div", { style: { position: "relative" } },
+        window.SP_REACT.createElement("svg", { width: width, height: height, style: { backgroundColor: "#0d0f12", borderRadius: "4px" } },
+            [0, 25, 50, 75, 100].map((temp) => (window.SP_REACT.createElement("g", { key: temp },
+                window.SP_REACT.createElement("line", { x1: padding.left, y1: yScale(temp), x2: width - padding.right, y2: yScale(temp), stroke: "#2a2d34", strokeWidth: 1, strokeDasharray: "2,2" }),
+                window.SP_REACT.createElement("text", { x: padding.left - 5, y: yScale(temp) + 3, fontSize: "9", fill: "#5a5d64", textAnchor: "end" },
+                    temp,
+                    "\u00B0C")))),
+            window.SP_REACT.createElement("line", { x1: padding.left, y1: padding.top, x2: padding.left, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
+            window.SP_REACT.createElement("line", { x1: padding.left, y1: height - padding.bottom, x2: width - padding.right, y2: height - padding.bottom, stroke: "#3d4450", strokeWidth: 2 }),
+            window.SP_REACT.createElement("defs", null,
+                window.SP_REACT.createElement("linearGradient", { id: "lineGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
+                    window.SP_REACT.createElement("stop", { offset: "0%", stopColor: "#4caf50" }),
+                    window.SP_REACT.createElement("stop", { offset: "50%", stopColor: "#1a9fff" }),
+                    window.SP_REACT.createElement("stop", { offset: "100%", stopColor: "#f44336" }))),
+            window.SP_REACT.createElement("polyline", { points: data.map((d) => `${xScale(d.offset)},${yScale(d.temp)}`).join(" "), fill: "none", stroke: "url(#lineGradient)", strokeWidth: 2 }),
+            data.map((point, i) => {
+                const color = point.result === "pass" ? "#4caf50" :
+                    point.result === "fail" ? "#ff9800" :
+                        "#f44336";
+                return (window.SP_REACT.createElement("g", { key: i },
+                    window.SP_REACT.createElement("circle", { cx: xScale(point.offset), cy: yScale(point.temp), r: hoveredPoint === i ? 6 : 4, fill: color, stroke: "#fff", strokeWidth: hoveredPoint === i ? 2 : 1, style: { cursor: "pointer", transition: "all 0.2s" }, onMouseEnter: (e) => handlePointHover(i, e), onMouseLeave: () => setHoveredPoint(null) })));
+            }),
+            window.SP_REACT.createElement("text", { x: width / 2, y: height - 5, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold" }, "Voltage Offset (mV)"),
+            window.SP_REACT.createElement("text", { x: 15, y: height / 2, fontSize: "11", fill: "#8b929a", textAnchor: "middle", fontWeight: "bold", transform: `rotate(-90, 15, ${height / 2})` }, "Temperature (\u00B0C)"),
+            window.SP_REACT.createElement("g", { transform: `translate(${width - 100}, 15)` },
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 0, r: 3, fill: "#4caf50" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 3, fontSize: "9", fill: "#8b929a" }, "Pass"),
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 12, r: 3, fill: "#ff9800" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 15, fontSize: "9", fill: "#8b929a" }, "Fail"),
+                window.SP_REACT.createElement("circle", { cx: 0, cy: 24, r: 3, fill: "#f44336" }),
+                window.SP_REACT.createElement("text", { x: 8, y: 27, fontSize: "9", fill: "#8b929a" }, "Crash"))),
+        hoveredPoint !== null && (window.SP_REACT.createElement("div", { style: {
+                position: "absolute",
+                left: tooltipPos.x + 10,
+                top: tooltipPos.y - 40,
+                backgroundColor: "#1a1d24",
+                border: "1px solid #3d4450",
+                borderRadius: "4px",
+                padding: "6px 10px",
+                fontSize: "10px",
+                color: "#fff",
+                pointerEvents: "none",
+                zIndex: 1000,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+            } },
+            window.SP_REACT.createElement("div", null,
+                window.SP_REACT.createElement("strong", null,
+                    data[hoveredPoint].offset,
+                    "mV")),
+            window.SP_REACT.createElement("div", null,
+                "Temp: ",
+                data[hoveredPoint].temp,
+                "\u00B0C"),
+            window.SP_REACT.createElement("div", { style: {
+                    color: data[hoveredPoint].result === "pass" ? "#4caf50" :
+                        data[hoveredPoint].result === "fail" ? "#ff9800" : "#f44336"
+                } }, data[hoveredPoint].result.toUpperCase())))));
+};
+// ==================== Results Screen ====================
+const ResultsScreen = ({ result, onApply, onStartOver }) => {
+    const cpuOffset = result?.offsets?.cpu || 0;
+    const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(false);
+    const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(false);
+    const handleApply = async () => {
+        setIsApplying(true);
+        try {
+            await onApply(applyOnStartup, gameOnlyMode);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(ChipGradeBadge, { grade: result?.chipGrade || "Bronze" })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "32px", fontWeight: "bold", color: "#1a9fff" } },
+                    cpuOffset,
+                    "mV"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a" } }, "Recommended Undervolt"))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "center" } },
+                window.SP_REACT.createElement(EnhancedCurveChart, { data: result?.curveData || [] }))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    padding: "8px",
+                    backgroundColor: "#1a1d24",
+                    borderRadius: "4px",
+                } },
+                window.SP_REACT.createElement("div", null,
+                    "Duration: ",
+                    Math.round(result?.duration || 0),
+                    "s"),
+                window.SP_REACT.createElement("div", null,
+                    "Iterations: ",
+                    result?.iterations || 0))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", description: "Automatically apply this preset when DeckTune starts", checked: applyOnStartup, onChange: setApplyOnStartup })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", description: "Only apply when a game is running", checked: gameOnlyMode, onChange: setGameOnlyMode })),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleApply, disabled: isApplying },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: isApplying ? "#8b929a" : "#4caf50" } },
+                    isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 12 }) : window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, isApplying ? "Applying..." : "Apply & Save as Wizard Preset")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onStartOver },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, "Start Over"))))));
+};
+// ==================== Wizard History View (Inline) ====================
+const WizardHistoryView = ({ onClose }) => {
+    const [presets, setPresets] = SP_REACT.useState([]);
+    const [selectedPreset, setSelectedPreset] = SP_REACT.useState(null);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    const loadPresets = async () => {
+        setIsLoading(true);
+        try {
+            const result = await call("get_wizard_presets");
+            setPresets(result || []);
+        }
+        catch (err) {
+            console.error("Failed to load wizard presets:", err);
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    SP_REACT.useEffect(() => {
+        loadPresets();
+    }, []);
+    const handleApply = async (preset) => {
+        try {
+            await call("apply_wizard_result", preset.id, true, preset.apply_on_startup, preset.game_only_mode);
+            console.log("Applied wizard preset:", preset.id);
+        }
+        catch (err) {
+            console.error("Failed to apply preset:", err);
+        }
+    };
+    const handleDelete = async (presetId) => {
+        try {
+            await call("delete_wizard_preset", presetId);
+            console.log("Deleted wizard preset:", presetId);
+            setSelectedPreset(null);
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to delete preset:", err);
+        }
+    };
+    const handleUpdateOptions = async (presetId, applyOnStartup, gameOnlyMode) => {
+        try {
+            await call("update_wizard_preset_options", presetId, applyOnStartup, gameOnlyMode);
+            console.log("Updated wizard preset options:", presetId);
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to update preset options:", err);
+        }
+    };
+    if (isLoading) {
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px" } },
+                    window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { fontSize: "24px", color: "#1a9fff" } }),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "12px", color: "#8b929a", marginTop: "10px" } }, "Loading presets...")))));
+    }
+    if (selectedPreset) {
+        const cpuOffset = selectedPreset.offsets?.cpu || 0;
+        const [applyOnStartup, setApplyOnStartup] = SP_REACT.useState(selectedPreset.apply_on_startup);
+        const [gameOnlyMode, setGameOnlyMode] = SP_REACT.useState(selectedPreset.game_only_mode);
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(null) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "5px" } },
+                        window.SP_REACT.createElement(FaHistory, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Back to List")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(ChipGradeBadge, { grade: selectedPreset.chip_grade })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "10px" } },
+                    window.SP_REACT.createElement("div", { style: { fontSize: "24px", fontWeight: "bold", color: "#1a9fff" } },
+                        cpuOffset,
+                        "mV"),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a" } }, new Date(selectedPreset.timestamp).toLocaleString()))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", checked: applyOnStartup, onChange: (val) => {
+                        setApplyOnStartup(val);
+                        handleUpdateOptions(selectedPreset.id, val, gameOnlyMode);
+                    } })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", checked: gameOnlyMode, onChange: (val) => {
+                        setGameOnlyMode(val);
+                        handleUpdateOptions(selectedPreset.id, applyOnStartup, val);
+                    } })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleApply(selectedPreset) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#4caf50" } },
+                        window.SP_REACT.createElement(FaCheck, { size: 12 }),
+                        window.SP_REACT.createElement("span", null, "Apply Preset")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => handleDelete(selectedPreset.id) },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", color: "#f44336" } },
+                        window.SP_REACT.createElement(FaTimes, { size: 12 }),
+                        window.SP_REACT.createElement("span", null, "Delete Preset"))))));
+    }
+    if (presets.length === 0) {
+        return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#8b929a", fontSize: "12px" } }, "No wizard presets found. Run the wizard to create your first preset."))));
+    }
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", flexDirection: "column", gap: "8px" } }, presets.map((preset) => {
+        const cpuOffset = preset.offsets?.cpu || 0;
+        const date = new Date(preset.timestamp).toLocaleDateString();
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.id },
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setSelectedPreset(preset) },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "16px" } },
+                            preset.chip_grade === "Platinum" && window.SP_REACT.createElement(FaTrophy, { style: { color: "#e5e4e2" } }),
+                            preset.chip_grade === "Gold" && window.SP_REACT.createElement(FaMedal, { style: { color: "#ffd700" } }),
+                            preset.chip_grade === "Silver" && window.SP_REACT.createElement(FaAward, { style: { color: "#c0c0c0" } }),
+                            preset.chip_grade === "Bronze" && window.SP_REACT.createElement(FaCertificate, { style: { color: "#cd7f32" } })),
+                        window.SP_REACT.createElement("div", null,
+                            window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold" } },
+                                preset.chip_grade,
+                                " \u2022 ",
+                                cpuOffset,
+                                "mV"),
+                            window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a" } }, date)))))));
+    })));
+};
+// ==================== Main Component ====================
+const WizardMode = () => {
+    const { info: platformInfo } = usePlatformInfo();
+    const { isRunning, progress, result, dirtyExit, startWizard, cancelWizard, applyResult, } = useWizard();
+    const [showCrashModal, setShowCrashModal] = SP_REACT.useState(false);
+    const [localResult, setLocalResult] = SP_REACT.useState(null);
+    const [showHistory, setShowHistory] = SP_REACT.useState(false);
+    const [wizardType, setWizardType] = SP_REACT.useState("load");
+    SP_REACT.useEffect(() => {
+        if (dirtyExit?.detected && !showCrashModal) {
+            setShowCrashModal(true);
+        }
+    }, [dirtyExit]);
+    SP_REACT.useEffect(() => {
+        if (result) {
+            setLocalResult(result);
+        }
+    }, [result]);
+    const handleStart = async (config) => {
+        try {
+            setLocalResult(null);
+            await startWizard(config);
+        }
+        catch (err) {
+            console.error("Failed to start wizard:", err);
+        }
+    };
+    const handleCancel = async () => {
+        try {
+            await cancelWizard();
+        }
+        catch (err) {
+            console.error("Failed to cancel wizard:", err);
+        }
+    };
+    const handleApply = async (applyOnStartup, gameOnlyMode) => {
+        if (!localResult)
+            return;
+        try {
+            await applyResult(localResult.id, true, applyOnStartup, gameOnlyMode);
+            console.log(`Applied wizard result with options: startup=${applyOnStartup}, gameOnly=${gameOnlyMode}`);
+        }
+        catch (err) {
+            console.error("Failed to apply result:", err);
+        }
+    };
+    const handleStartOver = () => {
+        setLocalResult(null);
+    };
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Wizard Mode" },
+        window.SP_REACT.createElement(PanicDisableButton$1, null),
+        !isRunning && !localResult && !showHistory && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setWizardType("load"), style: {
+                        flex: 1,
+                        backgroundColor: wizardType === "load" ? "#1a9fff" : "#3d4450",
+                        border: wizardType === "load" ? "2px solid #1a9fff" : "2px solid transparent",
+                        minHeight: "40px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            color: wizardType === "load" ? "#fff" : "#8b929a"
+                        } }, "Load-Based Wizard")),
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setWizardType("frequency"), style: {
+                        flex: 1,
+                        backgroundColor: wizardType === "frequency" ? "#1a9fff" : "#3d4450",
+                        border: wizardType === "frequency" ? "2px solid #1a9fff" : "2px solid transparent",
+                        minHeight: "40px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            color: wizardType === "frequency" ? "#fff" : "#8b929a"
+                        } }, "Frequency-Based Wizard"))))),
+        !isRunning && !localResult && wizardType === "load" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowHistory(!showHistory) },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" } },
+                    window.SP_REACT.createElement(FaHistory, { size: 12 }),
+                    window.SP_REACT.createElement("span", null, showHistory ? "Back to Wizard" : "View History"))))),
+        showCrashModal && dirtyExit?.crashInfo && (window.SP_REACT.createElement(CrashRecoveryModal, { crashInfo: dirtyExit.crashInfo, onDismiss: () => setShowCrashModal(false) })),
+        wizardType === "load" && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            !isRunning && !localResult && !showHistory && (window.SP_REACT.createElement(ConfigurationScreen, { onStart: handleStart, platformInfo: platformInfo })),
+            !isRunning && !localResult && showHistory && (window.SP_REACT.createElement(WizardHistoryView, { onClose: () => setShowHistory(false) })),
+            isRunning && progress && (window.SP_REACT.createElement(ProgressScreen, { progress: progress, onCancel: handleCancel })),
+            !isRunning && localResult && (window.SP_REACT.createElement(ResultsScreen, { result: localResult, onApply: handleApply, onStartOver: handleStartOver })))),
+        wizardType === "frequency" && (window.SP_REACT.createElement(FrequencyWizard, null))));
+};
+
+/**
+ * FocusableButton - Custom button component with gamepad focus support.
+ *
+ * Replaces Decky UI's default square focus with custom rounded focus.
+ * Uses inline styles to avoid CSS specificity issues.
+ */
+
+
+const FocusableButton = ({ children, onClick, onActivate, style = {}, focusColor = "#1a9fff", disabled = false, className = "", }) => {
+    const [isFocused, setIsFocused] = SP_REACT.useState(false);
+    const handleClick = () => {
+        if (!disabled && onClick)
+            onClick();
+    };
+    const handleActivate = () => {
+        if (!disabled) {
+            if (onActivate) {
+                onActivate();
+            }
+            else if (onClick) {
+                // Fallback to onClick if onActivate not provided
+                onClick();
+            }
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.Focusable, { onActivate: handleActivate, onClick: handleClick, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), className: className, style: {
+            ...style,
+            // Use border instead of outline for rounded corners
+            border: isFocused && !disabled ? `3px solid ${focusColor}` : "3px solid transparent",
+            borderRadius: "8px", // Rounded corners
+            boxShadow: isFocused && !disabled ? `0 0 12px ${focusColor}99` : "none",
+            transform: isFocused && !disabled ? "scale(1.05)" : "scale(1)",
+            transition: "all 0.2s ease",
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.5 : 1,
+            // Remove any padding/margin that might cause issues
+            padding: 0,
+            margin: 0,
+        } }, children));
+};
+
+/**
+ * Redesigned Presets tab - compact and gamepad-friendly.
+ *
+ * Two sections:
+ * 1. Game Profiles - auto-switching profiles per game
+ * 2. Global Presets - manual presets you can apply anytime
+ */
+
+const PresetsTabNew = () => {
+    const { state, api } = useDeckTune();
+    const profilesHook = useProfiles();
+    // Extra safety: ensure profiles is always an array
+    const profiles = Array.isArray(profilesHook.profiles) ? profilesHook.profiles : [];
+    const { activeProfile, runningAppId, runningAppName } = profilesHook;
+    const [activeSection, setActiveSection] = SP_REACT.useState("profiles");
+    // Load profiles on mount
+    SP_REACT.useEffect(() => {
+        const loadProfiles = async () => {
+            try {
+                await api.getProfiles();
+            }
+            catch (e) {
+                console.error("Failed to load profiles:", e);
+            }
+        };
+        loadProfiles();
+    }, [api]);
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    gap: "4px",
+                    marginBottom: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "4px",
+                    padding: "2px",
+                }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("profiles"), style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "6px",
+                            fontSize: "10px",
+                            backgroundColor: activeSection === "profiles" ? "#1a9fff" : "transparent",
+                            borderRadius: "4px",
+                            color: activeSection === "profiles" ? "#fff" : "#8b929a",
+                        } },
+                        window.SP_REACT.createElement(FaGamepad, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Game Profiles"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("presets"), style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "6px",
+                            fontSize: "10px",
+                            backgroundColor: activeSection === "presets" ? "#1a9fff" : "transparent",
+                            borderRadius: "4px",
+                            color: activeSection === "presets" ? "#fff" : "#8b929a",
+                        } },
+                        window.SP_REACT.createElement(FaGlobe, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Global Presets"))))),
+        activeSection === "profiles" ? (window.SP_REACT.createElement(GameProfilesSection, { profiles: profiles, activeProfile: activeProfile, runningAppId: runningAppId, runningAppName: runningAppName, api: api })) : (window.SP_REACT.createElement(GlobalPresetsSection, { presets: state.presets, api: api })),
+        window.SP_REACT.createElement("style", null, `
+          .section-button {
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: transparent;
+            color: #8b929a;
+          }
+          .section-button.active {
+            background-color: #1a9fff;
+            color: #fff;
+          }
+          .section-button.gpfocus {
+            border: 2px solid #1a9fff;
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+          }
+          .section-button:hover {
+            background-color: rgba(26, 159, 255, 0.2);
+          }
+          
+          .preset-action-btn {
+            border-radius: 4px;
+            transition: all 0.2s ease;
+          }
+          .preset-action-btn.gpfocus {
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(26, 159, 255, 0.6);
+          }
+          .preset-apply.gpfocus > div {
+            background-color: #1585d8 !important;
+          }
+          .preset-delete.gpfocus > div {
+            background-color: #3a3d45 !important;
+          }
+          
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+const GameProfilesSection = ({ profiles, activeProfile, runningAppId, runningAppName, api }) => {
+    const [isCreating, setIsCreating] = SP_REACT.useState(false);
+    const handleQuickCreate = async () => {
+        if (!runningAppId || !runningAppName)
+            return;
+        setIsCreating(true);
+        try {
+            const result = await api.createProfileForCurrentGame();
+            if (!result.success) {
+                alert(`Failed: ${result.error}`);
+            }
+        }
+        finally {
+            setIsCreating(false);
+        }
+    };
+    const handleDelete = async (appId, name) => {
+        DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Profile", strDescription: `Delete profile for ${name}?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
+                await api.deleteProfile(appId);
+            } }));
+    };
+    const formatCores = (cores) => {
+        const allSame = cores.every(v => v === cores[0]);
+        return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        runningAppId && runningAppName && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(FocusableButton, { onClick: handleQuickCreate, disabled: isCreating, style: { width: "100%", marginBottom: "8px" } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        fontSize: "10px",
+                        padding: "10px",
+                        backgroundColor: "#1a9fff",
+                        borderRadius: "6px",
+                        fontWeight: "bold"
+                    } },
+                    isCreating ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
+                    window.SP_REACT.createElement("span", null,
+                        "Save for ",
+                        runningAppName))))),
+        profiles.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
+                "No game profiles yet.",
+                runningAppId && window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to create one!")))) : (profiles.map((profile) => {
+            const isActive = activeProfile?.app_id === profile.app_id || runningAppId === profile.app_id;
+            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: profile.app_id },
+                window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "6px 8px",
+                            backgroundColor: isActive ? "#1a3a5c" : "#23262e",
+                            borderRadius: "6px 6px 0 0",
+                            border: isActive ? "2px solid #1a9fff" : "none",
+                            borderBottom: "1px solid #3d4450"
+                        } },
+                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
+                            window.SP_REACT.createElement("span", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, profile.name),
+                            isActive && (window.SP_REACT.createElement("span", { style: { fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" } }, "ACTIVE"))),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
+                            formatCores(profile.cores),
+                            profile.dynamic_enabled && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u26A1 Dynamic"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: {
+                            backgroundColor: "#1a1d24",
+                            borderRadius: "0 0 6px 6px",
+                            padding: "6px",
+                        } },
+                        window.SP_REACT.createElement(DFL.Focusable, { className: "preset-action-btn preset-delete", focusClassName: "gpfocus", onActivate: () => handleDelete(profile.app_id, profile.name), onClick: () => handleDelete(profile.app_id, profile.name) },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "4px",
+                                    padding: "6px 8px",
+                                    fontSize: "9px",
+                                    fontWeight: "600",
+                                    borderRadius: "4px",
+                                    backgroundColor: "#2a2d35",
+                                    color: "#f44336",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease"
+                                } },
+                                window.SP_REACT.createElement(FaTrash, { size: 8 }),
+                                window.SP_REACT.createElement("span", null, "Delete Profile")))))));
+        })),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+const GlobalPresetsSection = ({ presets, api }) => {
+    const [isApplying, setIsApplying] = SP_REACT.useState(null);
+    const [isSaving, setIsSaving] = SP_REACT.useState(false);
+    const handleApply = async (preset) => {
+        setIsApplying(preset.app_id);
+        try {
+            await api.applyUndervolt(preset.value);
+        }
+        finally {
+            setIsApplying(null);
+        }
+    };
+    const handleDelete = async (appId, label) => {
+        DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Preset", strDescription: `Delete preset "${label}"?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
+                await api.deletePreset(appId);
+            } }));
+    };
+    const handleQuickSave = async () => {
+        setIsSaving(true);
+        try {
+            const timestamp = new Date().toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            const label = `Preset ${timestamp}`;
+            // Get current cores from API state
+            const cores = api.state.cores || [0, 0, 0, 0];
+            // Create preset object
+            const preset = {
+                app_id: Date.now(), // Use timestamp as unique ID
+                label: label,
+                value: cores,
+                timeout: 0,
+                use_timeout: false,
+                tested: false,
+            };
+            console.log("Saving preset:", preset);
+            // Call backend to save preset
+            const result = await call("save_preset", preset);
+            console.log("Save result:", result);
+            if (result.success) {
+                // Reload presets directly
+                const updatedPresets = await call("get_presets");
+                console.log("Updated presets:", updatedPresets);
+                // Use setState to properly trigger React re-render
+                api.setState({ presets: updatedPresets });
+            }
+        }
+        catch (e) {
+            console.error("Failed to save preset:", e);
+            alert(`Failed to save: ${e}`);
+        }
+        finally {
+            setIsSaving(false);
+        }
+    };
+    const formatCores = (cores) => {
+        const allSame = cores.every(v => v === cores[0]);
+        return allSame ? `${cores[0]}mV` : cores.map(v => `${v}`).join("/");
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(FocusableButton, { onClick: handleQuickSave, disabled: isSaving, style: { width: "100%", marginBottom: "8px" } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        fontSize: "10px",
+                        padding: "10px",
+                        backgroundColor: "#1a9fff",
+                        borderRadius: "6px",
+                        fontWeight: "bold"
+                    } },
+                    isSaving ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaPlus, { size: 10 }),
+                    window.SP_REACT.createElement("span", null, "Save Current Values")))),
+        presets.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } },
+                "No global presets saved.",
+                window.SP_REACT.createElement("div", { style: { marginTop: "4px" } }, "Click above to save your current values!")))) : (presets.map((preset) => {
+            const isApplyingThis = isApplying === preset.app_id;
+            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset.app_id },
+                window.SP_REACT.createElement("div", { style: { marginBottom: "6px" } },
+                    window.SP_REACT.createElement("div", { style: { padding: "6px 8px", backgroundColor: "#23262e", borderRadius: "6px 6px 0 0", borderBottom: "1px solid #3d4450" } },
+                        window.SP_REACT.createElement("div", { style: { fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, preset.label),
+                        window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", marginTop: "2px" } },
+                            formatCores(preset.value),
+                            preset.tested && window.SP_REACT.createElement("span", { style: { marginLeft: "6px", color: "#4caf50" } }, "\u2713 Tested"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: {
+                            display: "flex",
+                            gap: "4px",
+                            backgroundColor: "#1a1d24",
+                            borderRadius: "0 0 6px 6px",
+                            padding: "6px",
+                        }, "flow-children": "horizontal" },
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, className: "preset-action-btn preset-apply", focusClassName: "gpfocus", onActivate: () => handleApply(preset), onClick: () => handleApply(preset) },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "4px",
+                                    padding: "6px 8px",
+                                    fontSize: "9px",
+                                    fontWeight: "600",
+                                    borderRadius: "4px",
+                                    backgroundColor: "#1a9fff",
+                                    color: "#fff",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease"
+                                } },
+                                isApplyingThis ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 9 }) : window.SP_REACT.createElement(FaCheck, { size: 9 }),
+                                window.SP_REACT.createElement("span", null, "Apply"))),
+                        window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, className: "preset-action-btn preset-delete", focusClassName: "gpfocus", onActivate: () => handleDelete(preset.app_id, preset.label), onClick: () => handleDelete(preset.app_id, preset.label) },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "4px",
+                                    padding: "6px 8px",
+                                    fontSize: "9px",
+                                    fontWeight: "600",
+                                    borderRadius: "4px",
+                                    backgroundColor: "#2a2d35",
+                                    color: "#f44336",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease"
+                                } },
+                                window.SP_REACT.createElement(FaTrash, { size: 8 }),
+                                window.SP_REACT.createElement("span", null, "Delete")))))));
+        })),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+
+/**
+ * Redesigned Tests tab - compact and gamepad-friendly.
+ *
+ * Feature: decktune, Frontend UI Components - Expert Mode
+ * Requirements: 7.4
+ *
+ * Two sections:
+ * 1. Run Tests - test selection and execution with progress
+ * 2. Test History - last 10 test results
+ */
+
+/**
+ * Available test options with compact labels and estimated durations.
+ */
+const TEST_OPTIONS = [
+    { value: "cpu_quick", label: "CPU Quick", duration: "30s", durationSeconds: 30, icon: "⚡" },
+    { value: "cpu_long", label: "CPU Long", duration: "5m", durationSeconds: 300, icon: "🔥" },
+    { value: "ram_quick", label: "RAM Quick", duration: "2m", durationSeconds: 120, icon: "💾" },
+    { value: "ram_thorough", label: "RAM Thorough", duration: "15m", durationSeconds: 900, icon: "🧠" },
+    { value: "combo", label: "Combo Stress", duration: "5m", durationSeconds: 300, icon: "💪" },
+    { value: "cpu_loop", label: "CPU Loop", duration: "∞", durationSeconds: 0, icon: "🔁" },
+];
+const TestsTabNew = () => {
+    const { history, currentTest, isRunning, runTest } = useTests();
+    const { missing: missingBinaries, hasMissing, check: checkBinaries } = useBinaries();
+    const [activeSection, setActiveSection] = SP_REACT.useState("run");
+    // NUCLEAR CACHE BUST - v3.1.19-20260118-2230
+    SP_REACT.useEffect(() => {
+        const buildId = "v3.1.19-20260118-2230-FOCUSABLE-BUTTON";
+        console.log(`[DeckTune CACHE BUST] ${buildId} - TestsTabNew with FocusableButton`);
+        window.__DECKTUNE_BUILD_ID__ = buildId;
+        window.__DECKTUNE_TESTS_TAB_VERSION__ = "FOCUSABLE_BUTTON";
+    }, []);
+    // Check binaries on mount
+    SP_REACT.useEffect(() => {
+        checkBinaries();
+    }, []);
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: "flex",
+                    gap: "4px",
+                    marginBottom: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "4px",
+                    padding: "2px",
+                }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("run"), style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "6px",
+                            fontSize: "10px",
+                            backgroundColor: activeSection === "run" ? "#1a9fff" : "transparent",
+                            borderRadius: "4px",
+                            color: activeSection === "run" ? "#fff" : "#8b929a",
+                        } },
+                        window.SP_REACT.createElement(FaPlay, { style: { fontSize: "10px" } }),
+                        window.SP_REACT.createElement("span", null, "Run Tests"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: () => setActiveSection("history"), style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "6px",
+                            fontSize: "10px",
+                            backgroundColor: activeSection === "history" ? "#1a9fff" : "transparent",
+                            borderRadius: "4px",
+                            color: activeSection === "history" ? "#fff" : "#8b929a",
+                        } },
+                        window.SP_REACT.createElement(FaHistory, { style: { fontSize: "10px" } }),
+                        window.SP_REACT.createElement("span", null, "History"))))),
+        activeSection === "run" ? (window.SP_REACT.createElement(RunTestsSection, { isRunning: isRunning, currentTest: currentTest, runTest: runTest, hasMissing: hasMissing, missingBinaries: missingBinaries })) : (window.SP_REACT.createElement(TestHistorySection, { history: history })),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+const RunTestsSection = ({ isRunning, currentTest, runTest, hasMissing, missingBinaries }) => {
+    const [progress, setProgress] = SP_REACT.useState(0);
+    const [startTime, setStartTime] = SP_REACT.useState(null);
+    const [estimatedDuration, setEstimatedDuration] = SP_REACT.useState(0);
+    const [testResult, setTestResult] = SP_REACT.useState(null);
+    const [elapsedTime, setElapsedTime] = SP_REACT.useState(0);
+    // Progress tracking
+    SP_REACT.useEffect(() => {
+        if (!isRunning || !currentTest) {
+            setProgress(0);
+            setStartTime(null);
+            setElapsedTime(0);
+            return;
+        }
+        // Set start time and estimated duration
+        const testOption = TEST_OPTIONS.find(t => t.value === currentTest);
+        if (testOption && !startTime) {
+            setStartTime(Date.now());
+            setEstimatedDuration(testOption.durationSeconds);
+            setTestResult(null);
+        }
+        // Update progress every second
+        const interval = setInterval(() => {
+            if (startTime) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                setElapsedTime(Math.floor(elapsed));
+                if (estimatedDuration > 0) {
+                    const newProgress = Math.min((elapsed / estimatedDuration) * 100, 99);
+                    setProgress(newProgress);
+                }
+                else {
+                    // Loop test - show elapsed time only
+                    setProgress(0);
+                }
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [isRunning, currentTest, startTime, estimatedDuration]);
+    const handleRunTest = async (testValue) => {
+        if (isRunning)
+            return;
+        setProgress(0);
+        setStartTime(null);
+        setTestResult(null);
+        try {
+            const result = await runTest(testValue);
+            setProgress(100);
+            setTestResult({ passed: result?.passed ?? true });
+        }
+        catch (error) {
+            setTestResult({ passed: false, error: error?.message || "Test failed" });
+        }
+    };
+    const getTestLabel = (value) => {
+        return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
+    };
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins > 0) {
+            return `${mins}m ${secs}s`;
+        }
+        return `${secs}s`;
+    };
+    const getRemainingTime = () => {
+        if (!startTime || !estimatedDuration)
+            return "";
+        const remaining = Math.max(0, estimatedDuration - elapsedTime);
+        return formatTime(remaining) + " left";
+    };
+    const isLoopTest = currentTest && TEST_OPTIONS.find(t => t.value === currentTest)?.durationSeconds === 0;
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        hasMissing && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    padding: "10px",
+                    backgroundColor: "#5c4813",
+                    borderRadius: "6px",
+                    marginBottom: "12px",
+                    border: "1px solid #ff9800",
+                } },
+                window.SP_REACT.createElement(FaExclamationCircle, { style: { color: "#ff9800", fontSize: "14px", flexShrink: 0, marginTop: "1px" } }),
+                window.SP_REACT.createElement("div", null,
+                    window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: "#ffb74d", marginBottom: "3px", fontSize: "10px" } }, "Missing Components"),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ffe0b2" } },
+                        "Required: ",
+                        window.SP_REACT.createElement("strong", null, missingBinaries.join(", "))))))),
+        testResult && !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "10px",
+                    backgroundColor: testResult.passed ? "#1b5e20" : "#5c1313",
+                    borderRadius: "6px",
+                    marginBottom: "12px",
+                    border: `1px solid ${testResult.passed ? "#4caf50" : "#f44336"}`,
+                } },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: testResult.error ? "4px" : "0" } },
+                    testResult.passed ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "12px" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#f44336", fontSize: "12px" } })),
+                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, testResult.passed ? "Test Passed!" : "Test Failed")),
+                testResult.error && (window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ffcdd2", marginTop: "4px" } }, testResult.error))))),
+        isRunning && currentTest && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1a3a5c",
+                    borderRadius: "6px",
+                    marginBottom: "12px",
+                    border: "1px solid #1a9fff",
+                } },
+                window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
+                        window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { color: "#1a9fff", fontSize: "12px" } }),
+                        window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, getTestLabel(currentTest))),
+                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a" } }, isLoopTest ? `${formatTime(elapsedTime)} elapsed` : getRemainingTime())),
+                !isLoopTest && (window.SP_REACT.createElement("div", null,
+                    window.SP_REACT.createElement("div", { style: {
+                            width: "100%",
+                            height: "6px",
+                            backgroundColor: "#23262e",
+                            borderRadius: "3px",
+                            overflow: "hidden"
+                        } },
+                        window.SP_REACT.createElement("div", { style: {
+                                width: `${progress}%`,
+                                height: "100%",
+                                backgroundColor: "#1a9fff",
+                                transition: "width 0.3s ease",
+                                borderRadius: "3px"
+                            } })),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginTop: "4px", textAlign: "center" } },
+                        Math.round(progress),
+                        "%"))),
+                isLoopTest && (window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#8b929a", textAlign: "center", marginTop: "4px" } }, "Running until manually stopped (restart plugin to cancel)"))))),
+        !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "6px",
+                } }, TEST_OPTIONS.map((test) => (window.SP_REACT.createElement(FocusableButton, { key: test.value, onClick: () => !hasMissing && handleRunTest(test.value), disabled: hasMissing },
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "10px 8px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "6px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" } },
+                        window.SP_REACT.createElement("span", { style: { fontSize: "14px" } }, test.icon),
+                        window.SP_REACT.createElement("span", { style: { fontSize: "10px", fontWeight: "bold" } }, test.label)),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a" } }, test.durationSeconds === 0 ? "Until cancelled" : `Duration: ${test.duration}`))))))))));
+};
+const TestHistorySection = ({ history }) => {
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        if (mins > 0) {
+            return `${mins}m ${secs}s`;
+        }
+        return `${secs}s`;
+    };
+    const formatTimestamp = (timestamp) => {
+        try {
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+        catch {
+            return timestamp;
+        }
+    };
+    const getTestLabel = (value) => {
+        return TEST_OPTIONS.find((t) => t.value === value)?.label || value;
+    };
+    const getTestIcon = (value) => {
+        return TEST_OPTIONS.find((t) => t.value === value)?.icon || "🔧";
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null, history.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+        window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "24px", fontSize: "11px" } },
+            "No tests run yet.",
+            window.SP_REACT.createElement("div", { style: { marginTop: "4px", fontSize: "9px" } }, "Switch to \"Run Tests\" to start!")))) : (history.slice(0, 10).map((entry, index) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: index },
+        window.SP_REACT.createElement(DFL.Focusable, { focusClassName: "gpfocus", style: {
+                marginBottom: "6px",
+            } },
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "8px 10px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    borderLeft: `3px solid ${entry.passed ? "#4caf50" : "#f44336"}`,
+                } },
+                window.SP_REACT.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
+                        window.SP_REACT.createElement("span", { style: { fontSize: "12px" } }, getTestIcon(entry.test_name)),
+                        entry.passed ? (window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "10px" } })) : (window.SP_REACT.createElement(FaTimes, { style: { color: "#f44336", fontSize: "10px" } })),
+                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "10px" } }, getTestLabel(entry.test_name))),
+                    window.SP_REACT.createElement("span", { style: { fontSize: "9px", color: "#8b929a" } }, formatDuration(entry.duration))),
+                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a", marginBottom: "2px" } }, formatTimestamp(entry.timestamp)),
+                window.SP_REACT.createElement("div", { style: { fontSize: "8px", color: "#8b929a" } },
+                    "Cores: [",
+                    entry.cores_tested.join(", "),
+                    "]")))))))));
+};
+
+/**
+ * FanCurveEditor component for visual fan curve editing.
+ *
+ * Feature: Fan Control Integration (Phase 4)
+ *
+ * Provides an interactive SVG graph for editing fan curve points.
+ * Supports drag-and-drop point manipulation, add/remove points,
+ * and real-time preview of the curve.
+ */
+
+// Graph dimensions
+const GRAPH_WIDTH = 280;
+const GRAPH_HEIGHT = 160;
+const MARGIN = { top: 20, right: 30, bottom: 30, left: 40 };
+const INNER_WIDTH = GRAPH_WIDTH - MARGIN.left - MARGIN.right;
+const INNER_HEIGHT = GRAPH_HEIGHT - MARGIN.top - MARGIN.bottom;
+// Temperature and speed ranges
+const TEMP_MIN = 30;
+const TEMP_MAX = 95;
+const SPEED_MIN = 0;
+const SPEED_MAX = 100;
+// Point interaction
+const POINT_RADIUS = 8;
+const POINT_HIT_RADIUS = 15;
+/** Default fan curve */
+const DEFAULT_CURVE = [
+    { temp_c: 40, speed_percent: 20 },
+    { temp_c: 50, speed_percent: 30 },
+    { temp_c: 60, speed_percent: 45 },
+    { temp_c: 70, speed_percent: 60 },
+    { temp_c: 80, speed_percent: 80 },
+    { temp_c: 85, speed_percent: 100 },
+];
+/**
+ * Convert temperature to X coordinate
+ */
+const tempToX = (temp) => {
+    const normalized = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
+    return MARGIN.left + normalized * INNER_WIDTH;
+};
+/**
+ * Convert speed to Y coordinate (inverted - 0% at bottom)
+ */
+const speedToY = (speed) => {
+    const normalized = (speed - SPEED_MIN) / (SPEED_MAX - SPEED_MIN);
+    return MARGIN.top + INNER_HEIGHT - normalized * INNER_HEIGHT;
+};
+/**
+ * Convert X coordinate to temperature
+ */
+const xToTemp = (x) => {
+    const normalized = (x - MARGIN.left) / INNER_WIDTH;
+    return Math.round(TEMP_MIN + normalized * (TEMP_MAX - TEMP_MIN));
+};
+/**
+ * Convert Y coordinate to speed
+ */
+const yToSpeed = (y) => {
+    const normalized = 1 - (y - MARGIN.top) / INNER_HEIGHT;
+    return Math.round(SPEED_MIN + normalized * (SPEED_MAX - SPEED_MIN));
+};
+/**
+ * Clamp value to range
+ */
+const clamp$1 = (value, min, max) => {
+    return Math.max(min, Math.min(max, value));
+};
+/**
+ * Generate SVG path for the curve
+ */
+const generateCurvePath = (points) => {
+    if (points.length === 0)
+        return "";
+    const sorted = [...points].sort((a, b) => a.temp_c - b.temp_c);
+    // Start from left edge at first point's speed
+    let path = `M ${MARGIN.left} ${speedToY(sorted[0].speed_percent)}`;
+    path += ` L ${tempToX(sorted[0].temp_c)} ${speedToY(sorted[0].speed_percent)}`;
+    // Connect all points
+    for (let i = 1; i < sorted.length; i++) {
+        path += ` L ${tempToX(sorted[i].temp_c)} ${speedToY(sorted[i].speed_percent)}`;
+    }
+    // Extend to right edge at last point's speed
+    const lastPoint = sorted[sorted.length - 1];
+    path += ` L ${MARGIN.left + INNER_WIDTH} ${speedToY(lastPoint.speed_percent)}`;
+    return path;
+};
+/**
+ * FanCurveEditor component
+ */
+const FanCurveEditor = ({ config, status, onConfigChange, onSave, isLoading = false, }) => {
+    const svgRef = SP_REACT.useRef(null);
+    const [draggingIndex, setDraggingIndex] = SP_REACT.useState(null);
+    const [hasChanges, setHasChanges] = SP_REACT.useState(false);
+    const [isSaving, setIsSaving] = SP_REACT.useState(false);
+    // Handle point drag start
+    const handlePointMouseDown = SP_REACT.useCallback((index, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingIndex(index);
+    }, []);
+    // Handle mouse move for dragging
+    const handleMouseMove = SP_REACT.useCallback((e) => {
+        if (draggingIndex === null || !svgRef.current)
+            return;
+        const svg = svgRef.current;
+        const rect = svg.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const newTemp = clamp$1(xToTemp(x), TEMP_MIN, TEMP_MAX);
+        const newSpeed = clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX);
+        const newCurve = [...config.curve];
+        newCurve[draggingIndex] = { temp_c: newTemp, speed_percent: newSpeed };
+        onConfigChange({ ...config, curve: newCurve });
+        setHasChanges(true);
+    }, [draggingIndex, config, onConfigChange]);
+    // Handle mouse up to stop dragging
+    const handleMouseUp = SP_REACT.useCallback(() => {
+        setDraggingIndex(null);
+    }, []);
+    // Handle click on graph to add point
+    const handleGraphClick = SP_REACT.useCallback((e) => {
+        if (draggingIndex !== null || !svgRef.current)
+            return;
+        if (config.mode !== "custom")
+            return;
+        const svg = svgRef.current;
+        const rect = svg.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        // Check if click is within graph area
+        if (x < MARGIN.left || x > MARGIN.left + INNER_WIDTH)
+            return;
+        if (y < MARGIN.top || y > MARGIN.top + INNER_HEIGHT)
+            return;
+        // Check if click is near existing point
+        const clickTemp = xToTemp(x);
+        const isNearExisting = config.curve.some(p => Math.abs(p.temp_c - clickTemp) < 5);
+        if (isNearExisting)
+            return;
+        const newPoint = {
+            temp_c: clamp$1(clickTemp, TEMP_MIN, TEMP_MAX),
+            speed_percent: clamp$1(yToSpeed(y), SPEED_MIN, SPEED_MAX),
+        };
+        const newCurve = [...config.curve, newPoint].sort((a, b) => a.temp_c - b.temp_c);
+        onConfigChange({ ...config, curve: newCurve });
+        setHasChanges(true);
+    }, [draggingIndex, config, onConfigChange]);
+    // Handle point removal
+    const handleRemovePoint = SP_REACT.useCallback((index) => {
+        if (config.curve.length <= 2)
+            return; // Keep at least 2 points
+        const newCurve = config.curve.filter((_, i) => i !== index);
+        onConfigChange({ ...config, curve: newCurve });
+        setHasChanges(true);
+    }, [config, onConfigChange]);
+    // Reset to default curve
+    const handleReset = SP_REACT.useCallback(() => {
+        onConfigChange({ ...config, curve: [...DEFAULT_CURVE] });
+        setHasChanges(true);
+    }, [config, onConfigChange]);
+    // Save configuration
+    const handleSave = SP_REACT.useCallback(async () => {
+        setIsSaving(true);
+        try {
+            await onSave(config);
+            setHasChanges(false);
+        }
+        finally {
+            setIsSaving(false);
+        }
+    }, [config, onSave]);
+    // Mode options for dropdown
+    const modeOptions = [
+        { data: "default", label: "Default (BIOS)" },
+        { data: "custom", label: "Custom Curve" },
+        { data: "fixed", label: "Fixed Speed" },
+    ];
+    // Sort curve for display
+    const sortedCurve = [...config.curve].sort((a, b) => a.temp_c - b.temp_c);
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ToggleField, { label: "Enable Fan Control", description: "Take manual control of the fan", checked: config.enabled, onChange: (enabled) => {
+                    onConfigChange({ ...config, enabled });
+                    setHasChanges(true);
+                }, disabled: isLoading })),
+        config.enabled && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.DropdownItem, { label: "Fan Mode", rgOptions: modeOptions, selectedOption: config.mode, onChange: (option) => {
+                        onConfigChange({ ...config, mode: option.data });
+                        setHasChanges(true);
+                    }, disabled: isLoading })),
+            status && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                        window.SP_REACT.createElement(FaFan, { style: {
+                                color: status.safety_override ? "#f44336" : "#4caf50",
+                                animation: status.speed_percent > 0 ? "spin 1s linear infinite" : "none",
+                            } }),
+                        window.SP_REACT.createElement("span", null,
+                            status.temp_c,
+                            "\u00B0C")),
+                    window.SP_REACT.createElement("div", { style: { color: "#8b929a" } },
+                        status.speed_percent,
+                        "% ",
+                        status.rpm ? `(${status.rpm} RPM)` : ""),
+                    status.safety_override && (window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "11px" } }, "Safety Override"))))),
+            config.mode === "custom" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        backgroundColor: "#1a1d23",
+                        borderRadius: "8px",
+                        padding: "8px",
+                    } },
+                    window.SP_REACT.createElement("svg", { ref: svgRef, width: GRAPH_WIDTH, height: GRAPH_HEIGHT, style: { cursor: draggingIndex !== null ? "grabbing" : "crosshair" }, onMouseMove: handleMouseMove, onMouseUp: handleMouseUp, onMouseLeave: handleMouseUp, onClick: handleGraphClick },
+                        window.SP_REACT.createElement("g", { stroke: "#3d4450", strokeWidth: "1" },
+                            [0, 25, 50, 75, 100].map(speed => (window.SP_REACT.createElement("line", { key: `h-${speed}`, x1: MARGIN.left, y1: speedToY(speed), x2: MARGIN.left + INNER_WIDTH, y2: speedToY(speed) }))),
+                            [40, 50, 60, 70, 80, 90].map(temp => (window.SP_REACT.createElement("line", { key: `v-${temp}`, x1: tempToX(temp), y1: MARGIN.top, x2: tempToX(temp), y2: MARGIN.top + INNER_HEIGHT })))),
+                        window.SP_REACT.createElement("g", { fill: "#8b929a", fontSize: "10" },
+                            [0, 50, 100].map(speed => (window.SP_REACT.createElement("text", { key: `y-${speed}`, x: MARGIN.left - 5, y: speedToY(speed) + 3, textAnchor: "end" },
+                                speed,
+                                "%"))),
+                            [40, 60, 80].map(temp => (window.SP_REACT.createElement("text", { key: `x-${temp}`, x: tempToX(temp), y: MARGIN.top + INNER_HEIGHT + 15, textAnchor: "middle" },
+                                temp,
+                                "\u00B0C")))),
+                        window.SP_REACT.createElement("rect", { x: tempToX(85), y: MARGIN.top, width: MARGIN.left + INNER_WIDTH - tempToX(85), height: INNER_HEIGHT, fill: "rgba(244, 67, 54, 0.1)" }),
+                        status && (window.SP_REACT.createElement("line", { x1: tempToX(status.temp_c), y1: MARGIN.top, x2: tempToX(status.temp_c), y2: MARGIN.top + INNER_HEIGHT, stroke: "#4caf50", strokeWidth: "2", strokeDasharray: "4,4" })),
+                        window.SP_REACT.createElement("path", { d: generateCurvePath(sortedCurve), fill: "none", stroke: "#1a9fff", strokeWidth: "2" }),
+                        window.SP_REACT.createElement("path", { d: `${generateCurvePath(sortedCurve)} L ${MARGIN.left + INNER_WIDTH} ${MARGIN.top + INNER_HEIGHT} L ${MARGIN.left} ${MARGIN.top + INNER_HEIGHT} Z`, fill: "rgba(26, 159, 255, 0.1)" }),
+                        sortedCurve.map((point, index) => (window.SP_REACT.createElement("g", { key: index },
+                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_HIT_RADIUS, fill: "transparent", style: { cursor: "grab" }, onMouseDown: (e) => handlePointMouseDown(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent), e), onDoubleClick: () => handleRemovePoint(config.curve.findIndex(p => p.temp_c === point.temp_c && p.speed_percent === point.speed_percent)) }),
+                            window.SP_REACT.createElement("circle", { cx: tempToX(point.temp_c), cy: speedToY(point.speed_percent), r: POINT_RADIUS, fill: "#1a9fff", stroke: "#fff", strokeWidth: "2", style: { pointerEvents: "none" } }),
+                            window.SP_REACT.createElement("text", { x: tempToX(point.temp_c), y: speedToY(point.speed_percent) - 12, fill: "#fff", fontSize: "9", textAnchor: "middle", style: { pointerEvents: "none" } },
+                                point.temp_c,
+                                "\u00B0/",
+                                point.speed_percent,
+                                "%"))))),
+                    window.SP_REACT.createElement("div", { style: {
+                            fontSize: "10px",
+                            color: "#8b929a",
+                            textAlign: "center",
+                            marginTop: "4px",
+                        } }, "Click to add point \u2022 Drag to move \u2022 Double-click to remove")))),
+            config.mode === "fixed" && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "Fixed Fan Speed", value: config.curve[0]?.speed_percent ?? 50, min: 0, max: 100, step: 5, showValue: true, onChange: (value) => {
+                        onConfigChange({
+                            ...config,
+                            curve: [{ temp_c: 0, speed_percent: value }],
+                        });
+                        setHasChanges(true);
+                    }, disabled: isLoading }))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Zero RPM Mode", description: "Allow fan to stop below 45\u00B0C (risky!)", checked: config.zero_rpm_enabled, onChange: (zero_rpm_enabled) => {
+                        onConfigChange({ ...config, zero_rpm_enabled });
+                        setHasChanges(true);
+                    }, disabled: isLoading })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.SliderField, { label: "Temperature Hysteresis", description: "Prevents rapid speed changes", value: config.hysteresis_temp, min: 1, max: 10, step: 1, showValue: true, valueSuffix: "\u00B0C", onChange: (hysteresis_temp) => {
+                        onConfigChange({ ...config, hysteresis_temp });
+                        setHasChanges(true);
+                    }, disabled: isLoading })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleReset, disabled: isLoading || isSaving },
+                        window.SP_REACT.createElement(FaUndo, { style: { marginRight: "4px" } }),
+                        "Reset"),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleSave, disabled: isLoading || isSaving || !hasChanges }, isSaving ? "Saving..." : "Save")))))));
+};
+
+/**
+ * FanTab component for fan control in Expert Mode.
+ *
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
+ *
+ * Provides fan curve editing and control through the FanCurveEditor component.
+ */
+
+/**
+ * FanTab component for Expert Mode.
+ *
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
+ */
+const FanTab = () => {
+    const { api } = useDeckTune();
+    const [config, setConfig] = SP_REACT.useState(null);
+    const [status, setStatus] = SP_REACT.useState(null);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    const [error, setError] = SP_REACT.useState(null);
+    const [isSaving, setIsSaving] = SP_REACT.useState(false);
+    // Load fan configuration on mount
+    SP_REACT.useEffect(() => {
+        const loadFanConfig = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const result = await api.getFanConfig();
+                if (result.success && result.config) {
+                    setConfig(result.config);
+                }
+                else {
+                    setError(result.error || "Failed to load fan configuration");
+                }
+            }
+            catch (e) {
+                setError(`Error loading fan config: ${e}`);
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        loadFanConfig();
+    }, [api]);
+    // Poll fan status periodically
+    SP_REACT.useEffect(() => {
+        if (!config?.enabled)
+            return;
+        const pollStatus = async () => {
+            try {
+                const result = await api.getFanStatus();
+                if (result.success && result.status) {
+                    setStatus(result.status);
+                }
+            }
+            catch (e) {
+                console.error("Error polling fan status:", e);
+            }
+        };
+        // Initial poll
+        pollStatus();
+        // Poll every 2 seconds
+        const interval = setInterval(pollStatus, 2000);
+        return () => clearInterval(interval);
+    }, [api, config?.enabled]);
+    const handleConfigChange = (newConfig) => {
+        setConfig(newConfig);
+    };
+    const handleSave = async (newConfig) => {
+        setIsSaving(true);
+        setError(null);
+        try {
+            const result = await api.setFanConfig(newConfig);
+            if (result.success) {
+                setConfig(newConfig);
+            }
+            else {
+                setError(result.error || "Failed to save fan configuration");
+            }
+        }
+        catch (e) {
+            setError(`Error saving fan config: ${e}`);
+        }
+        finally {
+            setIsSaving(false);
+        }
+    };
+    // Loading state
+    if (isLoading) {
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "24px",
+                    color: "#8b929a",
+                } },
+                window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                window.SP_REACT.createElement("span", null, "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430...")),
+            window.SP_REACT.createElement("style", null, `
+            .spin {
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `)));
+    }
+    // Error state
+    if (error && !config) {
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "16px",
+                    backgroundColor: "#5c1313",
+                    borderRadius: "8px",
+                    border: "1px solid #f44336",
+                } },
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#f44336", fontSize: "24px" } }),
+                window.SP_REACT.createElement("div", { style: { color: "#ffcdd2", textAlign: "center", fontSize: "12px" } }, error),
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => window.location.reload() }, "\u041F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430"))));
+    }
+    // No config available
+    if (!config) {
+        return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    textAlign: "center",
+                    padding: "24px",
+                    color: "#8b929a",
+                } }, "\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F \u0432\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440\u0430 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430")));
+    }
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "8px 12px",
+                    backgroundColor: "#5c1313",
+                    borderRadius: "6px",
+                    marginBottom: "8px",
+                    fontSize: "11px",
+                    color: "#ffcdd2",
+                    border: "1px solid #f44336",
+                } }, error))),
+        window.SP_REACT.createElement(FanCurveEditor, { config: config, status: status || undefined, onConfigChange: handleConfigChange, onSave: handleSave, isLoading: isSaving })));
+};
+
+/**
+ * Type definitions for Dynamic Manual Mode feature.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.1, 1.2, 1.3, 1.4
+ */
+/**
+ * Validation error codes for different failure types.
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.4
+ */
+var ValidationErrorCode;
+(function (ValidationErrorCode) {
+    /** Minimum voltage is greater than maximum voltage */
+    ValidationErrorCode["MIN_GREATER_THAN_MAX"] = "MIN_GREATER_THAN_MAX";
+    /** Voltage value is below platform minimum limit */
+    ValidationErrorCode["BELOW_PLATFORM_MIN"] = "BELOW_PLATFORM_MIN";
+    /** Voltage value is above 0mV */
+    ValidationErrorCode["ABOVE_ZERO"] = "ABOVE_ZERO";
+    /** Threshold is outside valid range (0-100) */
+    ValidationErrorCode["INVALID_THRESHOLD"] = "INVALID_THRESHOLD";
+    /** Configuration exceeds platform safety limits */
+    ValidationErrorCode["EXCEEDS_SAFETY_LIMIT"] = "EXCEEDS_SAFETY_LIMIT";
+    /** Invalid core ID */
+    ValidationErrorCode["INVALID_CORE_ID"] = "INVALID_CORE_ID";
+    /** Generic validation failure */
+    ValidationErrorCode["VALIDATION_FAILED"] = "VALIDATION_FAILED";
+})(ValidationErrorCode || (ValidationErrorCode = {}));
+/**
+ * Connection status for error banners.
+ *
+ * Requirements: Error banners for connection issues
+ */
+var ConnectionStatus;
+(function (ConnectionStatus) {
+    /** Connected and operational */
+    ConnectionStatus["CONNECTED"] = "CONNECTED";
+    /** Attempting to reconnect */
+    ConnectionStatus["RECONNECTING"] = "RECONNECTING";
+    /** Connection lost */
+    ConnectionStatus["DISCONNECTED"] = "DISCONNECTED";
+    /** Hardware error detected */
+    ConnectionStatus["HARDWARE_ERROR"] = "HARDWARE_ERROR";
+})(ConnectionStatus || (ConnectionStatus = {}));
+
+/**
+ * CoreTabs component for per-core navigation in Dynamic Manual Mode.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.1, 4.1
+ *
+ * Provides tab navigation for cores 0-3 with:
+ * - Tab selection handler
+ * - Active core indicator
+ * - Hidden in Simple Mode
+ * - Gamepad navigation support (D-pad Up/Down)
+ */
+
+/**
+ * CoreTabs component.
+ *
+ * Renders tabs for cores 0-3 with gamepad navigation support.
+ * Hidden in Simple Mode per Requirements 4.1.
+ *
+ * Property 15: Gamepad core navigation
+ * For any D-pad Up or Down input, the selected core index SHALL change by ±1
+ * (wrapping at boundaries 0 and 3).
+ *
+ * Requirements: 1.1, 4.1, 8.1
+ */
+const CoreTabs = ({ selectedCore, onCoreSelect, mode, }) => {
+    /**
+     * Handle gamepad navigation for core selection.
+     * Requirements: 8.1
+     *
+     * Property 15: Gamepad core navigation
+     * D-pad Up/Down changes selected core with wrapping.
+     */
+    SP_REACT.useEffect(() => {
+        const handleGamepadInput = (e) => {
+            // Only handle in expert mode
+            if (mode !== 'expert')
+                return;
+            // D-pad Up: Previous core (with wrapping)
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const newCore = selectedCore === 0 ? 3 : selectedCore - 1;
+                onCoreSelect(newCore);
+            }
+            // D-pad Down: Next core (with wrapping)
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const newCore = selectedCore === 3 ? 0 : selectedCore + 1;
+                onCoreSelect(newCore);
+            }
+        };
+        window.addEventListener('keydown', handleGamepadInput);
+        return () => {
+            window.removeEventListener('keydown', handleGamepadInput);
+        };
+    }, [selectedCore, onCoreSelect, mode]);
+    /**
+     * Hide tabs in Simple Mode.
+     * Requirements: 4.1
+     */
+    if (mode === 'simple') {
+        return null;
+    }
+    /**
+     * Render tabs for cores 0-3 - Compact for QAM.
+     * Requirements: 1.1
+     */
+    return (window.SP_REACT.createElement("div", { style: {
+            marginBottom: '8px',
+        } },
+        window.SP_REACT.createElement(DFL.Focusable, { style: {
+                display: 'flex',
+                gap: '4px',
+            }, "flow-children": "horizontal" }, [0, 1, 2, 3].map((coreId) => {
+            const isActive = coreId === selectedCore;
+            return (window.SP_REACT.createElement(FocusableButton, { key: coreId, onClick: () => onCoreSelect(coreId), style: {
+                    flex: 1,
+                }, focusColor: isActive ? '#4caf50' : '#1a9fff' },
+                window.SP_REACT.createElement("div", { style: {
+                        padding: '8px 6px',
+                        backgroundColor: isActive ? '#1b5e20' : '#3d4450',
+                        borderRadius: '4px',
+                        textAlign: 'center',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: isActive ? '#fff' : '#8b929a',
+                        transition: 'all 0.2s ease',
+                        position: 'relative',
+                    } },
+                    isActive && (window.SP_REACT.createElement("div", { style: {
+                            position: 'absolute',
+                            top: '3px',
+                            right: '3px',
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '50%',
+                            backgroundColor: '#4caf50',
+                            boxShadow: '0 0 4px #4caf50',
+                        } })),
+                    window.SP_REACT.createElement("div", null,
+                        "Core ",
+                        coreId))));
+        }))));
+};
+
+/**
+ * VoltageSliders component for dynamic voltage configuration.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.2, 1.3, 1.4, 5.2, 5.4
+ *
+ * Provides three sliders for configuring voltage curves:
+ * - MinimalValue: Voltage offset at low CPU load (-100 to 0 mV)
+ * - MaximumValue: Voltage offset at high CPU load (-100 to 0 mV)
+ * - Threshold: CPU load percentage where transition occurs (0 to 100%)
+ *
+ * Property 1: Slider value clamping
+ * All slider values are clamped to their valid ranges.
+ *
+ * UI Polish:
+ * - Tooltips for each control explaining their purpose
+ * - Smooth transitions for focus indicators
+ * - Responsive layout for different screen sizes
+ */
+
+/**
+ * Clamp a value to a specified range.
+ * Property 1: Slider value clamping
+ *
+ * @param value - Value to clamp
+ * @param min - Minimum allowed value
+ * @param max - Maximum allowed value
+ * @returns Clamped value within [min, max]
+ */
+const clamp = (value, min, max) => {
+    return Math.max(min, Math.min(max, value));
+};
+/**
+ * VoltageSliders component.
+ * Requirements: 1.2, 1.3, 1.4, 8.3, 8.5
+ * UI Polish: Tooltips, smooth transitions, responsive layout
+ */
+const VoltageSliders = ({ coreId, config, onChange, disabled = false, validationErrors = [], focusedSlider = null, onSliderFocus, }) => {
+    // Tooltip visibility state
+    const [showMinTooltip, setShowMinTooltip] = SP_REACT.useState(false);
+    const [showMaxTooltip, setShowMaxTooltip] = SP_REACT.useState(false);
+    const [showThresholdTooltip, setShowThresholdTooltip] = SP_REACT.useState(false);
+    /**
+     * Handle MinimalValue slider change.
+     * Requirements: 1.2
+     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
+     */
+    const handleMinChange = (value) => {
+        const clamped = clamp(Math.round(value), -100, 0);
+        onChange('min_mv', clamped);
+    };
+    /**
+     * Handle MaximumValue slider change.
+     * Requirements: 1.3
+     * Property 1: Slider value clamping - values are clamped to -100 to 0 mV
+     */
+    const handleMaxChange = (value) => {
+        const clamped = clamp(Math.round(value), -100, 0);
+        onChange('max_mv', clamped);
+    };
+    /**
+     * Handle Threshold slider change.
+     * Requirements: 1.4
+     * Property 1: Slider value clamping - values are clamped to 0 to 100%
+     */
+    const handleThresholdChange = (value) => {
+        const clamped = clamp(Math.round(value), 0, 100);
+        onChange('threshold', clamped);
+    };
+    /**
+     * Get validation errors for a specific field.
+     */
+    const getFieldErrors = (field) => {
+        return validationErrors
+            .filter(err => err.field === field && (err.core_id === undefined || err.core_id === coreId))
+            .map(err => err.message);
+    };
+    const minErrors = getFieldErrors('min_mv');
+    const maxErrors = getFieldErrors('max_mv');
+    const thresholdErrors = getFieldErrors('threshold');
+    /**
+     * Tooltip component for displaying help text.
+     */
+    const Tooltip = ({ text, visible }) => {
+        if (!visible)
+            return null;
+        return (window.SP_REACT.createElement("div", { style: {
+                position: 'absolute',
+                top: '-60px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: '#1a1f2c',
+                border: '2px solid #1a9fff',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                fontSize: '11px',
+                color: '#fff',
+                whiteSpace: 'nowrap',
+                zIndex: 1000,
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                animation: 'tooltipFadeIn 0.2s ease',
+            } },
+            text,
+            window.SP_REACT.createElement("div", { style: {
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid #1a9fff',
+                } })));
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('min'), onMouseEnter: () => setShowMinTooltip(true), onMouseLeave: () => setShowMinTooltip(false), style: {
+                        border: focusedSlider === 'min' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'min' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Minimal Value", description: `Voltage offset at low CPU load: ${config.min_mv} mV`, value: config.min_mv, min: -100, max: 0, step: 1, onChange: handleMinChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowMinTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowMinTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "Conservative voltage offset applied when CPU load is below threshold", visible: showMinTooltip })),
+            minErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, minErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('max'), onMouseEnter: () => setShowMaxTooltip(true), onMouseLeave: () => setShowMaxTooltip(false), style: {
+                        border: focusedSlider === 'max' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'max' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Maximum Value", description: `Voltage offset at high CPU load: ${config.max_mv} mV`, value: config.max_mv, min: -100, max: 0, step: 1, onChange: handleMaxChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowMaxTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowMaxTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "Aggressive voltage offset applied when CPU load is above threshold", visible: showMaxTooltip })),
+            maxErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, maxErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { position: 'relative' } },
+                window.SP_REACT.createElement("div", { onClick: () => onSliderFocus?.('threshold'), onMouseEnter: () => setShowThresholdTooltip(true), onMouseLeave: () => setShowThresholdTooltip(false), style: {
+                        border: focusedSlider === 'threshold' ? '3px solid #1a9fff' : '3px solid transparent',
+                        borderRadius: '8px',
+                        boxShadow: focusedSlider === 'threshold' ? '0 0 12px #1a9fff99' : 'none',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                        window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                            window.SP_REACT.createElement(DFL.SliderField, { label: "Threshold", description: `CPU load transition point: ${config.threshold}%`, value: config.threshold, min: 0, max: 100, step: 1, onChange: handleThresholdChange, disabled: disabled, showValue: false })),
+                        window.SP_REACT.createElement(FaInfoCircle, { style: {
+                                color: '#8b929a',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                opacity: 0.7,
+                                transition: 'opacity 0.2s ease',
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.opacity = '1';
+                                setShowThresholdTooltip(true);
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.opacity = '0.7';
+                                setShowThresholdTooltip(false);
+                            } }))),
+                window.SP_REACT.createElement(Tooltip, { text: "CPU load percentage where voltage transitions from minimal to maximum", visible: showThresholdTooltip })),
+            thresholdErrors.length > 0 && (window.SP_REACT.createElement("div", { style: {
+                    marginTop: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    color: '#ff9800',
+                    animation: 'errorFadeIn 0.3s ease',
+                } }, thresholdErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx }, err)))))),
+        window.SP_REACT.createElement("style", null, `
+          @keyframes tooltipFadeIn {
+            from {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+          }
+          
+          @keyframes errorFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `)));
+};
+
+/**
+ * RPC retry utility with exponential backoff.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: Error handling with retry logic
+ *
+ * Provides automatic retry logic for RPC calls with exponential backoff
+ * to handle transient network errors and connection issues.
+ */
+/**
+ * Default retry configuration.
+ * - 3 retry attempts
+ * - 500ms initial delay
+ * - 2x backoff multiplier (500ms, 1000ms, 2000ms)
+ * - 5000ms maximum delay
+ */
+const DEFAULT_RETRY_CONFIG = {
+    maxRetries: 3,
+    initialDelay: 500,
+    backoffMultiplier: 2,
+    maxDelay: 5000,
+};
+/**
+ * Sleep for a specified duration.
+ *
+ * @param ms - Duration in milliseconds
+ */
+const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
+/**
+ * Calculate delay for a retry attempt using exponential backoff.
+ *
+ * @param attempt - Current attempt number (0-indexed)
+ * @param config - Retry configuration
+ * @returns Delay in milliseconds
+ */
+const calculateDelay = (attempt, config) => {
+    const delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
+    return Math.min(delay, config.maxDelay);
+};
+/**
+ * Determine if an error is retryable.
+ *
+ * Retryable errors include:
+ * - Network errors (connection lost, timeout)
+ * - Temporary server errors (503, 504)
+ * - RPC errors marked as recoverable
+ *
+ * Non-retryable errors include:
+ * - Validation errors (400)
+ * - Permission errors (403)
+ * - Not found errors (404)
+ * - Hardware errors
+ *
+ * @param error - Error object
+ * @returns True if error is retryable
+ */
+const isRetryableError = (error) => {
+    // Network errors
+    if (error.message?.includes('network') ||
+        error.message?.includes('timeout') ||
+        error.message?.includes('connection')) {
+        return true;
+    }
+    // RPC errors with recoverable flag
+    if (error.recoverable === true) {
+        return true;
+    }
+    // HTTP status codes
+    if (error.status) {
+        // Retry on 503 (Service Unavailable) and 504 (Gateway Timeout)
+        if (error.status === 503 || error.status === 504) {
+            return true;
+        }
+        // Don't retry on client errors (4xx) or hardware errors
+        if (error.status >= 400 && error.status < 500) {
+            return false;
+        }
+    }
+    // Hardware errors are not retryable
+    if (error.code === 'HARDWARE_ERROR' || error.message?.includes('hardware')) {
+        return false;
+    }
+    // Default to retryable for unknown errors
+    return true;
+};
+/**
+ * Execute an RPC call with automatic retry logic.
+ *
+ * Retries the operation up to maxRetries times with exponential backoff
+ * if the error is retryable. Logs retry attempts for debugging.
+ *
+ * @param operation - Async function to execute
+ * @param config - Retry configuration (optional, uses defaults)
+ * @param operationName - Name for logging (optional)
+ * @returns Promise resolving to operation result
+ * @throws Last error if all retries fail
+ *
+ * @example
+ * ```typescript
+ * const result = await withRetry(
+ *   () => api.callPluginMethod('get_dynamic_config', {}),
+ *   undefined,
+ *   'get_dynamic_config'
+ * );
+ * ```
+ */
+async function withRetry(operation, config = DEFAULT_RETRY_CONFIG, operationName = 'RPC call') {
+    let lastError;
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+        try {
+            // Execute the operation
+            const result = await operation();
+            // Log successful retry
+            if (attempt > 0) {
+                console.log(`[RPCRetry] ${operationName} succeeded on attempt ${attempt + 1}`);
+            }
+            return result;
+        }
+        catch (error) {
+            lastError = error;
+            // Check if we should retry
+            const shouldRetry = attempt < config.maxRetries && isRetryableError(error);
+            if (shouldRetry) {
+                const delay = calculateDelay(attempt, config);
+                console.warn(`[RPCRetry] ${operationName} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), ` +
+                    `retrying in ${delay}ms:`, error);
+                await sleep(delay);
+            }
+            else {
+                // No more retries or non-retryable error
+                if (attempt >= config.maxRetries) {
+                    console.error(`[RPCRetry] ${operationName} failed after ${config.maxRetries + 1} attempts:`, error);
+                }
+                else {
+                    console.error(`[RPCRetry] ${operationName} failed with non-retryable error:`, error);
+                }
+                throw error;
+            }
+        }
+    }
+    // Should never reach here, but TypeScript needs it
+    throw lastError;
+}
+
+/**
+ * Last Known Good (LKG) configuration storage utility.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 7.4 - LKG configuration storage and recovery
+ *
+ * Manages storage and retrieval of stable configurations for error recovery.
+ * A configuration is marked as "stable" after running successfully for 30 seconds.
+ */
+/**
+ * Storage key for LKG configuration in localStorage.
+ */
+const LKG_STORAGE_KEY = 'dynamicMode_lkg';
+/**
+ * Minimum duration (in seconds) a configuration must be stable before
+ * being marked as Last Known Good.
+ */
+const STABILITY_THRESHOLD_SECONDS = 30;
+/**
+ * Save a configuration as Last Known Good.
+ *
+ * Stores the configuration with timestamp and stability duration.
+ * This should be called after a configuration has been running
+ * successfully for at least STABILITY_THRESHOLD_SECONDS.
+ *
+ * @param config - Configuration to save as LKG
+ * @param stableDuration - Duration in seconds the config has been stable
+ * @returns True if saved successfully
+ *
+ * Requirements: 7.4
+ */
+function saveLKG(config, stableDuration) {
+    try {
+        const lkg = {
+            config,
+            timestamp: Date.now(),
+            stable_duration: stableDuration,
+        };
+        localStorage.setItem(LKG_STORAGE_KEY, JSON.stringify(lkg));
+        console.log(`[LKG] Saved Last Known Good config (stable for ${stableDuration}s)`);
+        return true;
+    }
+    catch (error) {
+        console.error('[LKG] Failed to save Last Known Good config:', error);
+        return false;
+    }
+}
+/**
+ * Load the Last Known Good configuration.
+ *
+ * Retrieves the most recently saved stable configuration.
+ * Returns null if no LKG configuration exists or if loading fails.
+ *
+ * @returns Last Known Good configuration or null
+ *
+ * Requirements: 7.4
+ */
+function loadLKG() {
+    try {
+        const stored = localStorage.getItem(LKG_STORAGE_KEY);
+        if (!stored) {
+            console.log('[LKG] No Last Known Good config found');
+            return null;
+        }
+        const lkg = JSON.parse(stored);
+        // Validate structure
+        if (!lkg.config || !lkg.timestamp || typeof lkg.stable_duration !== 'number') {
+            console.warn('[LKG] Invalid Last Known Good config structure');
+            return null;
+        }
+        console.log(`[LKG] Loaded Last Known Good config from ${new Date(lkg.timestamp).toLocaleString()} ` +
+            `(stable for ${lkg.stable_duration}s)`);
+        return lkg;
+    }
+    catch (error) {
+        console.error('[LKG] Failed to load Last Known Good config:', error);
+        return null;
+    }
+}
+/**
+ * Check if a configuration has been stable long enough to be marked as LKG.
+ *
+ * @param stableDuration - Duration in seconds the config has been stable
+ * @returns True if duration meets the stability threshold
+ */
+function isStableEnoughForLKG(stableDuration) {
+    return stableDuration >= STABILITY_THRESHOLD_SECONDS;
+}
+/**
+ * Stability tracker for monitoring configuration stability.
+ *
+ * Tracks how long a configuration has been running without errors
+ * and automatically saves it as LKG when it reaches the stability threshold.
+ */
+class StabilityTracker {
+    constructor() {
+        this.startTime = null;
+        this.config = null;
+        this.checkInterval = null;
+    }
+    /**
+     * Start tracking stability for a configuration.
+     *
+     * @param config - Configuration to track
+     */
+    start(config) {
+        this.stop(); // Stop any existing tracking
+        this.config = config;
+        this.startTime = Date.now();
+        console.log('[LKG] Started stability tracking');
+        // Check stability every 5 seconds
+        this.checkInterval = setInterval(() => {
+            this.checkStability();
+        }, 5000);
+    }
+    /**
+     * Stop tracking stability.
+     */
+    stop() {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
+        this.startTime = null;
+        this.config = null;
+        console.log('[LKG] Stopped stability tracking');
+    }
+    /**
+     * Check if configuration has been stable long enough and save as LKG.
+     */
+    checkStability() {
+        if (!this.startTime || !this.config) {
+            return;
+        }
+        const stableDuration = (Date.now() - this.startTime) / 1000;
+        if (isStableEnoughForLKG(stableDuration)) {
+            // Save as LKG
+            saveLKG(this.config, stableDuration);
+            // Stop tracking - we've saved it
+            this.stop();
+        }
+    }
+    /**
+     * Get current stability duration in seconds.
+     *
+     * @returns Duration in seconds, or 0 if not tracking
+     */
+    getStabilityDuration() {
+        if (!this.startTime) {
+            return 0;
+        }
+        return (Date.now() - this.startTime) / 1000;
+    }
+}
+
+/**
+ * DynamicManualMode component for per-core dynamic voltage control.
+ *
+ * Feature: manual-dynamic-mode
+ * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4
+ *
+ * Provides granular per-core dynamic voltage configuration with:
+ * - Simple Mode: Unified controls for all cores
+ * - Expert Mode: Per-core configuration
+ * - Real-time voltage curve visualization
+ * - Live metrics monitoring (500ms polling)
+ * - Configuration persistence (localStorage + backend)
+ * - Safety validation and error handling
+ */
+
+/**
+ * Safe default configuration values.
+ * Requirements: 7.5
+ */
+const SAFE_DEFAULTS = {
+    min_mv: -30,
+    max_mv: -15,
+    threshold: 50,
+};
+/**
+ * Create default configuration for all cores.
+ */
+const createDefaultConfig = () => ({
+    mode: 'simple',
+    cores: [0, 1, 2, 3].map(core_id => ({
+        core_id,
+        ...SAFE_DEFAULTS,
+    })),
+    version: 1,
+});
+/**
+ * DynamicManualMode error boundary wrapper.
+ * Requirements: Error handling
+ *
+ * Catches React errors and provides recovery options:
+ * - Retry: Attempt to re-render the component
+ * - Restore LKG: Load Last Known Good configuration
+ * - Reset: Reset to safe defaults
+ */
+class DynamicModeErrorBoundary extends SP_REACT.Component {
+    constructor(props) {
+        super(props);
+        this.handleRetry = () => {
+            this.setState({ hasError: false, error: null });
+        };
+        this.handleRestoreLKG = () => {
+            try {
+                const lkg = loadLKG();
+                if (lkg) {
+                    // Save LKG config to localStorage for component to load
+                    localStorage.setItem('dynamicMode', JSON.stringify(lkg.config));
+                    console.log('[DynamicManualMode] Restored Last Known Good config');
+                }
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to restore LKG:', e);
+            }
+            this.setState({ hasError: false, error: null });
+        };
+        this.handleReset = () => {
+            try {
+                // Clear localStorage to force safe defaults
+                localStorage.removeItem('dynamicMode');
+                console.log('[DynamicManualMode] Reset to safe defaults');
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to reset:', e);
+            }
+            this.setState({ hasError: false, error: null });
+        };
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error('[DynamicManualMode] Error caught by boundary:', error, errorInfo);
+        // Log to backend for diagnostics
+        try {
+            // TODO: Send error report to backend
+            console.error('[DynamicManualMode] Error details:', {
+                message: error.message,
+                stack: error.stack,
+                componentStack: errorInfo.componentStack,
+            });
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to log error:', e);
+        }
+    }
+    render() {
+        if (this.state.hasError) {
+            return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+                window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: '16px',
+                            backgroundColor: '#b71c1c',
+                            borderRadius: '8px',
+                            color: '#fff',
+                        } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontWeight: 'bold',
+                                marginBottom: '8px'
+                            } },
+                            window.SP_REACT.createElement(FaExclamationTriangle, null),
+                            window.SP_REACT.createElement("span", null, "Error Loading Dynamic Mode")),
+                        window.SP_REACT.createElement("div", { style: { fontSize: '12px', marginBottom: '12px' } }, this.state.error?.message || 'Unknown error'),
+                        window.SP_REACT.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRetry, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#1a9fff',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Retry")),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleRestoreLKG, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#ff9800',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Restore Last Stable")),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: this.handleReset, style: { width: '100%' } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        padding: '8px',
+                                        backgroundColor: '#3d4450',
+                                        borderRadius: '6px',
+                                        textAlign: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    } }, "Reset to Defaults")))))));
+        }
+        return this.props.children;
+    }
+}
+/**
+ * Main DynamicManualMode component.
+ * Requirements: 1.5, 4.1, 5.1, 5.2, 5.3, 5.4, 8.1, 8.2, 8.3, 8.4, 8.5
+ */
+const DynamicManualModeInternal = () => {
+    const api = useApi();
+    // Component state
+    const [config, setConfig] = SP_REACT.useState(createDefaultConfig());
+    const [selectedCore, setSelectedCore] = SP_REACT.useState(0);
+    const [isActive, setIsActive] = SP_REACT.useState(false);
+    const [isLoading, setIsLoading] = SP_REACT.useState(false);
+    const [error, setError] = SP_REACT.useState(null);
+    const [validationErrors, setValidationErrors] = SP_REACT.useState([]);
+    const [metrics, setMetrics] = SP_REACT.useState(new Map());
+    const [showDangerWarning, setShowDangerWarning] = SP_REACT.useState(false);
+    const [platformLimits, setPlatformLimits] = SP_REACT.useState({ min: -100, max: 0 });
+    // Connection status tracking
+    // Requirements: Error banners for connection issues
+    const [connectionStatus, setConnectionStatus] = SP_REACT.useState(ConnectionStatus.CONNECTED);
+    const [connectionError, setConnectionError] = SP_REACT.useState(null);
+    // LKG tracking
+    // Requirements: 7.4 - Last Known Good configuration
+    const stabilityTrackerRef = SP_REACT.useRef(new StabilityTracker());
+    const [hasLKG, setHasLKG] = SP_REACT.useState(false);
+    // Gamepad navigation state
+    // Requirements: 8.1, 8.2, 8.3, 8.5
+    const [focusedSlider, setFocusedSlider] = SP_REACT.useState(null);
+    // Polling interval ref
+    const pollingIntervalRef = SP_REACT.useRef(null);
+    /**
+     * Load configuration and platform limits on mount.
+     * Requirements: 6.1, 6.3, 6.4, 7.2, 7.3
+     *
+     * Property 10: Configuration persistence round-trip
+     * Loads configuration with fallback chain: localStorage → backend → safe defaults
+     *
+     * Enhanced with:
+     * - RPC retry logic for transient errors
+     * - Connection status tracking
+     * - LKG availability check
+     */
+    SP_REACT.useEffect(() => {
+        const loadConfig = async () => {
+            setIsLoading(true);
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+            try {
+                // Check if LKG is available
+                const lkg = loadLKG();
+                setHasLKG(lkg !== null);
+                // Load platform limits first with retry logic
+                // Requirements: 7.2, 7.3
+                try {
+                    const limitsResponse = await withRetry(() => api.callPluginMethod('get_platform_limits', {}), DEFAULT_RETRY_CONFIG, 'get_platform_limits');
+                    if (limitsResponse.success && limitsResponse.limits) {
+                        setPlatformLimits(limitsResponse.limits);
+                        console.log('[DynamicManualMode] Platform limits:', limitsResponse.limits);
+                    }
+                }
+                catch (limitsError) {
+                    console.warn('[DynamicManualMode] Failed to load platform limits, using defaults:', limitsError);
+                    // Don't fail the entire load - continue with defaults
+                }
+                // Try localStorage first
+                // Requirements: 6.3
+                try {
+                    const storedConfig = localStorage.getItem('dynamicMode');
+                    if (storedConfig) {
+                        const parsed = JSON.parse(storedConfig);
+                        // Validate the loaded config has required structure
+                        if (parsed.cores && Array.isArray(parsed.cores) && parsed.cores.length === 4) {
+                            setConfig(parsed);
+                            console.log('[DynamicManualMode] Loaded config from localStorage');
+                            setConnectionStatus(ConnectionStatus.CONNECTED);
+                            return;
+                        }
+                        else {
+                            console.warn('[DynamicManualMode] Invalid localStorage config structure, falling back');
+                        }
+                    }
+                }
+                catch (localStorageError) {
+                    // Handle localStorage errors gracefully
+                    // Requirements: 6.4
+                    console.warn('[DynamicManualMode] localStorage error:', localStorageError);
+                    // Continue to backend fallback
+                }
+                // Fallback to backend with retry logic
+                // Requirements: 6.4
+                try {
+                    const response = await withRetry(() => api.callPluginMethod('get_dynamic_config', {}), DEFAULT_RETRY_CONFIG, 'get_dynamic_config');
+                    if (response.success && response.config) {
+                        setConfig(response.config);
+                        console.log('[DynamicManualMode] Loaded config from backend');
+                        setConnectionStatus(ConnectionStatus.CONNECTED);
+                        return;
+                    }
+                }
+                catch (backendError) {
+                    console.warn('[DynamicManualMode] Backend load error:', backendError);
+                    // Update connection status based on error type
+                    if (backendError.message?.includes('network') ||
+                        backendError.message?.includes('connection')) {
+                        setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                        setConnectionError('Connection to backend lost');
+                    }
+                    else if (backendError.message?.includes('hardware')) {
+                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                        setConnectionError('Hardware error detected');
+                    }
+                    // Continue to safe defaults
+                }
+                // Use safe defaults if both localStorage and backend fail
+                // Requirements: 6.4
+                setConfig(createDefaultConfig());
+                console.log('[DynamicManualMode] Using safe defaults');
+            }
+            catch (e) {
+                console.error('[DynamicManualMode] Failed to load config:', e);
+                setConfig(createDefaultConfig());
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError(e.message || 'Unknown error');
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        loadConfig();
+        // Cleanup stability tracker on unmount
+        return () => {
+            stabilityTrackerRef.current.stop();
+        };
+    }, [api]);
+    /**
+     * Start metrics polling when active.
+     * Requirements: 3.1, 3.5
+     *
+     * Enhanced with:
+     * - Connection error handling
+     * - Automatic reconnection attempts
+     */
+    SP_REACT.useEffect(() => {
+        if (isActive) {
+            // Start polling
+            pollingIntervalRef.current = setInterval(async () => {
+                try {
+                    const response = await api.callPluginMethod('get_core_metrics', { core_id: selectedCore });
+                    if (response.success && response.metrics) {
+                        setMetrics(prev => {
+                            const updated = new Map(prev);
+                            updated.set(selectedCore, response.metrics);
+                            return updated;
+                        });
+                        // Clear connection errors on successful poll
+                        if (connectionStatus !== ConnectionStatus.CONNECTED) {
+                            setConnectionStatus(ConnectionStatus.CONNECTED);
+                            setConnectionError(null);
+                            console.log('[DynamicManualMode] Connection restored');
+                        }
+                    }
+                    else {
+                        // Handle RPC error response
+                        if (response.error?.includes('hardware')) {
+                            setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                            setConnectionError(response.error);
+                        }
+                    }
+                }
+                catch (e) {
+                    console.error('[DynamicManualMode] Failed to poll metrics:', e);
+                    // Update connection status based on error
+                    if (e.message?.includes('network') || e.message?.includes('connection')) {
+                        if (connectionStatus === ConnectionStatus.CONNECTED) {
+                            setConnectionStatus(ConnectionStatus.RECONNECTING);
+                            setConnectionError('Connection lost, attempting to reconnect...');
+                        }
+                    }
+                    else if (e.message?.includes('hardware')) {
+                        setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                        setConnectionError('Hardware error detected');
+                        // Stop dynamic mode on hardware error
+                        handleStop();
+                    }
+                }
+            }, 500);
+        }
+        else {
+            // Stop polling
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        }
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+        };
+    }, [isActive, selectedCore, api, connectionStatus]);
+    /**
+     * Validate current configuration.
+     * Requirements: 7.1, 7.2, 7.3
+     *
+     * Returns validation errors if configuration is invalid.
+     */
+    const validateConfig = SP_REACT.useCallback(() => {
+        const errors = [];
+        const coresToValidate = config.mode === 'simple' ? [config.cores[0]] : config.cores;
+        for (const core of coresToValidate) {
+            // Check min <= max ordering
+            // Requirements: 7.1
+            // Property 12: Validation min-max ordering
+            if (core.min_mv > core.max_mv) {
+                errors.push({
+                    field: 'config',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) must be ≤ Maximum Value (${core.max_mv}mV)`,
+                    code: 'MIN_GREATER_THAN_MAX',
+                    core_id: core.core_id,
+                });
+            }
+            // Check platform limits
+            // Requirements: 7.2, 7.3
+            // Property 13: Voltage lower bound clamping
+            // Property 14: Voltage upper bound clamping
+            if (core.min_mv < platformLimits.min) {
+                errors.push({
+                    field: 'min_mv',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is below platform limit (${platformLimits.min}mV)`,
+                    code: 'BELOW_PLATFORM_MIN',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.max_mv < platformLimits.min) {
+                errors.push({
+                    field: 'max_mv',
+                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is below platform limit (${platformLimits.min}mV)`,
+                    code: 'BELOW_PLATFORM_MIN',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.min_mv > platformLimits.max) {
+                errors.push({
+                    field: 'min_mv',
+                    message: `Core ${core.core_id}: Minimal Value (${core.min_mv}mV) is above 0mV`,
+                    code: 'ABOVE_ZERO',
+                    core_id: core.core_id,
+                });
+            }
+            if (core.max_mv > platformLimits.max) {
+                errors.push({
+                    field: 'max_mv',
+                    message: `Core ${core.core_id}: Maximum Value (${core.max_mv}mV) is above 0mV`,
+                    code: 'ABOVE_ZERO',
+                    core_id: core.core_id,
+                });
+            }
+            // Check threshold range
+            if (core.threshold < 0 || core.threshold > 100) {
+                errors.push({
+                    field: 'threshold',
+                    message: `Core ${core.core_id}: Threshold (${core.threshold}%) must be between 0 and 100`,
+                    code: 'INVALID_THRESHOLD',
+                    core_id: core.core_id,
+                });
+            }
+        }
+        return errors;
+    }, [config, platformLimits]);
+    /**
+     * Check if configuration is dangerous.
+     * Requirements: 7.4
+     *
+     * A configuration is dangerous if any voltage is below -50mV.
+     */
+    const isDangerousConfig = SP_REACT.useCallback(() => {
+        const DANGER_THRESHOLD = -50;
+        const coresToCheck = config.mode === 'simple' ? [config.cores[0]] : config.cores;
+        return coresToCheck.some(core => core.min_mv < DANGER_THRESHOLD || core.max_mv < DANGER_THRESHOLD);
+    }, [config]);
+    /**
+     * Reset configuration to safe defaults.
+     * Requirements: 7.5
+     */
+    const handleResetToDefaults = SP_REACT.useCallback(() => {
+        setConfig(createDefaultConfig());
+        setValidationErrors([]);
+        setError(null);
+        setShowDangerWarning(false);
+        console.log('[DynamicManualMode] Reset to safe defaults');
+    }, []);
+    /**
+     * Restore Last Known Good configuration.
+     * Requirements: 7.4
+     *
+     * Loads the most recent stable configuration from LKG storage.
+     * This is used for error recovery when the current configuration
+     * causes issues.
+     */
+    const handleRestoreLKG = SP_REACT.useCallback(() => {
+        const lkg = loadLKG();
+        if (!lkg) {
+            setError('No Last Known Good configuration available');
+            return;
+        }
+        setConfig(lkg.config);
+        setValidationErrors([]);
+        setError(null);
+        setShowDangerWarning(false);
+        console.log(`[DynamicManualMode] Restored Last Known Good config from ` +
+            `${new Date(lkg.timestamp).toLocaleString()} (stable for ${lkg.stable_duration}s)`);
+    }, []);
+    /**
+     * Handle mode toggle (Simple/Expert).
+     * Requirements: 4.1, 4.4, 4.5
+     *
+     * Property 8: Mode switching configuration preservation
+     * When switching modes, all core configurations are preserved.
+     */
+    const handleModeToggle = SP_REACT.useCallback(() => {
+        setConfig(prev => {
+            const newMode = prev.mode === 'simple' ? 'expert' : 'simple';
+            // Configuration is always preserved when switching modes
+            // Requirements: 4.4
+            // In Simple Mode, we display Core 0's config but all cores retain their values
+            // Requirements: 4.5
+            return { ...prev, mode: newMode };
+        });
+    }, []);
+    /**
+     * Handle Apply button click.
+     * Requirements: 1.5, 6.1, 6.2, 4.3, 7.1, 7.4
+     */
+    const handleApply = SP_REACT.useCallback(async () => {
+        // Validate configuration first
+        // Requirements: 7.1
+        const errors = validateConfig();
+        if (errors.length > 0) {
+            setValidationErrors(errors);
+            setError('Configuration validation failed. Please fix the errors below.');
+            return;
+        }
+        // Check for dangerous configuration
+        // Requirements: 7.4
+        if (isDangerousConfig()) {
+            setShowDangerWarning(true);
+            return;
+        }
+        // Proceed with applying configuration
+        await applyConfiguration();
+    }, [validateConfig, isDangerousConfig]);
+    /**
+     * Apply configuration after validation passes.
+     * Requirements: 1.5, 6.1, 6.2, 4.3
+     *
+     * Enhanced with:
+     * - RPC retry logic for transient errors
+     * - Connection status tracking
+     * - Hardware error handling
+     */
+    const applyConfiguration = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        setValidationErrors([]);
+        setShowDangerWarning(false);
+        setConnectionStatus(ConnectionStatus.CONNECTED);
+        try {
+            if (config.mode === 'simple') {
+                // In Simple Mode, apply Core 0's config to all cores
+                // Requirements: 4.3
+                // Property 7: Simple mode configuration uniformity
+                const coreConfig = config.cores[0];
+                const response = await withRetry(() => api.callPluginMethod('set_all_cores_config', {
+                    min_mv: coreConfig.min_mv,
+                    max_mv: coreConfig.max_mv,
+                    threshold: coreConfig.threshold,
+                }), DEFAULT_RETRY_CONFIG, 'set_all_cores_config');
+                if (!response.success) {
+                    setError(response.error || 'Failed to apply configuration');
+                    if (response.validation_errors) {
+                        const errors = response.validation_errors.map((msg) => ({
+                            field: 'config',
+                            message: msg,
+                            code: 'VALIDATION_FAILED',
+                        }));
+                        setValidationErrors(errors);
+                    }
+                    return;
+                }
+            }
+            else {
+                // In Expert Mode, apply configuration for each core
+                for (const coreConfig of config.cores) {
+                    const response = await withRetry(() => api.callPluginMethod('set_dynamic_core_config', {
+                        core_id: coreConfig.core_id,
+                        min_mv: coreConfig.min_mv,
+                        max_mv: coreConfig.max_mv,
+                        threshold: coreConfig.threshold,
+                    }), DEFAULT_RETRY_CONFIG, `set_dynamic_core_config (core ${coreConfig.core_id})`);
+                    if (!response.success) {
+                        setError(response.error || 'Failed to apply configuration');
+                        if (response.validation_errors) {
+                            const errors = response.validation_errors.map((msg) => ({
+                                field: 'config',
+                                message: msg,
+                                code: 'VALIDATION_FAILED',
+                                core_id: coreConfig.core_id,
+                            }));
+                            setValidationErrors(errors);
+                        }
+                        return;
+                    }
+                }
+            }
+            // Save to localStorage
+            // Requirements: 6.1
+            // Property 10: Configuration persistence round-trip
+            try {
+                localStorage.setItem('dynamicMode', JSON.stringify(config));
+                console.log('[DynamicManualMode] Configuration saved to localStorage');
+            }
+            catch (localStorageError) {
+                // Handle localStorage errors gracefully (e.g., quota exceeded, private browsing)
+                // Requirements: 6.4
+                console.warn('[DynamicManualMode] Failed to save to localStorage:', localStorageError);
+                // Don't fail the entire operation - backend save already succeeded
+            }
+            console.log('[DynamicManualMode] Configuration applied successfully');
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to apply config:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status based on error type
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+            else if (e.message?.includes('hardware')) {
+                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                setConnectionError('Hardware error: ' + e.message);
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [config, api]);
+    /**
+     * Handle Start Dynamic Mode button click.
+     * Requirements: 5.1, 5.2
+     *
+     * Enhanced with:
+     * - RPC retry logic
+     * - LKG stability tracking
+     * - Connection error handling
+     */
+    const handleStart = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        setConnectionStatus(ConnectionStatus.CONNECTED);
+        try {
+            const response = await withRetry(() => api.callPluginMethod('start_dynamic_mode', { config }), DEFAULT_RETRY_CONFIG, 'start_dynamic_mode');
+            if (response.success) {
+                setIsActive(true);
+                // Start stability tracking for LKG
+                // Requirements: 7.4
+                stabilityTrackerRef.current.start(config);
+                console.log('[DynamicManualMode] Dynamic mode started');
+                setConnectionStatus(ConnectionStatus.CONNECTED);
+            }
+            else {
+                setError(response.error || 'Failed to start dynamic mode');
+                if (response.error?.includes('hardware')) {
+                    setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                    setConnectionError(response.error);
+                }
+            }
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to start:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+            else if (e.message?.includes('hardware')) {
+                setConnectionStatus(ConnectionStatus.HARDWARE_ERROR);
+                setConnectionError('Hardware error: ' + e.message);
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [config, api]);
+    /**
+     * Handle Stop Dynamic Mode button click.
+     * Requirements: 5.3, 5.4
+     *
+     * Enhanced with:
+     * - RPC retry logic
+     * - LKG stability tracking stop
+     * - Connection error handling
+     */
+    const handleStop = SP_REACT.useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await withRetry(() => api.callPluginMethod('stop_dynamic_mode', {}), DEFAULT_RETRY_CONFIG, 'stop_dynamic_mode');
+            if (response.success) {
+                setIsActive(false);
+                // Stop stability tracking
+                // Requirements: 7.4
+                const stableDuration = stabilityTrackerRef.current.getStabilityDuration();
+                if (isStableEnoughForLKG(stableDuration)) {
+                    // Save as LKG if it was stable long enough
+                    saveLKG(config, stableDuration);
+                    setHasLKG(true);
+                }
+                stabilityTrackerRef.current.stop();
+                console.log('[DynamicManualMode] Dynamic mode stopped');
+                setConnectionStatus(ConnectionStatus.CONNECTED);
+            }
+            else {
+                setError(response.error || 'Failed to stop dynamic mode');
+            }
+        }
+        catch (e) {
+            console.error('[DynamicManualMode] Failed to stop:', e);
+            setError(e.message || 'Unknown error');
+            // Update connection status
+            if (e.message?.includes('network') || e.message?.includes('connection')) {
+                setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                setConnectionError('Connection to backend lost');
+            }
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }, [api, config]);
+    /**
+     * Update core configuration.
+     */
+    const updateCoreConfig = SP_REACT.useCallback((coreId, updates) => {
+        setConfig(prev => ({
+            ...prev,
+            cores: prev.cores.map(core => core.core_id === coreId ? { ...core, ...updates } : core),
+        }));
+    }, []);
+    /**
+     * Update all cores in Simple Mode.
+     * Requirements: 4.2
+     * Property 6: Simple mode value propagation
+     */
+    const updateAllCores = SP_REACT.useCallback((updates) => {
+        setConfig(prev => ({
+            ...prev,
+            cores: prev.cores.map(core => ({ ...core, ...updates })),
+        }));
+    }, []);
+    /**
+     * Handle slider changes - propagates to all cores in Simple Mode.
+     * Requirements: 4.2, 8.3
+     */
+    const handleSliderChange = SP_REACT.useCallback((field, value) => {
+        if (config.mode === 'simple') {
+            // In Simple Mode, propagate to all cores
+            updateAllCores({ [field]: value });
+        }
+        else {
+            // In Expert Mode, update only selected core
+            updateCoreConfig(selectedCore, { [field]: value });
+        }
+    }, [config.mode, selectedCore, updateAllCores, updateCoreConfig]);
+    /**
+     * Handle gamepad navigation for slider adjustment and focus management.
+     * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+     *
+     * Property 15: Gamepad core navigation
+     * D-pad Up/Down changes selected core with wrapping (handled in CoreTabs).
+     *
+     * Property 16: Gamepad focus navigation
+     * D-pad Left/Right moves focus between sliders and buttons.
+     *
+     * Property 17: Gamepad slider adjustment
+     * L1/R1 adjusts slider value by one increment when slider has focus.
+     *
+     * Property 18: Gamepad focus indicator visibility
+     * Visual focus indicators are rendered for focused elements.
+     */
+    SP_REACT.useEffect(() => {
+        const handleGamepadInput = (e) => {
+            // D-pad Left/Right: Focus navigation between sliders
+            // Requirements: 8.2
+            // Property 16: Gamepad focus navigation
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setFocusedSlider(prev => {
+                    if (prev === null || prev === 'min')
+                        return 'threshold';
+                    if (prev === 'max')
+                        return 'min';
+                    if (prev === 'threshold')
+                        return 'max';
+                    return prev;
+                });
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setFocusedSlider(prev => {
+                    if (prev === null || prev === 'threshold')
+                        return 'min';
+                    if (prev === 'min')
+                        return 'max';
+                    if (prev === 'max')
+                        return 'threshold';
+                    return prev;
+                });
+            }
+            // L1/R1: Slider adjustment when slider has focus
+            // Requirements: 8.3
+            // Property 17: Gamepad slider adjustment
+            if ((e.key === 'PageUp' || e.key === 'PageDown') && focusedSlider) {
+                e.preventDefault();
+                const currentCore = config.mode === 'simple' ? 0 : selectedCore;
+                const currentConfig = config.cores[currentCore];
+                const increment = e.key === 'PageUp' ? 1 : -1; // L1 = PageUp, R1 = PageDown
+                if (focusedSlider === 'min') {
+                    const newValue = Math.max(-100, Math.min(0, currentConfig.min_mv + increment));
+                    handleSliderChange('min_mv', newValue);
+                }
+                else if (focusedSlider === 'max') {
+                    const newValue = Math.max(-100, Math.min(0, currentConfig.max_mv + increment));
+                    handleSliderChange('max_mv', newValue);
+                }
+                else if (focusedSlider === 'threshold') {
+                    const newValue = Math.max(0, Math.min(100, currentConfig.threshold + increment));
+                    handleSliderChange('threshold', newValue);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleGamepadInput);
+        return () => {
+            window.removeEventListener('keydown', handleGamepadInput);
+        };
+    }, [focusedSlider, config, selectedCore, handleSliderChange]);
+    if (isLoading && !config.cores.length) {
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '24px',
+                        color: '#8b929a',
+                    } },
+                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    window.SP_REACT.createElement("span", null, "Loading...")))));
+    }
+    // Check if Apply button should be disabled
+    // Requirements: 7.1
+    const hasValidationErrors = validateConfig().length > 0;
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Dynamic Manual Mode" },
+        connectionStatus !== ConnectionStatus.CONNECTED && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#b71c1c' :
+                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#d32f2f' :
+                            '#ff9800', // RECONNECTING
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                    border: '2px solid ' + (connectionStatus === ConnectionStatus.HARDWARE_ERROR ? '#ff5252' :
+                        connectionStatus === ConnectionStatus.DISCONNECTED ? '#ff5252' :
+                            '#ffb74d'),
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        marginBottom: connectionError ? '6px' : '0',
+                    } },
+                    connectionStatus === ConnectionStatus.RECONNECTING && window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    connectionStatus === ConnectionStatus.HARDWARE_ERROR && window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    connectionStatus === ConnectionStatus.DISCONNECTED && window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    window.SP_REACT.createElement("span", null,
+                        connectionStatus === ConnectionStatus.RECONNECTING && 'Reconnecting...',
+                        connectionStatus === ConnectionStatus.HARDWARE_ERROR && 'Hardware Error',
+                        connectionStatus === ConnectionStatus.DISCONNECTED && 'Connection Lost')),
+                connectionError && (window.SP_REACT.createElement("div", { style: { fontSize: '11px', color: '#fff', opacity: 0.9 } }, connectionError))))),
+        showDangerWarning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '16px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    border: '2px solid #ff9800',
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: '#ff9800',
+                        marginBottom: '8px',
+                    } }, "\u26A0\uFE0F Dangerous Configuration Warning"),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: '11px',
+                        color: '#fff',
+                        marginBottom: '12px',
+                        lineHeight: '1.4',
+                    } }, "Your configuration includes aggressive voltage offsets (below -50mV) that may cause system instability or crashes. Proceed only if you understand the risks."),
+                window.SP_REACT.createElement("div", { style: { display: 'flex', gap: '8px' } },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => {
+                            setShowDangerWarning(false);
+                            applyConfiguration();
+                        }, style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#ff9800',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                            } }, "Apply Anyway")),
+                    window.SP_REACT.createElement(FocusableButton, { onClick: () => setShowDangerWarning(false), style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#3d4450',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                            } }, "Cancel")))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    backgroundColor: isActive ? '#1b5e20' : '#3d4450',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                    transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+                    boxShadow: isActive ? '0 0 16px rgba(76, 175, 80, 0.3)' : 'none',
+                } },
+                window.SP_REACT.createElement("span", { style: {
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        transition: 'color 0.3s ease',
+                    } },
+                    "Status: ",
+                    isActive ? 'Active' : 'Inactive'),
+                window.SP_REACT.createElement("div", { style: {
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: isActive ? '#4caf50' : '#8b929a',
+                        boxShadow: isActive ? '0 0 8px #4caf50' : 'none',
+                        transition: 'all 0.3s ease',
+                        animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none',
+                    } }))),
+        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: '#b71c1c',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                } },
+                window.SP_REACT.createElement("div", { style: { fontSize: '12px', color: '#fff' } }, error)))),
+        validationErrors.length > 0 && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: '12px',
+                    backgroundColor: '#5c1313',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                } }, validationErrors.map((err, idx) => (window.SP_REACT.createElement("div", { key: idx, style: { fontSize: '11px', color: '#ff9800', marginBottom: '4px' } },
+                err.core_id !== undefined && `Core ${err.core_id}: `,
+                err.message)))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: '12px' } },
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleModeToggle, style: { width: '100%' } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: '8px',
+                            backgroundColor: config.mode === 'simple' ? '#1a9fff' : '#3d4450',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                        } }, config.mode === 'simple' ? '✓ Simple Mode' : 'Expert Mode (Per-Core)')))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(CoreTabs, { selectedCore: selectedCore, onCoreSelect: setSelectedCore, mode: config.mode })),
+        window.SP_REACT.createElement(VoltageSliders, { coreId: config.mode === 'simple' ? 0 : selectedCore, config: config.mode === 'simple' ? config.cores[0] : config.cores[selectedCore], onChange: handleSliderChange, disabled: isLoading, validationErrors: validationErrors, focusedSlider: focusedSlider, onSliderFocus: setFocusedSlider }),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: 'flex', gap: '8px', marginTop: '12px' }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Apply configuration to all cores" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleApply, disabled: isLoading || hasValidationErrors, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: hasValidationErrors ? '#3d4450' : '#1a9fff',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                opacity: hasValidationErrors ? 0.5 : 1,
+                                transition: 'all 0.2s ease',
+                            } },
+                            isLoading ? window.SP_REACT.createElement(FaSpinner, { className: "spin" }) : null,
+                            window.SP_REACT.createElement("span", null, "Apply")))),
+                !isActive ? (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Start dynamic voltage adjustment" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStart, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: '#1b5e20',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaPlay, null),
+                            window.SP_REACT.createElement("span", null, "Start"))))) : (window.SP_REACT.createElement("div", { style: { flex: 1, position: 'relative' }, title: "Stop dynamic voltage adjustment" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleStop, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '10px',
+                                backgroundColor: '#b71c1c',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaStop, null),
+                            window.SP_REACT.createElement("span", null, "Stop"))))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: {
+                    display: 'flex',
+                    gap: '8px',
+                    marginTop: '8px',
+                    flexDirection: 'column',
+                } },
+                hasLKG && (window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Restore the last known stable configuration" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleRestoreLKG, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '8px',
+                                backgroundColor: '#ff9800',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                transition: 'all 0.2s ease',
+                            } },
+                            window.SP_REACT.createElement(FaUndo, null),
+                            window.SP_REACT.createElement("span", null, "Restore Last Stable"))))),
+                window.SP_REACT.createElement("div", { style: { position: 'relative' }, title: "Reset all cores to safe default values (-30mV/-15mV/50%)" },
+                    window.SP_REACT.createElement(FocusableButton, { onClick: handleResetToDefaults, disabled: isLoading, style: { width: '100%' } },
+                        window.SP_REACT.createElement("div", { style: {
+                                padding: '8px',
+                                backgroundColor: '#3d4450',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                transition: 'all 0.2s ease',
+                            } }, "Reset to Safe Defaults"))))),
+        window.SP_REACT.createElement("style", null, `
+          /* Spinner animation for loading states */
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          /* Pulse animation for active status indicator */
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.7;
+              transform: scale(1.1);
+            }
+          }
+          
+          /* Smooth fade-in for error messages */
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          /* Responsive layout adjustments */
+          @media (max-width: 768px) {
+            /* Adjust padding and font sizes for smaller screens */
+            .dynamic-mode-container {
+              padding: 8px;
+            }
+            
+            .dynamic-mode-button {
+              font-size: 10px;
+              padding: 8px;
+            }
+            
+            .dynamic-mode-status {
+              font-size: 11px;
+            }
+          }
+          
+          @media (min-width: 769px) and (max-width: 1024px) {
+            /* Medium screen adjustments */
+            .dynamic-mode-container {
+              padding: 12px;
+            }
+          }
+          
+          @media (min-width: 1025px) {
+            /* Large screen adjustments */
+            .dynamic-mode-container {
+              padding: 16px;
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+          }
+          
+          /* Smooth transitions for all interactive elements */
+          button, .focusable-element {
+            transition: all 0.2s ease;
+          }
+          
+          button:hover, .focusable-element:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          }
+          
+          button:active, .focusable-element:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          }
+          
+          /* Focus indicator enhancement for gamepad navigation */
+          .gamepad-focus {
+            outline: 3px solid #1a9fff;
+            outline-offset: 2px;
+            box-shadow: 0 0 12px rgba(26, 159, 255, 0.6);
+            transition: all 0.2s ease;
+          }
+          
+          /* Smooth graph update transitions */
+          .recharts-wrapper {
+            transition: opacity 0.3s ease;
+          }
+          
+          .recharts-line {
+            transition: stroke-dashoffset 0.5s ease;
+          }
+        `)));
+};
+/**
+ * Exported component with error boundary.
+ */
+const DynamicManualMode = () => (window.SP_REACT.createElement(DynamicModeErrorBoundary, null,
+    window.SP_REACT.createElement(DynamicManualModeInternal, null)));
+
+/**
+ * ExpertMode component for DeckTune.
+ *
+ * Feature: decktune, Frontend UI Components - Expert Mode
+ * Requirements: 4.5, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2
+ *
+ * Feature: decktune-critical-fixes
+ * Validates: Requirements 2.1, 2.2, 2.3, 2.5, 2.6
+ *
+ * Provides detailed manual controls and diagnostics for power users:
+ * - Manual tab: Per-core sliders, Apply/Test/Disable buttons, live metrics
+ * - Presets tab: Preset list with edit/delete/export, import
+ * - Tests tab: Test selection, run button, history
+ * - Diagnostics tab: System info, logs, export
+ * - Panic Disable button: Always visible emergency reset (Requirement 4.5)
+ *
+ * v3.1.19: Complete focus system refactor with FocusableButton
+ */
+
+const TABS = [
+    { id: "manual", label: "Manual", icon: FaSlidersH },
+    { id: "dynamic-manual", label: "Dynamic", icon: FaChartLine },
+    { id: "presets", label: "Presets", icon: FaList },
+    { id: "tests", label: "Tests", icon: FaVial },
+    { id: "fan", label: "Fan", icon: FaFan },
+    { id: "diagnostics", label: "Diagnostics", icon: FaInfoCircle },
+];
+/**
+ * Panic Disable Button component - compact emergency reset.
+ * Requirements: 4.5
+ *
+ * Features:
+ * - Compact red button with white focus outline
+ * - Immediate reset to 0 on click
+ * - Uses FocusableButton for custom focus
+ */
+const PanicDisableButton = () => {
+    const { api } = useDeckTune();
+    const [isPanicking, setIsPanicking] = SP_REACT.useState(false);
+    const [isFocused, setIsFocused] = SP_REACT.useState(false);
+    const handlePanicDisable = async () => {
+        setIsPanicking(true);
+        try {
+            await api.panicDisable();
+        }
+        finally {
+            setIsPanicking(false);
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+        window.SP_REACT.createElement(DFL.Focusable, { onActivate: handlePanicDisable, onGamepadFocus: () => setIsFocused(true), onGamepadBlur: () => setIsFocused(false), style: {
+                padding: 0,
+                margin: 0,
+            } },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px 16px",
+                    backgroundColor: "#b71c1c",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    fontSize: "12px",
+                    border: isFocused && !isPanicking ? "3px solid #fff" : "3px solid transparent",
+                    boxShadow: isFocused && !isPanicking ? "0 0 12px rgba(255, 255, 255, 0.6)" : "none",
+                    transform: isFocused && !isPanicking ? "scale(1.05)" : "scale(1)",
+                    transition: "all 0.2s ease",
+                    cursor: isPanicking ? "not-allowed" : "pointer",
+                    opacity: isPanicking ? 0.5 : 1,
+                } }, isPanicking ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement(FaSpinner, { className: "spin", style: { fontSize: "12px" } }),
+                window.SP_REACT.createElement("span", null, "Disabling..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { fontSize: "12px" } }),
+                window.SP_REACT.createElement("span", null, "PANIC DISABLE")))))));
+};
+/**
+ * ExpertMode component - detailed controls for power users.
+ * Requirements: 4.5, 7.1, 10.1, 10.2, 10.3, 10.4, 10.5
+ */
+const ExpertMode = ({ initialTab = "manual" }) => {
+    const [activeTab, setActiveTab] = SP_REACT.useState(initialTab);
+    // NUCLEAR CACHE BUST - v3.1.19-20260118-2230
+    SP_REACT.useEffect(() => {
+        const buildId = "v3.1.19-20260118-2230-FOCUSABLE-BUTTON";
+        console.log(`[DeckTune CACHE BUST] ${buildId} - FocusableButton refactor complete`);
+        window.__DECKTUNE_BUILD_ID__ = buildId;
+        window.__DECKTUNE_EXPERT_MODE_VERSION__ = "FOCUSABLE_BUTTON_V1";
+    }, []);
+    /**
+     * Handle tab change with persistence.
+     * Requirements: 10.5
+     */
+    const handleTabChange = SP_REACT.useCallback(async (tab) => {
+        setActiveTab(tab);
+        // Persist selected tab to settings
+        try {
+            await call("save_setting", "expert_mode_selected_tab", tab);
+            console.log("[ExpertMode] Selected tab persisted:", tab);
+        }
+        catch (error) {
+            console.error("[ExpertMode] Failed to persist selected tab:", error);
+        }
+    }, []);
+    // Load persisted tab on mount
+    SP_REACT.useEffect(() => {
+        const loadPersistedTab = async () => {
+            try {
+                const response = await call("load_setting", "expert_mode_selected_tab");
+                if (response.success && response.value) {
+                    setActiveTab(response.value);
+                    console.log("[ExpertMode] Loaded persisted tab:", response.value);
+                }
+            }
+            catch (error) {
+                console.error("[ExpertMode] Failed to load persisted tab:", error);
+            }
+        };
+        loadPersistedTab();
+    }, []);
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Expert Mode" },
+        window.SP_REACT.createElement(PanicDisableButton, null),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(TabNavigation, { activeTab: activeTab, onTabChange: handleTabChange })),
+        window.SP_REACT.createElement("div", { key: activeTab },
+            activeTab === "manual" && window.SP_REACT.createElement(ManualTab, null),
+            activeTab === "dynamic-manual" && window.SP_REACT.createElement(DynamicManualMode, null),
+            activeTab === "presets" && window.SP_REACT.createElement(PresetsTabNew, null),
+            activeTab === "tests" && window.SP_REACT.createElement(TestsTabNew, null),
+            activeTab === "fan" && window.SP_REACT.createElement(FanTab, null),
+            activeTab === "diagnostics" && window.SP_REACT.createElement(DiagnosticsTab, null))));
+};
+const TabNavigation = ({ activeTab, onTabChange }) => {
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: {
+            display: "flex",
+            marginBottom: "8px",
+            backgroundColor: "#23262e",
+            borderRadius: "4px",
+            padding: "2px",
+            gap: "2px",
+        }, "flow-children": "horizontal" }, TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (window.SP_REACT.createElement(FocusableButton, { key: tab.id, onClick: () => onTabChange(tab.id), focusColor: isActive ? "#1a9fff" : "#666", style: {
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "1px",
+                padding: "4px 2px",
+                borderRadius: "3px",
+                backgroundColor: isActive ? "#1a9fff" : "transparent",
+                color: isActive ? "#fff" : "#8b929a",
+            } },
+            window.SP_REACT.createElement(Icon, null),
+            window.SP_REACT.createElement("span", { style: { fontSize: "8px", fontWeight: isActive ? "600" : "400" } }, tab.label)));
+    })));
+};
+/**
+ * Manual tab component with simple/per-core modes.
+ *
+ * Feature: ui-refactor-settings
+ * Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5
+ */
+const ManualTab = () => {
+    const { state, api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const { settings, setApplyOnStartup, setGameOnlyMode } = useSettings();
+    const [coreValues, setCoreValues] = SP_REACT.useState([...state.cores]);
+    const [simpleMode, setSimpleMode] = SP_REACT.useState(true);
+    const [simpleValue, setSimpleValue] = SP_REACT.useState(-25);
+    const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const safeLimit = platformInfo?.safe_limit ?? -30;
+    const currentMinLimit = settings.expertMode ? -100 : safeLimit;
+    // Sync with state.cores
+    SP_REACT.useEffect(() => {
+        setCoreValues([...state.cores]);
+        const avg = Math.round(state.cores.reduce((sum, val) => sum + val, 0) / 4);
+        setSimpleValue(avg);
+    }, [state.cores]);
+    /**
+     * Handle simple mode toggle.
+     */
+    const handleSimpleModeToggle = () => {
+        if (!simpleMode) {
+            // Switching to simple: use average
+            const avg = Math.round(coreValues.reduce((sum, val) => sum + val, 0) / 4);
+            setSimpleValue(avg);
+        }
+        else {
+            // Switching to per-core: copy simple value to all cores
+            setCoreValues([simpleValue, simpleValue, simpleValue, simpleValue]);
+        }
+        setSimpleMode(!simpleMode);
+    };
+    /**
+     * Handle simple slider change.
+     */
+    const handleSimpleValueChange = (value) => {
+        setSimpleValue(value);
+        setCoreValues([value, value, value, value]);
+    };
+    /**
+     * Handle slider value change for a specific core.
+     */
+    const handleCoreChange = (core, value) => {
+        const newValues = [...coreValues];
+        newValues[core] = value;
+        setCoreValues(newValues);
+    };
+    /**
+     * Apply current values.
+     */
+    const handleApply = async () => {
+        setIsApplying(true);
+        try {
+            await api.applyUndervolt(coreValues);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    /**
+     * Disable undervolt (reset to 0 on backend, but keep UI values).
+     */
+    const handleDisable = async () => {
+        await api.disableUndervolt();
+        // Don't reset UI values - user can re-enable with same values
+    };
+    /**
+     * Reset UI values to 0.
+     */
+    const handleReset = () => {
+        setCoreValues([0, 0, 0, 0]);
+        setSimpleValue(0);
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "6px" } },
+                platformInfo.variant,
+                " (",
+                platformInfo.model,
+                ") \u2022 Limit: ",
+                platformInfo.safe_limit,
+                "mV"))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { marginBottom: "8px" } },
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleSimpleModeToggle, style: { width: "100%" } },
+                    window.SP_REACT.createElement("div", { style: {
+                            padding: "6px",
+                            backgroundColor: simpleMode ? "#1a9fff" : "#3d4450",
+                            borderRadius: "4px",
+                            fontSize: "9px",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                        } }, simpleMode ? "✓ Simple Mode" : "Per-Core Mode")))),
+        settings.expertMode && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "6px",
+                    backgroundColor: "#5c1313",
+                    borderRadius: "4px",
+                    border: "1px solid #ff6b6b",
+                    marginBottom: "8px"
+                } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "9px", color: "#ff9800", display: "flex", alignItems: "center", gap: "4px" } },
+                    window.SP_REACT.createElement(FaExclamationTriangle, { size: 9 }),
+                    window.SP_REACT.createElement("span", null, "Expert mode active \u2022 Range: -100mV"))))),
+        simpleMode ? (
+        /* Simple Mode: Single slider for all cores */
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.SliderField, { label: "All Cores", value: simpleValue, min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: handleSimpleValueChange, valueSuffix: " mV", bottomSeparator: "none" }))) : (
+        /* Per-core sliders */
+        [0, 1, 2, 3].map((core) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: core },
+            window.SP_REACT.createElement(DFL.SliderField, { label: `Core ${core}`, value: coreValues[core], min: currentMinLimit, max: 0, step: 1, showValue: true, onChange: (value) => handleCoreChange(core, value), valueSuffix: " mV", bottomSeparator: "none" }))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "6px", marginTop: "8px" }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleApply, disabled: isApplying, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#1a9fff",
+                            borderRadius: "6px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                        } },
+                        isApplying ? window.SP_REACT.createElement(FaSpinner, { className: "spin", size: 10 }) : window.SP_REACT.createElement(FaCheck, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Apply"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleDisable, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#3d4450",
+                            borderRadius: "6px",
+                            fontSize: "10px",
+                            fontWeight: "bold"
+                        } },
+                        window.SP_REACT.createElement(FaBan, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Disable"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: handleReset, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#5c4813",
+                            borderRadius: "6px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            color: "#ff9800"
+                        } },
+                        window.SP_REACT.createElement(FaTimes, { size: 10 }),
+                        window.SP_REACT.createElement("span", null, "Reset"))))),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+/**
+ * Diagnostics tab component.
+ * Requirements: 7.5, 8.1, 8.2
+ *
+ * Features:
+ * - System info display (platform, SteamOS version)
+ * - Log viewer
+ * - Export Diagnostics button
+ */
+const DiagnosticsTab = () => {
+    const { api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const [systemInfo, setSystemInfo] = SP_REACT.useState(null);
+    const [isExporting, setIsExporting] = SP_REACT.useState(false);
+    const [exportResult, setExportResult] = SP_REACT.useState(null);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    // Fetch system info on mount
+    SP_REACT.useEffect(() => {
+        const fetchSystemInfo = async () => {
+            setIsLoading(true);
+            try {
+                const info = await api.getSystemInfo();
+                setSystemInfo(info);
+            }
+            catch (e) {
+                console.error("Failed to fetch system info:", e);
+            }
+            finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSystemInfo();
+    }, [api]);
+    /**
+     * Handle export diagnostics button click.
+     */
+    const handleExportDiagnostics = async () => {
+        setIsExporting(true);
+        setExportResult(null);
+        try {
+            const result = await api.exportDiagnostics();
+            setExportResult(result);
+        }
+        catch (e) {
+            setExportResult({ success: false, error: "Export failed" });
+        }
+        finally {
+            setIsExporting(false);
+        }
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginBottom: "8px" } }, "System Information")),
+        isLoading ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", color: "#8b929a" } },
+                window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                window.SP_REACT.createElement("span", null, "Loading system info...")))) : (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } },
+                window.SP_REACT.createElement(InfoRow, { label: "Platform", value: platformInfo ? `${platformInfo.variant} (${platformInfo.model})` : "Unknown" }),
+                window.SP_REACT.createElement(InfoRow, { label: "Safe Limit", value: platformInfo ? `${platformInfo.safe_limit} mV` : "Unknown" }),
+                window.SP_REACT.createElement(InfoRow, { label: "Detection", value: platformInfo?.detected ? "Successful" : "Failed" }),
+                systemInfo && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                    window.SP_REACT.createElement("div", { style: { borderTop: "1px solid #3d4450", margin: "8px 0" } }),
+                    window.SP_REACT.createElement(InfoRow, { label: "SteamOS Version", value: systemInfo.steamos_version || "Unknown" }),
+                    window.SP_REACT.createElement(InfoRow, { label: "Kernel", value: systemInfo.kernel || "Unknown" }),
+                    window.SP_REACT.createElement(InfoRow, { label: "Hostname", value: systemInfo.hostname || "Unknown" }),
+                    systemInfo.uptime && (window.SP_REACT.createElement(InfoRow, { label: "Uptime", value: formatUptime(systemInfo.uptime) }))))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Current Configuration")),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } }, systemInfo?.config ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement(InfoRow, { label: "Active Cores", value: `[${systemInfo.config.cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                window.SP_REACT.createElement(InfoRow, { label: "LKG Cores", value: `[${systemInfo.config.lkg_cores?.join(", ") || "0, 0, 0, 0"}]` }),
+                window.SP_REACT.createElement(InfoRow, { label: "Status", value: systemInfo.config.status || "Unknown" }),
+                window.SP_REACT.createElement(InfoRow, { label: "Presets Count", value: String(systemInfo.config.presets_count || 0) }))) : (window.SP_REACT.createElement("div", { style: { color: "#8b929a" } }, "Configuration not available")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { fontSize: "14px", fontWeight: "bold", marginTop: "16px", marginBottom: "8px" } }, "Recent Logs")),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "8px",
+                    backgroundColor: "#1a1d23",
+                    borderRadius: "8px",
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "#8b929a",
+                } }, systemInfo?.logs ? (systemInfo.logs.split("\n").slice(-20).map((line, index) => (window.SP_REACT.createElement("div", { key: index, style: { marginBottom: "2px" } }, line)))) : (window.SP_REACT.createElement("div", null, "No logs available")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { marginTop: "16px" } },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleExportDiagnostics, disabled: isExporting },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } }, isExporting ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                        window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                        window.SP_REACT.createElement("span", null, "Exporting..."))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                        window.SP_REACT.createElement(FaDownload, null),
+                        window.SP_REACT.createElement("span", null, "Export Diagnostics"))))))),
+        exportResult && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: exportResult.success ? "#1b5e20" : "#b71c1c",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } }, exportResult.success ? (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement("div", { style: { fontWeight: "bold", marginBottom: "4px" } },
+                    window.SP_REACT.createElement(FaCheck, { style: { marginRight: "8px" } }),
+                    "Export Successful"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px", wordBreak: "break-all" } },
+                    "Saved to: ",
+                    exportResult.path))) : (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+                window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
+                    window.SP_REACT.createElement(FaTimes, { style: { marginRight: "8px" } }),
+                    "Export Failed"),
+                window.SP_REACT.createElement("div", { style: { fontSize: "12px" } }, exportResult.error)))))),
+        window.SP_REACT.createElement("style", null, `
+          .spin {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `)));
+};
+const InfoRow = ({ label, value }) => (window.SP_REACT.createElement("div", { style: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: "6px",
+        fontSize: "12px",
+    } },
+    window.SP_REACT.createElement("span", { style: { color: "#8b929a" } },
+        label,
+        ":"),
+    window.SP_REACT.createElement("span", { style: { color: "#fff" } }, value)));
+/**
+ * Format uptime seconds to human readable string.
+ */
+const formatUptime = (seconds) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const parts = [];
+    if (days > 0)
+        parts.push(`${days}d`);
+    if (hours > 0)
+        parts.push(`${hours}h`);
+    if (mins > 0)
+        parts.push(`${mins}m`);
+    return parts.length > 0 ? parts.join(" ") : "< 1m";
+};
+
+/**
+ * SetupWizard component for DeckTune first-run experience.
+ *
+ * Feature: decktune-3.1-reliability-ux, Setup Wizard
+ * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+ *
+ * Provides a guided setup process for new users:
+ * - Step 1: Welcome with introduction
+ * - Step 2: Explanation of undervolting benefits/risks
+ * - Step 3: Goal selection with estimates
+ * - Step 4: Confirmation and completion
+ */
+
+// ============================================================================
+// Constants
+// Requirements: 5.4
+// ============================================================================
+/**
+ * Goal estimates for each preset goal.
+ * Requirements: 5.4
+ *
+ * These estimates are based on typical Steam Deck undervolting results.
+ * Actual results vary based on silicon quality and workload.
+ */
+const GOAL_ESTIMATES = {
+    quiet: {
+        batteryImprovement: "+10-15%",
+        tempReduction: "-8-12°C",
+        description: "Prioritizes lower temperatures and quieter fan operation. Best for casual gaming and media consumption.",
+    },
+    balanced: {
+        batteryImprovement: "+15-20%",
+        tempReduction: "-5-8°C",
+        description: "Good balance between performance, battery life, and thermals. Recommended for most users.",
+    },
+    battery: {
+        batteryImprovement: "+20-30%",
+        tempReduction: "-3-5°C",
+        description: "Maximizes battery life with aggressive power savings. Ideal for long gaming sessions away from power.",
+    },
+    performance: {
+        batteryImprovement: "+5-10%",
+        tempReduction: "-2-4°C",
+        description: "Finds the most aggressive stable undervolt for maximum efficiency. For users who want every bit of optimization.",
+    },
+};
+/**
+ * Goal display information.
+ * Requirements: 5.3
+ */
+const GOAL_INFO = {
+    quiet: {
+        label: "Quiet/Cool",
+        icon: FaLeaf,
+        color: "#4caf50",
+    },
+    balanced: {
+        label: "Balanced",
+        icon: FaBalanceScale,
+        color: "#2196f3",
+    },
+    battery: {
+        label: "Max Battery",
+        icon: FaBatteryFull,
+        color: "#ff9800",
+    },
+    performance: {
+        label: "Max Performance",
+        icon: FaRocket,
+        color: "#f44336",
+    },
+};
+const STEP_ORDER = ['welcome', 'explanation', 'goal', 'confirm'];
+const StepIndicator = ({ currentStep }) => {
+    const steps = [
+        { id: 'welcome', label: 'Welcome' },
+        { id: 'explanation', label: 'Learn' },
+        { id: 'goal', label: 'Goal' },
+        { id: 'confirm', label: 'Confirm' },
+    ];
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    return (window.SP_REACT.createElement(DFL.Focusable, { style: {
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            marginBottom: "16px",
+        } }, steps.map((s, index) => (window.SP_REACT.createElement("div", { key: s.id, style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+        } },
+        window.SP_REACT.createElement("div", { style: {
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: currentIndex >= index ? "#1a9fff" : "#3d4450",
+                color: currentIndex >= index ? "#fff" : "#8b929a",
+                fontWeight: "bold",
+                fontSize: "12px",
+            } }, currentIndex > index ? window.SP_REACT.createElement(FaCheck, { size: 10 }) : index + 1),
+        window.SP_REACT.createElement("span", { style: {
+                color: currentIndex >= index ? "#fff" : "#8b929a",
+                fontSize: "10px",
+                display: index < steps.length - 1 ? "none" : "inline",
+            } }, s.label),
+        index < steps.length - 1 && (window.SP_REACT.createElement("div", { style: {
+                width: "16px",
+                height: "2px",
+                backgroundColor: currentIndex > index ? "#1a9fff" : "#3d4450",
+            } })))))));
+};
+const WelcomeStep = ({ onNext, onSkip }) => {
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    textAlign: "center",
+                    padding: "16px",
+                } },
+                window.SP_REACT.createElement(FaBolt, { style: {
+                        fontSize: "48px",
+                        color: "#1a9fff",
+                        marginBottom: "16px",
+                    } }),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "18px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                    } }, "Welcome to DeckTune!"),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "13px",
+                        color: "#8b929a",
+                        lineHeight: "1.5",
+                    } }, "Let's set up your Steam Deck for optimal performance and battery life. This wizard will guide you through the process."))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#1a9fff",
+                    } },
+                    window.SP_REACT.createElement("span", null, "Get Started"),
+                    window.SP_REACT.createElement(FaArrowRight, null)))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
+};
+const ExplanationStep = ({ onNext, onBack, onSkip }) => {
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#1a3a5c",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                    } },
+                    window.SP_REACT.createElement(FaInfoCircle, { style: { color: "#1a9fff" } }),
+                    window.SP_REACT.createElement("span", { style: { fontWeight: "bold" } }, "What is Undervolting?")),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "12px",
+                        color: "#b0bec5",
+                        lineHeight: "1.5",
+                    } }, "Undervolting reduces the voltage supplied to your CPU while maintaining the same performance. This results in lower temperatures, quieter fans, and longer battery life."))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    gap: "8px",
+                    marginBottom: "12px",
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "#1b5e20",
+                        borderRadius: "8px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "6px",
+                        } },
+                        window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50" } }),
+                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Benefits")),
+                    window.SP_REACT.createElement("ul", { style: {
+                            fontSize: "10px",
+                            color: "#a5d6a7",
+                            margin: 0,
+                            paddingLeft: "16px",
+                            lineHeight: "1.6",
+                        } },
+                        window.SP_REACT.createElement("li", null, "Lower temperatures"),
+                        window.SP_REACT.createElement("li", null, "Quieter fan operation"),
+                        window.SP_REACT.createElement("li", null, "Extended battery life"),
+                        window.SP_REACT.createElement("li", null, "Same performance"))),
+                window.SP_REACT.createElement("div", { style: {
+                        flex: 1,
+                        padding: "12px",
+                        backgroundColor: "#5c4813",
+                        borderRadius: "8px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "6px",
+                        } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800" } }),
+                        window.SP_REACT.createElement("span", { style: { fontWeight: "bold", fontSize: "12px" } }, "Risks")),
+                    window.SP_REACT.createElement("ul", { style: {
+                            fontSize: "10px",
+                            color: "#ffe0b2",
+                            margin: 0,
+                            paddingLeft: "16px",
+                            lineHeight: "1.6",
+                        } },
+                        window.SP_REACT.createElement("li", null, "System instability if too aggressive"),
+                        window.SP_REACT.createElement("li", null, "Requires testing"),
+                        window.SP_REACT.createElement("li", null, "Results vary by chip"))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "10px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    textAlign: "center",
+                } },
+                window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", marginRight: "6px" } }),
+                "DeckTune includes automatic safety features and crash recovery.")),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        window.SP_REACT.createElement(FaArrowLeft, null),
+                        window.SP_REACT.createElement("span", null, "Back"))),
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: "#1a9fff",
+                        } },
+                        window.SP_REACT.createElement("span", null, "Next"),
+                        window.SP_REACT.createElement(FaArrowRight, null))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
+};
+const GoalStep = ({ selectedGoal, onSelectGoal, onNext, onBack, onSkip, }) => {
+    const goals = ['quiet', 'balanced', 'battery', 'performance'];
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    marginBottom: "8px",
+                } }, "Choose Your Goal"),
+            window.SP_REACT.createElement("div", { style: {
+                    fontSize: "11px",
+                    color: "#8b929a",
+                    marginBottom: "12px",
+                } }, "Select what matters most to you. You can change this later.")),
+        goals.map((goal) => {
+            const info = GOAL_INFO[goal];
+            const estimate = GOAL_ESTIMATES[goal];
+            const Icon = info.icon;
+            const isSelected = selectedGoal === goal;
+            return (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: goal },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => onSelectGoal(goal), style: {
+                        border: isSelected ? `2px solid ${info.color}` : "2px solid transparent",
+                        borderRadius: "8px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "12px",
+                            padding: "4px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: {
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                backgroundColor: isSelected ? info.color : "#3d4450",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                            } },
+                            window.SP_REACT.createElement(Icon, { style: { color: "#fff", fontSize: "16px" } })),
+                        window.SP_REACT.createElement("div", { style: { flex: 1, textAlign: "left" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    color: isSelected ? info.color : "#fff",
+                                } }, info.label),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginTop: "2px",
+                                } },
+                                estimate.description.split('.')[0],
+                                ".")),
+                        isSelected && (window.SP_REACT.createElement(FaCheck, { style: { color: info.color, fontSize: "14px" } }))))));
+        }),
+        selectedGoal && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                    marginTop: "8px",
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                        color: GOAL_INFO[selectedGoal].color,
+                    } }, "Estimated Improvements"),
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        gap: "16px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                marginBottom: "4px",
+                            } },
+                            window.SP_REACT.createElement(FaBatteryFull, { style: { color: "#4caf50", fontSize: "12px" } }),
+                            window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Battery")),
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                color: "#4caf50",
+                            } }, GOAL_ESTIMATES[selectedGoal].batteryImprovement)),
+                    window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                marginBottom: "4px",
+                            } },
+                            window.SP_REACT.createElement(FaThermometerHalf, { style: { color: "#2196f3", fontSize: "12px" } }),
+                            window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, "Temperature")),
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                color: "#2196f3",
+                            } }, GOAL_ESTIMATES[selectedGoal].tempReduction))),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "9px",
+                        color: "#666",
+                        marginTop: "8px",
+                        fontStyle: "italic",
+                    } }, "* Actual results vary based on silicon quality and workload")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        window.SP_REACT.createElement(FaArrowLeft, null),
+                        window.SP_REACT.createElement("span", null, "Back"))),
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onNext, disabled: !selectedGoal, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: selectedGoal ? "#1a9fff" : "#8b929a",
+                            opacity: selectedGoal ? 1 : 0.5,
+                        } },
+                        window.SP_REACT.createElement("span", null, "Next"),
+                        window.SP_REACT.createElement(FaArrowRight, null))))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onSkip },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } },
+                    window.SP_REACT.createElement("span", null, "Skip Setup"))))));
+};
+const ConfirmStep = ({ selectedGoal, onConfirm, onBack, onCancel, isLoading, }) => {
+    const info = GOAL_INFO[selectedGoal];
+    const Icon = info.icon;
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    textAlign: "center",
+                    padding: "16px",
+                } },
+                window.SP_REACT.createElement("div", { style: {
+                        width: "64px",
+                        height: "64px",
+                        borderRadius: "50%",
+                        backgroundColor: info.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 16px",
+                    } },
+                    window.SP_REACT.createElement(Icon, { style: { color: "#fff", fontSize: "28px" } })),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                    } }, "Ready to Start!"),
+                window.SP_REACT.createElement("div", { style: {
+                        fontSize: "12px",
+                        color: "#8b929a",
+                    } },
+                    "You've selected ",
+                    window.SP_REACT.createElement("strong", { style: { color: info.color } }, info.label)))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "12px",
+                    backgroundColor: "#23262e",
+                    borderRadius: "8px",
+                } },
+                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "8px" } }, "What happens next:"),
+                window.SP_REACT.createElement("ul", { style: {
+                        fontSize: "11px",
+                        color: "#b0bec5",
+                        margin: 0,
+                        paddingLeft: "20px",
+                        lineHeight: "1.8",
+                    } },
+                    window.SP_REACT.createElement("li", null, "Your preferences will be saved"),
+                    window.SP_REACT.createElement("li", null, "DeckTune will be configured for your goal"),
+                    window.SP_REACT.createElement("li", null, "You can run autotune to find optimal values"),
+                    window.SP_REACT.createElement("li", null, "Settings can be changed anytime in Expert mode")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onConfirm, disabled: isLoading, style: { marginTop: "12px" } },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        color: "#4caf50",
+                    } },
+                    window.SP_REACT.createElement(FaCheck, null),
+                    window.SP_REACT.createElement("span", null, isLoading ? "Saving..." : "Complete Setup")))),
+        window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, disabled: isLoading, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                        } },
+                        window.SP_REACT.createElement(FaArrowLeft, null),
+                        window.SP_REACT.createElement("span", null, "Back"))),
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onCancel, disabled: isLoading, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            color: "#ff6b6b",
+                        } },
+                        window.SP_REACT.createElement(FaTimes, null),
+                        window.SP_REACT.createElement("span", null, "Cancel")))))));
+};
+// ============================================================================
+// Main Component
+// Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+// ============================================================================
+/**
+ * SetupWizard component - guided first-run experience.
+ *
+ * Requirements:
+ * - 5.1: Display welcome wizard on first run
+ * - 5.2: Explain undervolting benefits/risks
+ * - 5.3: Offer preset goals with explanations
+ * - 5.4: Show estimated improvements for selected goal
+ * - 5.5: Save preferences on completion
+ * - 5.6: Allow re-running wizard from settings
+ * - 5.7: Allow skip/cancel without applying changes
+ */
+const SetupWizard = ({ onComplete, onCancel, onSkip, }) => {
+    const { api } = useDeckTune();
+    const { info: platformInfo } = usePlatformInfo();
+    const [wizardState, setWizardState] = SP_REACT.useState({
+        step: 'welcome',
+        selectedGoal: null,
+    });
+    const [isLoading, setIsLoading] = SP_REACT.useState(false);
+    const [error, setError] = SP_REACT.useState(null);
+    /**
+     * Navigate to next step.
+     */
+    const goToNextStep = () => {
+        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
+        const currentIndex = stepOrder.indexOf(wizardState.step);
+        if (currentIndex < stepOrder.length - 1) {
+            setWizardState((prev) => ({
+                ...prev,
+                step: stepOrder[currentIndex + 1],
+            }));
+        }
+    };
+    /**
+     * Navigate to previous step.
+     */
+    const goToPreviousStep = () => {
+        const stepOrder = ['welcome', 'explanation', 'goal', 'confirm'];
+        const currentIndex = stepOrder.indexOf(wizardState.step);
+        if (currentIndex > 0) {
+            setWizardState((prev) => ({
+                ...prev,
+                step: stepOrder[currentIndex - 1],
+            }));
+        }
+    };
+    /**
+     * Handle goal selection.
+     * Requirements: 5.3
+     */
+    const handleSelectGoal = (goal) => {
+        setWizardState((prev) => ({
+            ...prev,
+            selectedGoal: goal,
+        }));
+    };
+    /**
+     * Handle wizard completion.
+     * Requirements: 5.5
+     *
+     * Saves preferences and marks first_run_complete.
+     */
+    const handleComplete = async () => {
+        if (!wizardState.selectedGoal)
+            return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Save wizard settings via RPC
+            await api.saveSetting('wizard_goal', wizardState.selectedGoal);
+            await api.saveSetting('wizard_completed_at', new Date().toISOString());
+            await api.saveSetting('first_run_complete', true);
+            setWizardState((prev) => ({
+                ...prev,
+                step: 'complete',
+            }));
+            onComplete?.(wizardState.selectedGoal);
+        }
+        catch (e) {
+            setError(String(e));
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    /**
+     * Handle wizard cancellation.
+     * Requirements: 5.7
+     *
+     * Does not modify any settings or apply any values.
+     */
+    const handleCancel = () => {
+        // Reset state without saving anything
+        setWizardState({
+            step: 'welcome',
+            selectedGoal: null,
+        });
+        onCancel?.();
+    };
+    /**
+     * Handle wizard skip.
+     * Requirements: 5.7
+     *
+     * Marks first_run_complete but doesn't apply any settings.
+     */
+    const handleSkip = async () => {
+        try {
+            // Only mark as complete, don't save any goal
+            await api.saveSetting('first_run_complete', true);
+            onSkip?.();
+        }
+        catch (e) {
+            // Silently fail - user can still use the plugin
+            onSkip?.();
+        }
+    };
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Setup Wizard" },
+        platformInfo && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    fontSize: "10px",
+                    color: "#8b929a",
+                    textAlign: "center",
+                    marginBottom: "8px",
+                } },
+                "Detected: ",
+                platformInfo.variant,
+                " (",
+                platformInfo.model,
+                ")"))),
+        wizardState.step !== 'complete' && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement(StepIndicator, { currentStep: wizardState.step }))),
+        error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            window.SP_REACT.createElement("div", { style: {
+                    padding: "8px",
+                    backgroundColor: "#b71c1c",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    color: "#fff",
+                    textAlign: "center",
+                } }, error))),
+        wizardState.step === 'welcome' && (window.SP_REACT.createElement(WelcomeStep, { onNext: goToNextStep, onSkip: handleSkip })),
+        wizardState.step === 'explanation' && (window.SP_REACT.createElement(ExplanationStep, { onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
+        wizardState.step === 'goal' && (window.SP_REACT.createElement(GoalStep, { selectedGoal: wizardState.selectedGoal, onSelectGoal: handleSelectGoal, onNext: goToNextStep, onBack: goToPreviousStep, onSkip: handleSkip })),
+        wizardState.step === 'confirm' && wizardState.selectedGoal && (window.SP_REACT.createElement(ConfirmStep, { selectedGoal: wizardState.selectedGoal, onConfirm: handleComplete, onBack: goToPreviousStep, onCancel: handleCancel, isLoading: isLoading })),
+        wizardState.step === 'complete' && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        textAlign: "center",
+                        padding: "24px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            width: "64px",
+                            height: "64px",
+                            borderRadius: "50%",
+                            backgroundColor: "#4caf50",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 16px",
+                        } },
+                        window.SP_REACT.createElement(FaCheck, { style: { color: "#fff", fontSize: "28px" } })),
+                    window.SP_REACT.createElement("div", { style: {
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            marginBottom: "8px",
+                        } }, "Setup Complete!"),
+                    window.SP_REACT.createElement("div", { style: {
+                            fontSize: "12px",
+                            color: "#8b929a",
+                        } }, "DeckTune is ready to use. Head to Wizard mode to run autotune and find your optimal undervolt values.")))))));
+};
+
+/**
+ * FanControl component for fan curve management.
+ *
+ * Feature: fan-control-curves
+ * Requirements: 4.1, 4.2, 4.3
+ *
+ * Provides UI for:
+ * - Preset selection (Stock, Silent, Turbo)
+ * - Custom curve creation and management
+ * - Real-time status display
+ * - Navigation back to admin panel
+ */
+
+/**
+ * FanControl component
+ * Requirements: 4.1, 4.2, 4.3
+ */
+const FanControl = ({ onBack }) => {
+    const [status, setStatus] = SP_REACT.useState(null);
+    const [presets, setPresets] = SP_REACT.useState([]);
+    const [customCurves, setCustomCurves] = SP_REACT.useState([]);
+    const [isLoading, setIsLoading] = SP_REACT.useState(true);
+    const [error, setError] = SP_REACT.useState(null);
+    const [isApplying, setIsApplying] = SP_REACT.useState(false);
+    const [showCustomEditor, setShowCustomEditor] = SP_REACT.useState(false);
+    const [customCurveName, setCustomCurveName] = SP_REACT.useState("");
+    const [customPoints, setCustomPoints] = SP_REACT.useState([
+        { temp: 40, speed: 20 },
+        { temp: 60, speed: 50 },
+        { temp: 80, speed: 100 },
+    ]);
+    const [validationError, setValidationError] = SP_REACT.useState(null);
+    // Load initial data
+    SP_REACT.useEffect(() => {
+        loadInitialData();
+    }, []);
+    // Poll status every 2 seconds
+    SP_REACT.useEffect(() => {
+        const interval = setInterval(() => {
+            loadStatus();
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+    const loadInitialData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Load presets
+            const presetsResult = await call("fan_list_presets");
+            if (presetsResult.success && presetsResult.presets) {
+                setPresets(presetsResult.presets);
+            }
+            // Load custom curves
+            const customResult = await call("fan_list_custom");
+            if (customResult.success && customResult.curves) {
+                setCustomCurves(customResult.curves);
+            }
+            // Load status
+            await loadStatus();
+        }
+        catch (e) {
+            setError(`Failed to load fan control data: ${e}`);
+        }
+        finally {
+            setIsLoading(false);
+        }
+    };
+    const loadStatus = async () => {
+        try {
+            const result = await call("fan_get_status");
+            if (result.success && result.status) {
+                setStatus(result.status);
+            }
+        }
+        catch (e) {
+            console.error("Failed to load fan status:", e);
+        }
+    };
+    const applyPreset = async (presetName) => {
+        setIsApplying(true);
+        setError(null);
+        try {
+            const result = await call("fan_apply_preset", presetName);
+            if (!result.success) {
+                setError(result.error || "Failed to apply preset");
+            }
+            else {
+                await loadStatus();
+            }
+        }
+        catch (e) {
+            setError(`Error applying preset: ${e}`);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    const loadCustomCurve = async (curveName) => {
+        setIsApplying(true);
+        setError(null);
+        try {
+            const result = await call("fan_load_custom", curveName);
+            if (!result.success) {
+                setError(result.error || "Failed to load custom curve");
+            }
+            else {
+                await loadStatus();
+            }
+        }
+        catch (e) {
+            setError(`Error loading custom curve: ${e}`);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    const deleteCustomCurve = async (curveName) => {
+        setError(null);
+        try {
+            const result = await call("fan_delete_custom", curveName);
+            if (!result.success) {
+                setError(result.error || "Failed to delete custom curve");
+            }
+            else {
+                // Refresh custom curves list
+                const customResult = await call("fan_list_custom");
+                if (customResult.success && customResult.curves) {
+                    setCustomCurves(customResult.curves);
+                }
+            }
+        }
+        catch (e) {
+            setError(`Error deleting custom curve: ${e}`);
+        }
+    };
+    const validatePoints = (points) => {
+        // Check point count (3-10)
+        if (points.length < 3) {
+            return "Curve must have at least 3 points";
+        }
+        if (points.length > 10) {
+            return "Curve cannot have more than 10 points";
+        }
+        // Check each point
+        for (const point of points) {
+            if (point.temp < 0 || point.temp > 120) {
+                return `Temperature ${point.temp}°C is out of range [0, 120]`;
+            }
+            if (point.speed < 0 || point.speed > 100) {
+                return `Speed ${point.speed}% is out of range [0, 100]`;
+            }
+        }
+        return null;
+    };
+    const addPoint = () => {
+        if (customPoints.length >= 10) {
+            setValidationError("Cannot add more than 10 points");
+            return;
+        }
+        // Add a new point between the last two points
+        const lastPoint = customPoints[customPoints.length - 1];
+        const secondLastPoint = customPoints[customPoints.length - 2];
+        const newTemp = Math.round((lastPoint.temp + secondLastPoint.temp) / 2);
+        const newSpeed = Math.round((lastPoint.speed + secondLastPoint.speed) / 2);
+        setCustomPoints([...customPoints, { temp: newTemp, speed: newSpeed }]);
+        setValidationError(null);
+    };
+    const removePoint = (index) => {
+        if (customPoints.length <= 3) {
+            setValidationError("Curve must have at least 3 points");
+            return;
+        }
+        const newPoints = customPoints.filter((_, i) => i !== index);
+        setCustomPoints(newPoints);
+        setValidationError(null);
+    };
+    const updatePoint = (index, field, value) => {
+        const numValue = parseInt(value, 10);
+        if (isNaN(numValue))
+            return;
+        const newPoints = [...customPoints];
+        newPoints[index] = { ...newPoints[index], [field]: numValue };
+        setCustomPoints(newPoints);
+        // Validate
+        const error = validatePoints(newPoints);
+        setValidationError(error);
+    };
+    const saveCustomCurve = async () => {
+        // Validate curve name
+        if (!customCurveName.trim()) {
+            setValidationError("Please enter a curve name");
+            return;
+        }
+        // Validate points
+        const error = validatePoints(customPoints);
+        if (error) {
+            setValidationError(error);
+            return;
+        }
+        setIsApplying(true);
+        setValidationError(null);
+        try {
+            const result = await call("fan_create_custom", customCurveName.trim(), customPoints);
+            if (!result.success) {
+                setValidationError(result.error || "Failed to create custom curve");
+            }
+            else {
+                // Refresh custom curves list
+                const customResult = await call("fan_list_custom");
+                if (customResult.success && customResult.curves) {
+                    setCustomCurves(customResult.curves);
+                }
+                // Close editor
+                setShowCustomEditor(false);
+                setCustomCurveName("");
+                setCustomPoints([
+                    { temp: 40, speed: 20 },
+                    { temp: 60, speed: 50 },
+                    { temp: 80, speed: 100 },
+                ]);
+            }
+        }
+        catch (e) {
+            setValidationError(`Error creating custom curve: ${e}`);
+        }
+        finally {
+            setIsApplying(false);
+        }
+    };
+    const openCustomEditor = () => {
+        setShowCustomEditor(true);
+        setValidationError(null);
+        setCustomCurveName("");
+        setCustomPoints([
+            { temp: 40, speed: 20 },
+            { temp: 60, speed: 50 },
+            { temp: 80, speed: 100 },
+        ]);
+    };
+    // Loading state
+    if (isLoading) {
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Fan Control" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        padding: "24px",
+                        color: "#8b929a",
+                    } },
+                    window.SP_REACT.createElement(FaSpinner, { className: "spin" }),
+                    window.SP_REACT.createElement("span", null, "Loading fan control...")),
+                window.SP_REACT.createElement("style", null, `
+              .spin {
+                animation: spin 1s linear infinite;
+              }
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `))));
+    }
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement(DFL.PanelSection, null,
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, null,
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: onBack, style: {
+                            minHeight: "40px",
+                            padding: "8px 12px",
+                            backgroundColor: "rgba(61, 68, 80, 0.5)",
+                            borderRadius: "8px",
+                        } },
+                        window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                            window.SP_REACT.createElement(FaArrowLeft, { size: 14 }),
+                            window.SP_REACT.createElement("span", null, "Back to Main View"))))),
+            error && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "8px 12px",
+                        backgroundColor: "#5c1313",
+                        borderRadius: "6px",
+                        marginBottom: "8px",
+                        fontSize: "11px",
+                        color: "#ffcdd2",
+                        border: "1px solid #f44336",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                    } },
+                    window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    error))),
+            status && !status.hwmon_available && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "8px 12px",
+                        backgroundColor: "#5c4813",
+                        borderRadius: "6px",
+                        marginBottom: "8px",
+                        fontSize: "11px",
+                        color: "#fff3cd",
+                        border: "1px solid #ff9800",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                    } },
+                    window.SP_REACT.createElement(FaExclamationTriangle, null),
+                    "Hardware interface unavailable - fan control disabled")))),
+        status && (window.SP_REACT.createElement(DFL.PanelSection, { title: "Current Status" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        backgroundColor: "#23262e",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                    } },
+                    window.SP_REACT.createElement("div", null,
+                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Temperature"),
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
+                            status.current_temp.toFixed(1),
+                            "\u00B0C")),
+                    window.SP_REACT.createElement("div", null,
+                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Current Speed"),
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
+                            status.current_speed,
+                            "%")),
+                    window.SP_REACT.createElement("div", null,
+                        window.SP_REACT.createElement("div", { style: { color: "#8b929a", fontSize: "11px" } }, "Target Speed"),
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold" } },
+                            status.target_speed,
+                            "%")))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "6px 12px",
+                        backgroundColor: "#1a1d23",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        color: "#8b929a",
+                        textAlign: "center",
+                    } },
+                    "Active: ",
+                    status.active_curve,
+                    " (",
+                    status.curve_type,
+                    ")")))),
+        window.SP_REACT.createElement(DFL.PanelSection, { title: "Presets" }, presets.map((preset) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: preset },
+            window.SP_REACT.createElement(DFL.Focusable, null,
+                window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => applyPreset(preset), disabled: isApplying || (status && !status.hwmon_available), style: {
+                        minHeight: "40px",
+                        padding: "8px 12px",
+                        backgroundColor: status?.active_curve === preset && status?.curve_type === "preset"
+                            ? "#1a9fff"
+                            : "rgba(61, 68, 80, 0.5)",
+                        borderRadius: "8px",
+                        border: status?.active_curve === preset && status?.curve_type === "preset"
+                            ? "2px solid rgba(26, 159, 255, 0.5)"
+                            : "2px solid transparent",
+                    } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        } },
+                        window.SP_REACT.createElement("span", { style: { textTransform: "capitalize" } }, preset),
+                        status?.active_curve === preset && status?.curve_type === "preset" && (window.SP_REACT.createElement("span", { style: { fontSize: "11px", color: "#4caf50" } }, "\u25CF Active"))))))))),
+        window.SP_REACT.createElement(DFL.PanelSection, { title: "Custom Curves" },
+            customCurves.length === 0 ? (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        textAlign: "center",
+                        padding: "16px",
+                        color: "#8b929a",
+                        fontSize: "12px",
+                    } }, "No custom curves created yet"))) : (customCurves.map((curve) => (window.SP_REACT.createElement(DFL.PanelSectionRow, { key: curve },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "center",
+                    } },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 } },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => loadCustomCurve(curve), disabled: isApplying || (status && !status.hwmon_available), style: {
+                                minHeight: "40px",
+                                padding: "8px 12px",
+                                backgroundColor: status?.active_curve === curve && status?.curve_type === "custom"
+                                    ? "#1a9fff"
+                                    : "rgba(61, 68, 80, 0.5)",
+                                borderRadius: "8px",
+                                border: status?.active_curve === curve && status?.curve_type === "custom"
+                                    ? "2px solid rgba(26, 159, 255, 0.5)"
+                                    : "2px solid transparent",
+                            } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                } },
+                                window.SP_REACT.createElement("span", null, curve),
+                                status?.active_curve === curve && status?.curve_type === "custom" && (window.SP_REACT.createElement("span", { style: { fontSize: "11px", color: "#4caf50" } }, "\u25CF Active"))))),
+                    window.SP_REACT.createElement(DFL.Focusable, null,
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => deleteCustomCurve(curve), disabled: isApplying, style: {
+                                minHeight: "40px",
+                                padding: "8px 12px",
+                                backgroundColor: "#5c1313",
+                                borderRadius: "8px",
+                                border: "1px solid #f44336",
+                            } }, "Delete"))))))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, null,
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: openCustomEditor, disabled: status && !status.hwmon_available, style: {
+                            minHeight: "40px",
+                            padding: "8px 12px",
+                            backgroundColor: "rgba(26, 159, 255, 0.2)",
+                            borderRadius: "8px",
+                            border: "1px solid #1a9fff",
+                        } }, "Edit Curve")))),
+        showCustomEditor && (window.SP_REACT.createElement(DFL.ModalRoot, { onCancel: () => setShowCustomEditor(false) },
+            window.SP_REACT.createElement(DFL.ModalHeader, null, "Create Custom Fan Curve"),
+            window.SP_REACT.createElement(DFL.ModalBody, null,
+                window.SP_REACT.createElement("div", { style: { padding: "16px" } },
+                    window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "8px", fontSize: "13px", color: "#8b929a" } }, "Curve Name"),
+                        window.SP_REACT.createElement(DFL.TextField, { value: customCurveName, onChange: (e) => setCustomCurveName(e.target.value), placeholder: "Enter curve name", style: {
+                                width: "100%",
+                                padding: "8px",
+                                backgroundColor: "#23262e",
+                                border: "1px solid #3d4450",
+                                borderRadius: "4px",
+                                color: "#fff",
+                            } })),
+                    window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                        window.SP_REACT.createElement("div", { style: {
+                                marginBottom: "8px",
+                                fontSize: "13px",
+                                color: "#8b929a",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                            } },
+                            window.SP_REACT.createElement("span", null, "Curve Points (3-10)"),
+                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: addPoint, disabled: customPoints.length >= 10, style: {
+                                    padding: "4px 8px",
+                                    fontSize: "11px",
+                                    backgroundColor: "rgba(76, 175, 80, 0.2)",
+                                    border: "1px solid #4caf50",
+                                    borderRadius: "4px",
+                                } },
+                                window.SP_REACT.createElement(FaPlus, { size: 10, style: { marginRight: "4px" } }),
+                                "Add Point")),
+                        customPoints.map((point, index) => (window.SP_REACT.createElement("div", { key: index, style: {
+                                display: "flex",
+                                gap: "8px",
+                                marginBottom: "8px",
+                                alignItems: "center",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "4px" } }, "Temp (\u00B0C)"),
+                                window.SP_REACT.createElement(DFL.TextField, { value: point.temp.toString(), onChange: (e) => updatePoint(index, "temp", e.target.value), type: "number", min: 0, max: 120, style: {
+                                        width: "100%",
+                                        padding: "6px",
+                                        backgroundColor: "#23262e",
+                                        border: "1px solid #3d4450",
+                                        borderRadius: "4px",
+                                        color: "#fff",
+                                    } })),
+                            window.SP_REACT.createElement("div", { style: { flex: 1 } },
+                                window.SP_REACT.createElement("div", { style: { fontSize: "11px", color: "#8b929a", marginBottom: "4px" } }, "Speed (%)"),
+                                window.SP_REACT.createElement(DFL.TextField, { value: point.speed.toString(), onChange: (e) => updatePoint(index, "speed", e.target.value), type: "number", min: 0, max: 100, style: {
+                                        width: "100%",
+                                        padding: "6px",
+                                        backgroundColor: "#23262e",
+                                        border: "1px solid #3d4450",
+                                        borderRadius: "4px",
+                                        color: "#fff",
+                                    } })),
+                            window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => removePoint(index), disabled: customPoints.length <= 3, style: {
+                                    padding: "6px 8px",
+                                    marginTop: "16px",
+                                    backgroundColor: "rgba(244, 67, 54, 0.2)",
+                                    border: "1px solid #f44336",
+                                    borderRadius: "4px",
+                                } },
+                                window.SP_REACT.createElement(FaTrash, { size: 12 })))))),
+                    validationError && (window.SP_REACT.createElement("div", { style: {
+                            padding: "8px 12px",
+                            backgroundColor: "#5c1313",
+                            borderRadius: "6px",
+                            marginBottom: "8px",
+                            fontSize: "11px",
+                            color: "#ffcdd2",
+                            border: "1px solid #f44336",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, null),
+                        validationError)))),
+            window.SP_REACT.createElement(DFL.ModalFooter, null,
+                window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => setShowCustomEditor(false), disabled: isApplying, style: {
+                            padding: "8px 16px",
+                            backgroundColor: "rgba(61, 68, 80, 0.5)",
+                            borderRadius: "4px",
+                        } }, "Cancel"),
+                    window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: saveCustomCurve, disabled: isApplying || !!validationError || !customCurveName.trim(), style: {
+                            padding: "8px 16px",
+                            backgroundColor: "#1a9fff",
+                            borderRadius: "4px",
+                        } }, isApplying ? "Saving..." : "Save Curve")))))));
+};
+
+/**
+ * HeaderBar component for DeckTune.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
+ *
+ * Provides compact navigation to Fan Control and Settings:
+ * - Fan Control icon button (FaFan)
+ * - Settings icon button (FaCog)
+ * - Compact display with 20px icons
+ * - Gamepad navigation support via FocusableButton
+ */
+/**
+ * HeaderBar component - compact navigation for Fan Control and Settings.
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
+ *
+ * Features:
+ * - Positioned at top of DeckTuneApp
+ * - Two icon buttons: Fan Control (FaFan) and Settings (FaCog)
+ * - Icons sized at 20px for compact display (Requirement 1.5)
+ * - Gamepad navigation support via FocusableButton
+ * - Hover and focus states for accessibility
+ */
+const HeaderBar = ({ onFanControlClick, onSettingsClick, version, }) => {
+    return (window.SP_REACT.createElement("div", { style: {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 12px",
+            backgroundColor: "rgba(26, 29, 35, 0.5)",
+            borderRadius: "8px",
+            marginBottom: "12px",
+        }, role: "navigation", "aria-label": "Quick navigation" },
+        version && (window.SP_REACT.createElement("div", { style: {
+                fontSize: "10px",
+                color: "#5a5d64",
+                fontFamily: "monospace",
+            } },
+            "v",
+            version)),
+        window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
+            window.SP_REACT.createElement(FocusableButton, { onClick: onFanControlClick, style: { padding: 0 }, "aria-label": "Open Fan Control" },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "36px",
+                        height: "36px",
+                        backgroundColor: "rgba(61, 68, 80, 0.5)",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                    } },
+                    window.SP_REACT.createElement(FaFan, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))),
+            window.SP_REACT.createElement(FocusableButton, { onClick: onSettingsClick, style: { padding: 0 }, "aria-label": "Open Settings" },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "36px",
+                        height: "36px",
+                        backgroundColor: "rgba(61, 68, 80, 0.5)",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                    } },
+                    window.SP_REACT.createElement(FaCog, { size: 20, color: "#8b929a", "aria-hidden": "true", style: { transition: "color 0.2s ease" } }))))));
+};
+
+/**
+ * SettingsMenu component for DeckTune.
+ *
+ * Feature: ui-refactor-settings
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
+ *
+ * Provides centralized settings management interface:
+ * - Expert Mode toggle with confirmation dialog
+ * - Binning Settings (test duration, step size, start value)
+ * - Modal overlay with backdrop dismiss
+ * - Gamepad navigation support
+ * - Accessibility compliant (WCAG AA)
+ */
+
+/**
+ * Expert Mode Warning Dialog component.
+ *
+ * Requirements: 2.3, 2.4, 9.3
+ *
+ * Displays warning about risks and requires explicit confirmation
+ * before enabling Expert Mode.
+ */
+const ExpertWarningDialog = ({ isOpen, onConfirm, onCancel, }) => {
+    if (!isOpen)
+        return null;
+    return (window.SP_REACT.createElement("div", { style: {
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+        }, role: "dialog", "aria-modal": "true", "aria-labelledby": "expert-warning-title", "aria-describedby": "expert-warning-description" },
+        window.SP_REACT.createElement("div", { style: {
+                backgroundColor: "#1a1d23",
+                borderRadius: "8px",
+                padding: "16px",
+                maxWidth: "400px",
+                border: "2px solid #ff6b6b",
+            } },
+            window.SP_REACT.createElement("div", { style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "12px",
+                } },
+                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff6b6b", fontSize: "20px" }, "aria-hidden": "true" }),
+                window.SP_REACT.createElement("div", { id: "expert-warning-title", style: {
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#ff6b6b",
+                    } }, "Expert Undervolter Mode")),
+            window.SP_REACT.createElement("div", { id: "expert-warning-description", style: {
+                    fontSize: "11px",
+                    lineHeight: "1.5",
+                    marginBottom: "12px",
+                    color: "#e0e0e0",
+                } },
+                window.SP_REACT.createElement("p", { style: { marginBottom: "8px" } },
+                    window.SP_REACT.createElement("strong", null, "\u26A0\uFE0F WARNING:"),
+                    " Expert mode removes safety limits."),
+                window.SP_REACT.createElement("p", { style: { marginBottom: "8px", color: "#ff9800" } },
+                    window.SP_REACT.createElement("strong", null, "Risks:"),
+                    " System instability, crashes, data loss, hardware damage."),
+                window.SP_REACT.createElement("p", { style: { color: "#f44336", fontWeight: "bold", fontSize: "10px" } }, "Use at your own risk!")),
+            window.SP_REACT.createElement(DFL.Focusable, { style: { display: "flex", gap: "8px" }, "flow-children": "horizontal" },
+                window.SP_REACT.createElement(FocusableButton, { onClick: onConfirm, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#b71c1c",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                        } },
+                        window.SP_REACT.createElement(FaCheck, { size: 10, "aria-hidden": "true" }),
+                        window.SP_REACT.createElement("span", null, "I Understand"))),
+                window.SP_REACT.createElement(FocusableButton, { onClick: onCancel, style: { flex: 1 } },
+                    window.SP_REACT.createElement("div", { style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                            padding: "8px",
+                            backgroundColor: "#3d4450",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                        } },
+                        window.SP_REACT.createElement(FaTimes, { size: 10, "aria-hidden": "true" }),
+                        window.SP_REACT.createElement("span", null, "Cancel")))))));
+};
+/**
+ * SettingsMenu component - centralized settings management.
+ *
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3, 9.4, 9.5
+ *
+ * Features:
+ * - Modal overlay with backdrop dismiss
+ * - Expert Mode toggle with confirmation
+ * - Binning Settings (test duration, step size, start value)
+ * - Auto-save on changes (Requirement 9.4)
+ * - Gamepad navigation support
+ * - WCAG AA compliant
+ */
+const SettingsMenu = ({ isOpen, onClose }) => {
+    const settings = useSettings();
+    const [showExpertWarning, setShowExpertWarning] = SP_REACT.useState(false);
+    // Binning config state
+    const [binningConfig, setBinningConfig] = SP_REACT.useState({
+        test_duration: 60,
+        step_size: 5,
+        start_value: -10,
+    });
+    const [binningLoaded, setBinningLoaded] = SP_REACT.useState(false);
+    // Load binning config on mount
+    SP_REACT.useEffect(() => {
+        if (isOpen && !binningLoaded) {
+            loadBinningConfig();
+        }
+    }, [isOpen]);
+    const loadBinningConfig = async () => {
+        try {
+            const response = await call("get_binning_config");
+            if (response.success && response.config) {
+                setBinningConfig({
+                    test_duration: response.config.test_duration || 60,
+                    step_size: response.config.step_size || 5,
+                    start_value: response.config.start_value || -10,
+                });
+                setBinningLoaded(true);
+            }
+        }
+        catch (err) {
+            console.error("Failed to load binning config:", err);
+        }
+    };
+    const updateBinningConfig = async (updates) => {
+        const newConfig = { ...binningConfig, ...updates };
+        setBinningConfig(newConfig);
+        try {
+            await call("update_binning_config", newConfig);
+        }
+        catch (err) {
+            console.error("Failed to update binning config:", err);
+        }
+    };
+    if (!isOpen)
+        return null;
+    /**
+     * Handle Expert Mode toggle.
+     *
+     * Requirements: 2.3, 2.4
+     * Shows confirmation dialog when enabling, directly disables when turning off.
+     */
+    const handleExpertModeToggle = () => {
+        if (!settings.settings.expertMode) {
+            // Enabling - show warning dialog
+            setShowExpertWarning(true);
+        }
+        else {
+            // Disabling - no confirmation needed
+            settings.setExpertMode(false);
+        }
+    };
+    /**
+     * Handle Expert Mode confirmation.
+     *
+     * Requirements: 2.4, 9.4
+     */
+    const handleExpertModeConfirm = async () => {
+        await settings.setExpertMode(true);
+        setShowExpertWarning(false);
+    };
+    /**
+     * Handle Expert Mode cancellation.
+     *
+     * Requirements: 2.4
+     */
+    const handleExpertModeCancel = () => {
+        setShowExpertWarning(false);
+    };
+    /**
+     * Handle backdrop click to close menu.
+     *
+     * Requirements: 2.1, 9.5
+     */
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+    return (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+        window.SP_REACT.createElement("div", { style: {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.85)",
+                zIndex: 9999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+            }, onClick: handleBackdropClick, role: "dialog", "aria-modal": "true", "aria-labelledby": "settings-menu-title" },
+            window.SP_REACT.createElement("div", { style: {
+                    backgroundColor: "#1a1d23",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    maxWidth: "400px",
+                    width: "100%",
+                    border: "1px solid #3d4450",
+                }, onClick: (e) => e.stopPropagation() },
+                window.SP_REACT.createElement("div", { style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "16px",
+                    } },
+                    window.SP_REACT.createElement("h2", { id: "settings-menu-title", style: {
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            color: "#fff",
+                            margin: 0,
+                        } }, "Settings"),
+                    window.SP_REACT.createElement(FocusableButton, { onClick: onClose },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "32px",
+                                height: "32px",
+                                backgroundColor: "#3d4450",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                            }, "aria-label": "Close settings" },
+                            window.SP_REACT.createElement(FaTimes, { size: 14, color: "#fff", "aria-hidden": "true" })))),
+                window.SP_REACT.createElement(DFL.PanelSection, null,
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Expert Mode"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "8px",
+                                    lineHeight: "1.4",
+                                } }, "Removes safety limits for advanced undervolting. Use with caution."),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: handleExpertModeToggle, style: { width: "100%" } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "10px 12px",
+                                        backgroundColor: settings.settings.expertMode
+                                            ? "#b71c1c"
+                                            : "#3d4450",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                    }, role: "switch", "aria-checked": settings.settings.expertMode, "aria-label": "Expert Mode toggle" },
+                                    window.SP_REACT.createElement("span", null, settings.settings.expertMode ? "⚠ Expert Mode" : "Expert Mode"),
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.settings.expertMode ? "ON" : "OFF"))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Apply on Startup"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "8px",
+                                    lineHeight: "1.4",
+                                } }, "Automatically apply last profile when Steam Deck boots"),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: () => settings.setApplyOnStartup(!settings.settings.applyOnStartup), style: { width: "100%" } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "10px 12px",
+                                        backgroundColor: settings.settings.applyOnStartup
+                                            ? "#1a9fff"
+                                            : "#3d4450",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                    }, role: "switch", "aria-checked": settings.settings.applyOnStartup, "aria-label": "Apply on Startup toggle" },
+                                    window.SP_REACT.createElement("span", null, settings.settings.applyOnStartup ? "✓ Apply on Startup" : "Apply on Startup"),
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.settings.applyOnStartup ? "ON" : "OFF"))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Game Only Mode"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "8px",
+                                    lineHeight: "1.4",
+                                } }, "Apply undervolt only when games are running, reset in Steam menu"),
+                            window.SP_REACT.createElement(FocusableButton, { onClick: () => settings.setGameOnlyMode(!settings.settings.gameOnlyMode), style: { width: "100%" } },
+                                window.SP_REACT.createElement("div", { style: {
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "10px 12px",
+                                        backgroundColor: settings.settings.gameOnlyMode
+                                            ? "#1a9fff"
+                                            : "#3d4450",
+                                        borderRadius: "4px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                    }, role: "switch", "aria-checked": settings.settings.gameOnlyMode, "aria-label": "Game Only Mode toggle" },
+                                    window.SP_REACT.createElement("span", null, settings.settings.gameOnlyMode ? "✓ Game Only Mode" : "Game Only Mode"),
+                                    window.SP_REACT.createElement("span", { style: { fontSize: "10px", color: "#8b929a" } }, settings.settings.gameOnlyMode ? "ON" : "OFF"))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: { marginBottom: "16px" } },
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#fff",
+                                    marginBottom: "8px",
+                                } }, "Wizard Settings"),
+                            window.SP_REACT.createElement("div", { style: {
+                                    fontSize: "10px",
+                                    color: "#8b929a",
+                                    marginBottom: "12px",
+                                    lineHeight: "1.4",
+                                } }, "Advanced configuration for Wizard Mode testing algorithm."),
+                            window.SP_REACT.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "12px" } },
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Test Duration: ",
+                                        binningConfig.test_duration,
+                                        "s"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 30, max: 300, step: 10, value: binningConfig.test_duration, onChange: (e) => updateBinningConfig({ test_duration: parseInt(e.target.value) }), style: { width: "100%" } })),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Step Size: ",
+                                        binningConfig.step_size,
+                                        "mV"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 1, max: 10, step: 1, value: binningConfig.step_size, onChange: (e) => updateBinningConfig({ step_size: parseInt(e.target.value) }), style: { width: "100%" } })),
+                                window.SP_REACT.createElement("div", null,
+                                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", color: "#8b929a", marginBottom: "4px" } },
+                                        "Start Value: ",
+                                        binningConfig.start_value,
+                                        "mV"),
+                                    window.SP_REACT.createElement("input", { type: "range", min: 5, max: 20, step: 5, value: Math.abs(binningConfig.start_value), onChange: (e) => updateBinningConfig({ start_value: -parseInt(e.target.value) }), style: { width: "100%" } }))))),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement("div", { style: {
+                                fontSize: "9px",
+                                color: "#4caf50",
+                                textAlign: "center",
+                                padding: "4px",
+                            } }, "\u2713 Changes saved automatically")),
+                    window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                        window.SP_REACT.createElement(FocusableButton, { onClick: async () => {
+                                if (confirm("Reset all settings to defaults? This will clear wizard setup state and all configurations.")) {
+                                    try {
+                                        // Clear localStorage
+                                        localStorage.removeItem('decktune_wizard_setup_complete');
+                                        localStorage.removeItem('decktune_ui_mode');
+                                        localStorage.removeItem('decktune_last_mode');
+                                        // Reset binning config
+                                        await call("update_binning_config", {
+                                            test_duration: 60,
+                                            step_size: 5,
+                                            start_value: -10,
+                                        });
+                                        // Reset expert mode
+                                        await settings.setExpertMode(false);
+                                        // Reload page
+                                        window.location.reload();
+                                    }
+                                    catch (err) {
+                                        console.error("Failed to reset settings:", err);
+                                    }
+                                }
+                            }, style: {
+                                width: "100%",
+                                padding: "10px",
+                                backgroundColor: "#f44336",
+                                borderRadius: "4px",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "12px",
+                                textAlign: "center",
+                                cursor: "pointer",
+                            } }, "Reset All Settings"))))),
+        window.SP_REACT.createElement(ExpertWarningDialog, { isOpen: showExpertWarning, onConfirm: handleExpertModeConfirm, onCancel: handleExpertModeCancel })));
+};
+
+/**
  * DeckTuneApp - Main application component.
  *
  * Feature: ui-refactor-settings
@@ -36224,11 +36304,10 @@ const FrequencyWizard = () => {
 const DeckTuneContent = () => {
     // Load saved mode from localStorage, default to wizard
     // Requirements: 8.1, 8.2 - Fan Control accessed only via header, not in mode list
-    // Requirements: 10.1, 10.2, 10.5 - Frequency mode integration
     const [mode, setMode] = SP_REACT.useState(() => {
         try {
             const saved = localStorage.getItem('decktune_ui_mode');
-            return (saved === "expert" || saved === "wizard" || saved === "frequency" || saved === "fan") ? saved : "wizard";
+            return (saved === "expert" || saved === "wizard" || saved === "fan") ? saved : "wizard";
         }
         catch {
             return "wizard";
@@ -36260,15 +36339,9 @@ const DeckTuneContent = () => {
     SP_REACT.useEffect(() => {
         const handleModeSwitch = async () => {
             try {
-                if (mode === "frequency") {
-                    // Activate frequency-based voltage control
-                    await api.enableFrequencyMode();
-                }
-                else if (mode === "wizard" || mode === "expert") {
-                    // Deactivate frequency-based voltage control (switch to load-based)
-                    await api.disableFrequencyMode();
-                }
-                // Fan mode doesn't affect voltage control
+                // Frequency mode is now part of Wizard Mode, not a separate top-level mode
+                // Always use load-based mode for wizard and expert
+                await api.disableFrequencyMode();
             }
             catch (e) {
                 console.error("Failed to switch voltage control mode:", e);
@@ -36345,9 +36418,9 @@ const DeckTuneContent = () => {
      * Requirements: 8.4, 8.5 - Preserve previously selected mode
      */
     const handleFanControlBack = () => {
-        // Return to the last non-fan mode (wizard, expert, or frequency)
+        // Return to the last non-fan mode (wizard or expert)
         const lastMode = localStorage.getItem('decktune_last_mode');
-        if (lastMode === "expert" || lastMode === "wizard" || lastMode === "frequency") {
+        if (lastMode === "expert" || lastMode === "wizard") {
             setMode(lastMode);
         }
         else {
@@ -36539,42 +36612,8 @@ const DeckTuneContent = () => {
                                     borderRadius: "4px",
                                     fontWeight: "bold",
                                     boxShadow: `0 0 10px ${getStatusColor()}`,
-                                } }, getStatusText())))),
-                    window.SP_REACT.createElement(DFL.Focusable, { className: "fade-in mode-button-focusable", style: {
-                            minHeight: "40px",
-                            padding: "8px 12px",
-                            backgroundColor: mode === "frequency" ? "#1a9fff" : "rgba(61, 68, 80, 0.5)",
-                            borderRadius: "8px",
-                            border: mode === "frequency" ? "2px solid rgba(26, 159, 255, 0.5)" : "2px solid transparent",
-                            position: "relative",
-                            overflow: "hidden",
-                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                            cursor: "pointer",
-                            animationDelay: "0.2s"
-                        }, onActivate: () => setMode("frequency"), onClick: () => setMode("frequency") },
-                        window.SP_REACT.createElement("div", { style: {
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                fontSize: "12px",
-                                fontWeight: mode === "frequency" ? "bold" : "normal",
-                                color: mode === "frequency" ? "#fff" : "#8b929a"
-                            } },
-                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                                window.SP_REACT.createElement(FaBolt, { size: 14, style: {
-                                        filter: mode === "frequency" ? "drop-shadow(0 0 4px rgba(255,255,255,0.5))" : "none"
-                                    } }),
-                                window.SP_REACT.createElement("span", null, "Frequency-Based")),
-                            mode === "frequency" && (window.SP_REACT.createElement("div", { className: "status-badge", style: {
-                                    fontSize: "9px",
-                                    color: "#fff",
-                                    padding: "3px 6px",
-                                    backgroundColor: getStatusColor(),
-                                    borderRadius: "4px",
-                                    fontWeight: "bold",
-                                    boxShadow: `0 0 10px ${getStatusColor()}`,
                                 } }, getStatusText()))))))),
-        window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.3s" } }, mode === "wizard" ? (window.SP_REACT.createElement(WizardMode, null)) : mode === "expert" ? (window.SP_REACT.createElement(ExpertMode, null)) : mode === "frequency" ? (window.SP_REACT.createElement(FrequencyWizard, null)) : (window.SP_REACT.createElement(FanControl, { onBack: handleFanControlBack })))));
+        window.SP_REACT.createElement("div", { className: "fade-in", style: { animationDelay: "0.3s" } }, mode === "wizard" ? (window.SP_REACT.createElement(WizardMode, null)) : mode === "expert" ? (window.SP_REACT.createElement(ExpertMode, null)) : (window.SP_REACT.createElement(FanControl, { onBack: handleFanControlBack })))));
 };
 /**
  * Main app component with initialization.

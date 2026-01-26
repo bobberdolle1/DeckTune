@@ -152,6 +152,9 @@ const validateConfig = (config: FrequencyWizardConfig): ValidationErrors => {
 export const FrequencyWizard: FC = () => {
   const { state, api } = useDeckTune();
   
+  // Configuration mode: "preset" or "manual"
+  const [configMode, setConfigMode] = useState<"preset" | "manual">("preset");
+  
   // Configuration state - Requirements: 3.1
   const [config, setConfig] = useState<FrequencyWizardConfig>({
     freq_start: 400,
@@ -198,6 +201,7 @@ export const FrequencyWizard: FC = () => {
    */
   const handlePresetClick = (preset: QuickPreset) => {
     setConfig(preset.config);
+    setConfigMode("preset");
     setShowErrors(false);
     setError(null);
   };
@@ -207,24 +211,37 @@ export const FrequencyWizard: FC = () => {
    * Requirements: 6.3
    */
   const handleStart = async () => {
+    console.log("[FrequencyWizard] Start button clicked");
+    
     // Validate configuration - Requirement 3.7
     const errors = validateConfig(config);
     if (Object.keys(errors).length > 0) {
+      console.error("[FrequencyWizard] Validation errors:", errors);
       setShowErrors(true);
       return;
     }
 
     setIsStarting(true);
     setError(null);
+    
+    console.log("[FrequencyWizard] Starting wizard with config:", config);
 
     try {
       const result = await api.startFrequencyWizard(config);
       
+      console.log("[FrequencyWizard] Start result:", result);
+      
       if (!result.success) {
-        setError(result.error || "Failed to start wizard");
+        const errorMsg = result.error || "Failed to start wizard";
+        console.error("[FrequencyWizard] Start failed:", errorMsg);
+        setError(errorMsg);
+      } else {
+        console.log("[FrequencyWizard] Wizard started successfully");
       }
     } catch (err) {
-      setError(String(err));
+      const errorMsg = String(err);
+      console.error("[FrequencyWizard] Exception during start:", errorMsg);
+      setError(errorMsg);
     } finally {
       setIsStarting(false);
     }
@@ -330,6 +347,8 @@ export const FrequencyWizard: FC = () => {
             border: 2px solid transparent;
             transition: all 0.3s ease;
             cursor: pointer;
+            max-width: 100%;
+            overflow: hidden;
           }
           
           .preset-card:hover {
@@ -340,6 +359,13 @@ export const FrequencyWizard: FC = () => {
           .preset-card.active {
             border-color: #1a9fff;
             background: rgba(26, 159, 255, 0.2);
+          }
+          
+          .preset-card:focus-within,
+          .preset-card.gpfocus {
+            outline: 3px solid #1a9fff !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(26, 159, 255, 0.6) !important;
           }
           
           .error-text {
@@ -553,52 +579,98 @@ export const FrequencyWizard: FC = () => {
         {/* Configuration form - Requirements: 3.1-3.7 */}
         {!isRunning && (
           <>
-            {/* Quick presets - Requirements: 3.7, 12.5 */}
+            {/* Mode Toggle: Preset vs Manual */}
             <PanelSectionRow>
-              <div style={{ marginBottom: "8px" }}>
-                <span style={{ color: "#8b929a", fontSize: "11px", fontWeight: "bold" }}>
-                  Quick Presets
-                </span>
-              </div>
-              <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {QUICK_PRESETS.map((preset) => {
-                  const Icon = preset.icon;
-                  const isActive = JSON.stringify(config) === JSON.stringify(preset.config);
-                  
-                  return (
-                    <Focusable
-                      key={preset.name}
-                      className={`preset-card ${isActive ? "active" : ""}`}
-                      onActivate={() => handlePresetClick(preset)}
-                      onClick={() => handlePresetClick(preset)}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <Icon style={{ fontSize: "20px", color: isActive ? "#1a9fff" : "#8b929a" }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ 
-                            fontSize: "12px", 
-                            fontWeight: "bold", 
-                            color: isActive ? "#1a9fff" : "#fff",
-                            marginBottom: "2px",
-                          }}>
-                            {preset.name}
-                          </div>
-                          <div style={{ fontSize: "10px", color: "#8b929a" }}>
-                            {preset.description}
-                          </div>
-                        </div>
-                        {isActive && (
-                          <FaCheck style={{ color: "#1a9fff", fontSize: "14px" }} />
-                        )}
-                      </div>
-                    </Focusable>
-                  );
-                })}
+              <Focusable style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => setConfigMode("preset")}
+                  style={{
+                    flex: 1,
+                    backgroundColor: configMode === "preset" ? "#1a9fff" : "#3d4450",
+                    border: configMode === "preset" ? "2px solid #1a9fff" : "2px solid transparent",
+                    minHeight: "36px",
+                  }}
+                >
+                  <div style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "bold",
+                    color: configMode === "preset" ? "#fff" : "#8b929a"
+                  }}>
+                    Quick Presets
+                  </div>
+                </ButtonItem>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => setConfigMode("manual")}
+                  style={{
+                    flex: 1,
+                    backgroundColor: configMode === "manual" ? "#1a9fff" : "#3d4450",
+                    border: configMode === "manual" ? "2px solid #1a9fff" : "2px solid transparent",
+                    minHeight: "36px",
+                  }}
+                >
+                  <div style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "bold",
+                    color: configMode === "manual" ? "#fff" : "#8b929a"
+                  }}>
+                    Manual Config
+                  </div>
+                </ButtonItem>
               </Focusable>
             </PanelSectionRow>
 
+            {/* Quick presets - Requirements: 3.7, 12.5 */}
+            {configMode === "preset" && (
+              <PanelSectionRow>
+                <div style={{ marginBottom: "8px" }}>
+                  <span style={{ color: "#8b929a", fontSize: "11px", fontWeight: "bold" }}>
+                    Select Preset
+                  </span>
+                </div>
+                <Focusable style={{ display: "flex", flexDirection: "column", gap: "8px", maxWidth: "100%" }}>
+                  {QUICK_PRESETS.map((preset) => {
+                    const Icon = preset.icon;
+                    const isActive = JSON.stringify(config) === JSON.stringify(preset.config);
+                    
+                    return (
+                      <Focusable
+                        key={preset.name}
+                        className={`preset-card ${isActive ? "active" : ""}`}
+                        onActivate={() => handlePresetClick(preset)}
+                        onClick={() => handlePresetClick(preset)}
+                        style={{ width: "100%" }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
+                          <Icon style={{ fontSize: "20px", color: isActive ? "#1a9fff" : "#8b929a", flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ 
+                              fontSize: "12px", 
+                              fontWeight: "bold", 
+                              color: isActive ? "#1a9fff" : "#fff",
+                              marginBottom: "2px",
+                            }}>
+                              {preset.name}
+                            </div>
+                            <div style={{ fontSize: "10px", color: "#8b929a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {preset.description}
+                            </div>
+                          </div>
+                          {isActive && (
+                            <FaCheck style={{ color: "#1a9fff", fontSize: "14px", flexShrink: 0 }} />
+                          )}
+                        </div>
+                      </Focusable>
+                    );
+                  })}
+                </Focusable>
+              </PanelSectionRow>
+            )}
+
             {/* Frequency range configuration - Requirements: 3.1, 3.2 */}
-            <PanelSection title="Frequency Range">
+            {configMode === "manual" && (
+              <PanelSection title="Frequency Range">
               <PanelSectionRow>
                 <SliderField
                   label="Start Frequency (MHz)"
@@ -647,8 +719,10 @@ export const FrequencyWizard: FC = () => {
                 )}
               </PanelSectionRow>
             </PanelSection>
+            )}
 
             {/* Test duration - Requirements: 3.1, 3.4 */}
+            {configMode === "manual" && (
             <PanelSection title="Test Settings">
               <PanelSectionRow>
                 <SliderField
@@ -666,8 +740,10 @@ export const FrequencyWizard: FC = () => {
                 )}
               </PanelSectionRow>
             </PanelSection>
+            )}
 
             {/* Voltage parameters - Requirements: 3.1, 3.5 */}
+            {configMode === "manual" && (
             <PanelSection title="Voltage Settings">
               <PanelSectionRow>
                 <SliderField
@@ -717,6 +793,7 @@ export const FrequencyWizard: FC = () => {
                 )}
               </PanelSectionRow>
             </PanelSection>
+            )}
 
             {/* Start button - Requirement: 6.3 */}
             <PanelSectionRow>

@@ -38,6 +38,7 @@ import {
 } from "react-icons/fa";
 import { useDeckTune, useWizard, usePlatformInfo } from "../context";
 import { WizardConfig } from "../context/WizardContext";
+import { FrequencyWizard } from "./FrequencyWizard";
 
 // ==================== Panic Disable Button ====================
 
@@ -973,6 +974,7 @@ export const WizardMode: FC = () => {
   const [showCrashModal, setShowCrashModal] = useState(false);
   const [localResult, setLocalResult] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [wizardType, setWizardType] = useState<"load" | "frequency">("load");
 
   useEffect(() => {
     if (dirtyExit?.detected && !showCrashModal) {
@@ -1021,8 +1023,52 @@ export const WizardMode: FC = () => {
     <PanelSection title="Wizard Mode">
       <PanicDisableButton />
 
+      {/* Wizard Type Selector */}
+      {!isRunning && !localResult && !showHistory && (
+        <PanelSectionRow>
+          <Focusable style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+            <ButtonItem
+              layout="below"
+              onClick={() => setWizardType("load")}
+              style={{
+                flex: 1,
+                backgroundColor: wizardType === "load" ? "#1a9fff" : "#3d4450",
+                border: wizardType === "load" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "40px",
+              }}
+            >
+              <div style={{ 
+                fontSize: "11px", 
+                fontWeight: "bold",
+                color: wizardType === "load" ? "#fff" : "#8b929a"
+              }}>
+                Load-Based Wizard
+              </div>
+            </ButtonItem>
+            <ButtonItem
+              layout="below"
+              onClick={() => setWizardType("frequency")}
+              style={{
+                flex: 1,
+                backgroundColor: wizardType === "frequency" ? "#1a9fff" : "#3d4450",
+                border: wizardType === "frequency" ? "2px solid #1a9fff" : "2px solid transparent",
+                minHeight: "40px",
+              }}
+            >
+              <div style={{ 
+                fontSize: "11px", 
+                fontWeight: "bold",
+                color: wizardType === "frequency" ? "#fff" : "#8b929a"
+              }}>
+                Frequency-Based Wizard
+              </div>
+            </ButtonItem>
+          </Focusable>
+        </PanelSectionRow>
+      )}
+
       {/* History Toggle Button */}
-      {!isRunning && !localResult && (
+      {!isRunning && !localResult && wizardType === "load" && (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => setShowHistory(!showHistory)}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
@@ -1040,24 +1086,32 @@ export const WizardMode: FC = () => {
         />
       )}
 
-      {!isRunning && !localResult && !showHistory && (
-        <ConfigurationScreen onStart={handleStart} platformInfo={platformInfo} />
+      {wizardType === "load" && (
+        <>
+          {!isRunning && !localResult && !showHistory && (
+            <ConfigurationScreen onStart={handleStart} platformInfo={platformInfo} />
+          )}
+
+          {!isRunning && !localResult && showHistory && (
+            <WizardHistoryView onClose={() => setShowHistory(false)} />
+          )}
+
+          {isRunning && progress && (
+            <ProgressScreen progress={progress} onCancel={handleCancel} />
+          )}
+
+          {!isRunning && localResult && (
+            <ResultsScreen
+              result={localResult}
+              onApply={handleApply}
+              onStartOver={handleStartOver}
+            />
+          )}
+        </>
       )}
 
-      {!isRunning && !localResult && showHistory && (
-        <WizardHistoryView onClose={() => setShowHistory(false)} />
-      )}
-
-      {isRunning && progress && (
-        <ProgressScreen progress={progress} onCancel={handleCancel} />
-      )}
-
-      {!isRunning && localResult && (
-        <ResultsScreen
-          result={localResult}
-          onApply={handleApply}
-          onStartOver={handleStartOver}
-        />
+      {wizardType === "frequency" && (
+        <FrequencyWizard />
       )}
     </PanelSection>
   );

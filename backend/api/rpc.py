@@ -1642,7 +1642,7 @@ class DeckTuneRPC:
         """Check if any long-running operation is active.
         
         Returns:
-            True if autotune, binning, benchmark, or Iron Seeker is running
+            True if autotune, binning, benchmark, Iron Seeker, or frequency wizard is running
         """
         # Check autotune
         if self.autotune_engine and self.autotune_engine.is_running():
@@ -1658,6 +1658,10 @@ class DeckTuneRPC:
         
         # Check Iron Seeker
         if self.iron_seeker_engine and self.iron_seeker_engine.is_running():
+            return True
+        
+        # Check frequency wizard
+        if hasattr(self, '_frequency_wizard_task') and self._frequency_wizard_task and not self._frequency_wizard_task.done():
             return True
         
         return False
@@ -2239,26 +2243,56 @@ class DeckTuneRPC:
         Feature: frequency-based-wizard
         Validates: Requirements 11.1
         """
+        logger.info("=" * 80)
+        logger.info("FREQUENCY WIZARD START REQUEST")
+        logger.info("=" * 80)
+        logger.info(f"Received config: {config}")
+        
         # Check if other operations are running
+        logger.info("Checking if other operations are running...")
         if self._is_operation_running():
+            logger.warning("Another operation is already running - blocking frequency wizard start")
+            logger.info(f"  - Autotune running: {self.autotune_engine and self.autotune_engine.is_running()}")
+            logger.info(f"  - Binning running: {self.binning_engine and self.binning_engine.is_running()}")
+            logger.info(f"  - Benchmark running: {self._benchmark_task and not self._benchmark_task.done()}")
+            logger.info(f"  - Iron Seeker running: {self.iron_seeker_engine and self.iron_seeker_engine.is_running()}")
+            logger.info(f"  - Frequency Wizard running: {hasattr(self, '_frequency_wizard_task') and self._frequency_wizard_task and not self._frequency_wizard_task.done()}")
             return {
                 "success": False,
                 "error": "Another operation is running. Please wait for it to complete."
             }
+        logger.info("No other operations running - proceeding")
+        
+        # Check if test_runner is available
+        logger.info(f"Checking test_runner availability: {self.test_runner is not None}")
+        if not self.test_runner:
+            logger.error("TestRunner not initialized - cannot start frequency wizard")
+            logger.error("This usually means the plugin failed to initialize properly")
+            return {
+                "success": False,
+                "error": "Test runner not initialized. Please restart the plugin."
+            }
+        logger.info("TestRunner is available")
         
         # Import here to avoid circular imports
+        logger.info("Importing frequency wizard modules...")
         from ..tuning.frequency_wizard import FrequencyWizardConfig, FrequencyWizard
         from ..platform.cpufreq import CPUFreqController
         from pathlib import Path
         import uuid
+        logger.info("Modules imported successfully")
         
         try:
             # Extract core_id
             core_id = config.get("core_id", 0)
+            logger.info(f"Target core_id: {core_id}")
             
             # Check for preset
             preset = config.get("preset")
+            logger.info(f"Preset specified: {preset}")
+            
             if preset:
+                logger.info(f"Loading preset configuration: {preset}")
                 if preset == "quick":
                     wizard_config = FrequencyWizardConfig.quick_preset()
                 elif preset == "balanced":
@@ -2266,9 +2300,12 @@ class DeckTuneRPC:
                 elif preset == "thorough":
                     wizard_config = FrequencyWizardConfig.thorough_preset()
                 else:
+                    logger.error(f"Unknown preset: {preset}")
                     return {"success": False, "error": f"Unknown preset: {preset}"}
+                logger.info(f"Preset loaded: {wizard_config}")
             else:
                 # Create config from parameters
+                logger.info("Creating custom configuration from parameters")
                 wizard_config = FrequencyWizardConfig(
                     freq_start=config.get("freq_start", 400),
                     freq_end=config.get("freq_end", 3500),
@@ -2279,42 +2316,75 @@ class DeckTuneRPC:
                     safety_margin=config.get("safety_margin", 5),
                     adaptive_step=config.get("adaptive_step", True)
                 )
+                logger.info(f"Custom config created: {wizard_config}")
             
             # Validate configuration
-            wizard_config.validate()
+            logger.info("Validating wizard configuration...")
+            try:
+                wizard_config.validate()
+                logger.info("Configuration validation passed")
+            except Exception as validation_error:
+                logger.error(f"Configuration validation failed: {validation_error}")
+                raise
             
             # Create CPUFreq controller
-            cpufreq_controller = CPUFreqController()
+            logger.info("Creating CPUFreq controller...")
+            try:
+                cpufreq_controller = CPUFreqController()
+                logger.info("CPUFreq controller created successfully")
+            except Exception as cpufreq_error:
+                logger.error(f"Failed to create CPUFreq controller: {cpufreq_error}")
+                raise
             
             # Create save path for intermediate results
             save_dir = Path.home() / ".decktune" / "frequency_wizard"
+            logger.info(f"Creating save directory: {save_dir}")
             save_dir.mkdir(parents=True, exist_ok=True)
             save_path = save_dir / f"wizard_core{core_id}_intermediate.json"
+            logger.info(f"Intermediate results will be saved to: {save_path}")
             
             # Create wizard instance
             session_id = str(uuid.uuid4())
-            wizard = FrequencyWizard(
-                config=wizard_config,
-                cpufreq_controller=cpufreq_controller,
-                test_runner=self.test_runner,
-                progress_callback=self._frequency_wizard_progress_callback,
-                save_path=save_path
-            )
+            logger.info(f"Creating wizard instance with session_id: {session_id}")
+            try:
+                wizard = FrequencyWizard(
+                    config=wizard_config,
+                    cpufreq_controller=cpufreq_controller,
+                    test_runner=self.test_runner,
+                    progress_callback=self._frequency_wizard_progress_callback,
+                    save_path=save_path
+                )
+                logger.info("Wizard instance created successfully")
+            except Exception as wizard_error:
+                logger.error(f"Failed to create wizard instance: {wizard_error}")
+                raise
             
             # Store wizard instance
             if not hasattr(self, '_frequency_wizards'):
                 self._frequency_wizards = {}
+                logger.info("Initialized _frequency_wizards dictionary")
             self._frequency_wizards[session_id] = wizard
+            logger.info(f"Wizard instance stored with session_id: {session_id}")
             
             # Calculate estimated duration
             num_frequencies = len(wizard._calculate_frequency_points())
             # Rough estimate: test_duration * num_frequencies * avg_binary_search_iterations
             estimated_duration = wizard_config.test_duration * num_frequencies * 6
+            logger.info(f"Estimated duration: {estimated_duration}s ({num_frequencies} frequency points)")
             
             # Start wizard in background task
+            logger.info("Starting wizard background task...")
             self._frequency_wizard_task = asyncio.create_task(
                 self._run_frequency_wizard(session_id, wizard, core_id)
             )
+            logger.info("Background task created and started")
+            
+            logger.info("=" * 80)
+            logger.info("FREQUENCY WIZARD STARTED SUCCESSFULLY")
+            logger.info(f"Session ID: {session_id}")
+            logger.info(f"Core ID: {core_id}")
+            logger.info(f"Estimated Duration: {estimated_duration}s")
+            logger.info("=" * 80)
             
             logger.info(
                 f"Started frequency wizard: session_id={session_id}, core={core_id}, "
@@ -2328,7 +2398,15 @@ class DeckTuneRPC:
             }
             
         except Exception as e:
-            logger.error(f"Failed to start frequency wizard: {e}")
+            logger.error("=" * 80)
+            logger.error("FREQUENCY WIZARD START FAILED")
+            logger.error("=" * 80)
+            logger.exception(f"Exception during frequency wizard start: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception args: {e.args}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            logger.error("=" * 80)
             return {"success": False, "error": str(e)}
     
     async def _run_frequency_wizard(
@@ -2344,21 +2422,45 @@ class DeckTuneRPC:
             wizard: FrequencyWizard instance
             core_id: CPU core ID
         """
+        logger.info("=" * 80)
+        logger.info(f"FREQUENCY WIZARD EXECUTION STARTED")
+        logger.info(f"Session ID: {session_id}, Core ID: {core_id}")
+        logger.info("=" * 80)
+        
         try:
+            logger.info("Calling wizard.run()...")
             curve = await wizard.run(core_id)
+            logger.info(f"Wizard.run() completed successfully")
+            logger.info(f"Generated curve: {curve}")
             
             # Save curve to settings
+            logger.info("Saving curve to settings...")
             curves = self.settings.getSetting("frequency_curves") or {}
+            logger.info(f"Existing curves: {list(curves.keys())}")
             curves[str(core_id)] = curve.to_dict()
             self.settings.setSetting("frequency_curves", curves)
+            logger.info(f"Curve saved for core {core_id}")
             
             # Emit completion event
+            logger.info("Emitting completion event...")
             await self.event_emitter.emit_status("frequency_wizard_complete")
+            logger.info("Completion event emitted")
             
-            logger.info(f"Frequency wizard completed: session_id={session_id}, core={core_id}")
+            logger.info("=" * 80)
+            logger.info(f"FREQUENCY WIZARD COMPLETED SUCCESSFULLY")
+            logger.info(f"Session ID: {session_id}, Core ID: {core_id}")
+            logger.info("=" * 80)
             
         except Exception as e:
-            logger.exception(f"Frequency wizard error: {e}")
+            logger.error("=" * 80)
+            logger.error(f"FREQUENCY WIZARD EXECUTION FAILED")
+            logger.error(f"Session ID: {session_id}, Core ID: {core_id}")
+            logger.error("=" * 80)
+            logger.exception(f"Exception during wizard execution: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            logger.error("=" * 80)
             await self.event_emitter.emit_status("error")
         finally:
             # Clean up wizard instance
@@ -2371,15 +2473,24 @@ class DeckTuneRPC:
         Args:
             progress: WizardProgress instance
         """
+        logger.debug(f"Progress callback: {progress.progress_percent:.1f}% - "
+                    f"Freq: {progress.current_frequency}MHz, "
+                    f"Voltage: {progress.current_voltage}mV, "
+                    f"Completed: {progress.completed_points}/{progress.total_points}")
+        
         # Store latest progress
         if not hasattr(self, '_frequency_wizard_progress'):
             self._frequency_wizard_progress = {}
+            logger.debug("Initialized _frequency_wizard_progress dictionary")
         
         # Find session_id for this wizard (there should only be one active)
         if hasattr(self, '_frequency_wizards'):
             for session_id in self._frequency_wizards:
                 self._frequency_wizard_progress[session_id] = progress
+                logger.debug(f"Stored progress for session {session_id}")
                 break
+        else:
+            logger.warning("No active frequency wizards found in progress callback")
     
     async def get_frequency_wizard_progress(self) -> Dict[str, Any]:
         """Get current frequency wizard progress.

@@ -2,6 +2,39 @@
 
 All notable changes to DeckTune will be documented in this file.
 
+## [3.3.2] - 2026-01-26
+
+### Changed
+- **Frequency Wizard Integration**: Moved Frequency-Based Wizard into Wizard Mode as a sub-mode
+  - Removed from top-level navigation menu
+  - Added "Load-Based Wizard" / "Frequency-Based Wizard" toggle in Wizard Mode
+  - Improved UI organization and navigation flow
+
+### Fixed
+- **Frequency Wizard UI**: Fixed multiple UI/UX issues
+  - Fixed preset cards overflowing plugin boundaries (added maxWidth: 100%, overflow: hidden)
+  - Fixed gamepad focus not appearing on quick presets (added proper focus styles)
+  - Fixed frequency range always visible - now only shown in Manual Config mode
+  - Added "Quick Presets" / "Manual Config" toggle for better UX
+  - Improved Focusable structure for proper gamepad navigation
+- **Frequency Wizard Backend**: Enhanced reliability and debugging
+  - Added test_runner availability check with clear error message
+  - Added _frequency_wizard_task to _is_operation_running() to prevent conflicts
+  - Added comprehensive logging throughout wizard lifecycle:
+    - Detailed operation checks (autotune, binning, benchmark, iron seeker status)
+    - Config validation and preset loading
+    - CPUFreq controller and wizard instance creation
+    - Background task execution with progress tracking
+    - Full exception handling with traceback and error types
+  - Added progress callback logging (frequency, voltage, completion percentage)
+
+### Improved
+- **Logging**: Extensive debug logging for frequency wizard troubleshooting
+  - Visual separators (80-char lines) for easy log parsing
+  - Step-by-step execution tracking
+  - Exception details with full stack traces
+  - Progress updates with detailed metrics
+
 ## [3.3.1] - 2026-01-26
 
 ### Fixed
