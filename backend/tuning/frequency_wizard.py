@@ -329,13 +329,38 @@ class FrequencyWizard:
         
         # Try to load intermediate results
         loaded_points = self._load_intermediate_results(core_id)
+        crashed_frequency = None
+        
         if loaded_points:
             logger.info(f"Resuming from {len(loaded_points)} previously completed points")
             points = loaded_points
             
+            # Check if this was a crash recovery
+            crash_info = self.check_crash_recovery()
+            if crash_info and crash_info.get('in_progress'):
+                crashed_frequency = crash_info.get('last_frequency')
+                logger.warning(
+                    f"CRASH RECOVERY: Skipping crashed frequency {crashed_frequency}MHz "
+                    f"(crashed at {crash_info.get('last_voltage')}mV)"
+                )
+            
             # Skip already completed frequencies
             completed_freqs = {p.frequency_mhz for p in points}
             frequencies = [f for f in frequencies if f not in completed_freqs]
+            
+            # Skip crashed frequency if detected
+            if crashed_frequency and crashed_frequency in frequencies:
+                logger.warning(f"Removing crashed frequency {crashed_frequency}MHz from test list")
+                frequencies = [f for f in frequencies if f != crashed_frequency]
+                
+                # Add a point marking this frequency as unstable
+                points.append(FrequencyPoint(
+                    frequency_mhz=crashed_frequency,
+                    voltage_mv=crash_info.get('last_voltage', 0),
+                    stable=False,
+                    test_duration=0,
+                    temperature=0.0
+                ))
             
             # Update progress
             self.progress.completed_points = len(points)
