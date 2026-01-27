@@ -435,6 +435,9 @@ class FrequencyWizard:
             f"{sum(1 for p in points if p.stable)} stable"
         )
         
+        # Clear crash recovery marker on successful completion
+        self.clear_crash_recovery()
+        
         # Run verification tests
         logger.info("Running verification tests...")
         verification_passed = await self._verify_curve(curve)
@@ -540,12 +543,22 @@ class FrequencyWizard:
                 wizard_config=self.config.to_dict()
             )
             
-            # Save to file
+            # Save to file with crash recovery metadata
             import json
-            with open(self.save_path, 'w') as f:
-                json.dump(partial_curve.to_dict(), f, indent=2)
+            save_data = partial_curve.to_dict()
+            save_data['_crash_recovery'] = {
+                'in_progress': True,
+                'last_frequency': points[-1].freq_mhz if points else None,
+                'last_voltage': points[-1].voltage_mv if points else None,
+                'timestamp': time.time(),
+                'total_points': len(points),
+                'config': self.config.to_dict()
+            }
             
-            logger.debug(f"Saved intermediate results: {len(points)} points")
+            with open(self.save_path, 'w') as f:
+                json.dump(save_data, f, indent=2)
+            
+            logger.debug(f"Saved intermediate results: {len(points)} points (crash recovery enabled)")
         
         except Exception as e:
             logger.warning(f"Failed to save intermediate results: {e}")
@@ -570,6 +583,16 @@ class FrequencyWizard:
             with open(self.save_path, 'r') as f:
                 data = json.load(f)
             
+            # Check for crash recovery metadata
+            crash_recovery = data.get('_crash_recovery', {})
+            if crash_recovery.get('in_progress'):
+                logger.warning(
+                    f"CRASH RECOVERY DETECTED: Previous wizard session crashed at "
+                    f"frequency {crash_recovery.get('last_frequency')}MHz, "
+                    f"voltage {crash_recovery.get('last_voltage')}mV. "
+                    f"Completed {crash_recovery.get('total_points', 0)} points before crash."
+                )
+            
             curve = FrequencyCurve.from_dict(data)
             
             # Verify it's for the same core and config
@@ -586,6 +609,56 @@ class FrequencyWizard:
         except Exception as e:
             logger.warning(f"Failed to load intermediate results: {e}")
             return None
+    
+    def check_crash_recovery(self) -> Optional[Dict[str, Any]]:
+        """Check if there's a crashed wizard session that can be resumed.
+        
+        Returns:
+            Dictionary with crash info if found, None otherwise:
+            {
+                'last_frequency': int,
+                'last_voltage': int,
+                'total_points': int,
+                'timestamp': float,
+                'config': dict
+            }
+        """
+        if not self.save_path or not self.save_path.exists():
+            return None
+        
+        try:
+            import json
+            with open(self.save_path, 'r') as f:
+                data = json.load(f)
+            
+            crash_recovery = data.get('_crash_recovery', {})
+            if crash_recovery.get('in_progress'):
+                return crash_recovery
+            
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to check crash recovery: {e}")
+            return None
+    
+    def clear_crash_recovery(self) -> None:
+        """Clear crash recovery marker after successful completion."""
+        if not self.save_path or not self.save_path.exists():
+            return
+        
+        try:
+            import json
+            with open(self.save_path, 'r') as f:
+                data = json.load(f)
+            
+            if '_crash_recovery' in data:
+                data['_crash_recovery']['in_progress'] = False
+                
+                with open(self.save_path, 'w') as f:
+                    json.dump(data, f, indent=2)
+                
+                logger.info("Cleared crash recovery marker")
+        except Exception as e:
+            logger.warning(f"Failed to clear crash recovery: {e}")
     
     async def _test_frequency_point(
         self,

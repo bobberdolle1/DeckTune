@@ -2565,6 +2565,77 @@ class DeckTuneRPC:
             logger.error(f"Failed to cancel frequency wizard: {e}")
             return {"success": False, "error": str(e)}
     
+    async def check_frequency_wizard_crash(self, core_id: int = 0) -> Dict[str, Any]:
+        """Check if there's a crashed frequency wizard session that can be resumed.
+        
+        Args:
+            core_id: CPU core ID to check (default: 0)
+            
+        Returns:
+            Dictionary with crash info if found:
+            {
+                "success": bool,
+                "crashed": bool,
+                "crash_info": {
+                    "last_frequency": int,
+                    "last_voltage": int,
+                    "total_points": int,
+                    "timestamp": float,
+                    "config": dict
+                }
+            }
+        """
+        try:
+            from ..tuning.frequency_wizard import FrequencyWizard
+            from ..platform.cpufreq import CPUFreqController
+            from pathlib import Path
+            
+            # Create temporary wizard instance to check crash recovery
+            save_dir = Path.home() / ".decktune" / "frequency_wizard"
+            save_path = save_dir / f"wizard_core{core_id}_intermediate.json"
+            
+            if not save_path.exists():
+                return {
+                    "success": True,
+                    "crashed": False
+                }
+            
+            # Create minimal wizard instance just to check crash recovery
+            cpufreq_controller = CPUFreqController()
+            from ..tuning.frequency_wizard import FrequencyWizardConfig
+            config = FrequencyWizardConfig()
+            
+            wizard = FrequencyWizard(
+                config=config,
+                cpufreq_controller=cpufreq_controller,
+                test_runner=self.test_runner,
+                progress_callback=None,
+                save_path=save_path
+            )
+            
+            crash_info = wizard.check_crash_recovery()
+            
+            if crash_info:
+                logger.warning(
+                    f"Detected crashed frequency wizard session: "
+                    f"last_freq={crash_info.get('last_frequency')}MHz, "
+                    f"points={crash_info.get('total_points')}"
+                )
+                return {
+                    "success": True,
+                    "crashed": True,
+                    "crash_info": crash_info
+                }
+            else:
+                return {
+                    "success": True,
+                    "crashed": False
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to check frequency wizard crash: {e}")
+            return {"success": False, "error": str(e)}
+    
     async def get_frequency_curve(self, core_id: int) -> Dict[str, Any]:
         """Get saved frequency curve for a CPU core.
         

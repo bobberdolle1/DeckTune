@@ -26,6 +26,7 @@ import {
   FaBolt,
   FaBalanceScale,
   FaShieldAlt,
+  FaTimes,
 } from "react-icons/fa";
 import { useDeckTune } from "../context";
 import { FrequencyWizardConfig } from "../api/types";
@@ -155,6 +156,14 @@ export const FrequencyWizard: FC = () => {
   // Configuration mode: "preset" or "manual"
   const [configMode, setConfigMode] = useState<"preset" | "manual">("preset");
   
+  // Crash recovery state
+  const [crashInfo, setCrashInfo] = useState<{
+    crashed: boolean;
+    last_frequency?: number;
+    last_voltage?: number;
+    total_points?: number;
+  } | null>(null);
+  
   // Configuration state - Requirements: 3.1
   const [config, setConfig] = useState<FrequencyWizardConfig>({
     freq_start: 400,
@@ -173,6 +182,33 @@ export const FrequencyWizard: FC = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check for crash recovery on mount
+  useEffect(() => {
+    const checkCrash = async () => {
+      try {
+        const result = await api.call("check_frequency_wizard_crash", 0) as {
+          success: boolean;
+          crashed: boolean;
+          crash_info?: any;
+        };
+        
+        if (result.success && result.crashed && result.crash_info) {
+          console.log("[FrequencyWizard] Detected crashed session:", result.crash_info);
+          setCrashInfo({
+            crashed: true,
+            last_frequency: result.crash_info.last_frequency,
+            last_voltage: result.crash_info.last_voltage,
+            total_points: result.crash_info.total_points,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to check crash recovery:", err);
+      }
+    };
+    
+    checkCrash();
+  }, []);
 
   // Poll for progress updates - Requirements: 4.1-4.4
   useEffect(() => {
@@ -423,8 +459,79 @@ export const FrequencyWizard: FC = () => {
       </style>
 
       <PanelSection title="Frequency-Based Voltage Wizard">
+        {/* Crash Recovery Banner */}
+        {crashInfo && crashInfo.crashed && !isRunning && (
+          <PanelSectionRow>
+            <div style={{
+              background: "rgba(255, 152, 0, 0.15)",
+              border: "2px solid #ff9800",
+              borderRadius: "6px",
+              padding: "12px",
+              marginBottom: "12px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <FaExclamationTriangle style={{ color: "#ff9800", fontSize: "16px" }} />
+                <span style={{ color: "#ff9800", fontSize: "12px", fontWeight: "bold" }}>
+                  Crashed Session Detected
+                </span>
+              </div>
+              <p style={{ fontSize: "10px", color: "#ccc", margin: "0 0 8px 0", lineHeight: "1.4" }}>
+                Previous wizard session crashed at <strong>{crashInfo.last_frequency}MHz</strong> with 
+                voltage <strong>{crashInfo.last_voltage}mV</strong>.
+                <br />
+                Completed <strong>{crashInfo.total_points}</strong> frequency points before crash.
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <ButtonItem
+                  layout="below"
+                  onClick={async () => {
+                    // Resume wizard - will load intermediate results
+                    setCrashInfo(null);
+                    await handleStart();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#ff9800",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                    <FaPlay size={10} />
+                    <span>Resume from Crash</span>
+                  </div>
+                </ButtonItem>
+                <ButtonItem
+                  layout="below"
+                  onClick={() => {
+                    if (confirm("Discard crashed session and start fresh?")) {
+                      // Clear crash recovery file
+                      setCrashInfo(null);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#3d4450",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                    <FaTimes size={10} />
+                    <span>Start Fresh</span>
+                  </div>
+                </ButtonItem>
+              </div>
+            </div>
+          </PanelSectionRow>
+        )}
+        
         {/* Warning banner when not running */}
-        {!isRunning && (
+        {!isRunning && !crashInfo?.crashed && (
           <PanelSectionRow>
             <div className="warning-banner">
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
@@ -501,6 +608,28 @@ export const FrequencyWizard: FC = () => {
                   <span className="stat-label">Estimated Remaining:</span>
                   <span className="stat-value">{formatTime(progress.estimated_remaining)}</span>
                 </div>
+                
+                {/* Test failure indicator */}
+                {progress.last_test_failed && (
+                  <div style={{
+                    background: "rgba(244, 67, 54, 0.15)",
+                    border: "1px solid #f44336",
+                    borderRadius: "4px",
+                    padding: "8px",
+                    marginTop: "8px",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <FaExclamationTriangle style={{ color: "#f44336", fontSize: "12px" }} />
+                      <span style={{ color: "#f44336", fontSize: "10px", fontWeight: "bold" }}>
+                        Last test failed - system may have crashed or frozen
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "9px", color: "#ccc", margin: "4px 0 0 0", lineHeight: "1.3" }}>
+                      If system becomes unresponsive, wizard will auto-save progress.
+                      You can resume after reboot.
+                    </p>
+                  </div>
+                )}
               </div>
             </PanelSectionRow>
 

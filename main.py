@@ -746,6 +746,14 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """Cancel running frequency wizard."""
         return await self.rpc.cancel_frequency_wizard()
     
+    async def check_frequency_wizard_crash(self, core_id=0):
+        """Check if there's a crashed frequency wizard session.
+        
+        Args:
+            core_id: CPU core ID to check (default: 0)
+        """
+        return await self.rpc.check_frequency_wizard_crash(core_id)
+    
     async def get_frequency_wizard_progress(self):
         """Get frequency wizard progress."""
         return await self.rpc.get_frequency_wizard_progress()
