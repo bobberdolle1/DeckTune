@@ -30076,6 +30076,8 @@ const FrequencyWizard = () => {
     const { state, api } = useDeckTune();
     // Configuration mode: "preset" or "manual"
     const [configMode, setConfigMode] = SP_REACT.useState("preset");
+    // Crash recovery state
+    const [crashInfo, setCrashInfo] = SP_REACT.useState(null);
     // Configuration state - Requirements: 3.1
     const [config, setConfig] = SP_REACT.useState({
         freq_start: 400,
@@ -30093,6 +30095,27 @@ const FrequencyWizard = () => {
     const [isApplying, setIsApplying] = SP_REACT.useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = SP_REACT.useState(false);
     const [error, setError] = SP_REACT.useState(null);
+    // Check for crash recovery on mount
+    SP_REACT.useEffect(() => {
+        const checkCrash = async () => {
+            try {
+                const result = await api.call("check_frequency_wizard_crash", 0);
+                if (result.success && result.crashed && result.crash_info) {
+                    console.log("[FrequencyWizard] Detected crashed session:", result.crash_info);
+                    setCrashInfo({
+                        crashed: true,
+                        last_frequency: result.crash_info.last_frequency,
+                        last_voltage: result.crash_info.last_voltage,
+                        total_points: result.crash_info.total_points,
+                    });
+                }
+            }
+            catch (err) {
+                console.error("Failed to check crash recovery:", err);
+            }
+        };
+        checkCrash();
+    }, []);
     // Poll for progress updates - Requirements: 4.1-4.4
     SP_REACT.useEffect(() => {
         if (!state.isFrequencyWizardRunning)
@@ -30323,7 +30346,64 @@ const FrequencyWizard = () => {
           }
         `),
         window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency-Based Voltage Wizard" },
-            !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+            crashInfo && crashInfo.crashed && !isRunning && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        background: "rgba(255, 152, 0, 0.15)",
+                        border: "2px solid #ff9800",
+                        borderRadius: "6px",
+                        padding: "12px",
+                        marginBottom: "12px",
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+                        window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800", fontSize: "16px" } }),
+                        window.SP_REACT.createElement("span", { style: { color: "#ff9800", fontSize: "12px", fontWeight: "bold" } }, "Crashed Session Detected")),
+                    window.SP_REACT.createElement("p", { style: { fontSize: "10px", color: "#ccc", margin: "0 0 8px 0", lineHeight: "1.4" } },
+                        "Previous wizard session crashed at ",
+                        window.SP_REACT.createElement("strong", null,
+                            crashInfo.last_frequency,
+                            "MHz"),
+                        " with voltage ",
+                        window.SP_REACT.createElement("strong", null,
+                            crashInfo.last_voltage,
+                            "mV"),
+                        ".",
+                        window.SP_REACT.createElement("br", null),
+                        "Completed ",
+                        window.SP_REACT.createElement("strong", null, crashInfo.total_points),
+                        " frequency points before crash."),
+                    window.SP_REACT.createElement("div", { style: { display: "flex", gap: "8px" } },
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: async () => {
+                                // Resume wizard - will load intermediate results
+                                setCrashInfo(null);
+                                await handleStart();
+                            }, style: {
+                                flex: 1,
+                                padding: "8px",
+                                background: "#ff9800",
+                                borderRadius: "4px",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } },
+                                window.SP_REACT.createElement(FaPlay, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, "Resume from Crash"))),
+                        window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: () => {
+                                if (confirm("Discard crashed session and start fresh?")) {
+                                    // Clear crash recovery file
+                                    setCrashInfo(null);
+                                }
+                            }, style: {
+                                flex: 1,
+                                padding: "8px",
+                                background: "#3d4450",
+                                borderRadius: "4px",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } },
+                                window.SP_REACT.createElement(FaTimes, { size: 10 }),
+                                window.SP_REACT.createElement("span", null, "Start Fresh"))))))),
+            !isRunning && !crashInfo?.crashed && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement("div", { className: "warning-banner" },
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
                         window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#ff9800", fontSize: "14px" } }),
@@ -30366,7 +30446,18 @@ const FrequencyWizard = () => {
                                 progress.total_points)),
                         window.SP_REACT.createElement("div", { className: "stat-row" },
                             window.SP_REACT.createElement("span", { className: "stat-label" }, "Estimated Remaining:"),
-                            window.SP_REACT.createElement("span", { className: "stat-value" }, formatTime(progress.estimated_remaining))))),
+                            window.SP_REACT.createElement("span", { className: "stat-value" }, formatTime(progress.estimated_remaining))),
+                        progress.last_test_failed && (window.SP_REACT.createElement("div", { style: {
+                                background: "rgba(244, 67, 54, 0.15)",
+                                border: "1px solid #f44336",
+                                borderRadius: "4px",
+                                padding: "8px",
+                                marginTop: "8px",
+                            } },
+                            window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
+                                window.SP_REACT.createElement(FaExclamationTriangle, { style: { color: "#f44336", fontSize: "12px" } }),
+                                window.SP_REACT.createElement("span", { style: { color: "#f44336", fontSize: "10px", fontWeight: "bold" } }, "Last test failed - system may have crashed or frozen")),
+                            window.SP_REACT.createElement("p", { style: { fontSize: "9px", color: "#ccc", margin: "4px 0 0 0", lineHeight: "1.3" } }, "If system becomes unresponsive, wizard will auto-save progress. You can resume after reboot."))))),
                 window.SP_REACT.createElement(DFL.PanelSectionRow, null, !showCancelConfirm ? (window.SP_REACT.createElement(DFL.ButtonItem, { layout: "below", onClick: handleCancelClick, disabled: isCancelling },
                     window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
                         window.SP_REACT.createElement(FaStop, null),
