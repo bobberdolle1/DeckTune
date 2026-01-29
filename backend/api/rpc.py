@@ -2328,14 +2328,13 @@ class DeckTuneRPC:
                 logger.error(f"Configuration validation failed: {validation_error}")
                 raise
             
-            # Create CPUFreq controller
-            logger.info("Creating CPUFreq controller...")
-            try:
-                cpufreq_controller = CPUFreqController()
-                logger.info("CPUFreq controller created successfully")
-            except Exception as cpufreq_error:
-                logger.error(f"Failed to create CPUFreq controller: {cpufreq_error}")
-                raise
+            # Use CPUFreq controller from test_runner
+            logger.info("Using CPUFreq controller from test_runner...")
+            if self.test_runner._cpufreq_controller is None:
+                logger.error("TestRunner does not have cpufreq_controller initialized")
+                raise RuntimeError("CPUFreq controller not available in test_runner")
+            cpufreq_controller = self.test_runner._cpufreq_controller
+            logger.info("CPUFreq controller retrieved successfully")
             
             # Create save path for intermediate results
             save_dir = Path.home() / ".decktune" / "frequency_wizard"
@@ -2712,8 +2711,11 @@ class DeckTuneRPC:
                     "crashed": False
                 }
             
-            # Create minimal wizard instance just to check crash recovery
-            cpufreq_controller = CPUFreqController()
+            # Use CPUFreq controller from test_runner
+            if self.test_runner._cpufreq_controller is None:
+                logger.error("TestRunner does not have cpufreq_controller initialized")
+                return {"success": False, "error": "CPUFreq controller not available"}
+            cpufreq_controller = self.test_runner._cpufreq_controller
             from ..tuning.frequency_wizard import FrequencyWizardConfig
             config = FrequencyWizardConfig()
             
