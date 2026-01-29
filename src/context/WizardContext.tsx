@@ -104,7 +104,20 @@ export const WizardProvider: FC<{ children: ReactNode }> = ({ children }) => {
           break;
           
         case "wizard_complete":
-          setResult(data.data);
+          // CRITICAL FIX: Ensure result data has correct camelCase format
+          const resultData = data.data;
+          const formattedResult = {
+            id: resultData.id,
+            name: resultData.name,
+            timestamp: resultData.timestamp,
+            chipGrade: resultData.chip_grade || resultData.chipGrade,
+            offsets: resultData.offsets,
+            curveData: resultData.curve_data || resultData.curveData || [],
+            duration: resultData.duration,
+            iterations: resultData.iterations,
+            presetId: resultData.preset_id || resultData.presetId
+          };
+          setResult(formattedResult);
           setIsRunning(false);
           setProgress(null);
           loadResultsHistory();

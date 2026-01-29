@@ -2549,7 +2549,7 @@ class DeckTuneRPC:
             logger.info(f"Created frequency wizard preset: {preset_name}")
             
             # Emit completion event with preset info
-            await self.event_emitter.emit_status("frequency_wizard_complete", {
+            await self.event_emitter._emit_event("frequency_wizard_complete", {
                 'session_id': session_id,
                 'preset_id': preset_data['id'],
                 'preset_name': preset_name,
@@ -2604,7 +2604,7 @@ class DeckTuneRPC:
                 # Emit progress event for real-time updates
                 try:
                     asyncio.create_task(
-                        self.event_emitter.emit_status("frequency_wizard_progress", progress.to_dict())
+                        self.event_emitter._emit_event("frequency_wizard_progress", progress.to_dict())
                     )
                 except Exception as e:
                     logger.warning(f"Failed to emit progress event: {e}")

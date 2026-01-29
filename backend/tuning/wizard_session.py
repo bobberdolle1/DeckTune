@@ -346,21 +346,29 @@ class WizardSession:
         - Platinum: -51 mV or better
         
         Args:
-            max_stable_offset: Most negative stable offset found
+            max_stable_offset: Most negative stable offset found (negative value)
             
         Returns:
             Grade string
         """
+        # CRITICAL FIX: max_stable_offset is already negative, use abs() to get magnitude
         abs_offset = abs(max_stable_offset)
         
+        logger.info(f"[CHIP_GRADE] Calculating grade for offset={max_stable_offset}mV, abs={abs_offset}mV")
+        
         if abs_offset >= 51:
-            return "Platinum"
+            grade = "Platinum"
         elif abs_offset >= 36:
-            return "Gold"
+            grade = "Gold"
         elif abs_offset >= 21:
-            return "Silver"
+            grade = "Silver"
+        elif abs_offset >= 10:
+            grade = "Bronze"
         else:
-            return "Bronze"
+            grade = "Standard"
+        
+        logger.info(f"[CHIP_GRADE] Result: {grade} (abs_offset={abs_offset}mV)")
+        return grade
     
     def _calculate_percentile(self, max_stable_offset: int) -> int:
         """Calculate approximate percentile based on silicon lottery data.
@@ -428,21 +436,24 @@ class WizardSession:
         # CRITICAL FIX: Handle None offset during initialization
         current_offset = self._current_offset if self._current_offset is not None else 0
         
-        # Estimate remaining time based on iterations
-        # Rough estimate: 10 iterations average, current progress
-        estimated_total_iterations = 10
+        # CRITICAL FIX #2: Better progress calculation based on per-core testing
+        # For CPU domain with 4 cores, we test each core individually
+        # Each core tests ~5-10 offsets on average
+        # Total iterations ≈ 4 cores × 7 tests/core = 28 iterations
+        estimated_total_iterations = 28
+        
         if self._iterations > 0:
-            progress_ratio = self._iterations / estimated_total_iterations
-            progress_percent = min(progress_ratio * 100, 95)  # Cap at 95% until done
+            progress_ratio = min(self._iterations / estimated_total_iterations, 0.95)
+            progress_percent = progress_ratio * 100
             
-            if progress_ratio > 0:
+            if progress_ratio > 0.05:  # Only estimate after 5% progress
                 estimated_total_time = elapsed / progress_ratio
                 eta = max(0, int(estimated_total_time - elapsed))
             else:
-                eta = 300  # Default 5 minutes
+                eta = 600  # Default 10 minutes for first few iterations
         else:
-            progress_percent = 5
-            eta = 300
+            progress_percent = 0
+            eta = 600
         
         progress = WizardProgress(
             state=self._state,
@@ -469,6 +480,8 @@ class WizardSession:
             "heartbeat": progress.heartbeat,
             "liveMetrics": progress.live_metrics
         }
+        
+        logger.debug(f"[PROGRESS] {stage}: {progress_percent:.1f}%, ETA: {eta}s, iterations: {self._iterations}")
         
         await self.event_emitter.emit_wizard_progress(progress_dict)
     
@@ -1190,8 +1203,13 @@ class WizardSession:
                 game_only_mode=False
             )
             
-            # Save result
+            # Save result to history
             self._save_result(result)
+            
+            # CRITICAL FIX #3: Automatically save as wizard preset
+            logger.info(f"[WIZARD] Saving result as wizard preset...")
+            preset_id = self.save_as_wizard_preset(result, apply_on_startup=False, game_only_mode=False)
+            logger.info(f"[WIZARD] Wizard preset created: {preset_id}")
             
             # Clear crash flag
             self._clear_crash_flag()
@@ -1199,10 +1217,16 @@ class WizardSession:
             # Update state
             self._state = WizardState.FINISHED
             
-            # Emit completion
-            await self.event_emitter.emit_wizard_complete(asdict(result))
+            # CRITICAL FIX #4: Emit progress at 100% before completion
+            await self._emit_progress("Wizard completed successfully!")
+            await asyncio.sleep(0.5)  # Give UI time to update
             
-            logger.info(f"Wizard completed: {chip_grade} grade, {primary_offset}mV")
+            # Emit completion with preset info
+            completion_data = asdict(result)
+            completion_data['preset_id'] = preset_id
+            await self.event_emitter.emit_wizard_complete(completion_data)
+            
+            logger.info(f"[WIZARD] Completed: {chip_grade} grade, {primary_offset}mV, preset_id={preset_id}")
             
             return result
             
@@ -1218,7 +1242,12 @@ class WizardSession:
             raise
         
         finally:
-            # Cleanup
+            # CRITICAL FIX: Cleanup stress test processes
+            if self.runner:
+                logger.info("[WIZARD] Cleaning up stress test processes")
+                self.runner.cancel_current_test()
+            
+            # Cleanup state
             self._persist_state()
     
     def _save_result(self, result: WizardResult) -> None:
@@ -1292,13 +1321,32 @@ class WizardSession:
             except Exception as e:
                 logger.error(f"Failed to load wizard presets: {e}")
         
+        # CRITICAL FIX: Handle curve_data that may already be dicts
+        curve_data_list = []
+        for point in result.curve_data:
+            if isinstance(point, dict):
+                # Already a dict
+                curve_data_list.append(point)
+            else:
+                # Dataclass instance - convert to dict
+                try:
+                    curve_data_list.append(asdict(point))
+                except TypeError:
+                    # Fallback: manual conversion
+                    curve_data_list.append({
+                        "offset": getattr(point, 'offset', 0),
+                        "result": getattr(point, 'result', 'unknown'),
+                        "temp": getattr(point, 'temp', 0),
+                        "timestamp": getattr(point, 'timestamp', '')
+                    })
+        
         # Create wizard preset with full metadata
         preset = {
             "id": result.id,
             "name": result.name,
             "chip_grade": result.chip_grade,
             "offsets": result.offsets,
-            "curve_data": [asdict(point) for point in result.curve_data],
+            "curve_data": curve_data_list,
             "duration": result.duration,
             "iterations": result.iterations,
             "timestamp": result.timestamp,

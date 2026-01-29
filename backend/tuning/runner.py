@@ -209,6 +209,8 @@ class TestRunner:
         
         This method forcefully terminates any running stress test process.
         Should be called when user cancels a wizard or test operation.
+        
+        CRITICAL FIX: Also kills any orphaned stress-ng processes.
         """
         if self._current_process and self._current_process.returncode is None:
             try:
@@ -217,6 +219,15 @@ class TestRunner:
                 logger.info("[RUNNER] Process killed successfully")
             except Exception as e:
                 logger.error(f"[RUNNER] Failed to kill process: {e}")
+        
+        # CRITICAL FIX: Kill any orphaned stress-ng processes
+        try:
+            import subprocess
+            logger.info("[RUNNER] Cleaning up any orphaned stress-ng processes")
+            subprocess.run(["pkill", "-9", "stress-ng"], check=False, capture_output=True)
+            logger.info("[RUNNER] Orphaned process cleanup complete")
+        except Exception as e:
+            logger.warning(f"[RUNNER] Failed to cleanup orphaned processes: {e}")
     
     async def run_test(self, test_name: str) -> TestResult:
         """Execute a test case and return results.
