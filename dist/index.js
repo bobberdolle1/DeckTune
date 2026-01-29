@@ -147,6 +147,8 @@ function FaArrowLeft (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M496 384H160v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h80v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h336c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160h-80v-16c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h336v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h80c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16zm0-160H288V48c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v16H16C7.2 64 0 71.2 0 80v32c0 8.8 7.2 16 16 16h208v16c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-16h208c8.8 0 16-7.2 16-16V80c0-8.8-7.2-16-16-16z"},"child":[]}]})(props);
 }function FaSpinner (props) {
   return GenIcon({"attr":{"viewBox":"0 0 512 512"},"child":[{"tag":"path","attr":{"d":"M304 48c0 26.51-21.49 48-48 48s-48-21.49-48-48 21.49-48 48-48 48 21.49 48 48zm-48 368c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zm208-208c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48zM96 256c0-26.51-21.49-48-48-48S0 229.49 0 256s21.49 48 48 48 48-21.49 48-48zm12.922 99.078c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.491-48-48-48zm294.156 0c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48c0-26.509-21.49-48-48-48zM108.922 60.922c-26.51 0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.491-48-48-48z"},"child":[]}]})(props);
+}function FaStar (props) {
+  return GenIcon({"attr":{"viewBox":"0 0 576 512"},"child":[{"tag":"path","attr":{"d":"M259.3 17.8L194 150.2 47.9 171.5c-26.2 3.8-36.7 36.1-17.7 54.6l105.7 103-25 145.5c-4.5 26.3 23.2 46 46.4 33.7L288 439.6l130.7 68.7c23.2 12.2 50.9-7.4 46.4-33.7l-25-145.5 105.7-103c19-18.5 8.5-50.8-17.7-54.6L382 150.2 316.7 17.8c-11.7-23.6-45.6-23.9-57.4 0z"},"child":[]}]})(props);
 }function FaStop (props) {
   return GenIcon({"attr":{"viewBox":"0 0 448 512"},"child":[{"tag":"path","attr":{"d":"M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48z"},"child":[]}]})(props);
 }function FaSync (props) {
@@ -980,6 +982,31 @@ class Api extends SimpleEventEmitter {
     async getExpertModeStatus() {
         return await call("get_expert_mode_status");
     }
+    // ==================== Frequency Wizard Preset Management ====================
+    /**
+     * Get all frequency wizard presets.
+     */
+    async getFrequencyWizardPresets() {
+        return await call("get_frequency_wizard_presets");
+    }
+    /**
+     * Apply a frequency wizard preset.
+     */
+    async applyFrequencyWizardPreset(presetId) {
+        return await call("apply_frequency_wizard_preset", presetId);
+    }
+    /**
+     * Delete a frequency wizard preset.
+     */
+    async deleteFrequencyWizardPreset(presetId) {
+        return await call("delete_frequency_wizard_preset", presetId);
+    }
+    /**
+     * Update a frequency wizard preset.
+     */
+    async updateFrequencyWizardPreset(presetId, updates) {
+        return await call("update_frequency_wizard_preset", presetId, updates);
+    }
     // ==================== Profile Management Methods ====================
     // Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 9.1, 9.2
     /**
@@ -1194,6 +1221,16 @@ class Api extends SimpleEventEmitter {
             });
         }
         return result;
+    }
+    /**
+     * Check for crashed frequency wizard session.
+     * Requirements: 11.8
+     *
+     * @param coreId - CPU core ID to check (default: 0)
+     * @returns Crash recovery information
+     */
+    async checkFrequencyWizardCrash(coreId = 0) {
+        return await call("check_frequency_wizard_crash", coreId);
     }
     /**
      * Get current frequency wizard progress.
@@ -30099,7 +30136,7 @@ const FrequencyWizard = () => {
     SP_REACT.useEffect(() => {
         const checkCrash = async () => {
             try {
-                const result = await api.call("check_frequency_wizard_crash", 0);
+                const result = await api.checkFrequencyWizardCrash(0);
                 if (result.success && result.crashed && result.crash_info) {
                     console.log("[FrequencyWizard] Detected crashed session:", result.crash_info);
                     setCrashInfo({
@@ -30642,6 +30679,201 @@ const FrequencyWizard = () => {
                             window.SP_REACT.createElement(FaCheck, { style: { color: "#4caf50", fontSize: "14px" } }),
                             window.SP_REACT.createElement("span", { style: { color: "#4caf50", fontSize: "11px", fontWeight: "bold" } }, "Frequency Mode Active")),
                         window.SP_REACT.createElement("p", { style: { fontSize: "10px", color: "#ccc", margin: "6px 0 0 0" } }, "Voltage is being adjusted automatically based on CPU frequency.")))))))));
+};
+
+/**
+ * FrequencyWizardPresets - Manage frequency wizard presets.
+ *
+ * Displays saved frequency wizard results as presets with:
+ * - Per-core frequency curves visualization
+ * - Chip quality grading
+ * - Apply on Startup toggle
+ * - Apply/Delete actions
+ */
+
+const GRADE_ICONS = {
+    Platinum: FaTrophy,
+    Gold: FaMedal,
+    Silver: FaAward,
+    Bronze: FaCertificate,
+    Standard: FaStar,
+};
+const GRADE_COLORS = {
+    Platinum: "#E5E4E2",
+    Gold: "#FFD700",
+    Silver: "#C0C0C0",
+    Bronze: "#CD7F32",
+    Standard: "#808080",
+};
+const FrequencyWizardPresets = () => {
+    const { api } = useDeckTune();
+    const [presets, setPresets] = SP_REACT.useState([]);
+    const [loading, setLoading] = SP_REACT.useState(true);
+    const [expandedPreset, setExpandedPreset] = SP_REACT.useState(null);
+    SP_REACT.useEffect(() => {
+        loadPresets();
+    }, []);
+    const loadPresets = async () => {
+        try {
+            setLoading(true);
+            const result = await api.getFrequencyWizardPresets();
+            if (result.success) {
+                setPresets(result.presets || []);
+            }
+        }
+        catch (err) {
+            console.error("Failed to load frequency wizard presets:", err);
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    const handleApply = async (presetId) => {
+        try {
+            const result = await api.applyFrequencyWizardPreset(presetId);
+            if (result.success) {
+                await loadPresets();
+            }
+        }
+        catch (err) {
+            console.error("Failed to apply preset:", err);
+        }
+    };
+    const handleDelete = async (presetId, presetName) => {
+        DFL.showModal(window.SP_REACT.createElement(DFL.ConfirmModal, { strTitle: "Delete Preset", strDescription: `Delete frequency wizard preset "${presetName}"?`, strOKButtonText: "Delete", strCancelButtonText: "Cancel", onOK: async () => {
+                try {
+                    const result = await api.deleteFrequencyWizardPreset(presetId);
+                    if (result.success) {
+                        await loadPresets();
+                    }
+                }
+                catch (err) {
+                    console.error("Failed to delete preset:", err);
+                }
+            } }));
+    };
+    const handleToggleStartup = async (presetId, value) => {
+        try {
+            await api.updateFrequencyWizardPreset(presetId, { apply_on_startup: value });
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to update preset:", err);
+        }
+    };
+    const handleToggleGameOnly = async (presetId, value) => {
+        try {
+            await api.updateFrequencyWizardPreset(presetId, { game_only_mode: value });
+            await loadPresets();
+        }
+        catch (err) {
+            console.error("Failed to update preset:", err);
+        }
+    };
+    if (loading) {
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Wizard Presets" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } }, "Loading..."))));
+    }
+    if (presets.length === 0) {
+        return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Wizard Presets" },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { color: "#8b929a", textAlign: "center", padding: "16px", fontSize: "11px" } }, "No presets yet. Run the Frequency Wizard to create one."))));
+    }
+    return (window.SP_REACT.createElement(DFL.PanelSection, { title: "Frequency Wizard Presets" }, presets.map((preset) => {
+        const GradeIcon = GRADE_ICONS[preset.chip_grade] || FaStar;
+        const gradeColor = GRADE_COLORS[preset.chip_grade] || "#808080";
+        const isExpanded = expandedPreset === preset.id;
+        return (window.SP_REACT.createElement("div", { key: preset.id, style: { marginBottom: "12px" } },
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: {
+                        padding: "8px",
+                        backgroundColor: preset.enabled ? "#1a3a5c" : "#23262e",
+                        borderRadius: "6px 6px 0 0",
+                        border: preset.enabled ? "2px solid #1a9fff" : "none",
+                        borderBottom: "1px solid #3d4450"
+                    } },
+                    window.SP_REACT.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" } },
+                        window.SP_REACT.createElement(GradeIcon, { style: { color: gradeColor }, size: 14 }),
+                        window.SP_REACT.createElement("div", { style: { fontWeight: "bold", color: gradeColor, fontSize: "11px" } }, preset.chip_grade),
+                        preset.enabled && (window.SP_REACT.createElement("div", { style: { fontSize: "8px", padding: "1px 4px", backgroundColor: "#4caf50", borderRadius: "2px", fontWeight: "bold" } }, "ACTIVE")),
+                        window.SP_REACT.createElement("div", { style: { opacity: 0.7, fontSize: "9px", marginLeft: "auto" } }, new Date(preset.created_at).toLocaleDateString())),
+                    window.SP_REACT.createElement("div", { style: { fontSize: "10px", fontWeight: "bold" } }, preset.name))),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Apply on Startup", description: "Apply this preset when plugin starts", checked: preset.apply_on_startup || false, onChange: (value) => handleToggleStartup(preset.id, value) })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", description: "Apply only when a game is running", checked: preset.game_only_mode || false, onChange: (value) => handleToggleGameOnly(preset.id, value) })),
+            window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement(DFL.Focusable, { style: {
+                        display: "flex",
+                        gap: "4px",
+                        backgroundColor: "#1a1d24",
+                        borderRadius: "0 0 6px 6px",
+                        padding: "6px",
+                    }, "flow-children": "horizontal" },
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleApply(preset.id), onClick: () => handleApply(preset.id) },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                fontSize: "9px",
+                                fontWeight: "600",
+                                borderRadius: "4px",
+                                backgroundColor: preset.enabled ? "#2a2d35" : "#1a9fff",
+                                color: preset.enabled ? "#8b929a" : "#fff",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                            } },
+                            window.SP_REACT.createElement(FaPlay, { size: 8 }),
+                            window.SP_REACT.createElement("div", null, preset.enabled ? "Active" : "Apply"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => setExpandedPreset(isExpanded ? null : preset.id), onClick: () => setExpandedPreset(isExpanded ? null : preset.id) },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                fontSize: "9px",
+                                fontWeight: "600",
+                                borderRadius: "4px",
+                                backgroundColor: "#2a2d35",
+                                color: "#fff",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                            } },
+                            window.SP_REACT.createElement(FaChartLine, { size: 8 }),
+                            window.SP_REACT.createElement("div", null, isExpanded ? "Hide" : "Show"))),
+                    window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleDelete(preset.id, preset.name), onClick: () => handleDelete(preset.id, preset.name) },
+                        window.SP_REACT.createElement("div", { style: {
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "4px",
+                                padding: "8px",
+                                fontSize: "9px",
+                                fontWeight: "600",
+                                borderRadius: "4px",
+                                backgroundColor: "#2a2d35",
+                                color: "#f44336",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                            } },
+                            window.SP_REACT.createElement(FaTrash, { size: 8 }),
+                            window.SP_REACT.createElement("div", null, "Delete"))))),
+            isExpanded && preset.per_core_stats && (window.SP_REACT.createElement(DFL.PanelSectionRow, null,
+                window.SP_REACT.createElement("div", { style: { fontSize: "9px", opacity: 0.8, padding: "8px", backgroundColor: "#1a1d24", borderRadius: "4px" } }, preset.per_core_stats.map((stat) => (window.SP_REACT.createElement("div", { key: stat.core_id, style: { marginBottom: "4px" } },
+                    "Core ",
+                    stat.core_id,
+                    ": avg ",
+                    stat.avg_voltage.toFixed(1),
+                    "mV, min ",
+                    stat.min_voltage,
+                    "mV (",
+                    stat.stable_points,
+                    " pts)"))))))));
+    })));
 };
 
 /**
@@ -31301,7 +31533,9 @@ const WizardMode = () => {
             !isRunning && !localResult && showHistory && (window.SP_REACT.createElement(WizardHistoryView, { onClose: () => setShowHistory(false) })),
             isRunning && progress && (window.SP_REACT.createElement(ProgressScreen, { progress: progress, onCancel: handleCancel })),
             !isRunning && localResult && (window.SP_REACT.createElement(ResultsScreen, { result: localResult, onApply: handleApply, onStartOver: handleStartOver })))),
-        wizardType === "frequency" && (window.SP_REACT.createElement(FrequencyWizard, null))));
+        wizardType === "frequency" && (window.SP_REACT.createElement(window.SP_REACT.Fragment, null,
+            window.SP_REACT.createElement(FrequencyWizard, null),
+            window.SP_REACT.createElement(FrequencyWizardPresets, null)))));
 };
 
 /**

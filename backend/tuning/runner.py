@@ -400,15 +400,19 @@ class TestRunner:
         
         return voltages
     
-    async def run_per_core_test(self, core_id: int, duration: int) -> TestResult:
+    async def run_per_core_test(self, core_id: int, duration: int, gradual_load: bool = True) -> TestResult:
         """Run stress test pinned to a specific CPU core.
         
         Uses taskset to pin the stress test to a single core for
         per-core stability validation.
         
+        ENHANCEMENT: Gradual load decrease to prevent crashes from load spikes.
+        Starts at 100% CPU load and gradually decreases to 80% over the test duration.
+        
         Args:
             core_id: CPU core ID (0-3 for Steam Deck)
             duration: Test duration in seconds
+            gradual_load: If True, gradually decrease load from 100% to 80% (default: True)
             
         Returns:
             TestResult with pass/fail status
@@ -418,66 +422,152 @@ class TestRunner:
         error = None
         passed = False
         
-        # Build command with taskset for CPU affinity
         stress_ng_path = _get_binary_path("stress-ng")
         
-        # CRITICAL FIX: Use stress-ng built-in --taskset instead of external taskset
-        command = [
-            stress_ng_path,
-            "--cpu", "1",  # Single CPU worker
-            "--taskset", str(core_id),  # Pin to specific core (stress-ng built-in)
-            "--timeout", f"{duration}s",
-            "--metrics-brief"  # Brief metrics output
-        ]
-        
-        logger.info(f"[RUNNER] Per-core test: core={core_id}, duration={duration}s")
-        
-        try:
-            self._current_process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+        if gradual_load and duration >= 20:
+            # Use gradual load decrease: start at 100%, end at 80%
+            # Split test into 3 phases: 100% -> 90% -> 80%
+            phase_duration = duration // 3
+            remaining = duration - (phase_duration * 2)
+            
+            logger.info(f"[RUNNER] Per-core test with gradual load: core={core_id}, duration={duration}s")
+            logger.info(f"[RUNNER] Phase 1: 100% load for {phase_duration}s")
+            logger.info(f"[RUNNER] Phase 2: 90% load for {phase_duration}s")
+            logger.info(f"[RUNNER] Phase 3: 80% load for {remaining}s")
+            
+            phases = [
+                (100, phase_duration),  # 100% load
+                (90, phase_duration),   # 90% load
+                (80, remaining)         # 80% load
+            ]
+            
+            all_logs = []
+            
+            for phase_num, (load_percent, phase_time) in enumerate(phases, 1):
+                if phase_time <= 0:
+                    continue
+                
+                command = [
+                    stress_ng_path,
+                    "--cpu", "1",
+                    "--taskset", str(core_id),
+                    "--cpu-load", str(load_percent),  # Gradual load decrease
+                    "--timeout", f"{phase_time}s",
+                    "--metrics-brief"
+                ]
+                
+                logger.info(f"[RUNNER] Phase {phase_num}: {load_percent}% load for {phase_time}s")
+                
+                try:
+                    self._current_process = await asyncio.create_subprocess_exec(
+                        *command,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    
+                    stdout, stderr = await asyncio.wait_for(
+                        self._current_process.communicate(),
+                        timeout=phase_time + 10
+                    )
+                    
+                    phase_logs = stdout.decode("utf-8", errors="replace")
+                    if stderr:
+                        phase_logs += "\n--- STDERR ---\n" + stderr.decode("utf-8", errors="replace")
+                    
+                    all_logs.append(f"=== Phase {phase_num} ({load_percent}% load) ===\n{phase_logs}")
+                    
+                    if self._current_process.returncode != 0:
+                        passed = False
+                        error = f"Phase {phase_num} failed with code {self._current_process.returncode}"
+                        logs = "\n".join(all_logs)
+                        logger.error(f"[RUNNER] Phase {phase_num} failed: {error}")
+                        return TestResult(
+                            passed=passed,
+                            duration=time.time() - start_time,
+                            logs=logs,
+                            error=error
+                        )
+                    
+                except asyncio.TimeoutError:
+                    if self._current_process:
+                        self._current_process.kill()
+                        await self._current_process.wait()
+                    passed = False
+                    error = f"Phase {phase_num} timed out"
+                    logs = "\n".join(all_logs)
+                    logger.error(f"[RUNNER] Phase {phase_num} timeout")
+                    return TestResult(
+                        passed=passed,
+                        duration=time.time() - start_time,
+                        logs=logs,
+                        error=error
+                    )
+                finally:
+                    self._current_process = None
+            
+            # All phases passed
+            logs = "\n".join(all_logs)
+            passed = True
+            logger.info(f"[RUNNER] Core {core_id} completed all phases successfully")
+            
+        else:
+            # Standard test without gradual load
+            command = [
+                stress_ng_path,
+                "--cpu", "1",
+                "--taskset", str(core_id),
+                "--timeout", f"{duration}s",
+                "--metrics-brief"
+            ]
+            
+            logger.info(f"[RUNNER] Per-core test: core={core_id}, duration={duration}s")
             
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    self._current_process.communicate(),
-                    timeout=duration + 10
+                self._current_process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
                 
-                logs = stdout.decode("utf-8", errors="replace")
-                if stderr:
-                    logs += "\n--- STDERR ---\n" + stderr.decode("utf-8", errors="replace")
-                
-                logger.info(f"[RUNNER] Core {core_id} completed: returncode={self._current_process.returncode}")
-                
-                if self._current_process.returncode == 0:
-                    passed = _parse_stress_ng_output(logs)
-                    if not passed:
-                        error = "Test output indicates failure"
-                else:
-                    passed = False
-                    error = f"Process exited with code {self._current_process.returncode}"
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        self._current_process.communicate(),
+                        timeout=duration + 10
+                    )
                     
-            except asyncio.TimeoutError:
-                self._current_process.kill()
-                await self._current_process.wait()
+                    logs = stdout.decode("utf-8", errors="replace")
+                    if stderr:
+                        logs += "\n--- STDERR ---\n" + stderr.decode("utf-8", errors="replace")
+                    
+                    logger.info(f"[RUNNER] Core {core_id} completed: returncode={self._current_process.returncode}")
+                    
+                    if self._current_process.returncode == 0:
+                        passed = _parse_stress_ng_output(logs)
+                        if not passed:
+                            error = "Test output indicates failure"
+                    else:
+                        passed = False
+                        error = f"Process exited with code {self._current_process.returncode}"
+                        
+                except asyncio.TimeoutError:
+                    self._current_process.kill()
+                    await self._current_process.wait()
+                    passed = False
+                    error = f"Test timed out after {duration + 10} seconds"
+                    logs = f"[TIMEOUT] Process killed"
+                    
+            except FileNotFoundError as e:
                 passed = False
-                error = f"Test timed out after {duration + 10} seconds"
-                logs = f"[TIMEOUT] Process killed"
-                
-        except FileNotFoundError as e:
-            passed = False
-            error = f"stress-ng not found: {e}"
-            logs = ""
-            logger.error(f"[RUNNER] FileNotFoundError: {e}")
-        except Exception as e:
-            passed = False
-            error = f"Execution error: {str(e)}"
-            logs = ""
-            logger.error(f"[RUNNER] Exception: {e}", exc_info=True)
-        finally:
-            self._current_process = None
+                error = f"stress-ng not found: {e}"
+                logs = ""
+                logger.error(f"[RUNNER] FileNotFoundError: {e}")
+            except Exception as e:
+                passed = False
+                error = f"Execution error: {str(e)}"
+                logs = ""
+                logger.error(f"[RUNNER] Exception: {e}", exc_info=True)
+            finally:
+                self._current_process = None
         
         duration_actual = time.time() - start_time
         

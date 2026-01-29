@@ -2410,41 +2410,153 @@ class DeckTuneRPC:
             logger.error("=" * 80)
             return {"success": False, "error": str(e)}
     
+    def _calculate_frequency_chip_grade(self, per_core_stats: List[Dict[str, Any]]) -> str:
+        """Calculate chip quality grade based on frequency wizard results.
+        
+        Grading criteria:
+        - Platinum: avg < -30mV on all cores, min < -40mV
+        - Gold: avg < -25mV on all cores, min < -35mV
+        - Silver: avg < -20mV on all cores, min < -30mV
+        - Bronze: avg < -15mV on all cores
+        - Standard: anything else
+        
+        Args:
+            per_core_stats: List of per-core statistics
+            
+        Returns:
+            Chip grade string
+        """
+        if not per_core_stats:
+            return "Unknown"
+        
+        # Calculate overall stats
+        avg_voltages = [s['avg_voltage'] for s in per_core_stats]
+        min_voltages = [s['min_voltage'] for s in per_core_stats]
+        
+        overall_avg = sum(avg_voltages) / len(avg_voltages)
+        overall_min = min(min_voltages)
+        worst_core_avg = max(avg_voltages)  # Highest (least negative) = worst
+        
+        logger.info(f"Chip grading: overall_avg={overall_avg:.1f}mV, overall_min={overall_min}mV, worst_core={worst_core_avg:.1f}mV")
+        
+        # Platinum: exceptional chip
+        if worst_core_avg < -30 and overall_min < -40:
+            return "Platinum"
+        
+        # Gold: excellent chip
+        if worst_core_avg < -25 and overall_min < -35:
+            return "Gold"
+        
+        # Silver: good chip
+        if worst_core_avg < -20 and overall_min < -30:
+            return "Silver"
+        
+        # Bronze: average chip
+        if worst_core_avg < -15:
+            return "Bronze"
+        
+        # Standard: below average
+        return "Standard"
+    
     async def _run_frequency_wizard(
         self,
         session_id: str,
         wizard: "FrequencyWizard",
         core_id: int
     ) -> None:
-        """Run frequency wizard and handle completion.
+        """Run frequency wizard for ALL cores and handle completion.
+        
+        Automatically tests all 4 cores sequentially, generating a complete
+        frequency curve set for the entire CPU.
         
         Args:
             session_id: Wizard session ID
             wizard: FrequencyWizard instance
-            core_id: CPU core ID
+            core_id: Starting CPU core ID (typically 0)
         """
         logger.info("=" * 80)
-        logger.info(f"FREQUENCY WIZARD EXECUTION STARTED")
-        logger.info(f"Session ID: {session_id}, Core ID: {core_id}")
+        logger.info(f"FREQUENCY WIZARD EXECUTION STARTED - ALL CORES")
+        logger.info(f"Session ID: {session_id}")
         logger.info("=" * 80)
         
+        all_curves = {}
+        per_core_stats = []
+        
         try:
-            logger.info("Calling wizard.run()...")
-            curve = await wizard.run(core_id)
-            logger.info(f"Wizard.run() completed successfully")
-            logger.info(f"Generated curve: {curve}")
+            # Test all 4 cores sequentially
+            for current_core in range(4):
+                logger.info("=" * 80)
+                logger.info(f"TESTING CORE {current_core}")
+                logger.info("=" * 80)
+                
+                # Update progress to show current core
+                if hasattr(wizard, 'progress'):
+                    wizard.progress.current_stage = f"Testing core {current_core}"
+                
+                logger.info(f"Calling wizard.run() for core {current_core}...")
+                curve = await wizard.run(current_core)
+                logger.info(f"Core {current_core} completed successfully")
+                logger.info(f"Generated curve: {len(curve.points)} points, {sum(1 for p in curve.points if p.stable)} stable")
+                
+                # Save curve
+                all_curves[str(current_core)] = curve.to_dict()
+                
+                # Calculate stats for this core
+                stable_points = [p for p in curve.points if p.stable]
+                if stable_points:
+                    avg_voltage = sum(p.voltage_mv for p in stable_points) / len(stable_points)
+                    min_voltage = min(p.voltage_mv for p in stable_points)
+                    max_voltage = max(p.voltage_mv for p in stable_points)
+                    
+                    per_core_stats.append({
+                        'core_id': current_core,
+                        'total_points': len(curve.points),
+                        'stable_points': len(stable_points),
+                        'avg_voltage': round(avg_voltage, 1),
+                        'min_voltage': min_voltage,
+                        'max_voltage': max_voltage
+                    })
+                    
+                    logger.info(f"Core {current_core} stats: avg={avg_voltage:.1f}mV, min={min_voltage}mV, max={max_voltage}mV")
+                
+                # Save intermediate results after each core
+                self.settings.save_setting("frequency_curves", all_curves)
+                logger.info(f"Saved curves for {len(all_curves)} cores")
             
-            # Save curve to settings
-            logger.info("Saving curve to settings...")
-            curves = self.settings.get_setting("frequency_curves") or {}
-            logger.info(f"Existing curves: {list(curves.keys())}")
-            curves[str(core_id)] = curve.to_dict()
-            self.settings.save_setting("frequency_curves", curves)
-            logger.info(f"Curve saved for core {core_id}")
+            # Calculate chip grade based on all cores
+            chip_grade = self._calculate_frequency_chip_grade(per_core_stats)
+            logger.info(f"Chip grade: {chip_grade}")
             
-            # Emit completion event
-            logger.info("Emitting completion event...")
-            await self.event_emitter.emit_status("frequency_wizard_complete")
+            # Create wizard preset automatically
+            preset_name = f"Frequency Wizard {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            preset_data = {
+                'id': str(uuid.uuid4()),
+                'name': preset_name,
+                'type': 'frequency_wizard',
+                'created_at': datetime.now().isoformat(),
+                'chip_grade': chip_grade,
+                'frequency_curves': all_curves,
+                'per_core_stats': per_core_stats,
+                'wizard_config': self.config.to_dict() if hasattr(wizard, 'config') else {},
+                'apply_on_startup': False,
+                'game_only_mode': False,
+                'enabled': False
+            }
+            
+            # Save preset
+            presets = self.settings.get_setting("frequency_wizard_presets") or []
+            presets.append(preset_data)
+            self.settings.save_setting("frequency_wizard_presets", presets)
+            logger.info(f"Created frequency wizard preset: {preset_name}")
+            
+            # Emit completion event with preset info
+            await self.event_emitter.emit_status("frequency_wizard_complete", {
+                'session_id': session_id,
+                'preset_id': preset_data['id'],
+                'preset_name': preset_name,
+                'chip_grade': chip_grade,
+                'per_core_stats': per_core_stats
+            })
             logger.info("Completion event emitted")
             
             logger.info("=" * 80)
@@ -2773,6 +2885,115 @@ class DeckTuneRPC:
             
         except Exception as e:
             logger.error(f"Failed to disable frequency mode: {e}")
+            return {"success": False, "error": str(e)}
+    
+    # ==================== Frequency Wizard Preset Management ====================
+    
+    async def get_frequency_wizard_presets(self) -> Dict[str, Any]:
+        """Get all frequency wizard presets.
+        
+        Returns:
+            Dictionary with presets list
+        """
+        try:
+            presets = self.settings.get_setting("frequency_wizard_presets") or []
+            return {"success": True, "presets": presets}
+        except Exception as e:
+            logger.error(f"Failed to get frequency wizard presets: {e}")
+            return {"success": False, "error": str(e), "presets": []}
+    
+    async def apply_frequency_wizard_preset(self, preset_id: str) -> Dict[str, Any]:
+        """Apply a frequency wizard preset.
+        
+        Loads the frequency curves from the preset and enables frequency mode.
+        
+        Args:
+            preset_id: Preset ID to apply
+            
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            presets = self.settings.get_setting("frequency_wizard_presets") or []
+            preset = next((p for p in presets if p['id'] == preset_id), None)
+            
+            if not preset:
+                return {"success": False, "error": f"Preset {preset_id} not found"}
+            
+            # Apply frequency curves
+            curves = preset.get('frequency_curves', {})
+            await self.apply_frequency_curve(curves)
+            
+            # Enable frequency mode
+            await self.enable_frequency_mode()
+            
+            # Mark preset as enabled
+            for p in presets:
+                p['enabled'] = (p['id'] == preset_id)
+            self.settings.save_setting("frequency_wizard_presets", presets)
+            
+            logger.info(f"Applied frequency wizard preset: {preset['name']}")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to apply frequency wizard preset: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def delete_frequency_wizard_preset(self, preset_id: str) -> Dict[str, Any]:
+        """Delete a frequency wizard preset.
+        
+        Args:
+            preset_id: Preset ID to delete
+            
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            presets = self.settings.get_setting("frequency_wizard_presets") or []
+            presets = [p for p in presets if p['id'] != preset_id]
+            self.settings.save_setting("frequency_wizard_presets", presets)
+            
+            logger.info(f"Deleted frequency wizard preset: {preset_id}")
+            return {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Failed to delete frequency wizard preset: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def update_frequency_wizard_preset(
+        self,
+        preset_id: str,
+        updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update a frequency wizard preset.
+        
+        Args:
+            preset_id: Preset ID to update
+            updates: Dictionary with fields to update (name, apply_on_startup, etc.)
+            
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            presets = self.settings.get_setting("frequency_wizard_presets") or []
+            preset = next((p for p in presets if p['id'] == preset_id), None)
+            
+            if not preset:
+                return {"success": False, "error": f"Preset {preset_id} not found"}
+            
+            # Update allowed fields
+            allowed_fields = ['name', 'apply_on_startup', 'game_only_mode', 'enabled']
+            for field in allowed_fields:
+                if field in updates:
+                    preset[field] = updates[field]
+            
+            self.settings.save_setting("frequency_wizard_presets", presets)
+            
+            logger.info(f"Updated frequency wizard preset: {preset_id}")
+            return {"success": True, "preset": preset}
+            
+        except Exception as e:
+            logger.error(f"Failed to update frequency wizard preset: {e}")
             return {"success": False, "error": str(e)}
 
     # ==================== Context Profile Management ====================
@@ -4034,7 +4255,7 @@ class DeckTuneRPC:
         """Check for dirty exit from previous wizard session.
         
         Returns:
-            Dictionary with dirty_exit flag and crash_info if applicable
+            Dictionary with dirty_exit flag, crash_info, and detailed recovery options
         """
         if not hasattr(self, '_wizard_session') or not self._wizard_session:
             return {"dirty_exit": False}
@@ -4043,10 +4264,58 @@ class DeckTuneRPC:
             crash_info = self._wizard_session.check_dirty_exit()
             
             if crash_info:
-                logger.warning(f"Wizard dirty exit detected: {crash_info}")
+                logger.warning("=" * 80)
+                logger.warning("WIZARD CRASH RECOVERY AVAILABLE")
+                logger.warning("=" * 80)
+                logger.warning(f"Full crash info: {crash_info}")
+                
+                # Extract crash details
+                crashed_offset = crash_info.get('current_offset', 0)
+                last_stable = crash_info.get('last_stable', 0)
+                session_id = crash_info.get('session_id', 'unknown')
+                current_core = crash_info.get('current_core')
+                per_core_limits = crash_info.get('per_core_limits', [])
+                iterations = crash_info.get('iterations', 0)
+                
+                # Build detailed recovery message
+                if current_core is not None:
+                    if current_core < len(per_core_limits):
+                        # Core was completed
+                        message = (
+                            f"Wizard crashed after completing core {current_core}.\n"
+                            f"Completed cores: {per_core_limits}\n"
+                            f"Ready to continue with core {current_core + 1}."
+                        )
+                    else:
+                        # Core was in progress
+                        message = (
+                            f"Wizard crashed while testing core {current_core} at {crashed_offset}mV.\n"
+                            f"Last stable for core {current_core}: {last_stable}mV\n"
+                            f"Completed cores: {per_core_limits}\n"
+                            f"Will use {last_stable}mV for core {current_core} and continue."
+                        )
+                else:
+                    # Crashed during final verification
+                    message = (
+                        f"Wizard crashed during final verification.\n"
+                        f"All cores tested: {per_core_limits}\n"
+                        f"Can restart final verification."
+                    )
+                
+                logger.warning(f"Recovery message: {message}")
+                logger.warning("=" * 80)
+                
                 return {
                     "dirty_exit": True,
-                    "crash_info": crash_info
+                    "crash_info": crash_info,
+                    "crashed_offset": crashed_offset,
+                    "last_stable": last_stable,
+                    "session_id": session_id,
+                    "current_core": current_core,
+                    "per_core_limits": per_core_limits,
+                    "iterations": iterations,
+                    "can_continue": True,
+                    "message": message
                 }
             
             return {"dirty_exit": False}
@@ -4054,6 +4323,55 @@ class DeckTuneRPC:
         except Exception as e:
             logger.error(f"Failed to check wizard dirty exit: {e}")
             return {"dirty_exit": False, "error": str(e)}
+    
+    async def continue_wizard_from_crash(self) -> Dict[str, Any]:
+        """Continue wizard from last stable value after crash.
+        
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        try:
+            crash_info = self._wizard_session.check_dirty_exit()
+            
+            if not crash_info:
+                return {"success": False, "error": "No crash recovery data found"}
+            
+            # Clear the crash flag to allow wizard to start
+            self._wizard_session._clear_crash_flag()
+            
+            logger.info(f"Continuing wizard from crash recovery: {crash_info}")
+            
+            return {
+                "success": True,
+                "message": "Crash flag cleared. You can now start the wizard again.",
+                "last_stable": crash_info.get('last_stable', 0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to continue wizard from crash: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def clear_wizard_crash(self) -> Dict[str, Any]:
+        """Clear wizard crash flag without continuing.
+        
+        Returns:
+            Dictionary with success status
+        """
+        if not hasattr(self, '_wizard_session') or not self._wizard_session:
+            return {"success": False, "error": "Wizard not initialized"}
+        
+        try:
+            self._wizard_session._clear_crash_flag()
+            logger.info("Wizard crash flag cleared")
+            
+            return {"success": True, "message": "Crash flag cleared"}
+            
+        except Exception as e:
+            logger.error(f"Failed to clear wizard crash: {e}")
+            return {"success": False, "error": str(e)}
     
     async def get_wizard_results_history(self) -> List[Dict[str, Any]]:
         """Get history of wizard results.

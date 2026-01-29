@@ -1034,6 +1034,64 @@ export class Api extends SimpleEventEmitter {
     };
   }
 
+  // ==================== Frequency Wizard Preset Management ====================
+
+  /**
+   * Get all frequency wizard presets.
+   */
+  async getFrequencyWizardPresets(): Promise<{
+    success: boolean;
+    presets: any[];
+    error?: string;
+  }> {
+    return await call("get_frequency_wizard_presets") as {
+      success: boolean;
+      presets: any[];
+      error?: string;
+    };
+  }
+
+  /**
+   * Apply a frequency wizard preset.
+   */
+  async applyFrequencyWizardPreset(presetId: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return await call("apply_frequency_wizard_preset", presetId) as {
+      success: boolean;
+      error?: string;
+    };
+  }
+
+  /**
+   * Delete a frequency wizard preset.
+   */
+  async deleteFrequencyWizardPreset(presetId: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    return await call("delete_frequency_wizard_preset", presetId) as {
+      success: boolean;
+      error?: string;
+    };
+  }
+
+  /**
+   * Update a frequency wizard preset.
+   */
+  async updateFrequencyWizardPreset(presetId: string, updates: any): Promise<{
+    success: boolean;
+    preset?: any;
+    error?: string;
+  }> {
+    return await call("update_frequency_wizard_preset", presetId, updates) as {
+      success: boolean;
+      preset?: any;
+      error?: string;
+    };
+  }
+
   // ==================== Profile Management Methods ====================
   // Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 9.1, 9.2
 
@@ -1349,6 +1407,27 @@ export class Api extends SimpleEventEmitter {
     }
     
     return result;
+  }
+
+  /**
+   * Check for crashed frequency wizard session.
+   * Requirements: 11.8
+   * 
+   * @param coreId - CPU core ID to check (default: 0)
+   * @returns Crash recovery information
+   */
+  async checkFrequencyWizardCrash(coreId: number = 0): Promise<{
+    success: boolean;
+    crashed: boolean;
+    crash_info?: any;
+    error?: string;
+  }> {
+    return await call("check_frequency_wizard_crash", coreId) as {
+      success: boolean;
+      crashed: boolean;
+      crash_info?: any;
+      error?: string;
+    };
   }
 
   /**

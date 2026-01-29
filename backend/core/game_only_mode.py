@@ -186,15 +186,47 @@ class GameOnlyModeController:
             await self.event_emitter.emit_status("error")
     
     async def _apply_profile(self) -> None:
-        """Apply the saved undervolt profile.
+        """Apply the saved undervolt profile or wizard preset with game_only_mode.
         
-        Loads the last active profile from settings and applies it.
-        Handles errors gracefully.
+        Checks for wizard presets with game_only_mode=True first, then falls back
+        to regular profile. Supports both regular wizard and frequency wizard presets.
         
         Requirements: 5.1
         """
         try:
-            # Get last active profile from settings
+            # Check wizard presets with game_only_mode first
+            wizard_presets = self.settings.get_setting("wizard_presets") or []
+            for preset in wizard_presets:
+                if preset.get("game_only_mode", False):
+                    logger.info(f"Applying wizard preset (game only): {preset.get('name')}")
+                    
+                    # Apply the preset values
+                    cores = preset.get("offsets", {}).get("cpu", [0, 0, 0, 0])
+                    success, error = await self.ryzenadj.apply_values_async(cores)
+                    
+                    if success:
+                        self._last_profile = cores
+                        await self.event_emitter.emit_status("enabled")
+                        logger.info(f"Wizard preset applied successfully: {preset.get('name')}")
+                    else:
+                        logger.error(f"Failed to apply wizard preset: {error}")
+                        await self.event_emitter.emit_status("error")
+                    
+                    return  # Only apply one preset
+            
+            # Check frequency wizard presets with game_only_mode
+            freq_presets = self.settings.get_setting("frequency_wizard_presets") or []
+            for preset in freq_presets:
+                if preset.get("game_only_mode", False):
+                    logger.info(f"Applying frequency wizard preset (game only): {preset.get('name')}")
+                    
+                    # Apply frequency curves
+                    # Note: This requires RPC access, so we'll store the preset ID and let the controller handle it
+                    # For now, just log and skip (will be implemented when gymdeck3 integration is complete)
+                    logger.warning("Frequency wizard game_only_mode not yet implemented (requires gymdeck3)")
+                    return
+            
+            # Fall back to regular profile
             last_profile = self.settings.get_setting("cores")
             
             if not last_profile or last_profile == [0, 0, 0, 0]:

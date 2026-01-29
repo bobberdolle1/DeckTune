@@ -140,16 +140,43 @@ class Plugin:
                     decky.logger.warning(f"Could not set permission for {binary_path}: {e}")
 
     async def _apply_startup_profile(self):
-        """Apply last active profile on startup if Apply on Startup is enabled.
+        """Apply last active profile or wizard preset on startup if Apply on Startup is enabled.
         
-        Checks the apply_on_startup setting and applies the last_active_profile
-        if both conditions are met. Handles missing profiles gracefully.
+        Checks both regular profiles and wizard presets for apply_on_startup flag.
+        Applies the appropriate configuration based on preset type.
         
-        Feature: ui-refactor-settings
+        Feature: ui-refactor-settings, wizard-presets
         Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5
         """
         try:
-            # Check if Apply on Startup is enabled
+            # Check regular wizard presets first
+            wizard_presets = settings.get_setting("wizard_presets") or []
+            for preset in wizard_presets:
+                if preset.get("apply_on_startup", False):
+                    decky.logger.info(f"Applying wizard preset on startup: {preset.get('name')}")
+                    
+                    # Apply the preset values
+                    cores = preset.get("offsets", {}).get("cpu", [0, 0, 0, 0])
+                    await self.rpc.apply_undervolt(cores, timeout=15)
+                    
+                    decky.logger.info(f"Successfully applied wizard preset: {preset.get('name')}")
+                    return  # Only apply one preset
+            
+            # Check frequency wizard presets
+            freq_presets = settings.get_setting("frequency_wizard_presets") or []
+            for preset in freq_presets:
+                if preset.get("apply_on_startup", False):
+                    decky.logger.info(f"Applying frequency wizard preset on startup: {preset.get('name')}")
+                    
+                    # Apply frequency curves
+                    curves = preset.get("frequency_curves", {})
+                    await self.rpc.apply_frequency_curve(curves)
+                    await self.rpc.enable_frequency_mode()
+                    
+                    decky.logger.info(f"Successfully applied frequency wizard preset: {preset.get('name')}")
+                    return  # Only apply one preset
+            
+            # Check if Apply on Startup is enabled for game profiles
             apply_on_startup = self.game_only_settings_manager.get_setting("apply_on_startup", False)
             
             if not apply_on_startup:
@@ -705,6 +732,14 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
         """Check for dirty exit from previous wizard session."""
         return await self.rpc.check_wizard_dirty_exit()
     
+    async def continue_wizard_from_crash(self):
+        """Continue wizard from last stable value after crash."""
+        return await self.rpc.continue_wizard_from_crash()
+    
+    async def clear_wizard_crash(self):
+        """Clear wizard crash flag without continuing."""
+        return await self.rpc.clear_wizard_crash()
+    
     async def get_wizard_results_history(self):
         """Get history of wizard results."""
         return await self.rpc.get_wizard_results_history()
@@ -757,6 +792,22 @@ root ALL=(ALL) NOPASSWD: {ryzenadj_path}
     async def get_frequency_wizard_progress(self):
         """Get frequency wizard progress."""
         return await self.rpc.get_frequency_wizard_progress()
+    
+    async def get_frequency_wizard_presets(self):
+        """Get all frequency wizard presets."""
+        return await self.rpc.get_frequency_wizard_presets()
+    
+    async def apply_frequency_wizard_preset(self, preset_id):
+        """Apply a frequency wizard preset."""
+        return await self.rpc.apply_frequency_wizard_preset(preset_id)
+    
+    async def delete_frequency_wizard_preset(self, preset_id):
+        """Delete a frequency wizard preset."""
+        return await self.rpc.delete_frequency_wizard_preset(preset_id)
+    
+    async def update_frequency_wizard_preset(self, preset_id, updates):
+        """Update a frequency wizard preset."""
+        return await self.rpc.update_frequency_wizard_preset(preset_id, updates)
     
     async def apply_frequency_curve(self, curves):
         """Apply frequency curves.

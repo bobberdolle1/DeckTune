@@ -39,6 +39,7 @@ import {
 import { useDeckTune, useWizard, usePlatformInfo } from "../context";
 import { WizardConfig } from "../context/WizardContext";
 import { FrequencyWizard } from "./FrequencyWizard";
+import { FrequencyWizardPresets } from "./FrequencyWizardPresets";
 
 // ==================== Panic Disable Button ====================
 
@@ -1106,7 +1107,10 @@ export const WizardMode: FC = () => {
       )}
 
       {wizardType === "frequency" && (
-        <FrequencyWizard />
+        <>
+          <FrequencyWizard />
+          <FrequencyWizardPresets />
+        </>
       )}
     </PanelSection>
   );

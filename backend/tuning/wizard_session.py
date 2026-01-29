@@ -251,15 +251,25 @@ class WizardSession:
     
     # ==================== Crash Recovery ====================
     
-    def _set_crash_flag(self) -> None:
-        """Set crash flag before risky operation."""
+    def _set_crash_flag(self, core_id: Optional[int] = None, per_core_limits: Optional[List[int]] = None) -> None:
+        """Set crash flag before risky operation with full recovery context.
+        
+        Args:
+            core_id: Current core being tested (None if testing all cores)
+            per_core_limits: List of discovered limits for each core so far
+        """
         flag_path = self.settings_dir / self.CRASH_FLAG_FILE
-        flag_path.write_text(json.dumps({
+        crash_data = {
             "session_id": self._session_id,
             "timestamp": datetime.now().isoformat(),
             "current_offset": self._current_offset,
-            "last_stable": self._last_stable_offset
-        }))
+            "last_stable": self._last_stable_offset,
+            "current_core": core_id,
+            "per_core_limits": per_core_limits or [],
+            "iterations": self._iterations,
+            "config": asdict(self._config) if self._config else None
+        }
+        flag_path.write_text(json.dumps(crash_data, indent=2))
     
     def _clear_crash_flag(self) -> None:
         """Clear crash flag after successful operation."""
@@ -283,8 +293,13 @@ class WizardSession:
                 logger.error(f"Failed to read crash flag: {e}")
         return None
     
-    def _persist_state(self) -> None:
-        """Persist current session state to disk."""
+    def _persist_state(self, per_core_limits: Optional[List[int]] = None, current_core: Optional[int] = None) -> None:
+        """Persist current session state to disk with per-core progress.
+        
+        Args:
+            per_core_limits: List of discovered limits for each core
+            current_core: Current core being tested
+        """
         if not self._session_id:
             return
         
@@ -297,7 +312,9 @@ class WizardSession:
             "curve_data": [asdict(point) for point in self._curve_data],
             "iterations": self._iterations,
             "start_time": self._start_time,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "per_core_limits": per_core_limits or [],
+            "current_core": current_core
         }
         
         state_path = self.settings_dir / self.STATE_FILE
@@ -718,60 +735,96 @@ class WizardSession:
     async def _run_step_down_search(self, domain: str) -> int:
         """Run step-down search to find maximum stable offset.
         
-        Algorithm:
-        1. Start at -10mV (safe starting point)
-        2. Test each core individually with per-core stress test
-        3. If pass: step down (more negative), update last_stable
-        4. If fail: return last_stable
-        5. Stop at safety limit or 3 consecutive failures
+        CORRECTED Algorithm with FULL CRASH RECOVERY:
+        1. Check for previous crash and resume from last known state
+        2. For each core individually:
+           - Start at -30mV (or resume from crash point)
+           - Test progressively more aggressive values until failure
+           - Record that core's limit
+           - Save progress after each test
+        3. After all cores tested individually:
+           - Run final verification test with all cores at their limits
         
         Args:
             domain: Target domain ("cpu", "gpu", "soc")
             
         Returns:
-            Maximum stable offset (most negative that passed)
+            Maximum stable offset (most negative that passed on all cores)
         """
         step_size = self._config.get_step_size()
         safety_limit = self._config.safety_limits.get(domain, -100)
         
         logger.info(f"[WIZARD] Starting step-down search for {domain}: step_size={step_size}mV, safety_limit={safety_limit}mV")
         
-        # CRITICAL FIX: Start at -30mV instead of -10mV for more aggressive initial testing
-        # Most Steam Decks can handle -30mV easily, starting too conservative wastes time
-        self._current_offset = -30
-        self._last_stable_offset = 0
-        self._consecutive_failures = 0
+        # Check for crash recovery
+        crash_info = self.check_dirty_exit()
+        per_core_limits = []
+        start_core = 0
         
-        logger.info(f"[WIZARD] Initial offset set to: {self._current_offset}mV")
+        if crash_info and domain == "cpu":
+            logger.warning("=" * 80)
+            logger.warning("CRASH RECOVERY DETECTED")
+            logger.warning("=" * 80)
+            
+            recovered_limits = crash_info.get('per_core_limits', [])
+            crashed_core = crash_info.get('current_core')
+            crashed_offset = crash_info.get('current_offset', -30)
+            last_stable = crash_info.get('last_stable', 0)
+            
+            logger.warning(f"Recovered per-core limits: {recovered_limits}")
+            logger.warning(f"Crashed on core: {crashed_core} at {crashed_offset}mV")
+            logger.warning(f"Last stable for crashed core: {last_stable}mV")
+            
+            # Restore completed core limits
+            per_core_limits = recovered_limits.copy()
+            
+            # Determine where to resume
+            if crashed_core is not None:
+                # We crashed while testing a specific core
+                if crashed_core < len(per_core_limits):
+                    # Core was already completed, move to next
+                    start_core = crashed_core + 1
+                    logger.info(f"Core {crashed_core} was completed before crash, resuming from core {start_core}")
+                else:
+                    # Core was in progress, use last stable value
+                    start_core = crashed_core
+                    per_core_limits.append(last_stable)
+                    logger.info(f"Core {crashed_core} crashed at {crashed_offset}mV, using last stable {last_stable}mV")
+                    start_core += 1
+            else:
+                # Crashed during final verification or unknown state
+                start_core = len(per_core_limits)
+                logger.info(f"Resuming from core {start_core}")
+            
+            logger.warning("=" * 80)
+            
+            # Clear crash flag to start fresh
+            self._clear_crash_flag()
         
-        # CRITICAL FIX: Emit progress immediately after initialization
-        await self._emit_progress(f"Starting search at {self._current_offset}mV")
-        await asyncio.sleep(0.1)  # Give event loop time to process
-        
-        while not self._cancelled:
-            # Check safety limit
-            if self._current_offset < safety_limit:
-                logger.info(f"Reached safety limit: {safety_limit}mV")
-                break
-            
-            # CRITICAL FIX: Check cancellation before emitting progress
-            if self._cancelled:
-                logger.info("Wizard cancelled during iteration")
-                break
-            
-            # Emit progress
-            await self._emit_progress(f"Testing {self._current_offset}mV")
-            
-            # Test each core individually for CPU domain
-            if domain == "cpu":
-                all_cores_passed = True
-                per_core_test_failed = False
+        # Test each core individually for CPU domain
+        if domain == "cpu":
+            for core_id in range(start_core, 4):  # Resume from start_core
+                if self._cancelled:
+                    logger.info(f"[WIZARD] Wizard cancelled before testing core {core_id}")
+                    break
                 
-                for core_id in range(4):  # Steam Deck has 4 cores
-                    # CRITICAL FIX: Check cancellation inside core loop
-                    if self._cancelled:
-                        logger.info(f"[WIZARD] Wizard cancelled during core {core_id} test")
+                logger.info(f"[WIZARD] === Testing Core {core_id} individually ===")
+                await self._emit_progress(f"Finding limit for core {core_id}")
+                
+                # Reset for this core
+                self._current_offset = -30
+                core_last_stable = 0
+                core_consecutive_failures = 0
+                
+                # Test this core to its limit
+                while not self._cancelled:
+                    # Check safety limit
+                    if self._current_offset < safety_limit:
+                        logger.info(f"Core {core_id} reached safety limit: {safety_limit}mV")
                         break
+                    
+                    # Set crash flag BEFORE test with full context
+                    self._set_crash_flag(core_id=core_id, per_core_limits=per_core_limits)
                     
                     logger.info(f"[WIZARD] Testing core {core_id} at {self._current_offset}mV")
                     
@@ -779,69 +832,143 @@ class WizardSession:
                         passed = await self._test_offset_per_core(self._current_offset, core_id)
                     except Exception as e:
                         logger.error(f"[WIZARD] Per-core test exception on core {core_id}: {e}", exc_info=True)
-                        per_core_test_failed = True
-                        break
+                        passed = False
                     
-                    if not passed:
-                        all_cores_passed = False
-                        logger.warning(f"[WIZARD] Core {core_id} failed at {self._current_offset}mV")
-                        break  # Stop testing other cores if one fails
+                    # Clear crash flag after successful test
+                    self._clear_crash_flag()
+                    
+                    self._iterations += 1
+                    self._persist_state(per_core_limits=per_core_limits, current_core=core_id)
+                    
+                    if passed:
+                        # Success - update last stable and continue
+                        core_last_stable = self._current_offset
+                        core_consecutive_failures = 0
+                        logger.info(f"✓ Core {core_id}: {self._current_offset}mV stable")
+                        
+                        # Step down (more negative) to find the limit
+                        self._current_offset -= step_size
+                    else:
+                        # Failure - found this core's limit
+                        core_consecutive_failures += 1
+                        logger.info(f"✗ Core {core_id}: {self._current_offset}mV failed")
+                        
+                        if core_last_stable != 0:
+                            logger.info(f"[WIZARD] Core {core_id} limit found: {core_last_stable}mV")
+                            break
+                        
+                        # If no stable value found yet, try stepping UP
+                        if core_consecutive_failures >= 3:
+                            logger.info(f"[WIZARD] Core {core_id} has no stable values after 3 failures")
+                            break
+                        
+                        self._current_offset += (step_size // 2)
+                        logger.info(f"[WIZARD] Core {core_id} stepping back to: {self._current_offset}mV")
                 
-                # If cancelled during core loop, exit main loop
-                if self._cancelled:
+                per_core_limits.append(core_last_stable)
+                logger.info(f"[WIZARD] Core {core_id} final limit: {core_last_stable}mV")
+                
+                # Save progress after each core
+                self._persist_state(per_core_limits=per_core_limits, current_core=core_id)
+            
+            if self._cancelled:
+                return 0
+            
+            # Find the least aggressive (highest) limit among all cores
+            # This is the safe value that all cores can handle
+            final_offset = max(per_core_limits) if per_core_limits else 0
+            logger.info(f"[WIZARD] Per-core limits: {per_core_limits}")
+            logger.info(f"[WIZARD] Conservative limit (max): {final_offset}mV")
+            
+            # Run final verification test with all cores at the conservative limit
+            if final_offset != 0:
+                logger.info(f"[WIZARD] === Running final verification with all cores at {final_offset}mV ===")
+                await self._emit_progress(f"Final verification: all cores at {final_offset}mV")
+                
+                # Set crash flag for final verification
+                self._set_crash_flag(core_id=None, per_core_limits=per_core_limits)
+                
+                try:
+                    # Test all cores together
+                    values = [final_offset] * 4
+                    success, error = await self.ryzenadj.apply_values_async(values)
+                    if not success:
+                        logger.error(f"Failed to apply final verification values: {error}")
+                        self._clear_crash_flag()
+                        return 0
+                    
+                    # Run full stress test
+                    test_duration = self._config.get_test_duration_seconds()
+                    result = await self.runner.run_test("cpu_quick" if test_duration == 30 else "cpu_long")
+                    
+                    # Clear crash flag after successful verification
+                    self._clear_crash_flag()
+                    
+                    if result.passed:
+                        logger.info(f"✓ Final verification PASSED: all cores stable at {final_offset}mV")
+                        self._last_stable_offset = final_offset
+                        return final_offset
+                    else:
+                        logger.warning(f"✗ Final verification FAILED: all cores unstable at {final_offset}mV")
+                        # Back off by one step
+                        fallback_offset = final_offset + step_size
+                        logger.info(f"[WIZARD] Falling back to safer value: {fallback_offset}mV")
+                        self._last_stable_offset = fallback_offset
+                        return fallback_offset
+                        
+                except Exception as e:
+                    logger.error(f"[WIZARD] Final verification exception: {e}", exc_info=True)
+                    self._clear_crash_flag()
+                    return 0
+            
+            return final_offset
+            
+        else:
+            # For GPU/SOC, use original algorithm (full test)
+            self._current_offset = -30
+            self._last_stable_offset = 0
+            self._consecutive_failures = 0
+            
+            while not self._cancelled:
+                if self._current_offset < safety_limit:
+                    logger.info(f"Reached safety limit: {safety_limit}mV")
                     break
                 
-                # CRITICAL FIX: Fallback to regular stress test if per-core testing fails
-                if per_core_test_failed:
-                    logger.warning(f"[WIZARD] Per-core testing failed, falling back to regular stress test")
-                    try:
-                        passed = await self._test_offset(self._current_offset, domain)
-                    except Exception as e:
-                        logger.error(f"[WIZARD] Fallback test also failed: {e}", exc_info=True)
-                        passed = False
-                else:
-                    passed = all_cores_passed
-            else:
-                # For GPU/SOC, use full test
+                await self._emit_progress(f"Testing {self._current_offset}mV")
+                
+                self._set_crash_flag()
+                
                 try:
                     passed = await self._test_offset(self._current_offset, domain)
                 except Exception as e:
                     logger.error(f"[WIZARD] Test failed for {domain}: {e}", exc_info=True)
                     passed = False
+                
+                self._clear_crash_flag()
+                
+                self._iterations += 1
+                self._persist_state()
+                
+                if passed:
+                    self._last_stable_offset = self._current_offset
+                    self._consecutive_failures = 0
+                    logger.info(f"✓ {self._current_offset}mV stable")
+                    self._current_offset -= step_size
+                else:
+                    self._consecutive_failures += 1
+                    logger.info(f"✗ {self._current_offset}mV failed")
+                    
+                    if self._last_stable_offset != 0:
+                        logger.info(f"[WIZARD] Found stability limit: {self._last_stable_offset}mV")
+                        break
+                    
+                    if self._consecutive_failures >= 3:
+                        logger.info("[WIZARD] No stable values found after 3 failures")
+                        break
+                    
+                    self._current_offset += (step_size // 2)
             
-            self._iterations += 1
-            self._persist_state()
-            
-            if passed:
-                # Success - update last stable and continue
-                self._last_stable_offset = self._current_offset
-                self._consecutive_failures = 0
-                logger.info(f"✓ {self._current_offset}mV stable on all cores")
-                
-                # Step down (more negative) to find the limit
-                self._current_offset -= step_size
-                
-            else:
-                # Failure - stop searching, we found the limit
-                self._consecutive_failures += 1
-                logger.info(f"✗ {self._current_offset}mV failed (consecutive: {self._consecutive_failures})")
-                
-                # CRITICAL FIX: Stop after first failure instead of continuing down
-                # The last stable value is already recorded, no need to keep testing more aggressive values
-                if self._last_stable_offset != 0:
-                    logger.info(f"[WIZARD] Found stability limit, last stable: {self._last_stable_offset}mV")
-                    break
-                
-                # If no stable value found yet, try stepping UP (less negative) to find a stable point
-                if self._iterations > 5:
-                    logger.info("[WIZARD] No stable values found after 5 iterations, stopping search")
-                    break
-                
-                # Try less aggressive value (step up by half the step size)
-                self._current_offset += (step_size // 2)
-                logger.info(f"[WIZARD] Stepping back to less aggressive value: {self._current_offset}mV")
-        
-        return self._last_stable_offset
+            return self._last_stable_offset
     
     async def _run_verification_pass(self, final_offsets: Dict[str, int]) -> bool:
         """Run final verification pass with heavy multi-core load.

@@ -187,11 +187,7 @@ export const FrequencyWizard: FC = () => {
   useEffect(() => {
     const checkCrash = async () => {
       try {
-        const result = await api.call("check_frequency_wizard_crash", 0) as {
-          success: boolean;
-          crashed: boolean;
-          crash_info?: any;
-        };
+        const result = await api.checkFrequencyWizardCrash(0);
         
         if (result.success && result.crashed && result.crash_info) {
           console.log("[FrequencyWizard] Detected crashed session:", result.crash_info);
