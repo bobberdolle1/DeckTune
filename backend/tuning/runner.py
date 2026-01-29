@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
 
+from ..platform.cpufreq import CPUFreqError
+
 logger = logging.getLogger(__name__)
 
 # Plugin directory for bundled binaries (set by Decky Loader)
@@ -798,6 +800,15 @@ class TestRunner:
                 original_governor = self._cpufreq_controller.get_current_governor(core_id)
                 self._cpufreq_controller.lock_frequency(core_id, freq_mhz)
                 logger.info(f"[FREQ-TEST] Locked core {core_id} to {freq_mhz} MHz")
+            except CPUFreqError as e:
+                error = f"Failed to lock frequency: {str(e)}"
+                logger.error(f"[FREQ-TEST] {error}")
+                return TestResult(
+                    passed=False,
+                    duration=time.time() - start_time,
+                    logs="",
+                    error=error
+                )
             except Exception as e:
                 error = f"Failed to lock frequency: {str(e)}"
                 logger.error(f"[FREQ-TEST] {error}")

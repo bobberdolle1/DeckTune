@@ -223,7 +223,7 @@ export const FrequencyWizardPresets: FC = () => {
 
             {/* Action buttons */}
             <PanelSectionRow>
-              <Focusable
+              <div
                 style={{
                   display: "flex",
                   gap: "4px",
@@ -231,7 +231,6 @@ export const FrequencyWizardPresets: FC = () => {
                   borderRadius: "0 0 6px 6px",
                   padding: "6px",
                 }}
-                flow-children="horizontal"
               >
                 <Focusable
                   style={{ flex: 1 }}
@@ -304,7 +303,7 @@ export const FrequencyWizardPresets: FC = () => {
                     <div>Delete</div>
                   </div>
                 </Focusable>
-              </Focusable>
+              </div>
             </PanelSectionRow>
 
             {/* Expanded details */}

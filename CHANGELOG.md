@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.5.5] - 2026-01-29
+
+### Fixed
+- **Frequency Wizard — Steam Deck Compatibility**
+  - Fixed userspace governor unavailable error on Steam Deck
+  - Implemented fallback using performance governor with frequency limits
+  - Progress bar and ETA now work correctly during testing
+  - Tests no longer fail immediately on Steam Deck hardware
+- **Core System — Path Import Error**
+  - Fixed `NameError: name 'Path' is not defined` in update manager
+  - Added missing `from pathlib import Path` import to main.py
+- **UI Components — Focusable Errors**
+  - Fixed TypeScript errors in FrequencyWizardPresets component
+  - Corrected nested Focusable structure
+  - Removed invalid flow-children prop
+
+### Technical Details
+- Backend: `cpufreq.lock_frequency()` auto-detects available governors
+- Backend: `cpufreq.unlock_frequency()` restores frequency limits
+- Backend: Added CPUFreqError import to runner.py
+- Frontend: Fixed Focusable component structure in FrequencyWizardPresets
+
 ## [3.5.0] - 2026-01-29
 
 ### Added

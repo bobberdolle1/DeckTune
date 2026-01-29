@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 
 # Add plugin directory to Python path for module imports
 PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))

@@ -310,6 +310,9 @@ class CPUFreqController:
         Sets governor to 'userspace' and fixes frequency to the specified value.
         Stores the original governor for later restoration.
         
+        On Steam Deck where 'userspace' is not available, uses 'performance' governor
+        with min/max frequency limits as a fallback.
+        
         Args:
             core_id: CPU core ID
             freq_mhz: Frequency to lock to in MHz
@@ -326,13 +329,34 @@ class CPUFreqController:
         if core_id not in self._original_governors:
             self._original_governors[core_id] = self.get_current_governor(core_id)
         
-        # Set userspace governor
-        self.set_governor(core_id, "userspace")
+        # Check if userspace governor is available
+        available_governors = self.get_available_governors(core_id)
         
-        # Set frequency (in kHz)
-        freq_khz = freq_mhz * 1000
-        freq_path = self._get_cpufreq_path(core_id) / "scaling_setspeed"
-        self._write_sysfs_file(freq_path, str(freq_khz))
+        if "userspace" in available_governors:
+            # Set userspace governor
+            self.set_governor(core_id, "userspace")
+            
+            # Set frequency (in kHz)
+            freq_khz = freq_mhz * 1000
+            freq_path = self._get_cpufreq_path(core_id) / "scaling_setspeed"
+            self._write_sysfs_file(freq_path, str(freq_khz))
+        else:
+            # Fallback for Steam Deck: use performance governor with min/max limits
+            logger.warning(
+                f"Governor 'userspace' not available for core {core_id}. "
+                f"Using 'performance' governor with frequency limits as fallback."
+            )
+            
+            # Set performance governor
+            self.set_governor(core_id, "performance")
+            
+            # Set both min and max frequency to lock the frequency
+            freq_khz = freq_mhz * 1000
+            min_freq_path = self._get_cpufreq_path(core_id) / "scaling_min_freq"
+            max_freq_path = self._get_cpufreq_path(core_id) / "scaling_max_freq"
+            
+            self._write_sysfs_file(min_freq_path, str(freq_khz))
+            self._write_sysfs_file(max_freq_path, str(freq_khz))
         
         # Invalidate cache
         if core_id in self._frequency_cache:
@@ -342,6 +366,8 @@ class CPUFreqController:
     
     def unlock_frequency(self, core_id: int, original_governor: Optional[str] = None) -> None:
         """Restore original governor and unlock frequency.
+        
+        Also restores original min/max frequency limits if they were modified.
         
         Args:
             core_id: CPU core ID
@@ -364,6 +390,28 @@ class CPUFreqController:
                 "defaulting to 'schedutil'"
             )
             original_governor = "schedutil"
+        
+        # Restore min/max frequency limits to full range before changing governor
+        try:
+            cpufreq_path = self._get_cpufreq_path(core_id)
+            
+            # Get the hardware limits
+            min_freq_hw_path = cpufreq_path / "cpuinfo_min_freq"
+            max_freq_hw_path = cpufreq_path / "cpuinfo_max_freq"
+            
+            min_freq_hw = self._read_sysfs_file(min_freq_hw_path).strip()
+            max_freq_hw = self._read_sysfs_file(max_freq_hw_path).strip()
+            
+            # Restore to hardware limits
+            min_freq_path = cpufreq_path / "scaling_min_freq"
+            max_freq_path = cpufreq_path / "scaling_max_freq"
+            
+            self._write_sysfs_file(min_freq_path, min_freq_hw)
+            self._write_sysfs_file(max_freq_path, max_freq_hw)
+            
+            logger.debug(f"Restored frequency limits for core {core_id}")
+        except Exception as e:
+            logger.warning(f"Failed to restore frequency limits for core {core_id}: {e}")
         
         # Restore governor
         try:

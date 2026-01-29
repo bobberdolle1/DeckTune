@@ -1,24 +1,40 @@
-# 🔧 DeckTune v3.5.5 - Frequency Wizard Critical Fix
+# DeckTune v3.5.5 Release Notes
 
-## Fixed
+## 🐛 Critical Fixes
 
-### 🐛 Frequency Wizard Execution
-- **CPUFreqController Instance Mismatch** — Fixed frequency wizard failing immediately with "CPUFreqController required" error
-  - Root cause: RPC was creating new CPUFreqController instead of using TestRunner's instance
-  - TestRunner's `run_frequency_locked_test()` checked its own `_cpufreq_controller` which was different
-  - Solution: Reuse CPUFreqController from TestRunner instead of creating new instances
-  - All frequency tests now execute correctly with proper frequency locking
+### Frequency Wizard
+- **Fixed: Userspace governor unavailable on Steam Deck**
+  - Frequency wizard now uses `performance` governor with min/max frequency limits as fallback
+  - Tests no longer fail immediately when `userspace` governor is unavailable
+  - Progress bar and ETA now function correctly during testing
+  - Resolves issue where wizard completed in <1 minute with all tests failing
 
-## Installation
+### Core System
+- **Fixed: Path import error in main.py**
+  - Added missing `from pathlib import Path` import
+  - Resolves `NameError: name 'Path' is not defined` in update manager initialization
 
-Download and install via Decky Loader Developer Mode:
+### UI Components
+- **Fixed: Focusable component errors in FrequencyWizardPresets**
+  - Corrected nested `Focusable` structure causing TypeScript errors
+  - Removed invalid `flow-children` prop
+  - Improved button focus handling
 
-1. Download `DeckTune-v3.5.5.zip`
-2. Open Decky Loader Settings → Developer Mode
-3. Install from ZIP
+## 🔧 Technical Changes
 
-Or use the in-app updater from Settings menu!
+### backend/platform/cpufreq.py
+- `lock_frequency()`: Auto-detects available governors, uses fallback strategy
+- `unlock_frequency()`: Restores original frequency limits before governor change
+- Better error handling for unsupported governor scenarios
+
+### backend/tuning/runner.py
+- Added `CPUFreqError` import for proper exception handling
+- Improved frequency locking error messages
+
+## 📝 Notes
+
+This release specifically addresses Steam Deck compatibility issues where the Linux kernel doesn't provide the `userspace` cpufreq governor. The frequency wizard now works correctly on all Steam Deck models (LCD/OLED).
 
 ---
 
-**Full Changelog**: https://github.com/bobberdolle1/DeckTune/compare/v3.5.0...v3.5.5
+**Installation**: Update via Decky Loader plugin store or manual installation from GitHub releases.

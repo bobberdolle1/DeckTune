@@ -30804,13 +30804,13 @@ const FrequencyWizardPresets = () => {
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
                 window.SP_REACT.createElement(DFL.ToggleField, { label: "Game Only Mode", description: "Apply only when a game is running", checked: preset.game_only_mode || false, onChange: (value) => handleToggleGameOnly(preset.id, value) })),
             window.SP_REACT.createElement(DFL.PanelSectionRow, null,
-                window.SP_REACT.createElement(DFL.Focusable, { style: {
+                window.SP_REACT.createElement("div", { style: {
                         display: "flex",
                         gap: "4px",
                         backgroundColor: "#1a1d24",
                         borderRadius: "0 0 6px 6px",
                         padding: "6px",
-                    }, "flow-children": "horizontal" },
+                    } },
                     window.SP_REACT.createElement(DFL.Focusable, { style: { flex: 1 }, onActivate: () => handleApply(preset.id), onClick: () => handleApply(preset.id) },
                         window.SP_REACT.createElement("div", { style: {
                                 display: "flex",
