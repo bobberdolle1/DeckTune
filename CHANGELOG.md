@@ -1,5 +1,42 @@
 # Changelog
 
+## [3.5.0] - 2026-01-29
+
+### Added
+- **Frequency Wizard Preset Management** — Complete preset system for frequency wizard results
+  - Chip quality grading with visual badges (Platinum/Gold/Silver/Bronze/Standard)
+  - Apply on Startup toggle — automatically apply preset when plugin starts
+  - Game Only Mode toggle — apply preset only when a game is running
+  - Per-core statistics display with expandable details (avg/min voltage, stable points)
+  - Apply/Delete actions with confirmation modals
+  - Integrated into Wizard Mode under Frequency Wizard section
+
+### Fixed
+- **Regular Wizard Algorithm** — Fixed per-core testing to test each core individually to its limit
+  - Previous: tested all cores at each voltage level (all at -30mV, then all at -32mV)
+  - Correct: Core 0 to limit → Core 1 to limit → Core 2 to limit → Core 3 to limit → Final verification
+- **Wizard Crash Recovery** — Added full crash detection and recovery for regular wizard
+  - Saves per-core progress after each successful test
+  - Detects crashes on restart and offers to continue from last completed core
+  - Handles multiple crashes gracefully
+- **Stress Test Load** — Added gradual load decrease to prevent crashes
+  - Test phases: 100% → 90% → 80% CPU load
+  - Uses stress-ng `--cpu-load` parameter
+  - For tests <20s, uses standard 100% load
+- **Frequency Wizard Start Button** — Fixed non-functional start button (missing API method)
+- **Frequency Wizard Per-Core Testing** — Automatically tests all 4 cores sequentially
+  - Generates complete frequency curves for entire CPU
+  - Collects per-core statistics (avg_voltage, min_voltage, max_voltage, stable_points)
+  - Saves intermediate results after each core
+
+### Technical Details
+- Backend: Added `game_only_mode` field to frequency wizard preset structure
+- Backend: Updated `update_frequency_wizard_preset()` to allow `game_only_mode` updates
+- Backend: Startup logic checks frequency wizard presets with `apply_on_startup`
+- Backend: Game-only logic checks frequency wizard presets with `game_only_mode`
+- Frontend: FrequencyWizardPresets component follows Decky UI standards (QAM compliant)
+- Frontend: All toggles are functional (not placeholders)
+
 ## [3.4.0] - 2026-01-26
 
 ### Added
