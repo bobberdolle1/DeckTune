@@ -114,8 +114,42 @@ Navigate to: **Wizard Mode → Frequency-Based Wizard → Frequency Wizard Prese
 ---
 
 ## 🐛 Known Issues
-- Frequency wizard game_only_mode requires gymdeck3 integration (not yet implemented)
-- TypeScript diagnostic errors for JSX elements (false positives, build succeeds)
+- ~~Frequency wizard game_only_mode requires gymdeck3 integration (not yet implemented)~~ **FIXED in v3.5.0**
+- ~~TypeScript diagnostic errors for JSX elements (false positives, build succeeds)~~ **FIXED in v3.5.0**
+- ~~Regular Wizard progress not displaying~~ **FIXED in v3.5.0**
+- ~~Frequency Wizard CPUFreqController error~~ **FIXED in v3.5.0**
+- ~~Reset Settings button not working~~ **FIXED in v3.5.0**
+- ~~Wizard settings overflow in Settings menu~~ **FIXED in v3.5.0**
+- Plugin update check may show network errors (GitHub API rate limiting)
+
+---
+
+## 🔧 v3.5.0 Hotfixes
+
+### Regular Wizard Progress Display
+**Fixed**: Progress bar, ETA, elapsed time, last stable, and iterations now update correctly
+- Converted backend snake_case to frontend camelCase
+- All progress fields now display in real-time
+
+### Frequency Wizard Initialization
+**Fixed**: CPUFreqController now properly initialized
+- Added controller to TestRunner in main.py
+- Frequency wizard starts without errors
+
+### Settings Menu
+**Fixed**: Wizard settings now fit in QAM menu
+- Added scroll container with maxHeight: 80vh
+- No more overflow issues
+
+### Reset Settings
+**Fixed**: Button now properly resets all settings
+- Calls backend reset_config RPC method
+- Clears localStorage and reloads page
+
+### Version Detection
+**Fixed**: Now shows correct version from plugin.json
+- Removed hardcoded "3.4.0"
+- Reads version dynamically on startup
 
 ---
 
