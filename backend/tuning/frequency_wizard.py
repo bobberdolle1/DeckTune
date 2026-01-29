@@ -573,7 +573,7 @@ class FrequencyWizard:
             save_data = partial_curve.to_dict()
             save_data['_crash_recovery'] = {
                 'in_progress': True,
-                'last_frequency': points[-1].freq_mhz if points else None,
+                'last_frequency': points[-1].frequency_mhz if points else None,
                 'last_voltage': points[-1].voltage_mv if points else None,
                 'timestamp': time.time(),
                 'total_points': len(points),

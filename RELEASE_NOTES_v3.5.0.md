@@ -120,9 +120,14 @@ Navigate to: **Wizard Mode → Frequency-Based Wizard → Frequency Wizard Prese
 ---
 
 ## 📦 Installation
+
+Download and install via Decky Loader Developer Mode:
+
 1. Download `DeckTune-v3.5.0.zip`
-2. Extract to `~/homebrew/plugins/DeckTune/`
-3. Restart Decky Loader or reload the plugin
+2. Open Decky Loader Settings → Developer Mode
+3. Install from ZIP
+
+Or use the in-app updater from Settings menu!
 
 ---
 

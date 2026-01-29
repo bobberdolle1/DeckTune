@@ -2586,7 +2586,7 @@ class DeckTuneRPC:
         Args:
             progress: WizardProgress instance
         """
-        logger.debug(f"Progress callback: {progress.progress_percent:.1f}% - "
+        logger.debug(f"Progress callback: {progress.calculate_progress_percent():.1f}% - "
                     f"Freq: {progress.current_frequency}MHz, "
                     f"Voltage: {progress.current_voltage}mV, "
                     f"Completed: {progress.completed_points}/{progress.total_points}")

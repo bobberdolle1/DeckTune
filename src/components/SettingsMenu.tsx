@@ -1033,20 +1033,14 @@ export const SettingsMenu: FC<SettingsMenuProps> = ({ isOpen, onClose }) => {
                       localStorage.removeItem('decktune_ui_mode');
                       localStorage.removeItem('decktune_last_mode');
                       
-                      // Reset binning config
-                      await call("update_binning_config", {
-                        test_duration: 60,
-                        step_size: 5,
-                        start_value: -10,
-                      });
-                      
-                      // Reset expert mode
-                      await settings.setExpertMode(false);
+                      // Call backend reset_config
+                      await call("reset_config");
                       
                       // Reload page
                       window.location.reload();
                     } catch (err) {
                       console.error("Failed to reset settings:", err);
+                      alert(`Failed to reset settings: ${err}`);
                     }
                   }
                 }}

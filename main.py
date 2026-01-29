@@ -261,10 +261,17 @@ class Plugin:
         
         self.safety = SafetyManager(settings, self.platform, ryzenadj=self.ryzenadj)
         
-        # 4. Initialize test runner
-        self.test_runner = TestRunner()
+        # 4. Initialize CPUFreq controller for frequency wizard
+        from backend.platform.cpufreq import CPUFreqController
+        self.cpufreq_controller = CPUFreqController()
         
-        # 5. Initialize autotune engine
+        # 5. Initialize test runner with cpufreq_controller
+        self.test_runner = TestRunner(
+            cpufreq_controller=self.cpufreq_controller,
+            ryzenadj_wrapper=self.ryzenadj
+        )
+        
+        # 6. Initialize autotune engine
         self.autotune_engine = AutotuneEngine(
             ryzenadj=self.ryzenadj,
             runner=self.test_runner,
@@ -272,10 +279,10 @@ class Plugin:
             event_emitter=self.event_emitter
         )
         
-        # 6. Initialize watchdog
+        # 7. Initialize watchdog
         self.watchdog = Watchdog(self.safety)
         
-        # 7. Initialize binning engine
+        # 8. Initialize binning engine
         from backend.tuning.binning import BinningEngine
         self.binning_engine = BinningEngine(
             ryzenadj=self.ryzenadj,
@@ -471,7 +478,15 @@ class Plugin:
             from backend.core.updater import UpdateManager
             
             # Get current version from plugin.json
-            current_version = "3.4.0"
+            plugin_json_path = Path(PLUGIN_DIR) / "plugin.json"
+            current_version = "3.5.0"  # Default fallback
+            try:
+                if plugin_json_path.exists():
+                    with open(plugin_json_path, 'r') as f:
+                        plugin_data = json.load(f)
+                        current_version = plugin_data.get('version', '3.5.0')
+            except Exception as e:
+                decky.logger.warning(f"Failed to read version from plugin.json: {e}")
             
             self.update_manager = UpdateManager(
                 plugin_dir=PLUGIN_DIR,
