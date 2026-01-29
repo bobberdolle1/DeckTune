@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.5.7] - 2026-01-29
+
+### Fixed
+- **Wizard Completion & Results**
+  - Fixed chip grading calculation (Gold for -45mV, was incorrectly showing Bronze)
+  - Wizard now auto-creates presets after completion
+  - Results screen displays correctly with proper data formatting
+  - Added preset_id to completion event for frontend tracking
+- **Progress Bar Accuracy**
+  - Fixed progress calculation (28 iterations instead of 10)
+  - Progress bar now shows accurate percentage during per-core testing
+  - Added debug logging for progress updates
+- **Process Cleanup**
+  - Added `pkill -9 stress-ng` to kill orphaned processes
+  - CPU load no longer persists after wizard completion
+  - Cleanup runs in wizard finally block
+- **Event Emission Errors**
+  - Fixed EventEmitter signature error (613+ occurrences in logs)
+  - Changed `emit_status(event, data)` to `_emit_event(event, data)`
+  - Progress events now emit without errors
+- **Data Serialization**
+  - Fixed asdict() TypeError with curve_data
+  - Added type checking for dict vs dataclass instances
+  - Preset generation no longer crashes
+
+### Technical Details
+- Backend: Enhanced `_calculate_chip_grade()` with logging
+- Backend: Fixed `_emit_progress()` iteration estimate
+- Backend: Added type checking in `save_as_wizard_preset()`
+- Backend: Enhanced `cancel_current_test()` with pkill
+- Frontend: Added snake_case to camelCase conversion in WizardContext
+
 ## [3.5.6] - 2026-01-29
 
 ### Fixed
