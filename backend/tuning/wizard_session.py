@@ -454,7 +454,19 @@ class WizardSession:
             }
         )
         
-        await self.event_emitter.emit_wizard_progress(asdict(progress))
+        # Convert to dict with camelCase for frontend
+        progress_dict = {
+            "state": progress.state,
+            "currentStage": progress.current_stage,
+            "currentOffset": progress.current_offset,
+            "progressPercent": progress.progress_percent,
+            "etaSeconds": progress.eta_seconds,
+            "otaSeconds": progress.ota_seconds,
+            "heartbeat": progress.heartbeat,
+            "liveMetrics": progress.live_metrics
+        }
+        
+        await self.event_emitter.emit_wizard_progress(progress_dict)
     
     # ==================== Core Testing Logic ====================
     
