@@ -248,6 +248,10 @@ class WizardSession:
         if self.is_running():
             logger.info("Wizard cancellation requested")
             self._cancelled = True
+            
+            # Kill any running stress test
+            if hasattr(self, '_test_runner') and self._test_runner:
+                self._test_runner.cancel_current_test()
     
     # ==================== Crash Recovery ====================
     
@@ -1017,8 +1021,15 @@ class WizardSession:
         )
         
         try:
-            # Run stress test
-            result = await self.runner.run_test("cpu_long")
+            # Check for cancellation before starting
+            if self._cancelled:
+                logger.info("Verification cancelled before start")
+                if not dmesg_task.done():
+                    dmesg_task.cancel()
+                return False
+            
+            # Run 60s stress test
+            result = await self.runner.run_test("cpu_verify")
             passed = result.passed
             
             # Check for hardware errors

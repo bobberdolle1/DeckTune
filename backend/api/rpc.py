@@ -2536,7 +2536,7 @@ class DeckTuneRPC:
                 'chip_grade': chip_grade,
                 'frequency_curves': all_curves,
                 'per_core_stats': per_core_stats,
-                'wizard_config': self.config.to_dict() if hasattr(wizard, 'config') else {},
+                'wizard_config': wizard.config.to_dict() if hasattr(wizard, 'config') else {},
                 'apply_on_startup': False,
                 'game_only_mode': False,
                 'enabled': False
@@ -2600,6 +2600,15 @@ class DeckTuneRPC:
             for session_id in self._frequency_wizards:
                 self._frequency_wizard_progress[session_id] = progress
                 logger.debug(f"Stored progress for session {session_id}")
+                
+                # Emit progress event for real-time updates
+                try:
+                    asyncio.create_task(
+                        self.event_emitter.emit_status("frequency_wizard_progress", progress.to_dict())
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to emit progress event: {e}")
+                
                 break
         else:
             logger.warning("No active frequency wizards found in progress callback")

@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.5.6] - 2026-01-29
+
+### Fixed
+- **Wizard Cancellation**
+  - Cancel button now properly kills stress-ng process
+  - CPU load no longer persists after cancellation
+  - Both regular and frequency wizards terminate immediately
+- **Regular Wizard Verification**
+  - Fixed infinite loop in verification test (was 5min, now 60s)
+  - Verification completes in stated 60 seconds
+  - Added cancellation check before verification start
+- **Frequency Wizard Progress**
+  - Progress bar and ETA now update in real-time
+  - Added event emission for live progress updates
+  - Current frequency display works correctly
+- **Frequency Wizard Completion**
+  - Presets now created successfully after wizard completion
+  - Fixed config reference typo preventing preset creation
+  - Wizard can be restarted immediately without reboot
+- **UI Cleanup**
+  - Removed version display from main menu header
+
+### Technical Details
+- Backend: Added `cancel_current_test()` to TestRunner
+- Backend: Added `cpu_verify` test (60s) for verification
+- Backend: Progress callback now emits real-time events
+- Frontend: Simplified HeaderBar component
+
 ## [3.5.5] - 2026-01-29
 
 ### Fixed

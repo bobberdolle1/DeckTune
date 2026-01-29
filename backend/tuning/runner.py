@@ -112,6 +112,12 @@ class TestRunner:
             timeout=35,
             parse_fn=_parse_stress_ng_output
         ),
+        "cpu_verify": TestCase(
+            name="CPU Verification (60s)",
+            command=["stress-ng", "--cpu", "4", "--timeout", "60s"],
+            timeout=70,
+            parse_fn=_parse_stress_ng_output
+        ),
         "cpu_long": TestCase(
             name="CPU Long",
             command=["stress-ng", "--cpu", "4", "--timeout", "5m"],
@@ -197,6 +203,20 @@ class TestRunner:
         """
         status = self.check_binaries()
         return [name for name, available in status.items() if not available]
+    
+    def cancel_current_test(self) -> None:
+        """Cancel currently running test by killing the process.
+        
+        This method forcefully terminates any running stress test process.
+        Should be called when user cancels a wizard or test operation.
+        """
+        if self._current_process and self._current_process.returncode is None:
+            try:
+                logger.info("[RUNNER] Cancelling current test - killing process")
+                self._current_process.kill()
+                logger.info("[RUNNER] Process killed successfully")
+            except Exception as e:
+                logger.error(f"[RUNNER] Failed to kill process: {e}")
     
     async def run_test(self, test_name: str) -> TestResult:
         """Execute a test case and return results.

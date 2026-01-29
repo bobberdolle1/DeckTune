@@ -295,6 +295,10 @@ class FrequencyWizard:
         """
         logger.info("Wizard cancellation requested")
         self.cancelled = True
+        
+        # Kill any running test
+        if self.test_runner:
+            self.test_runner.cancel_current_test()
     
     async def run(self, core_id: int) -> FrequencyCurve:
         """Execute full frequency sweep for a CPU core.
